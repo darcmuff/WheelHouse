@@ -589,62 +589,8 @@ const DB_KEY = 'wheel_tracker_v7';
 let db = { wheels:[], trades:[] };
 
 const SEED_DATA = {
-  wheels:[
-    {id:'w_sofi1',ticker:'SOFI',label:'Rotation 1 — Sep/Nov 2025',company:'SoFi Technologies Inc.',status:'closed',lastPrice:null,notes:'CSP campaign → assigned 400 shares at $28 (Oct 2025). Covered calls → shares called away at $27 (Nov 2025).',createdAt:'2025-09-15',sortOrder:1},
-    {id:'w_sofi2',ticker:'SOFI',label:'CSP Chain — Mar 2026 / Ongoing',company:'SoFi Technologies Inc.',status:'open',lastPrice:17.76,notes:'CSP chain. Started 4x $17.50P, rolled down to $17.00P, scaled to 8 contracts. Currently 8x $17.00P exp 17/04/26.',createdAt:'2026-03-10',sortOrder:3},
-    {id:'w_sofi3',ticker:'SOFI',label:'Rotation 3 — Oct 2025 / Ongoing',company:'SoFi Technologies Inc.',status:'open',lastPrice:17.76,notes:'Concurrent CSP strategy → assigned 400 shares at $26 (Jan 2026). Running covered calls.',createdAt:'2025-10-13',sortOrder:2}
-  ],
-  trades:[
-    // ── ROTATION 1 (w_sofi1) — 16 trades ──
-    {id:'t01',wheelId:'w_sofi1',ticker:'SOFI',action:'CSP',entered:'2025-09-15',expiry:'2025-09-19',strike:28.00,premium:0.26,fees:0.00,shares:300,total:78.00,days:4,ppd:15.60,verified:false,comment:''},
-    {id:'t02',wheelId:'w_sofi1',ticker:'SOFI',action:'CSP',entered:'2025-09-22',expiry:'2025-09-26',strike:28.00,premium:0.26,fees:0.00,shares:400,total:104.00,days:4,ppd:20.80,verified:false,comment:''},
-    {id:'t03',wheelId:'w_sofi1',ticker:'SOFI',action:'BTC',entered:'2025-09-26',expiry:'2025-09-26',strike:28.00,premium:0.59,fees:0.00,shares:400,total:236.00,days:0,ppd:0,verified:false,comment:''},
-    {id:'t04',wheelId:'w_sofi1',ticker:'SOFI',action:'CSP',entered:'2025-09-26',expiry:'2025-10-03',strike:28.00,premium:0.84,fees:0.00,shares:400,total:336.00,days:7,ppd:42.00,verified:true,comment:''},
-    {id:'t05',wheelId:'w_sofi1',ticker:'SOFI',action:'IN',entered:'2025-10-03',expiry:null,strike:null,premium:28.00,fees:0.00,shares:200,total:5600.00,days:0,ppd:0,verified:false,comment:'Partial assignment'},
-    {id:'t06',wheelId:'w_sofi1',ticker:'SOFI',action:'IN',entered:'2025-10-03',expiry:null,strike:null,premium:28.00,fees:0.00,shares:200,total:5600.00,days:0,ppd:0,verified:false,comment:''},
-    {id:'t07',wheelId:'w_sofi1',ticker:'SOFI',action:'STOC',entered:'2025-10-06',expiry:'2025-10-10',strike:28.50,premium:0.33,fees:2.00,shares:400,total:130.00,days:4,ppd:26.00,verified:true,comment:''},
-    {id:'t08',wheelId:'w_sofi1',ticker:'SOFI',action:'STOC',entered:'2025-10-13',expiry:'2025-10-31',strike:33.00,premium:0.57,fees:2.16,shares:400,total:225.84,days:18,ppd:11.89,verified:true,comment:''},
-    {id:'t09',wheelId:'w_sofi1',ticker:'SOFI',action:'STOC',entered:'2025-11-03',expiry:'2025-11-28',strike:33.00,premium:1.00,fees:2.16,shares:400,total:397.84,days:25,ppd:15.30,verified:true,comment:''},
-    {id:'t10',wheelId:'w_sofi1',ticker:'SOFI',action:'BTC',entered:'2025-11-17',expiry:'2025-11-17',strike:33.00,premium:0.12,fees:2.16,shares:400,total:50.16,days:0,ppd:0,verified:false,comment:''},
-    {id:'t11',wheelId:'w_sofi1',ticker:'SOFI',action:'STOC',entered:'2025-11-17',expiry:'2025-11-28',strike:30.00,premium:0.36,fees:2.16,shares:400,total:141.84,days:11,ppd:11.82,verified:true,comment:''},
-    {id:'t12',wheelId:'w_sofi1',ticker:'SOFI',action:'BTC',entered:'2025-11-20',expiry:'2025-11-20',strike:30.00,premium:0.15,fees:1.62,shares:400,total:61.62,days:0,ppd:0,verified:false,comment:''},
-    {id:'t13',wheelId:'w_sofi1',ticker:'SOFI',action:'STOC',entered:'2025-11-20',expiry:'2025-11-28',strike:28.00,premium:0.44,fees:2.16,shares:400,total:173.84,days:8,ppd:19.32,verified:false,comment:''},
-    {id:'t14',wheelId:'w_sofi1',ticker:'SOFI',action:'BTC',entered:'2025-11-21',expiry:'2025-11-21',strike:28.00,premium:0.24,fees:2.16,shares:400,total:98.16,days:0,ppd:0,verified:false,comment:''},
-    {id:'t15',wheelId:'w_sofi1',ticker:'SOFI',action:'STOC',entered:'2025-11-21',expiry:'2025-11-28',strike:27.00,premium:0.29,fees:2.16,shares:400,total:113.84,days:7,ppd:14.23,verified:true,comment:''},
-    {id:'t16',wheelId:'w_sofi1',ticker:'SOFI',action:'OUT',entered:'2025-11-29',expiry:null,strike:27.00,premium:27.00,fees:0.00,shares:400,total:10800.00,days:0,ppd:0,verified:false,comment:'400 shares called away at $27'},
-    // ── ROTATION 2 (w_sofi2) — 1 trade ──
-    {id:'t17',wheelId:'w_sofi2',ticker:'SOFI',action:'CSP',entered:'2026-03-10',expiry:'2026-03-20',strike:17.50,premium:0.53,fees:2.16,shares:400,total:209.84,days:10,ppd:19.08,verified:true,comment:''},
-    {id:'t41',wheelId:'w_sofi2',ticker:'SOFI',action:'CSP',entered:'2026-03-17',expiry:'2026-04-02',strike:17.00,premium:0.54,fees:2.16,shares:400,total:213.84,days:16,ppd:13.37,verified:true,comment:'Fresh 4x entry'},
-    {id:'t42',wheelId:'w_sofi2',ticker:'SOFI',action:'BTC',entered:'2026-03-20',expiry:'2026-03-20',strike:17.50,premium:0.55,fees:2.16,shares:400,total:222.16,days:0,ppd:0,verified:true,rollId:'roll_1',comment:'Roll close: $17.50P'},
-    {id:'t43',wheelId:'w_sofi2',ticker:'SOFI',action:'CSP',entered:'2026-03-20',expiry:'2026-04-02',strike:17.00,premium:0.77,fees:2.16,shares:400,total:305.84,days:13,ppd:23.53,verified:true,rollId:'roll_1',comment:'Roll open: down to $17.00P'},
-    {id:'t44',wheelId:'w_sofi2',ticker:'SOFI',action:'BTC',entered:'2026-04-01',expiry:'2026-04-01',strike:17.00,premium:1.48,fees:4.32,shares:800,total:1188.32,days:0,ppd:0,verified:true,rollId:'roll_2',comment:'Roll close: all 8x $17.00P'},
-    {id:'t45',wheelId:'w_sofi2',ticker:'SOFI',action:'CSP',entered:'2026-04-01',expiry:'2026-04-17',strike:17.00,premium:1.71,fees:4.32,shares:800,total:1363.68,days:16,ppd:85.23,verified:true,rollId:'roll_2',comment:'Roll open: 8x $17.00P out to 17 Apr'},
-    // ── ROTATION 3 (w_sofi3) — 19 trades ──
-    {id:'t18',wheelId:'w_sofi3',ticker:'SOFI',action:'CSP',entered:'2025-10-13',expiry:'2025-10-31',strike:23.00,premium:0.76,fees:2.16,shares:400,total:301.84,days:18,ppd:15.89,verified:true,comment:''},
-    {id:'t19',wheelId:'w_sofi3',ticker:'SOFI',action:'CSP',entered:'2025-11-03',expiry:'2025-11-28',strike:25.00,premium:0.47,fees:2.16,shares:400,total:185.84,days:25,ppd:7.15,verified:true,comment:''},
-    {id:'t19b',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2025-11-26',expiry:'2025-11-26',strike:25.00,premium:0.01,fees:2.16,shares:400,total:6.16,days:0,ppd:0,verified:true,comment:'Bought back $25P before expiry'},
-    {id:'t20',wheelId:'w_sofi3',ticker:'SOFI',action:'CSP',entered:'2025-12-01',expiry:'2025-12-26',strike:27.00,premium:1.02,fees:2.08,shares:400,total:405.92,days:25,ppd:15.61,verified:true,comment:''},
-    {id:'t21',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2025-12-24',expiry:'2025-12-24',strike:27.00,premium:0.23,fees:2.08,shares:400,total:94.08,days:0,ppd:0,verified:false,comment:''},
-    {id:'t22',wheelId:'w_sofi3',ticker:'SOFI',action:'CSP',entered:'2025-12-29',expiry:'2026-01-09',strike:26.00,premium:0.45,fees:2.80,shares:400,total:177.20,days:11,ppd:14.77,verified:true,comment:''},
-    {id:'t23',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2026-01-05',expiry:'2026-01-05',strike:26.00,premium:0.12,fees:2.16,shares:400,total:50.16,days:0,ppd:0,verified:false,comment:''},
-    {id:'t24',wheelId:'w_sofi3',ticker:'SOFI',action:'CSP',entered:'2026-01-05',expiry:'2026-01-16',strike:27.00,premium:0.49,fees:2.16,shares:400,total:193.84,days:11,ppd:16.15,verified:true,comment:''},
-    {id:'t25',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2026-01-14',expiry:'2026-01-14',strike:27.00,premium:0.92,fees:2.16,shares:400,total:370.16,days:0,ppd:0,verified:false,comment:''},
-    {id:'t26',wheelId:'w_sofi3',ticker:'SOFI',action:'CSP',entered:'2026-01-14',expiry:'2026-01-30',strike:26.00,premium:1.42,fees:2.16,shares:400,total:565.84,days:16,ppd:33.28,verified:true,comment:'STOP: Sell To Open Put'},
-    {id:'t27',wheelId:'w_sofi3',ticker:'SOFI',action:'IN',entered:'2026-01-31',expiry:null,strike:null,premium:26.00,fees:0.00,shares:400,total:10400.00,days:0,ppd:0,verified:false,comment:'Assigned at $26'},
-    {id:'t28',wheelId:'w_sofi3',ticker:'SOFI',action:'STOC',entered:'2026-02-05',expiry:'2026-02-20',strike:24.00,premium:0.20,fees:2.16,shares:400,total:77.84,days:15,ppd:4.87,verified:true,comment:''},
-    {id:'t29',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2026-02-13',expiry:'2026-02-13',strike:24.00,premium:0.02,fees:2.16,shares:400,total:10.16,days:0,ppd:0,verified:false,comment:''},
-    {id:'t30',wheelId:'w_sofi3',ticker:'SOFI',action:'STOC',entered:'2026-02-13',expiry:'2026-03-27',strike:23.00,premium:0.52,fees:2.16,shares:400,total:205.84,days:42,ppd:4.90,verified:true,comment:''},
-    {id:'t31',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2026-02-23',expiry:'2026-02-23',strike:23.00,premium:0.19,fees:2.16,shares:400,total:78.16,days:0,ppd:0,verified:false,comment:''},
-    {id:'t32',wheelId:'w_sofi3',ticker:'SOFI',action:'STOC',entered:'2026-02-24',expiry:'2026-03-06',strike:20.00,premium:0.24,fees:2.16,shares:400,total:93.84,days:10,ppd:8.53,verified:true,comment:''},
-    {id:'t33',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2026-02-27',expiry:'2026-02-27',strike:20.00,premium:0.11,fees:2.16,shares:400,total:46.16,days:0,ppd:0,verified:false,comment:''},
-    {id:'t34',wheelId:'w_sofi3',ticker:'SOFI',action:'STOC',entered:'2026-02-27',expiry:'2026-03-13',strike:20.00,premium:0.22,fees:2.16,shares:400,total:85.84,days:14,ppd:6.13,verified:false,comment:''},
-    {id:'t35',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2026-03-10',expiry:'2026-03-10',strike:20.00,premium:0.08,fees:2.16,shares:400,total:34.16,days:0,ppd:0,verified:false,comment:''},
-    {id:'t36',wheelId:'w_sofi3',ticker:'SOFI',action:'STOC',entered:'2026-03-10',expiry:'2026-03-20',strike:20.00,premium:0.31,fees:2.16,shares:400,total:121.84,days:10,ppd:11.08,verified:true,comment:''},
-    {id:'t37',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2026-03-16',expiry:'2026-03-16',strike:20.00,premium:0.05,fees:2.16,shares:400,total:22.16,days:0,ppd:0,verified:true,comment:''},
-    {id:'t38',wheelId:'w_sofi3',ticker:'SOFI',action:'STOC',entered:'2026-03-16',expiry:'2026-03-20',strike:19.00,premium:0.15,fees:2.16,shares:400,total:57.84,days:4,ppd:14.46,verified:true,expiredWorthless:true,comment:'Expired worthless 20 Mar'},
-    {id:'t39',wheelId:'w_sofi3',ticker:'SOFI',action:'STOC',entered:'2026-03-24',expiry:'2026-04-02',strike:18.50,premium:0.17,fees:2.16,shares:400,total:65.84,days:9,ppd:7.32,verified:true,comment:''},
-    {id:'t40',wheelId:'w_sofi3',ticker:'SOFI',action:'BTC',entered:'2026-03-31',expiry:'2026-03-31',strike:18.50,premium:0.01,fees:2.16,shares:400,total:6.16,days:0,ppd:0,verified:true,comment:''}
-  ]
+  wheels:[],
+  trades:[]
 };
 
 function autoMarkExpiredTrades(){
