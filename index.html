@@ -790,6 +790,14 @@ async function loadDBFromFirestore(userId){
     }
     autoMarkExpiredTrades();
     render();
+    // Show onboarding only if this user genuinely has no rotations
+    if(!db.wheels||db.wheels.length===0){
+      const ob=document.getElementById('onboard-overlay');
+      if(ob)ob.style.display='flex';
+    } else {
+      const ob=document.getElementById('onboard-overlay');
+      if(ob)ob.style.display='none';
+    }
   }catch(e){console.error('Firestore load failed:',e);}
 }
 
@@ -3458,13 +3466,8 @@ function bootstrapApp(){
       // Signed in — hide auth overlay
       document.getElementById('auth-overlay').style.display='none';
       showSignOutButton(user);
-      // Load their data
+      // Load their data — onboarding check happens inside after load completes
       await loadDBFromFirestore(user.uid);
-      // Check if new user (no wheels yet)
-      if(!db.wheels||db.wheels.length===0){
-        const ob=document.getElementById('onboard-overlay');
-        ob.style.display='flex';
-      }
     } else {
       // Signed out — show auth overlay, clear app
       document.getElementById('auth-overlay').style.display='flex';
