@@ -393,12 +393,12 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
     <!-- Tab switcher -->
     <div style="display:flex;background:#212327;border-radius:8px;padding:4px;margin-bottom:24px;">
-      <button onclick="authTab('signin')" id="tab-signin" style="
+      <button id="tab-signin" style="
         flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;
         font-size:13px;font-weight:600;transition:all 0.2s;
         background:#2b2d32;color:#f0f1f3;
       ">Sign In</button>
-      <button onclick="authTab('signup')" id="tab-signup" style="
+      <button id="tab-signup" style="
         flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;
         font-size:13px;font-weight:600;transition:all 0.2s;
         background:transparent;color:#6b7280;
@@ -423,10 +423,10 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
         padding:12px 14px;color:#f0f1f3;font-size:14px;outline:none;
         transition:border-color 0.2s;
       " onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#33363d'"
-      onkeydown="if(event.key==='Enter')authSubmit()">
+      >
     </div>
 
-    <button onclick="authSubmit()" id="auth-submit-btn" style="
+    <button id="auth-submit-btn" style="
       width:100%;padding:12px;background:#0d9488;color:#fff;
       border:none;border-radius:6px;font-size:14px;font-weight:600;
       cursor:pointer;margin-bottom:16px;transition:opacity 0.2s;
@@ -440,7 +440,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     </div>
 
     <!-- Google -->
-    <button onclick="authGoogle()" style="
+    <button id="auth-google-btn" style="
       width:100%;padding:12px;background:#212327;color:#f0f1f3;
       border:1px solid #33363d;border-radius:6px;font-size:14px;font-weight:600;
       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
@@ -472,8 +472,8 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
       letter-spacing:0.1em;text-transform:uppercase;outline:none;margin-bottom:16px;
       transition:border-color 0.2s;box-sizing:border-box;
     " onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#33363d'"
-    onkeydown="if(event.key==='Enter')onboardSubmit()" oninput="this.value=this.value.toUpperCase()">
-    <button onclick="onboardSubmit()" style="
+    oninput="this.value=this.value.toUpperCase()">
+    <button id="onboard-submit-btn" style="
       width:100%;padding:14px;background:#0d9488;color:#fff;
       border:none;border-radius:6px;font-size:15px;font-weight:600;
       cursor:pointer;transition:opacity 0.2s;
@@ -3533,6 +3533,38 @@ onAuthStateChanged(_auth, async (user) => {
   }
 });
 </script>
+
+// ════════════════════════════════════════════════════════
+// DOM EVENT WIRING — module scope, no inline onclick needed
+// ════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Auth tabs
+  const tabSignin = document.getElementById('tab-signin');
+  const tabSignup = document.getElementById('tab-signup');
+  if (tabSignin) tabSignin.addEventListener('click', () => authTab('signin'));
+  if (tabSignup) tabSignup.addEventListener('click', () => authTab('signup'));
+
+  // Auth submit
+  const submitBtn = document.getElementById('auth-submit-btn');
+  if (submitBtn) submitBtn.addEventListener('click', authSubmit);
+
+  // Email password field — Enter key
+  const passField = document.getElementById('auth-password');
+  if (passField) passField.addEventListener('keydown', e => { if(e.key==='Enter') authSubmit(); });
+
+  // Google sign in
+  const googleBtn = document.getElementById('auth-google-btn');
+  if (googleBtn) googleBtn.addEventListener('click', authGoogle);
+
+  // Onboarding submit
+  const onboardBtn = document.getElementById('onboard-submit-btn');
+  if (onboardBtn) onboardBtn.addEventListener('click', onboardSubmit);
+
+  // Onboarding ticker — Enter key
+  const tickerField = document.getElementById('onboard-ticker');
+  if (tickerField) tickerField.addEventListener('keydown', e => { if(e.key==='Enter') onboardSubmit(); });
+});
+
 <script>
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/WheelHouse/sw.js').catch(()=>{});
