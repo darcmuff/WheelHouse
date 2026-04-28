@@ -3565,6 +3565,44 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tickerField) tickerField.addEventListener('keydown', e => { if(e.key==='Enter') onboardSubmit(); });
 });
 
+
+// ════════════════════════════════════════════════════════
+// EXPOSE FUNCTIONS TO GLOBAL SCOPE
+// Required because module-scoped functions are not accessible
+// from inline HTML onclick handlers
+// ════════════════════════════════════════════════════════
+window.authTab = authTab;
+window.authSubmit = authSubmit;
+window.authGoogle = authGoogle;
+window.onboardSubmit = onboardSubmit;
+window.switchView = switchView;
+window.openNewPos = openNewPos;
+window.closeModal = closeModal;
+window.saveWheel = saveWheel;
+window.deleteTrade = deleteTrade;
+window.deleteTradeFromModal = deleteTradeFromModal;
+window.markExpiredFromModal = markExpiredFromModal;
+window.saveTrade = saveTrade;
+window.savePrice = savePrice;
+window.switchPasteTab = switchPasteTab;
+window.parsePaste = parsePaste;
+window.savePMTrade = savePMTrade;
+window.showPasteStep1 = showPasteStep1;
+window.confirmParsed = confirmParsed;
+window.confirmRoll = confirmRoll;
+window.doImport = doImport;
+window.openPasteTrade = openPasteTrade;
+window.openEditWheel = openEditWheel;
+window.toggleStatus = toggleStatus;
+window.deleteWheel = deleteWheel;
+window.toggleExpand = toggleExpand;
+window.openEditTrade = openEditTrade;
+window.sortLog = sortLog;
+window.openAddTrade = openAddTrade;
+window.openImport = openImport;
+window.exportCSV = exportCSV;
+window.toggleAnalyticsSec = toggleAnalyticsSec;
+
 <script>
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/WheelHouse/sw.js').catch(()=>{});
