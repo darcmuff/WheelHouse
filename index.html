@@ -3532,45 +3532,27 @@ onAuthStateChanged(_auth, async (user) => {
     showAuthOverlay();
   }
 });
-</script>
 
 // ════════════════════════════════════════════════════════
-// DOM EVENT WIRING — module scope, no inline onclick needed
+// DOM EVENT WIRING + GLOBAL EXPOSE — INSIDE module scope
 // ════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-  // Auth tabs
   const tabSignin = document.getElementById('tab-signin');
   const tabSignup = document.getElementById('tab-signup');
   if (tabSignin) tabSignin.addEventListener('click', () => authTab('signin'));
   if (tabSignup) tabSignup.addEventListener('click', () => authTab('signup'));
-
-  // Auth submit
   const submitBtn = document.getElementById('auth-submit-btn');
   if (submitBtn) submitBtn.addEventListener('click', authSubmit);
-
-  // Email password field — Enter key
   const passField = document.getElementById('auth-password');
   if (passField) passField.addEventListener('keydown', e => { if(e.key==='Enter') authSubmit(); });
-
-  // Google sign in
   const googleBtn = document.getElementById('auth-google-btn');
   if (googleBtn) googleBtn.addEventListener('click', authGoogle);
-
-  // Onboarding submit
   const onboardBtn = document.getElementById('onboard-submit-btn');
   if (onboardBtn) onboardBtn.addEventListener('click', onboardSubmit);
-
-  // Onboarding ticker — Enter key
   const tickerField = document.getElementById('onboard-ticker');
   if (tickerField) tickerField.addEventListener('keydown', e => { if(e.key==='Enter') onboardSubmit(); });
 });
 
-
-// ════════════════════════════════════════════════════════
-// EXPOSE FUNCTIONS TO GLOBAL SCOPE
-// Required because module-scoped functions are not accessible
-// from inline HTML onclick handlers
-// ════════════════════════════════════════════════════════
 window.authTab = authTab;
 window.authSubmit = authSubmit;
 window.authGoogle = authGoogle;
@@ -3602,6 +3584,8 @@ window.openAddTrade = openAddTrade;
 window.openImport = openImport;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
+
+</script>
 
 <script>
 if('serviceWorker' in navigator){
