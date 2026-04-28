@@ -33,14 +33,42 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  window._fbAuth = getAuth(app);
-  window._fbDb  = getFirestore(app);
-  window._fbProviders = { google: new GoogleAuthProvider() };
-  window._fbFns = { onAuthStateChanged, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, getDoc, setDoc, deleteDoc, collection, getDocs };
+  const auth = getAuth(app);
+  const db_fs = getFirestore(app);
 
-  // Signal that Firebase is ready
-  window._fbReady = true;
-  document.dispatchEvent(new Event('firebase-ready'));
+  window._fbAuth = auth;
+  window._fbDb  = db_fs;
+  window._fbProviders = { google: new GoogleAuthProvider() };
+  window._fbFns = { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, getDoc, setDoc, deleteDoc, collection, getDocs };
+
+  // Master switch — nothing runs until Firebase confirms auth state
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      // Guaranteed valid user — set UID accessor
+      window._currentUid = () => user.uid;
+
+      // Hide auth overlay, show sign-out
+      document.getElementById('auth-overlay').style.display = 'none';
+      if (typeof showSignOutButton === 'function') showSignOutButton(user);
+
+      // Await cloud data — render and onboarding check happen inside
+      if (typeof loadDBFromFirestore === 'function') {
+        await loadDBFromFirestore(user.uid);
+      }
+    } else {
+      // Signed out
+      window._currentUid = () => null;
+      document.getElementById('auth-overlay').style.display = 'flex';
+      const ob = document.getElementById('onboard-overlay');
+      if (ob) ob.style.display = 'none';
+      const btn = document.getElementById('auth-signout-btn');
+      if (btn) btn.remove();
+      if (typeof db !== 'undefined' && typeof SEED_DATA !== 'undefined') {
+        db = JSON.parse(JSON.stringify(SEED_DATA));
+      }
+      if (typeof render === 'function') render();
+    }
+  });
 </script>
 <style>
 :root {
@@ -806,7 +834,7 @@ async function loadDBFromFirestore(userId){
 function _fsDoc(...args){return window._fbFns.doc(...args);}
 function _fsSetDoc(...args){return window._fbFns.setDoc(...args);}
 function _fsDeleteDoc(...args){return window._fbFns.deleteDoc(...args);}
-function _currentUid(){return window._fbAuth&&window._fbAuth.currentUser&&window._fbAuth.currentUser.uid;}
+function _currentUid(){return window._currentUid?window._currentUid():null;}
 
 function _saveWheel(wheel){
   const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
@@ -3437,20 +3465,21 @@ async function authGoogle(){
 async function onboardSubmit(){
   const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
   if(!ticker){document.getElementById('onboard-ticker').focus();return;}
-  const userId=_currentUid();
-  if(!userId){console.error('Onboard: no auth user');return;}
-  // Create first wheel for this ticker
+  // UID is guaranteed here — onboarding only shows after onAuthStateChanged confirms a valid user
+  const userId=window._currentUid?window._currentUid():null;
+  if(!userId){console.error('Onboard: no confirmed UID — should not happen');return;}
   const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
   const newWheel={id:wheelId,ticker:ticker,label:ticker+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()};
-  db.wheels.push(newWheel);
-  // Await the Firestore write before closing overlay
   try{
     const {doc,setDoc}=window._fbFns;
     await setDoc(doc(window._fbDb,'users',userId,'wheels',wheelId),newWheel);
-    console.log('Onboard wheel saved to Firestore');
-  }catch(e){console.error('Onboard save failed:',e);}
-  document.getElementById('onboard-overlay').style.display='none';
-  render();
+    db.wheels.push(newWheel);
+    document.getElementById('onboard-overlay').style.display='none';
+    render();
+  }catch(e){
+    console.error('Onboard save failed:',e);
+    alert('Could not save — please check your connection and try again.');
+  }
 }
 
 function showSignOutButton(user){
@@ -3461,43 +3490,14 @@ function showSignOutButton(user){
   const btn=document.createElement('button');
   btn.id='auth-signout-btn';
   btn.title='Sign out';
-  btn.onclick=()=>{window._fbFns.signOut(window._fbAuth);};
+  btn.onclick=async()=>{try{await window._fbFns.signOut(window._fbAuth);}catch(e){console.error('Sign out failed:',e);}};
   btn.style.cssText='background:none;border:none;cursor:pointer;color:#6b7280;font-size:11px;padding:4px 8px;border-radius:4px;margin-top:4px;display:block;width:100%;text-align:left;';
   btn.innerHTML='⎋ Sign out ('+( user.email||user.displayName||'user')+')';
   sb.appendChild(btn);
 }
 
-// Bootstrap: wait for Firebase then hook auth state
-function bootstrapApp(){
-  const {onAuthStateChanged}=window._fbFns;
-  onAuthStateChanged(window._fbAuth, async (user)=>{
-    if(user){
-      // Signed in — hide auth overlay
-      document.getElementById('auth-overlay').style.display='none';
-      showSignOutButton(user);
-      // Load their data — onboarding check happens inside after load completes
-      await loadDBFromFirestore(user.uid);
-    } else {
-      // Signed out — show auth overlay, clear app
-      document.getElementById('auth-overlay').style.display='flex';
-      document.getElementById('onboard-overlay').style.display='none';
-      const btn=document.getElementById('auth-signout-btn');
-      if(btn)btn.remove();
-      db=JSON.parse(JSON.stringify(SEED_DATA));
-      render();
-    }
-  });
-}
-
-if(window._fbReady){
-  bootstrapApp();
-} else {
-  document.addEventListener('firebase-ready',bootstrapApp);
-}
-
-// Initial render while auth loads
-loadDB();
-render();
+// Auth is managed entirely by the Firebase module above.
+// App only renders after onAuthStateChanged confirms a valid user.
 </script>
 <script>
 if('serviceWorker' in navigator){
