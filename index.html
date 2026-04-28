@@ -3506,8 +3506,24 @@ onAuthStateChanged(_auth, async (user) => {
     document.getElementById('auth-overlay').style.display = 'none';
     showSignOutButton(user);
 
-    // One-time migration: if old localStorage blob exists, push it to Firestore
-    await migrateLocalStorage(user.uid);
+    // FORCED MIGRATION — inline, no external function dependency
+    const localData = localStorage.getItem('wheel_tracker_v7');
+    if (localData) {
+      console.log('Forcing migration...');
+      try {
+        const oldDb = JSON.parse(localData);
+        for (const w of (oldDb.wheels || [])) {
+          if (w && w.id) await setDoc(doc(_fsDb, 'users', user.uid, 'wheels', w.id), w);
+        }
+        for (const t of (oldDb.trades || [])) {
+          if (t && t.id) await setDoc(doc(_fsDb, 'users', user.uid, 'trades', t.id), t);
+        }
+        localStorage.removeItem('wheel_tracker_v7');
+        console.log('Migration successful. localStorage cleared.');
+      } catch(err) {
+        console.error('Migration failed:', err);
+      }
+    }
 
     // Load from Firestore — render and onboarding check happen inside
     await loadDBFromFirestore(user.uid);
