@@ -781,6 +781,7 @@ async function loadDBFromFirestore(userId){
     const tradesSnap=await getDocs(collection(window._fbDb,'users',userId,'trades'));
     db.wheels=wheelsSnap.docs.map(d=>d.data());
     db.trades=tradesSnap.docs.map(d=>d.data());
+    console.log('Firestore loaded:',db.wheels.length,'wheels,',db.trades.length,'trades for uid:',userId);
     // Migration: swap sortOrder for w_sofi2 / w_sofi3
     const w2=db.wheels.find(w=>w.id==='w_sofi2');
     const w3=db.wheels.find(w=>w.id==='w_sofi3');
@@ -3436,10 +3437,18 @@ async function authGoogle(){
 async function onboardSubmit(){
   const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
   if(!ticker){document.getElementById('onboard-ticker').focus();return;}
+  const userId=_currentUid();
+  if(!userId){console.error('Onboard: no auth user');return;}
   // Create first wheel for this ticker
   const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
-  db.wheels.push({id:wheelId,ticker:ticker,label:ticker+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()});
-  _saveWheel(db.wheels[db.wheels.length-1]);
+  const newWheel={id:wheelId,ticker:ticker,label:ticker+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()};
+  db.wheels.push(newWheel);
+  // Await the Firestore write before closing overlay
+  try{
+    const {doc,setDoc}=window._fbFns;
+    await setDoc(doc(window._fbDb,'users',userId,'wheels',wheelId),newWheel);
+    console.log('Onboard wheel saved to Firestore');
+  }catch(e){console.error('Onboard save failed:',e);}
   document.getElementById('onboard-overlay').style.display='none';
   render();
 }
