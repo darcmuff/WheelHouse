@@ -21,7 +21,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-  import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
@@ -36,7 +36,7 @@
   window._fbAuth = getAuth(app);
   window._fbDb  = getFirestore(app);
   window._fbProviders = { google: new GoogleAuthProvider() };
-  window._fbFns = { onAuthStateChanged, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, getDoc, setDoc };
+  window._fbFns = { onAuthStateChanged, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, getDoc, setDoc, deleteDoc, collection, getDocs };
 
   // Signal that Firebase is ready
   window._fbReady = true;
@@ -767,38 +767,64 @@ function autoMarkExpiredTrades(){
     // Last open trade is still active — not expired
     if(openId){const last=db.trades.find(x=>x.id===openId);if(last&&last.expiredWorthless){last.expiredWorthless=false;changed=true;}}
   });
-  if(changed)saveDB();
+  if(changed){db.trades.forEach(t=>_saveTrade(t));}
 }
 function loadDB(){
-  // Firestore path: loadDBFromFirestore() handles this after auth
-  // Fallback for unauthenticated state — empty db
+  // Auth-gated — real load happens in loadDBFromFirestore after sign-in
   db = JSON.parse(JSON.stringify(SEED_DATA));
 }
-async function loadDBFromFirestore(uid){
+
+async function loadDBFromFirestore(userId){
   try{
-    const {doc,getDoc}=window._fbFns;
-    const ref=doc(window._fbDb,'users',uid,'data','wheelhouse');
-    const snap=await getDoc(ref);
-    if(snap.exists()){
-      db=snap.data().db||JSON.parse(JSON.stringify(SEED_DATA));
-    } else {
-      db=JSON.parse(JSON.stringify(SEED_DATA));
+    const {collection,getDocs}=window._fbFns;
+    const wheelsSnap=await getDocs(collection(window._fbDb,'users',userId,'wheels'));
+    const tradesSnap=await getDocs(collection(window._fbDb,'users',userId,'trades'));
+    db.wheels=wheelsSnap.docs.map(d=>d.data());
+    db.trades=tradesSnap.docs.map(d=>d.data());
+    // Migration: swap sortOrder for w_sofi2 / w_sofi3
+    const w2=db.wheels.find(w=>w.id==='w_sofi2');
+    const w3=db.wheels.find(w=>w.id==='w_sofi3');
+    if(w2&&w3&&w2.sortOrder===2&&w3.sortOrder===3){
+      w2.sortOrder=3;w3.sortOrder=2;
+      _saveWheel(w2);_saveWheel(w3);
     }
-    // Migration: swap sortOrder for w_sofi2 and w_sofi3
-    const w2=db.wheels.find(w=>w.id==='w_sofi2');const w3=db.wheels.find(w=>w.id==='w_sofi3');
-    if(w2&&w3&&w2.sortOrder===2&&w3.sortOrder===3){w2.sortOrder=3;w3.sortOrder=2;}
     autoMarkExpiredTrades();
     render();
   }catch(e){console.error('Firestore load failed:',e);}
 }
+
+// Firestore helpers
+function _fsDoc(...args){return window._fbFns.doc(...args);}
+function _fsSetDoc(...args){return window._fbFns.setDoc(...args);}
+function _fsDeleteDoc(...args){return window._fbFns.deleteDoc(...args);}
+function _currentUid(){return window._fbAuth&&window._fbAuth.currentUser&&window._fbAuth.currentUser.uid;}
+
+function _saveWheel(wheel){
+  const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
+  _fsSetDoc(_fsDoc(window._fbDb,'users',uid,'wheels',wheel.id),wheel)
+    .catch(e=>console.error('Wheel save failed:',e));
+}
+function _saveTrade(trade){
+  const uid=_currentUid();if(!uid||!trade||!trade.id)return;
+  _fsSetDoc(_fsDoc(window._fbDb,'users',uid,'trades',trade.id),trade)
+    .catch(e=>console.error('Trade save failed:',e));
+}
+function _deleteWheelDoc(wheelId){
+  const uid=_currentUid();if(!uid)return;
+  _fsDeleteDoc(_fsDoc(window._fbDb,'users',uid,'wheels',wheelId))
+    .catch(e=>console.error('Wheel delete failed:',e));
+}
+function _deleteTradeDoc(tradeId){
+  const uid=_currentUid();if(!uid)return;
+  _fsDeleteDoc(_fsDoc(window._fbDb,'users',uid,'trades',tradeId))
+    .catch(e=>console.error('Trade delete failed:',e));
+}
+
+// saveDB — broad save; fans out to per-document writes
 function saveDB(){
-  // Save to Firestore if user is signed in
-  const user=window._fbAuth&&window._fbAuth.currentUser;
-  if(user){
-    const {doc,setDoc}=window._fbFns;
-    const ref=doc(window._fbDb,'users',user.uid,'data','wheelhouse');
-    setDoc(ref,{db:db,updatedAt:new Date().toISOString()}).catch(e=>console.error('Firestore save failed:',e));
-  }
+  const uid=_currentUid();if(!uid)return;
+  db.wheels.forEach(w=>_saveWheel(w));
+  db.trades.forEach(t=>_saveTrade(t));
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
@@ -1193,7 +1219,7 @@ async function fetchAllQuotes(){
           w.lastPrice=quotes[w.ticker].price;
         }
       });
-      saveDB();render();
+      db.wheels.forEach(w=>_saveWheel(w));render();
     }
   }catch(e){
     console.warn('fetchAllQuotes:',e);
@@ -1902,13 +1928,13 @@ function markExpiredWorthless(wheelId,tradeId){
   const t=db.trades.find(x=>x.id===tradeId);
   if(!t)return;
   t.expiredWorthless=true;
-  saveDB();render();
+  _saveTrade(t);render();
 }
 function markExpiredFromModal(){
   const id=document.getElementById('tf-id').value;if(!id)return;
   const t=db.trades.find(x=>x.id===id);if(!t)return;
   t.expiredWorthless=true;
-  saveDB();closeModal('mTrade');render();
+  _saveTrade(t);closeModal('mTrade');render();
 }
 function openEditWheel(id){
   const w=db.wheels.find(x=>x.id===id);if(!w)return;
@@ -1929,15 +1955,19 @@ function saveWheel(){
     status:document.getElementById('wf-status').value,
     lastPrice:parseFloat(document.getElementById('wf-price').value)||null,
     notes:document.getElementById('wf-notes').value.trim()};
-  if(id){Object.assign(db.wheels.find(x=>x.id===id),data);}
-  else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);db.wheels.push({id:uid(),createdAt:new Date().toISOString().slice(0,10),sortOrder:mo+1,...data});}
-  saveDB();closeModal('mWheel');render();
+  let wheel;
+  if(id){wheel=db.wheels.find(x=>x.id===id);Object.assign(wheel,data);}
+  else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);wheel={id:uid(),createdAt:new Date().toISOString().slice(0,10),sortOrder:mo+1,...data};db.wheels.push(wheel);}
+  _saveWheel(wheel);closeModal('mWheel');render();
 }
-function toggleStatus(id){const w=db.wheels.find(x=>x.id===id);if(!w)return;w.status=w.status==='open'?'closed':'open';saveDB();render();}
+function toggleStatus(id){const w=db.wheels.find(x=>x.id===id);if(!w)return;w.status=w.status==='open'?'closed':'open';_saveWheel(w);render();}
 function deleteWheel(id){
   if(!confirm('Delete this rotation and ALL its trades? Cannot be undone.'))return;
-  db.wheels=db.wheels.filter(w=>w.id!==id);db.trades=db.trades.filter(t=>t.wheelId!==id);
-  expanded.delete(id);saveDB();render();
+  db.trades.filter(t=>t.wheelId===id).forEach(t=>_deleteTradeDoc(t.id));
+  _deleteWheelDoc(id);
+  db.wheels=db.wheels.filter(w=>w.id!==id);
+  db.trades=db.trades.filter(t=>t.wheelId!==id);
+  expanded.delete(id);render();
 }
 
 function populateWheelSelect(selectedId,ticker){
@@ -2021,7 +2051,7 @@ function saveTrade(){
   let wheelId=document.getElementById('tf-wheel').value;
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
-    if(ex){wheelId=ex.id;}else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);wheelId=nw.id;}
+    if(ex){wheelId=ex.id;}else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
   const action=document.getElementById('tf-action').value;
   const deltaRaw=parseFloat(document.getElementById('tf-delta').value);
@@ -2037,14 +2067,16 @@ function saveTrade(){
     db.trades.push({id:uid(),createdAt:new Date().toISOString(),...data});
     expanded.add(wheelId);
     const newTrade=db.trades[db.trades.length-1];
-    saveDB();closeModal('mTrade');render();
+    _saveTrade(newTrade);closeModal('mTrade');render();
     checkRollCandidate(newTrade,wheelId,entered,action);
     return;
   }
-  saveDB();closeModal('mTrade');render();
+  const updatedTrade=db.trades.find(t=>t.id===id);
+  if(updatedTrade)_saveTrade(updatedTrade);
+  closeModal('mTrade');render();
 }
-function deleteTrade(id){if(!confirm('Delete this trade?'))return;db.trades=db.trades.filter(t=>t.id!==id);saveDB();render();}
-function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;if(!id)return;if(!confirm('Delete this trade?'))return;db.trades=db.trades.filter(t=>t.id!==id);saveDB();closeModal('mTrade');render();}
+function deleteTrade(id){if(!confirm('Delete this trade?'))return;_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);render();}
+function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;if(!id)return;if(!confirm('Delete this trade?'))return;_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);closeModal('mTrade');render();}
 
 function openUpdatePrice(id){
   const w=db.wheels.find(x=>x.id===id);if(!w)return;
@@ -2057,7 +2089,7 @@ function savePrice(){
   const id=document.getElementById('pf-wheelId').value;
   const w=db.wheels.find(x=>x.id===id);if(!w)return;
   w.lastPrice=parseFloat(document.getElementById('pf-price').value)||null;
-  saveDB();closeModal('mPrice');render();
+  _saveWheel(w);closeModal('mPrice');render();
 }
 
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -2094,7 +2126,7 @@ function doImport(){
     db.trades.push({id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike:parseFloat(get(C.strike))||null,premium,fees,shares,total,days,ppd:days>0?total/days:0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)});
     imported++;
   }
-  saveDB();closeModal('mImport');document.getElementById('import-csv').value='';render();
+  db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mImport');document.getElementById('import-csv').value='';render();
   alert(`Import complete: ${imported} trades added, ${skipped} skipped.`);
 }
 function renderAnalytics(){
@@ -2764,7 +2796,7 @@ function savePMTrade(){
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
   db.trades.push(newTrade);expanded.add(wheelId);
   checkRollCandidate(newTrade,wheelId,entered,action);
-  saveDB();closeModal('mPaste');render();
+  _saveTrade(newTrade);closeModal('mPaste');render();
 }
 function openPasteTrade(wheelId){
   document.getElementById('paste-raw').value='';
@@ -2799,8 +2831,8 @@ function confirmRoll(){
   const{rid,newId,prevId}=pendingRollData;
   const nt=db.trades.find(t=>t.id===newId);
   const pt=db.trades.find(t=>t.id===prevId);
-  if(nt)nt.rollId=rid;if(pt)pt.rollId=rid;
-  saveDB();render();closeModal('mRoll');pendingRollData=null;
+  if(nt){nt.rollId=rid;_saveTrade(nt);}if(pt){pt.rollId=rid;_saveTrade(pt);}
+  render();closeModal('mRoll');pendingRollData=null;
 }
 
 // ── Tastytrade parser ──
@@ -3322,7 +3354,7 @@ function confirmParsed(){
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
         rollId:p.rollId,verified:false,comment:'via SmartScan (roll)'});
     });
-    expanded.add(wheelId);saveDB();closeModal('mPaste');parsedTradeData=null;
+    expanded.add(wheelId);db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mPaste');parsedTradeData=null;
     try{render();}catch(e){console.error('SmartScan roll render error:',e);}
     return;
   }
@@ -3339,7 +3371,7 @@ function confirmParsed(){
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
     verified:false,comment:'via SmartScan'});
   expanded.add(wheelId);
-  saveDB();closeModal('mPaste');parsedTradeData=null;
+  db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mPaste');parsedTradeData=null;
   try{render();}catch(e){console.error('SmartScan render error:',e);alert('Trade saved but display error: '+e.message+'\n\nRefresh the page to see your trade.');}
 }
 
@@ -3399,7 +3431,7 @@ async function onboardSubmit(){
   // Create first wheel for this ticker
   const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
   db.wheels.push({id:wheelId,ticker:ticker,label:ticker+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()});
-  saveDB();
+  _saveWheel(db.wheels[db.wheels.length-1]);
   document.getElementById('onboard-overlay').style.display='none';
   render();
 }
