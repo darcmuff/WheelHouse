@@ -17,59 +17,7 @@
 <meta name="twitter:image" content="https://darcmuff.github.io/WheelHouse/wheelhouse-share.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#18191c">
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-  import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
-    authDomain: "wheelhouse-61982.firebaseapp.com",
-    projectId: "wheelhouse-61982",
-    storageBucket: "wheelhouse-61982.firebasestorage.app",
-    messagingSenderId: "466853706084",
-    appId: "1:466853706084:web:7278a179265e8e540ba271"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db_fs = getFirestore(app);
-
-  window._fbAuth = auth;
-  window._fbDb  = db_fs;
-  window._fbProviders = { google: new GoogleAuthProvider() };
-  window._fbFns = { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, getDoc, setDoc, deleteDoc, collection, getDocs };
-
-  // Master switch — nothing runs until Firebase confirms auth state
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      // Guaranteed valid user — set UID accessor
-      window._currentUid = () => user.uid;
-
-      // Hide auth overlay, show sign-out
-      document.getElementById('auth-overlay').style.display = 'none';
-      if (typeof showSignOutButton === 'function') showSignOutButton(user);
-
-      // Await cloud data — render and onboarding check happen inside
-      if (typeof loadDBFromFirestore === 'function') {
-        await loadDBFromFirestore(user.uid);
-      }
-    } else {
-      // Signed out
-      window._currentUid = () => null;
-      document.getElementById('auth-overlay').style.display = 'flex';
-      const ob = document.getElementById('onboard-overlay');
-      if (ob) ob.style.display = 'none';
-      const btn = document.getElementById('auth-signout-btn');
-      if (btn) btn.remove();
-      if (typeof db !== 'undefined' && typeof SEED_DATA !== 'undefined') {
-        db = JSON.parse(JSON.stringify(SEED_DATA));
-      }
-      if (typeof render === 'function') render();
-    }
-  });
-</script>
+<!-- Firebase loaded inside main module script -->
 <style>
 :root {
   --bg:      #18191c;
@@ -750,7 +698,30 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   </div>
 </div>
 
-<script>
+<script type="module">
+// ════════════════════════════════════════════════════════
+// FIREBASE — single module context, no execution boundary
+// ════════════════════════════════════════════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, setDoc, deleteDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const _firebaseConfig = {
+  apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
+  authDomain: "wheelhouse-61982.firebaseapp.com",
+  projectId: "wheelhouse-61982",
+  storageBucket: "wheelhouse-61982.firebasestorage.app",
+  messagingSenderId: "466853706084",
+  appId: "1:466853706084:web:7278a179265e8e540ba271"
+};
+const _app  = initializeApp(_firebaseConfig);
+const _auth = getAuth(_app);
+const _fsDb = getFirestore(_app);
+const _googleProvider = new GoogleAuthProvider();
+
+// Scoped UID — only set after onAuthStateChanged confirms a valid user
+let _confirmedUid = null;
+
 // ════════════════════════════════════════════════════════
 // DATA
 // ════════════════════════════════════════════════════════
@@ -804,9 +775,8 @@ function loadDB(){
 
 async function loadDBFromFirestore(userId){
   try{
-    const {collection,getDocs}=window._fbFns;
-    const wheelsSnap=await getDocs(collection(window._fbDb,'users',userId,'wheels'));
-    const tradesSnap=await getDocs(collection(window._fbDb,'users',userId,'trades'));
+    const wheelsSnap=await getDocs(collection(_fsDb,'users',userId,'wheels'));
+    const tradesSnap=await getDocs(collection(_fsDb,'users',userId,'trades'));
     db.wheels=wheelsSnap.docs.map(d=>d.data());
     db.trades=tradesSnap.docs.map(d=>d.data());
     console.log('Firestore loaded:',db.wheels.length,'wheels,',db.trades.length,'trades for uid:',userId);
@@ -831,29 +801,29 @@ async function loadDBFromFirestore(userId){
 }
 
 // Firestore helpers
-function _fsDoc(...args){return window._fbFns.doc(...args);}
-function _fsSetDoc(...args){return window._fbFns.setDoc(...args);}
-function _fsDeleteDoc(...args){return window._fbFns.deleteDoc(...args);}
-function _currentUid(){return window._currentUid?window._currentUid():null;}
+function _fsDoc(...args){return doc(...args);}
+function _fsSetDoc(...args){return setDoc(...args);}
+function _fsDeleteDoc(...args){return deleteDoc(...args);}
+function _currentUid(){return _confirmedUid;}
 
 function _saveWheel(wheel){
   const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
-  _fsSetDoc(_fsDoc(window._fbDb,'users',uid,'wheels',wheel.id),wheel)
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),wheel)
     .catch(e=>console.error('Wheel save failed:',e));
 }
 function _saveTrade(trade){
   const uid=_currentUid();if(!uid||!trade||!trade.id)return;
-  _fsSetDoc(_fsDoc(window._fbDb,'users',uid,'trades',trade.id),trade)
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),trade)
     .catch(e=>console.error('Trade save failed:',e));
 }
 function _deleteWheelDoc(wheelId){
   const uid=_currentUid();if(!uid)return;
-  _fsDeleteDoc(_fsDoc(window._fbDb,'users',uid,'wheels',wheelId))
+  _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheelId))
     .catch(e=>console.error('Wheel delete failed:',e));
 }
 function _deleteTradeDoc(tradeId){
   const uid=_currentUid();if(!uid)return;
-  _fsDeleteDoc(_fsDoc(window._fbDb,'users',uid,'trades',tradeId))
+  _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'trades',tradeId))
     .catch(e=>console.error('Trade delete failed:',e));
 }
 
@@ -3440,11 +3410,10 @@ async function authSubmit(){
   if(!email||!pass){showAuthError('Please enter your email and password.');return;}
   btn.textContent='Please wait…';btn.disabled=true;
   try{
-    const {createUserWithEmailAndPassword,signInWithEmailAndPassword}=window._fbFns;
-    if(mode==='signup'){
-      await createUserWithEmailAndPassword(window._fbAuth,email,pass);
+        if(mode==='signup'){
+      await createUserWithEmailAndPassword(_auth,email,pass);
     } else {
-      await signInWithEmailAndPassword(window._fbAuth,email,pass);
+      await signInWithEmailAndPassword(_auth,email,pass);
     }
   } catch(e){
     btn.textContent=mode==='signup'?'Create Account':'Sign In';btn.disabled=false;
@@ -3455,8 +3424,7 @@ async function authSubmit(){
 
 async function authGoogle(){
   try{
-    const {signInWithPopup}=window._fbFns;
-    await signInWithPopup(window._fbAuth,window._fbProviders.google);
+    await signInWithPopup(_auth,_googleProvider);
   }catch(e){
     if(e.code!=='auth/popup-closed-by-user')showAuthError(e.message);
   }
@@ -3466,13 +3434,12 @@ async function onboardSubmit(){
   const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
   if(!ticker){document.getElementById('onboard-ticker').focus();return;}
   // UID is guaranteed here — onboarding only shows after onAuthStateChanged confirms a valid user
-  const userId=window._currentUid?window._currentUid():null;
+  const userId=_confirmedUid;
   if(!userId){console.error('Onboard: no confirmed UID — should not happen');return;}
   const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
   const newWheel={id:wheelId,ticker:ticker,label:ticker+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()};
   try{
-    const {doc,setDoc}=window._fbFns;
-    await setDoc(doc(window._fbDb,'users',userId,'wheels',wheelId),newWheel);
+    await setDoc(doc(_fsDb,'users',userId,'wheels',wheelId),newWheel);
     db.wheels.push(newWheel);
     document.getElementById('onboard-overlay').style.display='none';
     render();
@@ -3490,14 +3457,65 @@ function showSignOutButton(user){
   const btn=document.createElement('button');
   btn.id='auth-signout-btn';
   btn.title='Sign out';
-  btn.onclick=async()=>{try{await window._fbFns.signOut(window._fbAuth);}catch(e){console.error('Sign out failed:',e);}};
+  btn.onclick=async()=>{try{await signOut(_auth);}catch(e){console.error('Sign out failed:',e);}};
   btn.style.cssText='background:none;border:none;cursor:pointer;color:#6b7280;font-size:11px;padding:4px 8px;border-radius:4px;margin-top:4px;display:block;width:100%;text-align:left;';
   btn.innerHTML='⎋ Sign out ('+( user.email||user.displayName||'user')+')';
   sb.appendChild(btn);
 }
 
-// Auth is managed entirely by the Firebase module above.
-// App only renders after onAuthStateChanged confirms a valid user.
+// ════════════════════════════════════════════════════════
+// MASTER SWITCH — nothing runs until Firebase confirms auth
+// ════════════════════════════════════════════════════════
+async function migrateLocalStorage(userId) {
+  try {
+    const raw = localStorage.getItem('wheel_tracker_v7');
+    if (!raw) return;
+    const blob = JSON.parse(raw);
+    if (!blob || (!blob.wheels && !blob.trades)) return;
+    console.log('Migrating localStorage data to Firestore...');
+    const writes = [];
+    (blob.wheels || []).forEach(w => {
+      if (w && w.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'wheels', w.id), w));
+    });
+    (blob.trades || []).forEach(t => {
+      if (t && t.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'trades', t.id), t));
+    });
+    await Promise.all(writes);
+    localStorage.removeItem('wheel_tracker_v7');
+    console.log('Migration complete — localStorage cleared.');
+  } catch(e) {
+    console.error('Migration failed:', e);
+  }
+}
+
+function showAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'flex';
+  const ob = document.getElementById('onboard-overlay');
+  if (ob) ob.style.display = 'none';
+  const btn = document.getElementById('auth-signout-btn');
+  if (btn) btn.remove();
+  db = JSON.parse(JSON.stringify(SEED_DATA));
+  render();
+}
+
+onAuthStateChanged(_auth, async (user) => {
+  if (user) {
+    _confirmedUid = user.uid;
+
+    // Hide auth overlay
+    document.getElementById('auth-overlay').style.display = 'none';
+    showSignOutButton(user);
+
+    // One-time migration: if old localStorage blob exists, push it to Firestore
+    await migrateLocalStorage(user.uid);
+
+    // Load from Firestore — render and onboarding check happen inside
+    await loadDBFromFirestore(user.uid);
+  } else {
+    _confirmedUid = null;
+    showAuthOverlay();
+  }
+});
 </script>
 <script>
 if('serviceWorker' in navigator){
