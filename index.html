@@ -15,6 +15,33 @@
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://darcmuff.github.io/WheelHouse/wheelhouse-share.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#18191c">
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
+    authDomain: "wheelhouse-61982.firebaseapp.com",
+    projectId: "wheelhouse-61982",
+    storageBucket: "wheelhouse-61982.firebasestorage.app",
+    messagingSenderId: "466853706084",
+    appId: "1:466853706084:web:7278a179265e8e540ba271"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  window._fbAuth = getAuth(app);
+  window._fbDb  = getFirestore(app);
+  window._fbProviders = { google: new GoogleAuthProvider() };
+  window._fbFns = { onAuthStateChanged, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, getDoc, setDoc };
+
+  // Signal that Firebase is ready
+  window._fbReady = true;
+  document.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
 :root {
   --bg:      #18191c;
@@ -365,6 +392,120 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 </head>
 <body>
 
+<!-- ═══ AUTH OVERLAY ═══ -->
+<div id="auth-overlay" style="
+  position:fixed;inset:0;z-index:9999;
+  background:#18191c;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Inter',sans-serif;
+">
+  <div style="width:100%;max-width:400px;padding:32px 24px;">
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="56" height="56" style="margin-bottom:12px">
+        <circle cx="60" cy="60" r="58" fill="#212327"/>
+        <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="3" opacity="0.6"/>
+        <line x1="60" y1="60" x2="60" y2="18" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="60" y1="60" x2="96" y2="81" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="60" y1="60" x2="24" y2="81" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="60" cy="60" r="8" fill="#0d9488"/>
+        <circle cx="60" cy="60" r="4" fill="#18191c"/>
+      </svg>
+      <div style="color:#f0f1f3;font-size:22px;font-weight:700;letter-spacing:-0.02em;">WheelHouse</div>
+      <div style="color:#6b7280;font-size:13px;margin-top:4px;">Options Wheel Tracker</div>
+    </div>
+
+    <!-- Tab switcher -->
+    <div style="display:flex;background:#212327;border-radius:8px;padding:4px;margin-bottom:24px;">
+      <button onclick="authTab('signin')" id="tab-signin" style="
+        flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;
+        font-size:13px;font-weight:600;transition:all 0.2s;
+        background:#2b2d32;color:#f0f1f3;
+      ">Sign In</button>
+      <button onclick="authTab('signup')" id="tab-signup" style="
+        flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;
+        font-size:13px;font-weight:600;transition:all 0.2s;
+        background:transparent;color:#6b7280;
+      ">Create Account</button>
+    </div>
+
+    <!-- Error message -->
+    <div id="auth-error" style="
+      display:none;background:#3b1a1a;border:1px solid #7f1d1d;
+      color:#fca5a5;font-size:12px;padding:10px 14px;border-radius:6px;margin-bottom:16px;
+    "></div>
+
+    <!-- Email form -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+      <input id="auth-email" type="email" placeholder="Email address" style="
+        background:#212327;border:1px solid #33363d;border-radius:6px;
+        padding:12px 14px;color:#f0f1f3;font-size:14px;outline:none;
+        transition:border-color 0.2s;
+      " onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#33363d'">
+      <input id="auth-password" type="password" placeholder="Password" style="
+        background:#212327;border:1px solid #33363d;border-radius:6px;
+        padding:12px 14px;color:#f0f1f3;font-size:14px;outline:none;
+        transition:border-color 0.2s;
+      " onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#33363d'"
+      onkeydown="if(event.key==='Enter')authSubmit()">
+    </div>
+
+    <button onclick="authSubmit()" id="auth-submit-btn" style="
+      width:100%;padding:12px;background:#0d9488;color:#fff;
+      border:none;border-radius:6px;font-size:14px;font-weight:600;
+      cursor:pointer;margin-bottom:16px;transition:opacity 0.2s;
+    ">Sign In</button>
+
+    <!-- Divider -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="flex:1;height:1px;background:#33363d;"></div>
+      <span style="color:#6b7280;font-size:12px;">or</span>
+      <div style="flex:1;height:1px;background:#33363d;"></div>
+    </div>
+
+    <!-- Google -->
+    <button onclick="authGoogle()" style="
+      width:100%;padding:12px;background:#212327;color:#f0f1f3;
+      border:1px solid #33363d;border-radius:6px;font-size:14px;font-weight:600;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+      transition:border-color 0.2s;
+    " onmouseover="this.style.borderColor='#6b7280'" onmouseout="this.style.borderColor='#33363d'">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+
+    <div style="text-align:center;margin-top:20px;color:#4b5563;font-size:11px;">
+      Free forever. No credit card required.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ONBOARDING OVERLAY ═══ -->
+<div id="onboard-overlay" style="
+  display:none;position:fixed;inset:0;z-index:9998;
+  background:rgba(24,25,28,0.96);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+">
+  <div style="width:100%;max-width:440px;padding:32px 24px;text-align:center;">
+    <div style="color:#0d9488;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Welcome to WheelHouse</div>
+    <h2 style="color:#f0f1f3;font-size:24px;font-weight:700;margin-bottom:8px;letter-spacing:-0.02em;">What's your first ticker?</h2>
+    <p style="color:#6b7280;font-size:14px;margin-bottom:28px;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
+    <input id="onboard-ticker" type="text" placeholder="e.g. SOFI" maxlength="8" style="
+      width:100%;background:#212327;border:1px solid #33363d;border-radius:6px;
+      padding:14px;color:#f0f1f3;font-size:20px;font-weight:700;text-align:center;
+      letter-spacing:0.1em;text-transform:uppercase;outline:none;margin-bottom:16px;
+      transition:border-color 0.2s;box-sizing:border-box;
+    " onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#33363d'"
+    onkeydown="if(event.key==='Enter')onboardSubmit()" oninput="this.value=this.value.toUpperCase()">
+    <button onclick="onboardSubmit()" style="
+      width:100%;padding:14px;background:#0d9488;color:#fff;
+      border:none;border-radius:6px;font-size:15px;font-weight:600;
+      cursor:pointer;transition:opacity 0.2s;
+    ">Start Tracking →</button>
+    <div style="margin-top:16px;color:#4b5563;font-size:12px;">You can rename or delete this ticker later from Settings</div>
+  </div>
+</div>
+
 <!-- ═══ TICKER TAPE ═══ -->
 
 
@@ -629,13 +770,36 @@ function autoMarkExpiredTrades(){
   if(changed)saveDB();
 }
 function loadDB(){
-  try{const r=localStorage.getItem(DB_KEY);if(r){db=JSON.parse(r);}else{db=JSON.parse(JSON.stringify(SEED_DATA));saveDB();}}catch(e){}
-  // Migration: swap sortOrder for w_sofi2 and w_sofi3
-  const w2=db.wheels.find(w=>w.id==='w_sofi2');const w3=db.wheels.find(w=>w.id==='w_sofi3');
-  if(w2&&w3&&w2.sortOrder===2&&w3.sortOrder===3){w2.sortOrder=3;w3.sortOrder=2;saveDB();}
-  autoMarkExpiredTrades();
+  // Firestore path: loadDBFromFirestore() handles this after auth
+  // Fallback for unauthenticated state — empty db
+  db = JSON.parse(JSON.stringify(SEED_DATA));
 }
-function saveDB(){try{localStorage.setItem(DB_KEY,JSON.stringify(db));}catch(e){alert('Save failed: '+e.message);}}
+async function loadDBFromFirestore(uid){
+  try{
+    const {doc,getDoc}=window._fbFns;
+    const ref=doc(window._fbDb,'users',uid,'data','wheelhouse');
+    const snap=await getDoc(ref);
+    if(snap.exists()){
+      db=snap.data().db||JSON.parse(JSON.stringify(SEED_DATA));
+    } else {
+      db=JSON.parse(JSON.stringify(SEED_DATA));
+    }
+    // Migration: swap sortOrder for w_sofi2 and w_sofi3
+    const w2=db.wheels.find(w=>w.id==='w_sofi2');const w3=db.wheels.find(w=>w.id==='w_sofi3');
+    if(w2&&w3&&w2.sortOrder===2&&w3.sortOrder===3){w2.sortOrder=3;w3.sortOrder=2;}
+    autoMarkExpiredTrades();
+    render();
+  }catch(e){console.error('Firestore load failed:',e);}
+}
+function saveDB(){
+  // Save to Firestore if user is signed in
+  const user=window._fbAuth&&window._fbAuth.currentUser;
+  if(user){
+    const {doc,setDoc}=window._fbFns;
+    const ref=doc(window._fbDb,'users',user.uid,'data','wheelhouse');
+    setDoc(ref,{db:db,updatedAt:new Date().toISOString()}).catch(e=>console.error('Firestore save failed:',e));
+  }
+}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
 const CREDITS=new Set(['CSP','STOC','OUT','DIV']);
@@ -3179,8 +3343,122 @@ function confirmParsed(){
   try{render();}catch(e){console.error('SmartScan render error:',e);alert('Trade saved but display error: '+e.message+'\n\nRefresh the page to see your trade.');}
 }
 
+// ════════════════════════════════════════════════════════
+// AUTH & ONBOARDING
+// ════════════════════════════════════════════════════════
+function authTab(tab){
+  const isSign = tab==='signin';
+  document.getElementById('tab-signin').style.background = isSign?'#2b2d32':'transparent';
+  document.getElementById('tab-signin').style.color = isSign?'#f0f1f3':'#6b7280';
+  document.getElementById('tab-signup').style.background = isSign?'transparent':'#2b2d32';
+  document.getElementById('tab-signup').style.color = isSign?'#6b7280':'#f0f1f3';
+  document.getElementById('auth-submit-btn').textContent = isSign?'Sign In':'Create Account';
+  document.getElementById('auth-submit-btn').dataset.mode = tab;
+  document.getElementById('auth-error').style.display='none';
+}
+authTab('signin');
+
+function showAuthError(msg){
+  const el=document.getElementById('auth-error');
+  el.textContent=msg;el.style.display='block';
+}
+
+async function authSubmit(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-password').value;
+  const mode=document.getElementById('auth-submit-btn').dataset.mode||'signin';
+  const btn=document.getElementById('auth-submit-btn');
+  if(!email||!pass){showAuthError('Please enter your email and password.');return;}
+  btn.textContent='Please wait…';btn.disabled=true;
+  try{
+    const {createUserWithEmailAndPassword,signInWithEmailAndPassword}=window._fbFns;
+    if(mode==='signup'){
+      await createUserWithEmailAndPassword(window._fbAuth,email,pass);
+    } else {
+      await signInWithEmailAndPassword(window._fbAuth,email,pass);
+    }
+  } catch(e){
+    btn.textContent=mode==='signup'?'Create Account':'Sign In';btn.disabled=false;
+    const msgs={'auth/email-already-in-use':'An account with this email already exists.','auth/invalid-email':'Invalid email address.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-credential':'Incorrect email or password.'};
+    showAuthError(msgs[e.code]||e.message);
+  }
+}
+
+async function authGoogle(){
+  try{
+    const {signInWithPopup}=window._fbFns;
+    await signInWithPopup(window._fbAuth,window._fbProviders.google);
+  }catch(e){
+    if(e.code!=='auth/popup-closed-by-user')showAuthError(e.message);
+  }
+}
+
+async function onboardSubmit(){
+  const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
+  if(!ticker){document.getElementById('onboard-ticker').focus();return;}
+  // Create first wheel for this ticker
+  const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
+  db.wheels.push({id:wheelId,ticker:ticker,label:ticker+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()});
+  saveDB();
+  document.getElementById('onboard-overlay').style.display='none';
+  render();
+}
+
+function showSignOutButton(user){
+  // Add sign-out to sidebar if not already there
+  if(document.getElementById('auth-signout-btn'))return;
+  const sb=document.getElementById('sb-brand');
+  if(!sb)return;
+  const btn=document.createElement('button');
+  btn.id='auth-signout-btn';
+  btn.title='Sign out';
+  btn.onclick=()=>{window._fbFns.signOut(window._fbAuth);};
+  btn.style.cssText='background:none;border:none;cursor:pointer;color:#6b7280;font-size:11px;padding:4px 8px;border-radius:4px;margin-top:4px;display:block;width:100%;text-align:left;';
+  btn.innerHTML='⎋ Sign out ('+( user.email||user.displayName||'user')+')';
+  sb.appendChild(btn);
+}
+
+// Bootstrap: wait for Firebase then hook auth state
+function bootstrapApp(){
+  const {onAuthStateChanged}=window._fbFns;
+  onAuthStateChanged(window._fbAuth, async (user)=>{
+    if(user){
+      // Signed in — hide auth overlay
+      document.getElementById('auth-overlay').style.display='none';
+      showSignOutButton(user);
+      // Load their data
+      await loadDBFromFirestore(user.uid);
+      // Check if new user (no wheels yet)
+      if(!db.wheels||db.wheels.length===0){
+        const ob=document.getElementById('onboard-overlay');
+        ob.style.display='flex';
+      }
+    } else {
+      // Signed out — show auth overlay, clear app
+      document.getElementById('auth-overlay').style.display='flex';
+      document.getElementById('onboard-overlay').style.display='none';
+      const btn=document.getElementById('auth-signout-btn');
+      if(btn)btn.remove();
+      db=JSON.parse(JSON.stringify(SEED_DATA));
+      render();
+    }
+  });
+}
+
+if(window._fbReady){
+  bootstrapApp();
+} else {
+  document.addEventListener('firebase-ready',bootstrapApp);
+}
+
+// Initial render while auth loads
 loadDB();
 render();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/WheelHouse/sw.js').catch(()=>{});
+}
 </script>
 </body>
 </html>
