@@ -1160,20 +1160,14 @@ async function fetchSymbol(sym){
 async function fetchAllQuotes(){
   if(fetching)return;
   fetching=true;
-  console.log('fetchAllQuotes: starting, wheels:', db.wheels.length);
   try{
     const wheelSyms=db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
     const allSyms=[...new Set(wheelSyms)];
-    console.log('fetchAllQuotes: symbols to fetch:', allSyms);
     for(const sym of allSyms){
-      try{
-        await fetchSymbol(sym);
-        console.log('fetchAllQuotes: got', sym, quotes[sym]);
-      }catch(e){console.warn('Quote fetch:',sym,e.message);}
+      try{await fetchSymbol(sym);}catch(e){console.warn('Quote fetch:',sym,e.message);}
       if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
     }
     const nOk=Object.keys(quotes).length;
-    console.log('fetchAllQuotes: successful quotes:', nOk);
     if(nOk>0){
       db.wheels.forEach(w=>{
         if(w.status==='open'&&quotes[w.ticker]){
@@ -1377,7 +1371,7 @@ function renderRotationWindow(wheel){
   const headerPriceHtml=rawP!=null
     ?`<span class="rot-header-price" style="flex-direction:row;align-items:baseline;gap:6px">
         <span style="color:var(--silver);font-size:13px;font-weight:300">$${rawP.toFixed(2)}</span>
-        ${chg!=null?`<span style="color:${chgColor};font-size:11px;font-weight:600">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
+        ${chg!=null?`<span style="color:${chgColor};font-size:11px;font-weight:300">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
       </span>`
     :'';
   const shares=(m.sharesHeld>0?m.sharesHeld:0)+' shares';
