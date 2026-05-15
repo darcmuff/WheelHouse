@@ -3487,6 +3487,8 @@ onAuthStateChanged(_auth, async (user) => {
 
     // Load from Firestore — render and onboarding check happen inside
     await loadDBFromFirestore(user.uid);
+    // Fetch live prices now that wheels are loaded
+    fetchAllQuotes();
   } else {
     _confirmedUid = null;
     showAuthOverlay();
