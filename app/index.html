@@ -1138,91 +1138,39 @@ function showXpop(badge){
 function hideXpop(){document.getElementById('xpop').classList.remove('vis');}
 
 // ════════════════════════════════════════════════════════
-// LIVE MARKET DATA  (Yahoo Finance — multi-proxy fallback)
+// LIVE MARKET DATA  (Finnhub — direct, no proxies)
 // ════════════════════════════════════════════════════════
-// Indices + Magnificent 7 + SOFI
-const TAPE_SYMS=['^VIX','SPY','QQQ','DIA','IWM','AAPL','MSFT','NVDA','AMZN','GOOGL','META','TSLA','SOFI'];
-const IDX_NAMES={
-  'SPY':'S&P 500','QQQ':'Nasdaq 100','DIA':'Dow Jones','IWM':'Russell 2000',
-  '^VIX':'Volatility','AAPL':'Apple','MSFT':'Microsoft','NVDA':'Nvidia',
-  'AMZN':'Amazon','GOOGL':'Alphabet','META':'Meta','TSLA':'Tesla','SOFI':'SoFi Technologies'
-};
+const FINNHUB_KEY='d83pll9r01qkm5c94b10d83pll9r01qkm5c94b1g';
 let quotes={};
 let sparks={};
 let fetching=false;
 
-// Proxy pool — thingproxy first (different IPs, bypasses Yahoo blocks),
-// then allorigins raw, then allorigins /get (wraps body in {contents:"..."})
-const PROXIES=[
-  u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,
-  u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  u=>`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-  u=>`https://thingproxy.freeboard.io/fetch/${u}`,
-  u=>`https://proxy.cors.sh/${u}`,
-  u=>`https://cors-anywhere.herokuapp.com/${u}`
-];
-async function proxyFetch(url){
-  for(const mk of PROXIES){
-    try{
-      const r=await fetch(mk(url),{cache:'no-cache',signal:AbortSignal.timeout(9000)});
-      if(!r.ok)continue;
-      let j=await r.json();
-      // allorigins /get wraps the upstream body in {contents:"...json...",status:{http_code:...}}
-      if(j&&typeof j.contents==='string'){
-        if((j.status?.http_code||200)>=400)continue;
-        try{j=JSON.parse(j.contents);}catch(e){continue;}
-      }
-      return j;
-    }catch(e){/* try next proxy */}
-  }
-  throw new Error('All proxies failed');
-}
-
-// v8 chart endpoint: one call returns price metadata + OHLCV history = price + sparkline
 async function fetchSymbol(sym){
-  const urls=[
-    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=5d&interval=30m`,
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=5d&interval=30m`,
-    `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(sym)}`
-  ];
-  let j=null;
-  for(const url of urls){try{j=await proxyFetch(url);if(j)break;}catch(e){}}
-  if(!j)throw new Error('all endpoints failed for '+sym);
-  // v8 chart response
-  const res=j?.chart?.result?.[0];
-  if(res){
-    const meta=res.meta;
-    const price=meta.regularMarketPrice??meta.chartPreviousClose;
-    const prev=meta.chartPreviousClose??meta.previousClose??price;
-    const change=price-prev;const pct=prev?((change/prev)*100):0;
-    quotes[sym]={price,prev,change,pct,state:meta.marketState||'REGULAR'};
-    const closes=res.indicators?.quote?.[0]?.close||[];
-    sparks[sym]=closes.filter(p=>p!=null);
-    return;
-  }
-  // v7 quote response fallback
-  const qr=j?.quoteResponse?.result?.[0];
-  if(qr){
-    const price=qr.regularMarketPrice??qr.postMarketPrice??qr.preMarketPrice;
-    const prev=qr.regularMarketPreviousClose??price;
-    const change=price-prev;const pct=prev?((change/prev)*100):0;
-    quotes[sym]={price,prev,change,pct,state:qr.marketState||'REGULAR'};
-    sparks[sym]=[];return;
-  }
-  throw new Error('unrecognised response for '+sym);
+  // Finnhub doesn't support index symbols like ^VIX — skip them
+  if(sym.startsWith('^'))return;
+  const url=`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${FINNHUB_KEY}`;
+  const r=await fetch(url,{cache:'no-cache',signal:AbortSignal.timeout(8000)});
+  if(!r.ok)throw new Error(`Finnhub ${r.status} for ${sym}`);
+  const j=await r.json();
+  if(j.c==null||j.c===0)throw new Error(`No price data for ${sym}`);
+  // j.c=current, j.d=change, j.dp=change%, j.pc=previous close, j.o=open, j.h=high, j.l=low
+  quotes[sym]={price:j.c,prev:j.pc,change:j.d,pct:j.dp,state:'REGULAR'};
 }
 
 async function fetchAllQuotes(){
   if(fetching)return;
   fetching=true;
   try{
-    // Collect wheel tickers for live price updates
+    // Only fetch tickers we actually need — open wheel tickers
     const wheelSyms=db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
-    const allSyms=[...new Set([...TAPE_SYMS,...wheelSyms])];
-    const settled=await Promise.allSettled(allSyms.map(s=>fetchSymbol(s)));
-    const nOk=settled.filter(r=>r.status==='fulfilled').length;
+    const allSyms=[...new Set(wheelSyms)];
+    // Finnhub free tier: 60 calls/min — sequential with small delay to be safe
+    for(const sym of allSyms){
+      try{await fetchSymbol(sym);}catch(e){console.warn('Quote fetch:',sym,e.message);}
+      if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
+    }
+    const nOk=Object.keys(quotes).length;
     if(nOk>0){
-      // Update lastPrice for ALL open wheels where we have a live quote
       db.wheels.forEach(w=>{
         if(w.status==='open'&&quotes[w.ticker]){
           w.lastPrice=quotes[w.ticker].price;
@@ -1285,10 +1233,15 @@ function renderSidebar(){
   const s=calcOverall();
   const wl=calcWinLoss();
   const ytd=calcYTD();
-  const sofiQ=quotes['SOFI'];
   const openWheels=db.wheels.filter(w=>w.status==='open').length;
   const totalWheels=db.wheels.length;
-  const mktVal=sofiQ&&s.totalSharesHeld>0?sofiQ.price*s.totalSharesHeld:null;
+  // Market value: sum across all open wheels with shares held
+  let mktVal=null;
+  db.wheels.filter(w=>w.status==='open').forEach(w=>{
+    const wm=calcWheel(w);
+    const q=quotes[w.ticker];
+    if(q&&wm.sharesHeld>0){mktVal=(mktVal||0)+q.price*wm.sharesHeld;}
+  });
   document.getElementById('sb-stats').innerHTML=`
     <div class="sb-sec-ttl">Open Positions</div>
     <div class="si"><span class="si-lbl">${openWheels} open · ${totalWheels} total</span><span class="si-val o">${openWheels}/${totalWheels}</span></div>
@@ -1413,9 +1366,14 @@ function renderRotationWindow(wheel){
   // Header elements — live price between ticker and label
   const liveQ=quotes[wheel.ticker];
   const rawP=liveQ?liveQ.price:(wheel.lastPrice||null);
+  const chg=liveQ?liveQ.change:null;
+  const chgPct=liveQ?liveQ.pct:null;
+  const chgSign=chg!=null&&chg>=0?'+':'';
+  const chgColor=chg!=null?(chg>=0?'var(--green)':'var(--red)'):'var(--text3)';
   const headerPriceHtml=rawP!=null
-    ?`<span class="rot-header-price">
+    ?`<span class="rot-header-price" style="flex-direction:row;align-items:baseline;gap:6px">
         <span style="color:var(--silver);font-size:13px;font-weight:300">$${rawP.toFixed(2)}</span>
+        ${chg!=null?`<span style="color:${chgColor};font-size:11px;font-weight:600">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
       </span>`
     :'';
   const shares=(m.sharesHeld>0?m.sharesHeld:0)+' shares';
@@ -3596,3 +3554,4 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
+
