@@ -794,7 +794,6 @@ async function loadDBFromFirestore(userId){
       _saveWheel(w2);_saveWheel(w3);
     }
     // autoMarkExpiredTrades(); // disabled — manual expired clicks are source of truth
-    console.log('POST-AUTO-MARK:', JSON.stringify(db.trades.filter(t=>t.action==='CSP'||t.action==='STOC').map(t=>({id:t.id,action:t.action,expiry:t.expiry,expired:t.expiredWorthless}))));
     render();
     // Show onboarding only if this user genuinely has no rotations
     if(!db.wheels||db.wheels.length===0){
@@ -3554,8 +3553,11 @@ window.toggleAnalyticsSec = toggleAnalyticsSec;
 </script>
 
 <script>
+// Service worker disabled during development — unregister any existing one
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/WheelHouse/sw.js').catch(()=>{});
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister());
+  });
 }
 </script>
 </body>
