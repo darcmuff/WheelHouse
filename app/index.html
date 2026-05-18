@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>WHEELHOUSE — Options Wheel Tracker</title>
 <link rel="icon" type="image/x-icon" href="../favicon.ico">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
@@ -756,8 +759,8 @@ function autoMarkExpiredTrades(){
           const prev=db.trades.find(x=>x.id===openId);
           if(prev&&!prev.expiredWorthless){prev.expiredWorthless=true;changed=true;}
         }
-        // Current trade is a fresh open — clear any stale expired flag
-        if(t.expiredWorthless){t.expiredWorthless=false;changed=true;}
+        // Current trade is a fresh open — only clear stale expired flag if expiry is still in the future
+        if(t.expiredWorthless&&t.expiry&&new Date(t.expiry)>=new Date(new Date().toISOString().slice(0,10))){t.expiredWorthless=false;changed=true;}
         openId=t.id;
       } else if(t.action==='BTC'||t.action==='STC'){
         // Properly closed — ensure the open is NOT flagged as expired
