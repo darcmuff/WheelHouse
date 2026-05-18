@@ -732,6 +732,7 @@ let _confirmedUid = null;
 // ════════════════════════════════════════════════════════
 const DB_KEY = 'wheel_tracker_v7';
 let db = { wheels:[], trades:[] };
+window._db=db;
 
 const SEED_DATA = {
   wheels:[],
@@ -3487,6 +3488,7 @@ onAuthStateChanged(_auth, async (user) => {
 
     // Load from Firestore — render and onboarding check happen inside
     await loadDBFromFirestore(user.uid);
+    window._db=db;
     // Fetch live prices now that wheels are loaded, then poll every 60s
     fetchAllQuotes();
     setInterval(fetchAllQuotes,60000);
