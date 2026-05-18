@@ -1198,8 +1198,7 @@ function buildSpark(prices,isUp,w=52,h=20){
 }
 
 
-setTimeout(fetchAllQuotes,700);
-setInterval(fetchAllQuotes,60000);
+// Quote polling started after auth in onAuthStateChanged
 
 // ════════════════════════════════════════════════════════
 // VIEW STATE
@@ -3485,8 +3484,9 @@ onAuthStateChanged(_auth, async (user) => {
 
     // Load from Firestore — render and onboarding check happen inside
     await loadDBFromFirestore(user.uid);
-    // Fetch live prices now that wheels are loaded
+    // Fetch live prices now that wheels are loaded, then poll every 60s
     fetchAllQuotes();
+    setInterval(fetchAllQuotes,60000);
   } else {
     _confirmedUid = null;
     showAuthOverlay();
