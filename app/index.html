@@ -793,7 +793,7 @@ async function loadDBFromFirestore(userId){
       w2.sortOrder=3;w3.sortOrder=2;
       _saveWheel(w2);_saveWheel(w3);
     }
-    autoMarkExpiredTrades();
+    // autoMarkExpiredTrades(); // disabled — manual expired clicks are source of truth
     console.log('POST-AUTO-MARK:', JSON.stringify(db.trades.filter(t=>t.action==='CSP'||t.action==='STOC').map(t=>({id:t.id,action:t.action,expiry:t.expiry,expired:t.expiredWorthless}))));
     render();
     // Show onboarding only if this user genuinely has no rotations
