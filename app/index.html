@@ -765,8 +765,8 @@ function autoMarkExpiredTrades(){
         openId=null;
       }
     });
-    // Last open trade is still active — not expired
-    if(openId){const last=db.trades.find(x=>x.id===openId);if(last&&last.expiredWorthless){last.expiredWorthless=false;changed=true;}}
+    // Last open trade: only clear expired flag if expiry is still in the future (i.e. genuinely still active)
+    if(openId){const last=db.trades.find(x=>x.id===openId);if(last&&last.expiredWorthless&&last.expiry&&new Date(last.expiry)>=new Date(new Date().toISOString().slice(0,10))){last.expiredWorthless=false;changed=true;}}
   });
   if(changed){db.trades.forEach(t=>_saveTrade(t));}
 }
