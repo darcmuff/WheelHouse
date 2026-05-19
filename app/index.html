@@ -160,6 +160,13 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 }
 .hidden-bar:hover{color:var(--orange);border-color:var(--orange)}
 
+.rot-header-btn{
+  width:20px;height:20px;border:none;background:none;cursor:pointer;padding:0;flex-shrink:0;
+  opacity:.5;transition:opacity .15s;
+}
+.rot-header-btn:hover{opacity:1}
+.rot-header-btn svg{width:20px;height:20px}
+
 .rotation-window{
   background:var(--bg2);border:1px solid var(--border);
   border-radius:8px;margin-bottom:10px;overflow:hidden;
@@ -1411,7 +1418,7 @@ function renderPositions(){
       <option value="pnl"${posSortBy==='pnl'?' selected':''}>P&L high → low</option>
       <option value="dte"${posSortBy==='dte'?' selected':''}>Nearest expiry</option>
     </select>
-    <button class="btn-min-all" onclick="toggleMinAll()" title="Minimise / expand all">${minimised.size>0?'▣ Expand all':'▬ Minimise all'}</button>
+    <button class="btn-min-all" onclick="toggleMinAll()" title="Minimise / expand all" style="display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="5" y="7" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="2" rx="1" fill="var(--orange)"/></svg>${minimised.size>0?'Expand all':'Minimise all'}</button>
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
@@ -1677,8 +1684,8 @@ function renderRotationWindow(wheel){
       <span class="rot-shares">${shares}</span>
       ${dteBadge}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
-      <button style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 5px" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise">▬</button>
-      <button style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 5px" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide">✕</button>
+      <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="5" y="7" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="2" rx="1" fill="var(--orange)"/></svg></button>
+      <button class="rot-header-btn" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><line x1="8" y1="8" x2="16" y2="16" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"/></svg></button>
       <span class="rot-expand ${exp?'open':''}">▶</span>
     </div>
     ${metricsBar}
