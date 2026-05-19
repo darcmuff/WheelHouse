@@ -625,8 +625,8 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     <div class="sb-section" id="sb-stats" style="flex-shrink:0"></div>
 
     <div class="sb-btns" style="display:flex;gap:4px;align-items:center">
-      <input id="new-rot-ticker" type="text" placeholder="Ticker" style="flex:1;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation()">
-      <button class="btn btn-primary" style="padding:6px 10px;font-size:11px;white-space:nowrap" onclick="quickAddRotation()">+ Add</button>
+      <input id="new-rot-ticker" type="text" placeholder="Ticker" style="flex:1;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker')">
+      <button class="btn btn-primary" style="padding:6px 10px;font-size:11px;white-space:nowrap" onclick="quickAddRotation('new-rot-ticker')">+ Add</button>
     </div>
     <div class="sb-spacer"></div>
     <div style="border-top:1px solid var(--border)">
@@ -1410,15 +1410,11 @@ function renderPositions(){
   });
 
   // Toolbar
+  const sortLabels={sortOrder:'Manual',ticker:'A–Z',recent:'Recent',pnl:'P/L',dte:'Expiry'};
   const toolbar=`<div class="pos-toolbar">
-    <select onchange="setPosSort(this.value)" style="min-width:100px">
-      <option value="sortOrder"${posSortBy==='sortOrder'?' selected':''}>Manual order</option>
-      <option value="ticker"${posSortBy==='ticker'?' selected':''}>Ticker A–Z</option>
-      <option value="recent"${posSortBy==='recent'?' selected':''}>Recent activity</option>
-      <option value="pnl"${posSortBy==='pnl'?' selected':''}>P&L high → low</option>
-      <option value="dte"${posSortBy==='dte'?' selected':''}>Nearest expiry</option>
-    </select>
-    <button class="btn-min-all" onclick="toggleMinAll()" title="Minimise / expand all" style="display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="5" y="7" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="2" rx="1" fill="var(--orange)"/></svg>${minimised.size>0?'Expand all':'Minimise all'}</button>
+    <button class="rot-header-btn" onclick="cyclePosSort()" title="Sort: ${sortLabels[posSortBy]||'Manual'}"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><circle cx="7" cy="12" r="2" fill="var(--orange)"/><circle cx="12" cy="12" r="2" fill="var(--orange)"/><circle cx="17" cy="12" r="2" fill="var(--orange)"/></svg></button>
+    <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="5" y="7" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="2" rx="1" fill="var(--orange)"/></svg></button>
+    <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:80px;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
@@ -2078,6 +2074,12 @@ function toggleMinAll(){
 function toggleShowClosed(val){showClosed=val;render();}
 function toggleShowHidden(val){showHidden=val;render();}
 function setPosSort(val){posSortBy=val;render();}
+function cyclePosSort(){
+  const modes=['sortOrder','ticker','recent','pnl','dte'];
+  const i=modes.indexOf(posSortBy);
+  posSortBy=modes[(i+1)%modes.length];
+  render();
+}
 function toggleAnalyticsSec(id,hdr){
   const el=document.getElementById(id);if(!el)return;
   const chev=hdr.querySelector('.a-sec-chevron');
@@ -2099,8 +2101,8 @@ function goToRotation(id){
 }
 function sortLog(col){logSort.dir=logSort.col===col?(logSort.dir==='asc'?'desc':'asc'):'asc';logSort.col=col;render();}
 
-function quickAddRotation(){
-  const inp=document.getElementById('new-rot-ticker');
+function quickAddRotation(inputId){
+  const inp=document.getElementById(inputId||'new-rot-ticker');
   const ticker=inp.value.toUpperCase().trim();
   if(!ticker){inp.focus();return;}
   const existing=db.wheels.filter(w=>w.ticker===ticker).length;
@@ -3809,6 +3811,7 @@ window.toggleMinAll = toggleMinAll;
 window.toggleShowClosed = toggleShowClosed;
 window.toggleShowHidden = toggleShowHidden;
 window.setPosSort = setPosSort;
+window.cyclePosSort = cyclePosSort;
 window.openEditTrade = openEditTrade;
 window.sortLog = sortLog;
 window.openAddTrade = openAddTrade;
