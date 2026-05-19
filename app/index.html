@@ -1374,7 +1374,7 @@ function renderPositions(){
 
   // Toolbar
   const toolbar=`<div class="pos-toolbar">
-    <select onchange="posSortBy=this.value;render()" style="min-width:100px">
+    <select onchange="setPosSort(this.value)" style="min-width:100px">
       <option value="sortOrder"${posSortBy==='sortOrder'?' selected':''}>Manual order</option>
       <option value="ticker"${posSortBy==='ticker'?' selected':''}>Ticker A–Z</option>
       <option value="recent"${posSortBy==='recent'?' selected':''}>Recent activity</option>
@@ -1383,8 +1383,8 @@ function renderPositions(){
     </select>
     <button class="btn-min-all" onclick="toggleMinAll()" title="Minimise / expand all">${minimised.size>0?'▣ Expand all':'▬ Minimise all'}</button>
     <span class="toolbar-spacer"></span>
-    ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="showClosed=this.checked;render()"> Show closed (${closedWheels.length})</label>`:''}
-    ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="showHidden=this.checked;render()"> Show hidden (${hiddenWheels.length})</label>`:''}
+    ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
+    ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
   </div>`;
 
   // Render each rotation
@@ -1411,7 +1411,7 @@ function renderRotationMini(wheel){
   const isHidden=hidden.has(wheel.id);
 
   return`<div class="rot-mini ${isOpen?'rot-open':'rot-closed'}" style="${isHidden?'opacity:.5':''}">
-    <div class="rot-mini-inner" onclick="minimised.delete('${wheel.id}');render()">
+    <div class="rot-mini-inner" onclick="toggleMinimise('${wheel.id}')">
       <div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>
       <span class="mini-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
       ${rawP!=null?`<span class="mini-price">$${rawP.toFixed(2)}</span>`:''}
@@ -1421,7 +1421,7 @@ function renderRotationMini(wheel){
       ${openPos?`<span class="mini-dte" style="color:${_dteColor};border-color:${_dteColor}">${openPos.expiry?fmtDateShort(openPos.expiry):''} (${openPos.dte}d)</span>`:''}
       <span class="mini-spacer"></span>
       <span class="mini-badge ${isOpen?'open':'closed'}">${isOpen?'Live':'Closed'}</span>
-      <button class="mini-hide" onclick="event.stopPropagation();hidden.add('${wheel.id}');minimised.delete('${wheel.id}');render()" title="Hide rotation">✕</button>
+      <button class="mini-hide" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide rotation">✕</button>
     </div>
   </div>`;
 }
@@ -1631,8 +1631,8 @@ function renderRotationWindow(wheel){
       <span class="rot-shares">${shares}</span>
       ${dteBadge}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
-      <button style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 5px" onclick="event.stopPropagation();minimised.add('${wheel.id}');expanded.delete('${wheel.id}');render()" title="Minimise">▬</button>
-      <button style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 5px" onclick="event.stopPropagation();hidden.add('${wheel.id}');render()" title="Hide">✕</button>
+      <button style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 5px" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise">▬</button>
+      <button style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 5px" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide">✕</button>
       <span class="rot-expand ${exp?'open':''}">▶</span>
     </div>
     ${metricsBar}
@@ -2010,7 +2010,11 @@ function renderDashChart(){
 // INTERACTIONS
 // ════════════════════════════════════════════════════════
 function toggleExpand(id){expanded.has(id)?expanded.delete(id):expanded.add(id);render();}
-function toggleMinimise(id){minimised.has(id)?minimised.delete(id):minimised.add(id);render();}
+function toggleMinimise(id){
+  if(minimised.has(id)){minimised.delete(id);}
+  else{minimised.add(id);expanded.delete(id);}
+  render();
+}
 function toggleHide(id){hidden.has(id)?hidden.delete(id):hidden.add(id);render();}
 function toggleMinAll(){
   const allIds=db.wheels.map(w=>w.id);
@@ -2018,6 +2022,9 @@ function toggleMinAll(){
   else{allIds.forEach(id=>minimised.add(id));expanded.clear();}
   render();
 }
+function toggleShowClosed(val){showClosed=val;render();}
+function toggleShowHidden(val){showHidden=val;render();}
+function setPosSort(val){posSortBy=val;render();}
 function toggleAnalyticsSec(id,hdr){
   const el=document.getElementById(id);if(!el)return;
   const chev=hdr.querySelector('.a-sec-chevron');
@@ -3703,6 +3710,9 @@ window.toggleExpand = toggleExpand;
 window.toggleMinimise = toggleMinimise;
 window.toggleHide = toggleHide;
 window.toggleMinAll = toggleMinAll;
+window.toggleShowClosed = toggleShowClosed;
+window.toggleShowHidden = toggleShowHidden;
+window.setPosSort = setPosSort;
 window.openEditTrade = openEditTrade;
 window.sortLog = sortLog;
 window.openAddTrade = openAddTrade;
