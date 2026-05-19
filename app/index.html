@@ -92,6 +92,72 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
 
 /* ── ROTATION WINDOWS ── */
+/* ── POSITION TOOLBAR ── */
+.pos-toolbar{
+  display:flex;align-items:center;gap:10px;padding:0 0 10px 0;flex-wrap:wrap;
+}
+.pos-toolbar select{
+  background:var(--bg2);color:var(--text2);border:1px solid var(--border);
+  border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;
+}
+.pos-toolbar label{
+  font-size:11px;color:var(--text3);cursor:pointer;display:flex;align-items:center;gap:4px;user-select:none;
+}
+.pos-toolbar label input{accent-color:var(--orange)}
+.pos-toolbar .toolbar-spacer{flex:1}
+.pos-toolbar .btn-min-all{
+  font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;
+  background:var(--bg3);color:var(--text3);cursor:pointer;
+}
+.pos-toolbar .btn-min-all:hover{color:var(--orange);border-color:var(--orange)}
+
+/* ── MINIMISED ROW ── */
+.rot-mini{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;margin-bottom:4px;overflow:hidden;
+  transition:border-color .2s;cursor:pointer;user-select:none;
+}
+.rot-mini:hover{border-color:var(--border2);background:var(--bg3)}
+.rot-mini.rot-open{border-left:4px solid var(--orange)}
+.rot-mini.rot-closed{border-left:4px solid var(--red)}
+.rot-mini-inner{
+  display:flex;align-items:center;gap:8px;padding:7px 12px;
+}
+.rot-mini .rot-num{width:22px;height:22px;font-size:10px}
+.rot-mini .mini-ticker{
+  font-size:11px;font-weight:900;color:var(--orange);letter-spacing:.4px;
+  background:var(--orangeD);border:1px solid rgba(249,115,22,.35);
+  padding:2px 7px;border-radius:4px;flex-shrink:0;
+}
+.rot-mini .mini-ticker.cn{color:var(--text3);background:var(--bg3);border-color:var(--border)}
+.rot-mini .mini-price{font-size:12px;color:var(--silver);font-weight:300;flex-shrink:0}
+.rot-mini .mini-chg{font-size:10px;font-weight:300;flex-shrink:0}
+.rot-mini .mini-pnl{font-size:12px;font-weight:600;flex-shrink:0}
+.rot-mini .mini-leg{font-size:11px;font-weight:500;flex-shrink:0}
+.rot-mini .mini-dte{
+  font-size:9px;font-weight:300;padding:2px 7px;border-radius:10px;
+  flex-shrink:0;white-space:nowrap;border:1px solid;
+}
+.rot-mini .mini-spacer{flex:1}
+.rot-mini .mini-badge{
+  padding:2px 8px;border-radius:20px;font-size:8px;
+  font-weight:800;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;
+}
+.rot-mini .mini-badge.open{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}
+.rot-mini .mini-badge.closed{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.rot-mini .mini-hide{
+  font-size:10px;color:var(--text3);padding:2px 5px;border:none;background:none;cursor:pointer;opacity:0;transition:opacity .15s;
+}
+.rot-mini:hover .mini-hide{opacity:1}
+.rot-mini .mini-hide:hover{color:var(--red)}
+
+/* ── HIDDEN COUNT BAR ── */
+.hidden-bar{
+  text-align:center;padding:8px;font-size:11px;color:var(--text3);cursor:pointer;
+  border:1px dashed var(--border);border-radius:6px;margin-top:6px;
+}
+.hidden-bar:hover{color:var(--orange);border-color:var(--orange)}
+
 .rotation-window{
   background:var(--bg2);border:1px solid var(--border);
   border-radius:8px;margin-bottom:10px;overflow:hidden;
@@ -1209,6 +1275,11 @@ function buildSpark(prices,isUp,w=52,h=20){
 // ════════════════════════════════════════════════════════
 let view='positions';
 let expanded=new Set();
+let minimised=new Set();   // rotations collapsed to single row
+let hidden=new Set();      // rotations hidden from view entirely
+let showClosed=false;      // toggle to reveal closed rotations
+let showHidden=false;      // toggle to reveal hidden rotations
+let posSortBy='sortOrder'; // sortOrder | ticker | recent | pnl | dte
 let logSort={col:'entered',dir:'desc'};
 let logQ='';
 
@@ -1274,9 +1345,85 @@ function renderSidebar(){
 }
 
 function renderPositions(){
-  const wheels=[...db.wheels].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  let wheels=[...db.wheels];
   if(!wheels.length)return`<div class="empty"><h3>No rotations</h3><p>Click "+ New Rotation" in the sidebar.</p></div>`;
-  return wheels.map(w=>renderRotationWindow(w)).join('');
+
+  // Sort
+  if(posSortBy==='ticker') wheels.sort((a,b)=>(a.ticker||'').localeCompare(b.ticker||''));
+  else if(posSortBy==='recent'){
+    const lastTrade=w=>{const ts=db.trades.filter(t=>t.wheelId===w.id).map(t=>t.entered).sort();return ts.length?ts[ts.length-1]:'0';};
+    wheels.sort((a,b)=>lastTrade(b).localeCompare(lastTrade(a)));
+  }
+  else if(posSortBy==='pnl'){
+    wheels.sort((a,b)=>calcWheel(b).netPnL-calcWheel(a).netPnL);
+  }
+  else if(posSortBy==='dte'){
+    const nearestDTE=w=>{const op=buildOpenPosition(db.trades.filter(t=>t.wheelId===w.id));return op?op.dte:9999;};
+    wheels.sort((a,b)=>nearestDTE(a)-nearestDTE(b));
+  }
+  else wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+
+  // Filter
+  const closedWheels=wheels.filter(w=>w.status!=='open');
+  const hiddenWheels=wheels.filter(w=>hidden.has(w.id));
+  const visibleWheels=wheels.filter(w=>{
+    if(hidden.has(w.id)&&!showHidden)return false;
+    if(w.status!=='open'&&!showClosed)return false;
+    return true;
+  });
+
+  // Toolbar
+  const toolbar=`<div class="pos-toolbar">
+    <select onchange="posSortBy=this.value;render()" style="min-width:100px">
+      <option value="sortOrder"${posSortBy==='sortOrder'?' selected':''}>Manual order</option>
+      <option value="ticker"${posSortBy==='ticker'?' selected':''}>Ticker A–Z</option>
+      <option value="recent"${posSortBy==='recent'?' selected':''}>Recent activity</option>
+      <option value="pnl"${posSortBy==='pnl'?' selected':''}>P&L high → low</option>
+      <option value="dte"${posSortBy==='dte'?' selected':''}>Nearest expiry</option>
+    </select>
+    <button class="btn-min-all" onclick="toggleMinAll()" title="Minimise / expand all">${minimised.size>0?'▣ Expand all':'▬ Minimise all'}</button>
+    <span class="toolbar-spacer"></span>
+    ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="showClosed=this.checked;render()"> Show closed (${closedWheels.length})</label>`:''}
+    ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="showHidden=this.checked;render()"> Show hidden (${hiddenWheels.length})</label>`:''}
+  </div>`;
+
+  // Render each rotation
+  const cards=visibleWheels.map(w=>{
+    if(minimised.has(w.id))return renderRotationMini(w);
+    return renderRotationWindow(w);
+  }).join('');
+
+  return toolbar+cards;
+}
+
+function renderRotationMini(wheel){
+  const m=calcWheel(wheel);
+  const isOpen=wheel.status==='open';
+  const liveQ=quotes[wheel.ticker];
+  const rawP=liveQ?liveQ.price:(wheel.lastPrice||null);
+  const chg=liveQ?liveQ.change:null;
+  const chgPct=liveQ?liveQ.pct:null;
+  const chgSign=chg!=null&&chg>=0?'+':'';
+  const chgColor=chg!=null?(chg>=0?'var(--green)':'var(--red)'):'var(--text3)';
+  const openPos=buildOpenPosition(m.trades);
+  const _dteCl=openPos?dteCls(openPos.dte):'g';
+  const _dteColor=_dteCl==='r'?'var(--red)':_dteCl==='o'?'var(--orange)':'var(--green)';
+  const isHidden=hidden.has(wheel.id);
+
+  return`<div class="rot-mini ${isOpen?'rot-open':'rot-closed'}" style="${isHidden?'opacity:.5':''}">
+    <div class="rot-mini-inner" onclick="minimised.delete('${wheel.id}');render()">
+      <div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>
+      <span class="mini-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
+      ${rawP!=null?`<span class="mini-price">$${rawP.toFixed(2)}</span>`:''}
+      ${chg!=null?`<span class="mini-chg" style="color:${chgColor}">${chgSign}${chgPct.toFixed(2)}%</span>`:''}
+      <span class="mini-pnl ${colorN(m.netPnL)}">${fmtMoney(m.netPnL)}</span>
+      ${openPos?`<span class="mini-leg" style="color:${openPos.action==='CSP'?'var(--green)':'var(--blue)'}">${openPos.action} $${fmt2(openPos.strike)}</span>`:'<span class="mini-leg" style="color:var(--text3)">No leg</span>'}
+      ${openPos?`<span class="mini-dte" style="color:${_dteColor};border-color:${_dteColor}">${openPos.expiry?fmtDateShort(openPos.expiry):''} (${openPos.dte}d)</span>`:''}
+      <span class="mini-spacer"></span>
+      <span class="mini-badge ${isOpen?'open':'closed'}">${isOpen?'Live':'Closed'}</span>
+      <button class="mini-hide" onclick="event.stopPropagation();hidden.add('${wheel.id}');minimised.delete('${wheel.id}');render()" title="Hide rotation">✕</button>
+    </div>
+  </div>`;
 }
 
 function fmtDateShort(d){
@@ -1475,7 +1622,7 @@ function renderRotationWindow(wheel){
   }
 
   return`
-  <div class="rotation-window ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}">
+  <div class="rotation-window ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" style="${hidden.has(wheel.id)?'opacity:.5':''}">
     <div class="rot-header" onclick="toggleExpand('${wheel.id}')">
       <div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>
       <span class="rot-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
@@ -1484,6 +1631,8 @@ function renderRotationWindow(wheel){
       <span class="rot-shares">${shares}</span>
       ${dteBadge}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
+      <button style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 5px" onclick="event.stopPropagation();minimised.add('${wheel.id}');expanded.delete('${wheel.id}');render()" title="Minimise">▬</button>
+      <button style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 5px" onclick="event.stopPropagation();hidden.add('${wheel.id}');render()" title="Hide">✕</button>
       <span class="rot-expand ${exp?'open':''}">▶</span>
     </div>
     ${metricsBar}
@@ -1861,6 +2010,14 @@ function renderDashChart(){
 // INTERACTIONS
 // ════════════════════════════════════════════════════════
 function toggleExpand(id){expanded.has(id)?expanded.delete(id):expanded.add(id);render();}
+function toggleMinimise(id){minimised.has(id)?minimised.delete(id):minimised.add(id);render();}
+function toggleHide(id){hidden.has(id)?hidden.delete(id):hidden.add(id);render();}
+function toggleMinAll(){
+  const allIds=db.wheels.map(w=>w.id);
+  if(minimised.size>0){minimised.clear();}
+  else{allIds.forEach(id=>minimised.add(id));expanded.clear();}
+  render();
+}
 function toggleAnalyticsSec(id,hdr){
   const el=document.getElementById(id);if(!el)return;
   const chev=hdr.querySelector('.a-sec-chevron');
@@ -3543,6 +3700,9 @@ window.openEditWheel = openEditWheel;
 window.toggleStatus = toggleStatus;
 window.deleteWheel = deleteWheel;
 window.toggleExpand = toggleExpand;
+window.toggleMinimise = toggleMinimise;
+window.toggleHide = toggleHide;
+window.toggleMinAll = toggleMinAll;
 window.openEditTrade = openEditTrade;
 window.sortLog = sortLog;
 window.openAddTrade = openAddTrade;
