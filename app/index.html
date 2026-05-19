@@ -615,8 +615,9 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
     <div class="sb-section" id="sb-stats" style="flex-shrink:0"></div>
 
-    <div class="sb-btns">
-      <button class="btn btn-primary btn-full" onclick="openNewPos()">+ New Rotation</button>
+    <div class="sb-btns" style="display:flex;gap:4px;align-items:center">
+      <input id="new-rot-ticker" type="text" placeholder="Ticker" style="flex:1;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation()">
+      <button class="btn btn-primary" style="padding:6px 10px;font-size:11px;white-space:nowrap" onclick="quickAddRotation()">+ Add</button>
     </div>
     <div class="sb-spacer"></div>
     <div style="border-top:1px solid var(--border)">
@@ -639,10 +640,10 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     <div class="mtitle"><span id="mWheelTitle">New Rotation</span><span class="mx" onclick="closeModal('mWheel')">✕</span></div>
     <div class="fg">
       <div class="fld"><label>Ticker</label><input id="wf-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase"></div>
-      <div class="fld"><label>Label</label><input id="wf-label" type="text" placeholder="Rotation 1 — Sep 2025"></div>
-      <div class="fld"><label>Status</label><select id="wf-status"><option value="open">Open</option><option value="closed">Closed</option></select></div>
-      <div class="fld"><label>Current Price ($)</label><input id="wf-price" type="number" step="0.01"></div>
-      <div class="fld s2"><label>Notes</label><textarea id="wf-notes" rows="2"></textarea></div>
+      <div class="fld wf-edit-only"><label>Label</label><input id="wf-label" type="text" placeholder="Rotation 1 — Sep 2025"></div>
+      <div class="fld wf-edit-only"><label>Status</label><select id="wf-status"><option value="open">Open</option><option value="closed">Closed</option></select></div>
+      <div class="fld wf-edit-only"><label>Current Price ($)</label><input id="wf-price" type="number" step="0.01"></div>
+      <div class="fld s2 wf-edit-only"><label>Notes</label><textarea id="wf-notes" rows="2"></textarea></div>
     </div>
     <input type="hidden" id="wf-id">
     <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mWheel')">Cancel</button><button class="btn btn-primary" onclick="saveWheel()">Save</button></div>
@@ -2079,15 +2080,38 @@ function goToRotation(id){
 }
 function sortLog(col){logSort.dir=logSort.col===col?(logSort.dir==='asc'?'desc':'asc'):'asc';logSort.col=col;render();}
 
+function quickAddRotation(){
+  const inp=document.getElementById('new-rot-ticker');
+  const ticker=inp.value.toUpperCase().trim();
+  if(!ticker){inp.focus();return;}
+  const existing=db.wheels.filter(w=>w.ticker===ticker).length;
+  const now=new Date();
+  const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
+  const label=`Rotation ${existing+1} — ${mon} ${now.getFullYear()}`;
+  const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
+  const wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:now.toISOString().slice(0,10),sortOrder:mo+1};
+  db.wheels.push(wheel);
+  _saveWheel(wheel);
+  inp.value='';
+  render();
+  // Fetch price and logo in background
+  fetchSymbol(ticker).then(()=>{
+    if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;_saveWheel(wheel);render();}
+  }).catch(()=>{});
+  fetchLogo(ticker).then(()=>render()).catch(()=>{});
+}
 function openNewPos(){
   document.getElementById('wf-id').value='';
-  document.getElementById('wf-ticker').value='SOFI';
+  document.getElementById('wf-ticker').value='';
   document.getElementById('wf-label').value='';
   document.getElementById('wf-status').value='open';
   document.getElementById('wf-price').value='';
   document.getElementById('wf-notes').value='';
   document.getElementById('mWheelTitle').textContent='New Rotation';
+  // Hide non-essential fields for new rotation
+  document.querySelectorAll('.wf-edit-only').forEach(el=>el.style.display='none');
   openModal('mWheel');
+  setTimeout(()=>document.getElementById('wf-ticker').focus(),100);
 }
 function markExpiredWorthless(wheelId,tradeId){
   const t=db.trades.find(x=>x.id===tradeId);
@@ -2110,6 +2134,8 @@ function openEditWheel(id){
   document.getElementById('wf-price').value=w.lastPrice||'';
   document.getElementById('wf-notes').value=w.notes||'';
   document.getElementById('mWheelTitle').textContent='Edit: '+(w.label||w.ticker);
+  // Show all fields for editing
+  document.querySelectorAll('.wf-edit-only').forEach(el=>el.style.display='');
   openModal('mWheel');
 }
 function saveWheel(){
@@ -2122,7 +2148,24 @@ function saveWheel(){
     notes:document.getElementById('wf-notes').value.trim()};
   let wheel;
   if(id){wheel=db.wheels.find(x=>x.id===id);Object.assign(wheel,data);}
-  else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);wheel={id:uid(),createdAt:new Date().toISOString().slice(0,10),sortOrder:mo+1,...data};db.wheels.push(wheel);}
+  else{
+    // Auto-generate label: "Rotation N" based on existing rotations for this ticker
+    const existing=db.wheels.filter(w=>w.ticker===ticker).length;
+    if(!data.label){
+      const now=new Date();
+      const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
+      data.label=`Rotation ${existing+1} — ${mon} ${now.getFullYear()}`;
+    }
+    data.status='open';
+    const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
+    wheel={id:uid(),createdAt:new Date().toISOString().slice(0,10),sortOrder:mo+1,...data};
+    db.wheels.push(wheel);
+    // Auto-fetch price and logo in background
+    fetchSymbol(ticker).then(()=>{
+      if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;_saveWheel(wheel);render();}
+    }).catch(()=>{});
+    fetchLogo(ticker).then(()=>render()).catch(()=>{});
+  }
   _saveWheel(wheel);closeModal('mWheel');render();
 }
 function toggleStatus(id){const w=db.wheels.find(x=>x.id===id);if(!w)return;w.status=w.status==='open'?'closed':'open';_saveWheel(w);render();}
@@ -3721,6 +3764,7 @@ window.authGoogle = authGoogle;
 window.onboardSubmit = onboardSubmit;
 window.switchView = switchView;
 window.openNewPos = openNewPos;
+window.quickAddRotation = quickAddRotation;
 window.closeModal = closeModal;
 window.saveWheel = saveWheel;
 window.deleteTrade = deleteTrade;
