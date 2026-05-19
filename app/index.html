@@ -179,6 +179,11 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   font-size:11px;font-weight:900;color:var(--orange);
 }
 .rot-num.cn{background:var(--bg3);border-color:var(--border2);color:var(--text3)}
+.rot-logo{
+  width:24px;height:24px;border-radius:50%;flex-shrink:0;
+  object-fit:contain;background:var(--bg3);border:2px solid var(--border2);
+}
+.rot-logo.cn{opacity:.5}
 .rot-ticker{
   font-size:11px;font-weight:900;color:var(--orange);letter-spacing:.4px;
   background:var(--orangeD);border:1px solid rgba(249,115,22,.35);
@@ -1214,6 +1219,7 @@ function hideXpop(){document.getElementById('xpop').classList.remove('vis');}
 let quotes={};
 let sparks={};
 let fetching=false;
+let logos={};  // ticker → logo URL (cached per session)
 
 async function fetchSymbol(sym){
   // Finnhub doesn't support index symbols like ^VIX — skip them
@@ -1227,16 +1233,35 @@ async function fetchSymbol(sym){
   quotes[sym]={price:j.c,prev:j.pc,change:j.d,pct:j.dp,state:'REGULAR'};
 }
 
+async function fetchLogo(sym){
+  if(sym.startsWith('^')||logos[sym]!==undefined)return;
+  try{
+    const url=`/.netlify/functions/profile?symbol=${encodeURIComponent(sym)}`;
+    const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+    if(r.ok){
+      const j=await r.json();
+      logos[sym]=j.logo||null;
+    }else{logos[sym]=null;}
+  }catch(e){
+    console.warn('Logo fetch:',sym,e.message);
+    logos[sym]=null;
+  }
+}
+
 async function fetchAllQuotes(){
   if(fetching)return;
   fetching=true;
   try{
     const wheelSyms=db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
     const allSyms=[...new Set(wheelSyms)];
+    // Fetch logos in parallel (fire-and-forget, don't block quotes)
+    const logoPromises=allSyms.map(sym=>fetchLogo(sym));
     for(const sym of allSyms){
       try{await fetchSymbol(sym);}catch(e){console.warn('Quote fetch:',sym,e.message);}
       if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
     }
+    // Wait for logos to finish too
+    await Promise.allSettled(logoPromises);
     const nOk=Object.keys(quotes).length;
     if(nOk>0){
       db.wheels.forEach(w=>{
@@ -1245,6 +1270,8 @@ async function fetchAllQuotes(){
         }
       });
       db.wheels.forEach(w=>_saveWheel(w));render();
+    }else if(Object.keys(logos).length>0){
+      render(); // re-render even if no quotes, so logos appear
     }
   }catch(e){
     console.warn('fetchAllQuotes:',e);
@@ -1396,6 +1423,12 @@ function renderPositions(){
   return toolbar+cards;
 }
 
+function rotNumHtml(wheel,isOpen){
+  const logoUrl=logos[wheel.ticker];
+  if(logoUrl)return`<img src="${logoUrl}" class="rot-logo ${isOpen?'':'cn'}" alt="${wheel.ticker}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rot-num ${isOpen?'':'cn'}" style="display:none">${wheel.sortOrder||'?'}</div>`;
+  return`<div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>`;
+}
+
 function renderRotationMini(wheel){
   const m=calcWheel(wheel);
   const isOpen=wheel.status==='open';
@@ -1412,7 +1445,7 @@ function renderRotationMini(wheel){
 
   return`<div class="rot-mini ${isOpen?'rot-open':'rot-closed'}" style="${isHidden?'opacity:.5':''}">
     <div class="rot-mini-inner" onclick="toggleMinimise('${wheel.id}')">
-      <div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>
+      ${rotNumHtml(wheel,isOpen)}
       <span class="mini-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
       ${rawP!=null?`<span class="mini-price">$${rawP.toFixed(2)}</span>`:''}
       ${chg!=null?`<span class="mini-chg" style="color:${chgColor}">${chgSign}${chgPct.toFixed(2)}%</span>`:''}
@@ -1624,7 +1657,7 @@ function renderRotationWindow(wheel){
   return`
   <div class="rotation-window ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" style="${hidden.has(wheel.id)?'opacity:.5':''}">
     <div class="rot-header" onclick="toggleExpand('${wheel.id}')">
-      <div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>
+      ${rotNumHtml(wheel,isOpen)}
       <span class="rot-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
       ${headerPriceHtml}
       <span class="rot-label">${_dateSpan}</span>
