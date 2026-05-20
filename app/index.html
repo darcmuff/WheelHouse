@@ -2081,7 +2081,15 @@ function toggleShowClosed(val){showClosed=val;render();}
 function toggleShowHidden(val){showHidden=val;render();}
 function setPosSort(val){posSortBy=val;render();}
 let _logQTimer=null;
-function setLogQ(val){logQ=val;clearTimeout(_logQTimer);_logQTimer=setTimeout(()=>render(),300);}
+function setLogQ(val){
+  logQ=val;
+  clearTimeout(_logQTimer);
+  _logQTimer=setTimeout(()=>{
+    render();
+    const inp=document.querySelector('.search-inp');
+    if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
+  },300);
+}
 function cyclePosSort(){
   const modes=['sortOrder','ticker','recent','pnl','dte'];
   const i=modes.indexOf(posSortBy);
