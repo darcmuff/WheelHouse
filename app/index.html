@@ -69,16 +69,28 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 /* ── TICKER TAPE ── */
 
 /* ── LAYOUT ── */
-#layout{display:flex;min-height:100vh}
+#layout{min-height:100vh}
 
 /* ── SIDEBAR ── */
 #sidebar{
   width:200px;min-width:200px;background:var(--bg2);
   border-right:1px solid var(--border);display:flex;
-  flex-direction:column;position:sticky;top:0;
-  height:100vh;overflow-y:auto;min-height:0;
+  flex-direction:column;position:fixed;top:0;left:0;
+  height:100vh;z-index:50;transition:transform .2s;
 }
+#sidebar.collapsed{transform:translateX(-200px)}
 #sidebar .sb-spacer{display:none}
+.sb-toggle{
+  position:fixed;top:8px;left:8px;z-index:51;
+  width:24px;height:24px;border:none;background:var(--bg2);
+  border-radius:6px;cursor:pointer;display:none;
+  align-items:center;justify-content:center;
+  border:1px solid var(--border);
+}
+.sb-toggle svg{width:16px;height:16px;fill:var(--orange)}
+#sidebar.collapsed ~ .sb-toggle{display:flex}
+#sidebar.collapsed ~ #content{margin-left:0}
+#content{margin-left:200px;transition:margin-left .2s}
 #sb-brand{padding:8px 12px 7px;border-bottom:1px solid var(--border)}
 #sb-brand-name{
   font-size:17px;font-weight:300;color:var(--orange);
@@ -609,8 +621,9 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
   <!-- SIDEBAR -->
   <div id="sidebar">
-    <div id="sb-brand">
-      <div id="sb-brand-name">
+    <div id="sb-brand" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div id="sb-brand-name">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="38" height="38" style="flex-shrink:0">
           <defs>
             <filter id="wh-g1" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -636,6 +649,8 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
         WheelHouse
       </div>
       <div id="sb-brand-sub">Options Wheel Strategy</div>
+      </div>
+      <button onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;padding:4px" title="Collapse sidebar"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:16px;height:16px"><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"/></svg></button>
     </div>
 
     <div style="border-bottom:1px solid var(--border)">
@@ -655,6 +670,8 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     <div class="sb-btns"></div>
     <div class="sb-spacer"></div>
   </div>
+
+  <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()"><svg viewBox="0 0 256 256" fill="var(--orange)"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></button>
 
   <!-- CONTENT -->
   <div id="content"></div>
@@ -802,6 +819,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     <textarea id="import-csv" style="width:100%;height:185px;background:#141414;border:1px solid var(--border2);color:var(--text);padding:10px;border-radius:7px;font-size:13px;font-family:monospace;resize:vertical" placeholder="Paste CSV here…"></textarea>
     <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" onclick="doImport()">Import</button></div>
   </div>
+</div>
 <!-- MODAL: Settings -->
 <div class="mb" id="mSettings">
   <div class="mbox sm">
@@ -838,6 +856,16 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   // Restore theme preference
   var theme=localStorage.getItem('wh-theme');
   if(theme==='light')document.documentElement.setAttribute('data-theme','light');
+  // Restore sidebar state
+  var sbState=localStorage.getItem('wh-sidebar');
+  if(sbState==='collapsed'){
+    var sb=document.getElementById('sidebar');
+    var btn=document.getElementById('sb-toggle');
+    var ct=document.getElementById('content');
+    if(sb)sb.classList.add('collapsed');
+    if(btn)btn.style.display='flex';
+    if(ct)ct.style.marginLeft='0';
+  }
 })();
 </script>
 
@@ -3814,6 +3842,16 @@ function toggleTheme(isLight){
   const knob=document.getElementById('theme-knob');
   if(knob)knob.style.left=isLight?'18px':'2px';
 }
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const btn=document.getElementById('sb-toggle');
+  const content=document.getElementById('content');
+  sb.classList.toggle('collapsed');
+  const collapsed=sb.classList.contains('collapsed');
+  localStorage.setItem('wh-sidebar',collapsed?'collapsed':'open');
+  if(content)content.style.marginLeft=collapsed?'0':'200px';
+  if(btn)btn.style.display=collapsed?'flex':'none';
+}
 async function doSignOut(){
   try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
@@ -3964,6 +4002,7 @@ window.openAddTrade = openAddTrade;
 window.openImport = openImport;
 window.openSettings = openSettings;
 window.toggleTheme = toggleTheme;
+window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
