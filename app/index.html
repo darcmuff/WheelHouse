@@ -162,10 +162,21 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
 .rot-header-btn{
   width:20px;height:20px;border:none;background:none;cursor:pointer;padding:0;flex-shrink:0;
-  opacity:.5;transition:opacity .15s;
+  opacity:1;transition:opacity .15s;
 }
-.rot-header-btn:hover{opacity:1}
+.rot-header-btn:hover{opacity:.7}
 .rot-header-btn svg{width:20px;height:20px}
+.sort-dropdown{
+  position:absolute;top:28px;left:0;z-index:100;
+  background:var(--bg2);border:1px solid var(--border);border-radius:6px;
+  box-shadow:0 4px 12px rgba(0,0,0,.4);min-width:130px;overflow:hidden;
+}
+.sort-dropdown-item{
+  display:block;width:100%;padding:7px 12px;font-size:11px;color:var(--text2);
+  background:none;border:none;cursor:pointer;text-align:left;
+}
+.sort-dropdown-item:hover{background:var(--bg3);color:var(--text)}
+.sort-dropdown-item.active{color:var(--orange);font-weight:600}
 
 .rotation-window{
   background:var(--bg2);border:1px solid var(--border);
@@ -774,6 +785,20 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     <textarea id="import-csv" style="width:100%;height:185px;background:#141414;border:1px solid var(--border2);color:var(--text);padding:10px;border-radius:7px;font-size:13px;font-family:monospace;resize:vertical" placeholder="Paste CSV here…"></textarea>
     <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" onclick="doImport()">Import</button></div>
   </div>
+<!-- MODAL: Settings -->
+<div class="mb" id="mSettings">
+  <div class="mbox sm">
+    <div class="mtitle"><span>Settings</span><span class="mx" onclick="closeModal('mSettings')">✕</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">
+      <button class="btn btn-ghost btn-full" onclick="openImport();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px">↑ Import CSV</button>
+      <button class="btn btn-ghost btn-full" onclick="exportCSV();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px">↓ Export CSV</button>
+      <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+      <div id="settings-user" style="font-size:11px;color:var(--text3);padding:0 14px"></div>
+      <button id="settings-signout" class="btn btn-ghost btn-full" style="text-align:left;padding:10px 14px;font-size:13px;color:var(--red)" onclick="doSignOut()">⎋ Sign Out</button>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script>
@@ -1416,14 +1441,19 @@ function renderPositions(){
 
   // Toolbar
   const sortLabels={sortOrder:'Manual',ticker:'A–Z',recent:'Recent',pnl:'P/L',dte:'Expiry'};
+  const sortOpts=Object.entries(sortLabels).map(([k,v])=>`<button class="sort-dropdown-item ${posSortBy===k?'active':''}" onclick="setPosSort('${k}');closeSortMenu()">${v}</button>`).join('');
   const toolbar=`<div class="pos-toolbar">
-    <button class="rot-header-btn" onclick="cyclePosSort()" title="Sort: ${sortLabels[posSortBy]||'Manual'}"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><circle cx="7" cy="12" r="2" fill="var(--orange)"/><circle cx="12" cy="12" r="2" fill="var(--orange)"/><circle cx="17" cy="12" r="2" fill="var(--orange)"/></svg></button>
-    <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="5" y="7" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="2" rx="1" fill="var(--orange)"/></svg></button>
-    <button class="rot-header-btn" onclick="switchView('log')" title="Trade Log"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="6" y="7" width="3" height="2" rx="0.5" fill="var(--orange)"/><rect x="11" y="7" width="7" height="2" rx="0.5" fill="var(--orange)"/><rect x="6" y="11" width="3" height="2" rx="0.5" fill="var(--orange)"/><rect x="11" y="11" width="7" height="2" rx="0.5" fill="var(--orange)"/><rect x="6" y="15" width="3" height="2" rx="0.5" fill="var(--orange)"/><rect x="11" y="15" width="7" height="2" rx="0.5" fill="var(--orange)"/></svg></button>
+    <div style="position:relative">
+      <button class="rot-header-btn" onclick="toggleSortMenu(event)" title="Sort: ${sortLabels[posSortBy]||'Manual'}"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="1.5"/><circle cx="7" cy="12" r="1.5" fill="var(--orange)"/><circle cx="12" cy="12" r="1.5" fill="var(--orange)"/><circle cx="17" cy="12" r="1.5" fill="var(--orange)"/></svg></button>
+      <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
+    </div>
+    <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="1.5"/><rect x="5" y="7" width="14" height="1.5" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="1.5" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="1.5" rx="1" fill="var(--orange)"/></svg></button>
+    <button class="rot-header-btn" onclick="switchView('log')" title="Trade Log"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="1.5"/><rect x="6" y="7" width="3" height="1.5" rx="0.5" fill="var(--orange)"/><rect x="11" y="7" width="7" height="1.5" rx="0.5" fill="var(--orange)"/><rect x="6" y="11" width="3" height="1.5" rx="0.5" fill="var(--orange)"/><rect x="11" y="11" width="7" height="1.5" rx="0.5" fill="var(--orange)"/><rect x="6" y="15" width="3" height="1.5" rx="0.5" fill="var(--orange)"/><rect x="11" y="15" width="7" height="1.5" rx="0.5" fill="var(--orange)"/></svg></button>
     <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:80px;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
+    <button class="rot-header-btn" onclick="openSettings()" title="Settings"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="1.5"/><circle cx="12" cy="12" r="3.5" stroke="var(--orange)" stroke-width="1.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round"/></svg></button>
   </div>`;
 
   // Render each rotation
@@ -1686,8 +1716,8 @@ function renderRotationWindow(wheel){
       <span class="rot-shares">${shares}</span>
       ${dteBadge}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
-      <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="5" y="7" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="2" rx="1" fill="var(--orange)"/></svg></button>
-      <button class="rot-header-btn" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><line x1="8" y1="8" x2="16" y2="16" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="1.5"/><rect x="5" y="7" width="14" height="1.5" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="1.5" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="1.5" rx="1" fill="var(--orange)"/></svg></button>
+      <button class="rot-header-btn" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="1.5"/><line x1="8" y1="8" x2="16" y2="16" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round"/></svg></button>
       <span class="rot-expand ${exp?'open':''}">▶</span>
     </div>
     ${metricsBar}
@@ -1766,8 +1796,6 @@ function renderLog(){
   }).join('')||'<tr><td colspan="14" style="text-align:center;color:#444;padding:50px">No trades</td></tr>';
   return`
   <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0">
-    <button class="rot-header-btn" onclick="openImport()" title="Import CSV"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><path d="M12 16V8M8 12l4-4 4 4" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <button class="rot-header-btn" onclick="exportCSV()" title="Export CSV"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><path d="M12 8v8M8 12l4 4 4-4" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <input class="search-inp" type="search" placeholder="Search…" value="${logQ}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
     <span style="color:var(--text3);font-size:11px">${trades.length}</span>
     <span class="toolbar-spacer"></span>
@@ -2095,6 +2123,18 @@ function cyclePosSort(){
   const i=modes.indexOf(posSortBy);
   posSortBy=modes[(i+1)%modes.length];
   render();
+}
+function toggleSortMenu(e){
+  e.stopPropagation();
+  const dd=document.getElementById('sort-dropdown');
+  if(!dd)return;
+  const show=dd.style.display==='none';
+  dd.style.display=show?'block':'none';
+  if(show){document.addEventListener('click',closeSortMenu,{once:true});}
+}
+function closeSortMenu(){
+  const dd=document.getElementById('sort-dropdown');
+  if(dd)dd.style.display='none';
 }
 function toggleAnalyticsSec(id,hdr){
   const el=document.getElementById(id);if(!el)return;
@@ -3725,17 +3765,14 @@ async function onboardSubmit(){
 }
 
 function showSignOutButton(user){
-  // Add sign-out to sidebar if not already there
-  if(document.getElementById('auth-signout-btn'))return;
-  const sb=document.getElementById('sb-brand');
-  if(!sb)return;
-  const btn=document.createElement('button');
-  btn.id='auth-signout-btn';
-  btn.title='Sign out';
-  btn.onclick=async()=>{try{await signOut(_auth);}catch(e){console.error('Sign out failed:',e);}};
-  btn.style.cssText='background:none;border:none;cursor:pointer;color:#6b7280;font-size:11px;padding:4px 8px;border-radius:4px;margin-top:4px;display:block;width:100%;text-align:left;';
-  btn.innerHTML='⎋ Sign out ('+( user.email||user.displayName||'user')+')';
-  sb.appendChild(btn);
+  // Populate settings modal with user info
+  const userEl=document.getElementById('settings-user');
+  if(userEl)userEl.textContent=user.email||user.displayName||'user';
+}
+
+function openSettings(){openModal('mSettings');}
+async function doSignOut(){
+  try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
 
 // ════════════════════════════════════════════════════════
@@ -3876,10 +3913,14 @@ window.toggleShowHidden = toggleShowHidden;
 window.setPosSort = setPosSort;
 window.setLogQ = setLogQ;
 window.cyclePosSort = cyclePosSort;
+window.toggleSortMenu = toggleSortMenu;
+window.closeSortMenu = closeSortMenu;
 window.openEditTrade = openEditTrade;
 window.sortLog = sortLog;
 window.openAddTrade = openAddTrade;
 window.openImport = openImport;
+window.openSettings = openSettings;
+window.doSignOut = doSignOut;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
 
