@@ -869,7 +869,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     var ct=document.getElementById('content');
     if(sb)sb.classList.add('collapsed');
     if(btn)btn.style.display='flex';
-    if(ct)ct.style.marginLeft='0';
+    if(ct){ct.style.marginLeft='0';ct.style.paddingLeft='36px';}
   }
 })();
 </script>
@@ -3864,7 +3864,7 @@ function toggleSidebar(){
   sb.classList.toggle('collapsed');
   const collapsed=sb.classList.contains('collapsed');
   localStorage.setItem('wh-sidebar',collapsed?'collapsed':'open');
-  if(content)content.style.marginLeft=collapsed?'0':'200px';
+  if(content){content.style.marginLeft=collapsed?'0':'200px';content.style.paddingLeft=collapsed?'36px':'';}
   if(btn)btn.style.display=collapsed?'flex':'none';
 }
 async function doSignOut(){
