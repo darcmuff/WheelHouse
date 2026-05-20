@@ -42,6 +42,23 @@
   --yellow:  #fbbf24;
   --silver:  #c8ccd6;
 }
+[data-theme="light"]{
+  --bg:      #f5f5f5;
+  --bg2:     #ffffff;
+  --bg3:     #e8e8e8;
+  --bg4:     #d4d4d4;
+  --border:  #d1d5db;
+  --border2: #9ca3af;
+  --orangeD: rgba(13,148,136,0.08);
+  --text:    #1a1a1a;
+  --text2:   #4b5563;
+  --text3:   #6b7280;
+  --green:   #16a34a;
+  --red:     #dc2626;
+  --blue:    #2563eb;
+  --yellow:  #d97706;
+  --silver:  #374151;
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
 body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;zoom:1.35}
@@ -790,15 +807,22 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   <div class="mbox sm">
     <div class="mtitle"><span>Settings</span><span class="mx" onclick="closeModal('mSettings')">✕</span></div>
     <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+        <span style="font-size:13px;color:var(--text2)">Light mode</span>
+        <label style="position:relative;width:36px;height:20px;display:inline-block;cursor:pointer">
+          <input type="checkbox" id="theme-toggle" onchange="toggleTheme(this.checked)" style="opacity:0;width:0;height:0">
+          <span style="position:absolute;inset:0;background:var(--bg3);border-radius:20px;transition:.2s"></span>
+          <span id="theme-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--orange);border-radius:50%;transition:.2s"></span>
+        </label>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full" onclick="openImport();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px">↑ Import CSV</button>
       <button class="btn btn-ghost btn-full" onclick="exportCSV();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px">↓ Export CSV</button>
-      <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+      <div style="border-top:1px solid var(--border);margin:0"></div>
       <div id="settings-user" style="font-size:11px;color:var(--text3);padding:0 14px"></div>
       <button id="settings-signout" class="btn btn-ghost btn-full" style="text-align:left;padding:10px 14px;font-size:13px;color:var(--red)" onclick="doSignOut()">⎋ Sign Out</button>
     </div>
   </div>
-</div>
-
 </div>
 
 <script>
@@ -811,6 +835,9 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     var ov=document.getElementById('auth-overlay');
     if(ov)ov.style.display='none';
   }
+  // Restore theme preference
+  var theme=localStorage.getItem('wh-theme');
+  if(theme==='light')document.documentElement.setAttribute('data-theme','light');
 })();
 </script>
 
@@ -1346,7 +1373,7 @@ let minimised=new Set();   // rotations collapsed to single row
 let hidden=new Set();      // rotations hidden from view entirely
 let showClosed=false;      // toggle to reveal closed rotations
 let showHidden=false;      // toggle to reveal hidden rotations
-let posSortBy='sortOrder'; // sortOrder | ticker | recent | pnl | dte
+let posSortBy='ticker'; // ticker | recent | pnl | dte
 let logSort={col:'entered',dir:'desc'};
 let logQ='';
 
@@ -1440,7 +1467,7 @@ function renderPositions(){
   });
 
   // Toolbar
-  const sortLabels={sortOrder:'Manual',ticker:'A–Z',recent:'Recent',pnl:'P/L',dte:'Expiry'};
+  const sortLabels={ticker:'A–Z',recent:'Recent',pnl:'P/L',dte:'Expiry'};
   const sortOpts=Object.entries(sortLabels).map(([k,v])=>`<button class="sort-dropdown-item ${posSortBy===k?'active':''}" onclick="setPosSort('${k}');closeSortMenu()">${v}</button>`).join('');
   const toolbar=`<div class="pos-toolbar">
     <div style="position:relative">
@@ -2119,7 +2146,7 @@ function setLogQ(val){
   },300);
 }
 function cyclePosSort(){
-  const modes=['sortOrder','ticker','recent','pnl','dte'];
+  const modes=['ticker','recent','pnl','dte'];
   const i=modes.indexOf(posSortBy);
   posSortBy=modes[(i+1)%modes.length];
   render();
@@ -3770,7 +3797,23 @@ function showSignOutButton(user){
   if(userEl)userEl.textContent=user.email||user.displayName||'user';
 }
 
-function openSettings(){openModal('mSettings');}
+function openSettings(){
+  openModal('mSettings');
+  // Sync toggle state
+  const toggle=document.getElementById('theme-toggle');
+  const knob=document.getElementById('theme-knob');
+  if(toggle){
+    const isLight=document.documentElement.getAttribute('data-theme')==='light';
+    toggle.checked=isLight;
+    if(knob)knob.style.left=isLight?'18px':'2px';
+  }
+}
+function toggleTheme(isLight){
+  document.documentElement.setAttribute('data-theme',isLight?'light':'');
+  localStorage.setItem('wh-theme',isLight?'light':'dark');
+  const knob=document.getElementById('theme-knob');
+  if(knob)knob.style.left=isLight?'18px':'2px';
+}
 async function doSignOut(){
   try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
@@ -3920,6 +3963,7 @@ window.sortLog = sortLog;
 window.openAddTrade = openAddTrade;
 window.openImport = openImport;
 window.openSettings = openSettings;
+window.toggleTheme = toggleTheme;
 window.doSignOut = doSignOut;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
