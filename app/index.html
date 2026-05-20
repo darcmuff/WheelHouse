@@ -1766,10 +1766,10 @@ function renderLog(){
   }).join('')||'<tr><td colspan="14" style="text-align:center;color:#444;padding:50px">No trades</td></tr>';
   return`
   <div class="toolbar">
-    <input class="search-inp" type="search" placeholder="Search ticker, action, comment…" value="${logQ}" oninput="logQ=this.value;render()">
-    <button class="btn btn-primary" onclick="openAddTrade(null)">+ Add Trade</button>
     <button class="btn btn-ghost" onclick="openImport()">↑ Import</button>
     <button class="btn btn-ghost" onclick="exportCSV()">↓ Export CSV</button>
+    <span class="toolbar-spacer"></span>
+    <input class="search-inp" type="search" placeholder="Search…" value="${logQ}" oninput="logQ=this.value;render()" style="width:160px">
     <span style="color:var(--text3);font-size:13px">${trades.length} trade${trades.length!==1?'s':''}</span>
   </div>
   <div class="log-wrap">
@@ -2336,7 +2336,38 @@ function openImport(){openModal('mImport');}
 const ACTION_MAP={'csp: cash secured put':'CSP','btc: buy to close':'BTC','stoc: sell to open call':'STOC','stc: sell to close':'STC','in: buy shares':'IN','out: sell shares':'OUT','div: dividend':'DIV','stop: sell to open put':'CSP','acc: assigned covered call':'OUT','acp: assigned cash put':'IN','exp: expired worthless':'EXP','csp':'CSP','btc':'BTC','stoc':'STOC','stc':'STC','in':'IN','out':'OUT','div':'DIV','stop':'CSP','acc':'OUT','acp':'IN','exp':'EXP'};
 const VALID_ACTIONS=new Set(['CSP','BTC','STOC','STC','IN','OUT','DIV','EXP']);
 function parseCSVLine(line){const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur.trim());cur='';}else cur+=ch;}r.push(cur.trim());return r;}
-function normDate(s){if(!s)return'';s=s.replace(/['"]/g,'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[m,d,y]=s.split('/');return`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}return s;}
+function normDate(s){
+  if(!s)return'';
+  s=s.replace(/['"]/g,'').trim();
+  if(!s)return'';
+  const pad=n=>String(n).padStart(2,'0');
+  const today=new Date();
+  let m;
+  // ISO: 2025-09-15
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  // "15 Sep 2025" / "15 September 2025" / "15 Sep"
+  m=new RegExp(`^(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[2].slice(0,3).toLowerCase()];if(mon){const yr=m[3]?parseInt(m[3]):today.getFullYear();return`${yr}-${pad(mon)}-${pad(parseInt(m[1]))}`;}};
+  // "Sep 15, 2025" / "September 15 2025"
+  m=new RegExp(`^(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2}),?\\s+(\\d{4})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(mon)return`${m[3]}-${pad(mon)}-${pad(parseInt(m[2]))}`;}
+  // "Sep 15" (no year)
+  m=new RegExp(`^(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(mon)return`${today.getFullYear()}-${pad(mon)}-${pad(parseInt(m[2]))}`;}
+  // "15Sep2025" (IBKR compact)
+  m=new RegExp(`^(\\d{1,2})(${MON_PAT})(\\d{4})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[2].toLowerCase()];if(mon)return`${m[3]}-${pad(mon)}-${pad(parseInt(m[1]))}`;}
+  // MM/DD/YYYY (US)
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[mo,d,y]=s.split('/');return`${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;}
+  // MM/DD/YY (US short)
+  if(/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(s)){const[mo,d,y]=s.split('/');return`${2000+parseInt(y)}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;}
+  // DD-MM-YYYY or DD.MM.YYYY (UK/EU)
+  m=/^(\d{1,2})[-.](\d{1,2})[-.](\d{4})$/.exec(s);
+  if(m){const d=parseInt(m[1]),mo=parseInt(m[2]);if(d>12&&mo<=12)return`${m[3]}-${pad(mo)}-${pad(d)}`;if(mo>12&&d<=12)return`${m[3]}-${pad(d)}-${pad(mo)}`;return`${m[3]}-${pad(mo)}-${pad(d)}`;}
+  // YYYY/MM/DD
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(s)){const[y,mo,d]=s.split('/');return`${y}-${mo}-${d}`;}
+  return s;
+}
 function doImport(){
   const csv=document.getElementById('import-csv').value.trim();if(!csv)return;
   const lines=csv.split('\n');if(lines.length<2){alert('No data rows found');return;}
