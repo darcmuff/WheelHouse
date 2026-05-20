@@ -2080,7 +2080,8 @@ function toggleMinAll(){
 function toggleShowClosed(val){showClosed=val;render();}
 function toggleShowHidden(val){showHidden=val;render();}
 function setPosSort(val){posSortBy=val;render();}
-function setLogQ(val){logQ=val;render();}
+let _logQTimer=null;
+function setLogQ(val){logQ=val;clearTimeout(_logQTimer);_logQTimer=setTimeout(()=>render(),300);}
 function cyclePosSort(){
   const modes=['sortOrder','ticker','recent','pnl','dte'];
   const i=modes.indexOf(posSortBy);
@@ -2877,10 +2878,16 @@ function _renderAnalyticsCharts(){
 }
 
 function exportCSV(){
+  const q=logQ.toLowerCase();
+  const filtered=db.trades.filter(t=>{
+    if(!q)return true;
+    return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
+  });
   const hdr=['Ticker','Action','Rotation','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment'];
-  const rows=db.trades.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>`"${v}"`).join(',');});
+  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>`"${v}"`).join(',');});
   const csv=[hdr.join(','),...rows].join('\n');
-  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`wheelhouse-${new Date().toISOString().slice(0,10)}.csv`});
+  const suffix=q?`-${q}`:'';
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`wheelhouse${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
   a.click();URL.revokeObjectURL(a.href);
 }
 
