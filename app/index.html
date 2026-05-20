@@ -42,6 +42,23 @@
   --yellow:  #fbbf24;
   --silver:  #c8ccd6;
 }
+[data-theme="light"]{
+  --bg:      #f5f5f5;
+  --bg2:     #ffffff;
+  --bg3:     #e8e8e8;
+  --bg4:     #d4d4d4;
+  --border:  #d1d5db;
+  --border2: #9ca3af;
+  --orangeD: rgba(13,148,136,0.08);
+  --text:    #1a1a1a;
+  --text2:   #4b5563;
+  --text3:   #6b7280;
+  --green:   #16a34a;
+  --red:     #dc2626;
+  --blue:    #2563eb;
+  --yellow:  #d97706;
+  --silver:  #374151;
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
 body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;zoom:1.35}
@@ -52,16 +69,28 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 /* ── TICKER TAPE ── */
 
 /* ── LAYOUT ── */
-#layout{display:flex;min-height:100vh}
+#layout{min-height:100vh}
 
 /* ── SIDEBAR ── */
 #sidebar{
   width:200px;min-width:200px;background:var(--bg2);
   border-right:1px solid var(--border);display:flex;
-  flex-direction:column;position:sticky;top:0;
-  height:100vh;overflow-y:auto;min-height:0;
+  flex-direction:column;position:fixed;top:0;left:0;
+  height:100vh;z-index:50;transition:transform .2s;
 }
+#sidebar.collapsed{transform:translateX(-200px)}
 #sidebar .sb-spacer{display:none}
+.sb-toggle{
+  position:fixed;top:8px;left:8px;z-index:51;
+  width:24px;height:24px;border:none;background:var(--bg2);
+  border-radius:6px;cursor:pointer;display:none;
+  align-items:center;justify-content:center;
+  border:1px solid var(--border);
+}
+.sb-toggle svg{width:16px;height:16px;fill:var(--orange)}
+#sidebar.collapsed ~ .sb-toggle{display:flex}
+#sidebar.collapsed ~ #content{margin-left:0}
+#content{margin-left:200px;transition:margin-left .2s}
 #sb-brand{padding:8px 12px 7px;border-bottom:1px solid var(--border)}
 #sb-brand-name{
   font-size:17px;font-weight:300;color:var(--orange);
@@ -162,10 +191,21 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
 .rot-header-btn{
   width:20px;height:20px;border:none;background:none;cursor:pointer;padding:0;flex-shrink:0;
-  opacity:.5;transition:opacity .15s;
+  opacity:1;transition:opacity .15s;
 }
-.rot-header-btn:hover{opacity:1}
+.rot-header-btn:hover{opacity:.7}
 .rot-header-btn svg{width:20px;height:20px}
+.sort-dropdown{
+  position:absolute;top:28px;left:0;z-index:100;
+  background:var(--bg2);border:1px solid var(--border);border-radius:6px;
+  box-shadow:0 4px 12px rgba(0,0,0,.4);min-width:130px;overflow:hidden;
+}
+.sort-dropdown-item{
+  display:block;width:100%;padding:7px 12px;font-size:11px;color:var(--text2);
+  background:none;border:none;cursor:pointer;text-align:left;
+}
+.sort-dropdown-item:hover{background:var(--bg3);color:var(--text)}
+.sort-dropdown-item.active{color:var(--orange);font-weight:600}
 
 .rotation-window{
   background:var(--bg2);border:1px solid var(--border);
@@ -190,7 +230,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .rot-num.cn{background:var(--bg3);border-color:var(--border2);color:var(--text3)}
 .rot-logo{
   width:24px;height:24px;border-radius:50%;flex-shrink:0;
-  object-fit:contain;background:var(--bg3);border:2px solid var(--border2);
+  object-fit:contain;
 }
 .rot-logo.cn{opacity:.5}
 .rot-ticker{
@@ -428,6 +468,10 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .mb.open{display:flex}
 .mbox{background:var(--bg2);border:1px solid var(--border2);border-radius:13px;padding:25px;width:560px;max-width:96vw;max-height:92vh;overflow-y:auto}
 .mbox.sm{width:370px}
+#mSettings{background:transparent;align-items:flex-start;justify-content:flex-end}
+#mSettings .mtitle{font-size:13px;font-weight:300;margin-bottom:10px}
+#mSettings .mbox{width:220px;padding:14px;border-radius:10px;margin:8px 8px 0 0}
+#mSettings .btn{justify-content:flex-start}
 .mtitle{font-size:17px;font-weight:800;color:var(--orange);margin-bottom:19px;display:flex;justify-content:space-between;align-items:center}
 .mx{cursor:pointer;color:var(--text3);font-size:22px;line-height:1}.mx:hover{color:var(--text)}
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -581,8 +625,9 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
   <!-- SIDEBAR -->
   <div id="sidebar">
-    <div id="sb-brand">
-      <div id="sb-brand-name">
+    <div id="sb-brand" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div id="sb-brand-name">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="38" height="38" style="flex-shrink:0">
           <defs>
             <filter id="wh-g1" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -608,6 +653,8 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
         WheelHouse
       </div>
       <div id="sb-brand-sub">Options Wheel Strategy</div>
+      </div>
+      <button onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;padding:4px" title="Collapse sidebar"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:16px;height:16px"><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"/></svg></button>
     </div>
 
     <div style="border-bottom:1px solid var(--border)">
@@ -624,17 +671,11 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
     <div class="sb-section" id="sb-stats" style="flex-shrink:0"></div>
 
-    <div class="sb-btns" style="display:flex;gap:4px;align-items:center">
-      <input id="new-rot-ticker" type="text" placeholder="Ticker" style="flex:1;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker')">
-      <button class="btn btn-primary" style="padding:6px 10px;font-size:11px;white-space:nowrap" onclick="quickAddRotation('new-rot-ticker')">+ Add</button>
-    </div>
+    <div class="sb-btns"></div>
     <div class="sb-spacer"></div>
-    <div style="border-top:1px solid var(--border)">
-      <div class="nav-item" data-view="log" onclick="switchView('log')">
-        <span class="nav-icon">≡</span>Trade Log
-      </div>
-    </div>
   </div>
+
+  <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()"><svg viewBox="0 0 256 256" fill="var(--orange)"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></button>
 
   <!-- CONTENT -->
   <div id="content"></div>
@@ -783,6 +824,55 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" onclick="doImport()">Import</button></div>
   </div>
 </div>
+<!-- MODAL: Settings -->
+<div class="mb" id="mSettings">
+  <div class="mbox sm">
+    <div class="mtitle"><span>Settings</span><span class="mx" onclick="closeModal('mSettings')">✕</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+        <span style="font-size:13px;color:var(--text2)">Light mode</span>
+        <label style="position:relative;width:36px;height:20px;display:inline-block;cursor:pointer">
+          <input type="checkbox" id="theme-toggle" onchange="toggleTheme(this.checked)" style="opacity:0;width:0;height:0">
+          <span style="position:absolute;inset:0;background:var(--bg3);border-radius:20px;transition:.2s"></span>
+          <span id="theme-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--orange);border-radius:50%;transition:.2s"></span>
+        </label>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:0"></div>
+      <button class="btn btn-ghost btn-full" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
+      <button class="btn btn-ghost btn-full" onclick="openImport();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg><span>Import CSV</span></button>
+      <button class="btn btn-ghost btn-full" onclick="exportCSV();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg><span>Export CSV</span></button>
+      <div style="border-top:1px solid var(--border);margin:0"></div>
+      <div id="settings-user" style="font-size:11px;color:var(--text3);padding:0 14px"></div>
+      <button id="settings-signout" class="btn btn-ghost btn-full" style="text-align:left;padding:10px 14px;font-size:13px;color:var(--red)" onclick="doSignOut()">⎋ Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Preview bypass — runs before Firebase module loads
+// Hides auth overlay when not on the live Netlify domain
+(function(){
+  var h=window.location.hostname;
+  if(h.indexOf('netlify.app')===-1 && h!=='localhost' && h!=='127.0.0.1'){
+    window.__wheelPreview=true;
+    var ov=document.getElementById('auth-overlay');
+    if(ov)ov.style.display='none';
+  }
+  // Restore theme preference
+  var theme=localStorage.getItem('wh-theme');
+  if(theme==='light')document.documentElement.setAttribute('data-theme','light');
+  // Restore sidebar state
+  var sbState=localStorage.getItem('wh-sidebar');
+  if(sbState==='collapsed'){
+    var sb=document.getElementById('sidebar');
+    var btn=document.getElementById('sb-toggle');
+    var ct=document.getElementById('content');
+    if(sb)sb.classList.add('collapsed');
+    if(btn)btn.style.display='flex';
+    if(ct)ct.style.marginLeft='0';
+  }
+})();
+</script>
 
 <script type="module">
 // ════════════════════════════════════════════════════════
@@ -1316,7 +1406,7 @@ let minimised=new Set();   // rotations collapsed to single row
 let hidden=new Set();      // rotations hidden from view entirely
 let showClosed=false;      // toggle to reveal closed rotations
 let showHidden=false;      // toggle to reveal hidden rotations
-let posSortBy='sortOrder'; // sortOrder | ticker | recent | pnl | dte
+let posSortBy='ticker'; // ticker | recent | pnl | dte
 let logSort={col:'entered',dir:'desc'};
 let logQ='';
 
@@ -1410,14 +1500,19 @@ function renderPositions(){
   });
 
   // Toolbar
-  const sortLabels={sortOrder:'Manual',ticker:'A–Z',recent:'Recent',pnl:'P/L',dte:'Expiry'};
+  const sortLabels={dte:'Expiry',recent:'Recent',ticker:'A–Z',pnl:'P/L'};
+  const sortOpts=Object.entries(sortLabels).map(([k,v])=>`<button class="sort-dropdown-item ${posSortBy===k?'active':''}" onclick="setPosSort('${k}');closeSortMenu()">${v}</button>`).join('');
   const toolbar=`<div class="pos-toolbar">
-    <button class="rot-header-btn" onclick="cyclePosSort()" title="Sort: ${sortLabels[posSortBy]||'Manual'}"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><circle cx="7" cy="12" r="2" fill="var(--orange)"/><circle cx="12" cy="12" r="2" fill="var(--orange)"/><circle cx="17" cy="12" r="2" fill="var(--orange)"/></svg></button>
-    <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="5" y="7" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="2" rx="1" fill="var(--orange)"/></svg></button>
+    <div style="position:relative;display:flex;align-items:center">
+      <button class="rot-header-btn" onclick="toggleSortMenu(event)" title="Sort: ${sortLabels[posSortBy]||'Manual'}"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M128,128a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16h72A8,8,0,0,1,128,128ZM48,72H184a8,8,0,0,0,0-16H48a8,8,0,0,0,0,16Zm56,112H48a8,8,0,0,0,0,16h56a8,8,0,0,0,0-16Zm125.66-21.66a8,8,0,0,0-11.32,0L192,188.69V112a8,8,0,0,0-16,0v76.69l-26.34-26.35a8,8,0,0,0-11.32,11.32l40,40a8,8,0,0,0,11.32,0l40-40A8,8,0,0,0,229.66,162.34Z"/></svg></button>
+      <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
+    </div>
+    <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg></button>
     <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:80px;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
+    <button class="rot-header-btn" onclick="openSettings()" title="Settings"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button>
   </div>`;
 
   // Render each rotation
@@ -1680,9 +1775,8 @@ function renderRotationWindow(wheel){
       <span class="rot-shares">${shares}</span>
       ${dteBadge}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
-      <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><rect x="5" y="7" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="11" width="14" height="2" rx="1" fill="var(--orange)"/><rect x="5" y="15" width="14" height="2" rx="1" fill="var(--orange)"/></svg></button>
-      <button class="rot-header-btn" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="var(--orange)" stroke-width="2"/><line x1="8" y1="8" x2="16" y2="16" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"/></svg></button>
-      <span class="rot-expand ${exp?'open':''}">▶</span>
+      <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>
+      <button class="rot-header-btn" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>
     </div>
     ${metricsBar}
     ${expandedHtml}
@@ -1759,12 +1853,10 @@ function renderLog(){
     </tr>`;
   }).join('')||'<tr><td colspan="14" style="text-align:center;color:#444;padding:50px">No trades</td></tr>';
   return`
-  <div class="toolbar">
-    <input class="search-inp" type="search" placeholder="Search ticker, action, comment…" value="${logQ}" oninput="logQ=this.value;render()">
-    <button class="btn btn-primary" onclick="openAddTrade(null)">+ Add Trade</button>
-    <button class="btn btn-ghost" onclick="openImport()">↑ Import</button>
-    <button class="btn btn-ghost" onclick="exportCSV()">↓ Export CSV</button>
-    <span style="color:var(--text3);font-size:13px">${trades.length} trade${trades.length!==1?'s':''}</span>
+  <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0">
+    <input class="search-inp" type="search" placeholder="Search…" value="${logQ}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
+    <span style="color:var(--text3);font-size:11px">${trades.length}</span>
+    <span class="toolbar-spacer"></span>
   </div>
   <div class="log-wrap">
     <table class="lt">
@@ -2074,11 +2166,33 @@ function toggleMinAll(){
 function toggleShowClosed(val){showClosed=val;render();}
 function toggleShowHidden(val){showHidden=val;render();}
 function setPosSort(val){posSortBy=val;render();}
+let _logQTimer=null;
+function setLogQ(val){
+  logQ=val;
+  clearTimeout(_logQTimer);
+  _logQTimer=setTimeout(()=>{
+    render();
+    const inp=document.querySelector('.search-inp');
+    if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
+  },300);
+}
 function cyclePosSort(){
-  const modes=['sortOrder','ticker','recent','pnl','dte'];
+  const modes=['ticker','recent','pnl','dte'];
   const i=modes.indexOf(posSortBy);
   posSortBy=modes[(i+1)%modes.length];
   render();
+}
+function toggleSortMenu(e){
+  e.stopPropagation();
+  const dd=document.getElementById('sort-dropdown');
+  if(!dd)return;
+  const show=dd.style.display==='none';
+  dd.style.display=show?'block':'none';
+  if(show){document.addEventListener('click',closeSortMenu,{once:true});}
+}
+function closeSortMenu(){
+  const dd=document.getElementById('sort-dropdown');
+  if(dd)dd.style.display='none';
 }
 function toggleAnalyticsSec(id,hdr){
   const el=document.getElementById(id);if(!el)return;
@@ -2330,7 +2444,38 @@ function openImport(){openModal('mImport');}
 const ACTION_MAP={'csp: cash secured put':'CSP','btc: buy to close':'BTC','stoc: sell to open call':'STOC','stc: sell to close':'STC','in: buy shares':'IN','out: sell shares':'OUT','div: dividend':'DIV','stop: sell to open put':'CSP','acc: assigned covered call':'OUT','acp: assigned cash put':'IN','exp: expired worthless':'EXP','csp':'CSP','btc':'BTC','stoc':'STOC','stc':'STC','in':'IN','out':'OUT','div':'DIV','stop':'CSP','acc':'OUT','acp':'IN','exp':'EXP'};
 const VALID_ACTIONS=new Set(['CSP','BTC','STOC','STC','IN','OUT','DIV','EXP']);
 function parseCSVLine(line){const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur.trim());cur='';}else cur+=ch;}r.push(cur.trim());return r;}
-function normDate(s){if(!s)return'';s=s.replace(/['"]/g,'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[m,d,y]=s.split('/');return`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}return s;}
+function normDate(s){
+  if(!s)return'';
+  s=s.replace(/['"]/g,'').trim();
+  if(!s)return'';
+  const pad=n=>String(n).padStart(2,'0');
+  const today=new Date();
+  let m;
+  // ISO: 2025-09-15
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  // "15 Sep 2025" / "15 September 2025" / "15 Sep"
+  m=new RegExp(`^(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[2].slice(0,3).toLowerCase()];if(mon){const yr=m[3]?parseInt(m[3]):today.getFullYear();return`${yr}-${pad(mon)}-${pad(parseInt(m[1]))}`;}};
+  // "Sep 15, 2025" / "September 15 2025"
+  m=new RegExp(`^(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2}),?\\s+(\\d{4})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(mon)return`${m[3]}-${pad(mon)}-${pad(parseInt(m[2]))}`;}
+  // "Sep 15" (no year)
+  m=new RegExp(`^(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(mon)return`${today.getFullYear()}-${pad(mon)}-${pad(parseInt(m[2]))}`;}
+  // "15Sep2025" (IBKR compact)
+  m=new RegExp(`^(\\d{1,2})(${MON_PAT})(\\d{4})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[2].toLowerCase()];if(mon)return`${m[3]}-${pad(mon)}-${pad(parseInt(m[1]))}`;}
+  // MM/DD/YYYY (US)
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[mo,d,y]=s.split('/');return`${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;}
+  // MM/DD/YY (US short)
+  if(/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(s)){const[mo,d,y]=s.split('/');return`${2000+parseInt(y)}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;}
+  // DD-MM-YYYY or DD.MM.YYYY (UK/EU)
+  m=/^(\d{1,2})[-.](\d{1,2})[-.](\d{4})$/.exec(s);
+  if(m){const d=parseInt(m[1]),mo=parseInt(m[2]);if(d>12&&mo<=12)return`${m[3]}-${pad(mo)}-${pad(d)}`;if(mo>12&&d<=12)return`${m[3]}-${pad(d)}-${pad(mo)}`;return`${m[3]}-${pad(mo)}-${pad(d)}`;}
+  // YYYY/MM/DD
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(s)){const[y,mo,d]=s.split('/');return`${y}-${mo}-${d}`;}
+  return s;
+}
 function doImport(){
   const csv=document.getElementById('import-csv').value.trim();if(!csv)return;
   const lines=csv.split('\n');if(lines.length<2){alert('No data rows found');return;}
@@ -2839,10 +2984,16 @@ function _renderAnalyticsCharts(){
 }
 
 function exportCSV(){
+  const q=logQ.toLowerCase();
+  const filtered=db.trades.filter(t=>{
+    if(!q)return true;
+    return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
+  });
   const hdr=['Ticker','Action','Rotation','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment'];
-  const rows=db.trades.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>`"${v}"`).join(',');});
+  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>`"${v}"`).join(',');});
   const csv=[hdr.join(','),...rows].join('\n');
-  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`wheelhouse-${new Date().toISOString().slice(0,10)}.csv`});
+  const suffix=q?`-${q}`:'';
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`wheelhouse${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
   a.click();URL.revokeObjectURL(a.href);
 }
 
@@ -3672,17 +3823,40 @@ async function onboardSubmit(){
 }
 
 function showSignOutButton(user){
-  // Add sign-out to sidebar if not already there
-  if(document.getElementById('auth-signout-btn'))return;
-  const sb=document.getElementById('sb-brand');
-  if(!sb)return;
-  const btn=document.createElement('button');
-  btn.id='auth-signout-btn';
-  btn.title='Sign out';
-  btn.onclick=async()=>{try{await signOut(_auth);}catch(e){console.error('Sign out failed:',e);}};
-  btn.style.cssText='background:none;border:none;cursor:pointer;color:#6b7280;font-size:11px;padding:4px 8px;border-radius:4px;margin-top:4px;display:block;width:100%;text-align:left;';
-  btn.innerHTML='⎋ Sign out ('+( user.email||user.displayName||'user')+')';
-  sb.appendChild(btn);
+  // Populate settings modal with user info
+  const userEl=document.getElementById('settings-user');
+  if(userEl)userEl.textContent=user.email||user.displayName||'user';
+}
+
+function openSettings(){
+  openModal('mSettings');
+  // Sync toggle state
+  const toggle=document.getElementById('theme-toggle');
+  const knob=document.getElementById('theme-knob');
+  if(toggle){
+    const isLight=document.documentElement.getAttribute('data-theme')==='light';
+    toggle.checked=isLight;
+    if(knob)knob.style.left=isLight?'18px':'2px';
+  }
+}
+function toggleTheme(isLight){
+  document.documentElement.setAttribute('data-theme',isLight?'light':'');
+  localStorage.setItem('wh-theme',isLight?'light':'dark');
+  const knob=document.getElementById('theme-knob');
+  if(knob)knob.style.left=isLight?'18px':'2px';
+}
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const btn=document.getElementById('sb-toggle');
+  const content=document.getElementById('content');
+  sb.classList.toggle('collapsed');
+  const collapsed=sb.classList.contains('collapsed');
+  localStorage.setItem('wh-sidebar',collapsed?'collapsed':'open');
+  if(content)content.style.marginLeft=collapsed?'0':'200px';
+  if(btn)btn.style.display=collapsed?'flex':'none';
+}
+async function doSignOut(){
+  try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
 
 // ════════════════════════════════════════════════════════
@@ -3720,7 +3894,17 @@ function showAuthOverlay() {
   render();
 }
 
+// ── PREVIEW MODE: skip auth when not on Netlify (local preview / Claude file viewer) ──
+const _isPreview = !!window.__wheelPreview;
+if(_isPreview){
+  _confirmedUid='preview-user';
+  db={wheels:[],trades:[]};
+  window._db=db;
+  render();
+}
+
 onAuthStateChanged(_auth, async (user) => {
+  if(_isPreview) return; // skip auth flow in preview mode
   if (user) {
     _confirmedUid = user.uid;
 
@@ -3811,11 +3995,18 @@ window.toggleMinAll = toggleMinAll;
 window.toggleShowClosed = toggleShowClosed;
 window.toggleShowHidden = toggleShowHidden;
 window.setPosSort = setPosSort;
+window.setLogQ = setLogQ;
 window.cyclePosSort = cyclePosSort;
+window.toggleSortMenu = toggleSortMenu;
+window.closeSortMenu = closeSortMenu;
 window.openEditTrade = openEditTrade;
 window.sortLog = sortLog;
 window.openAddTrade = openAddTrade;
 window.openImport = openImport;
+window.openSettings = openSettings;
+window.toggleTheme = toggleTheme;
+window.toggleSidebar = toggleSidebar;
+window.doSignOut = doSignOut;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
 
