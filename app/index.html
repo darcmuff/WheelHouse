@@ -1400,13 +1400,13 @@ function buildSpark(prices,isUp,w=52,h=20){
 // ════════════════════════════════════════════════════════
 // VIEW STATE
 // ════════════════════════════════════════════════════════
-let view='positions';
-let expanded=new Set();
-let minimised=new Set();   // rotations collapsed to single row
-let hidden=new Set();      // rotations hidden from view entirely
-let showClosed=false;      // toggle to reveal closed rotations
-let showHidden=false;      // toggle to reveal hidden rotations
-let posSortBy='ticker'; // ticker | recent | pnl | dte
+let view=localStorage.getItem('wh-view')||'positions';
+let expanded=new Set(JSON.parse(localStorage.getItem('wh-expanded')||'[]'));
+let minimised=new Set(JSON.parse(localStorage.getItem('wh-minimised')||'[]'));
+let hidden=new Set(JSON.parse(localStorage.getItem('wh-hidden')||'[]'));
+let showClosed=localStorage.getItem('wh-showClosed')==='true';
+let showHidden=localStorage.getItem('wh-showHidden')==='true';
+let posSortBy=localStorage.getItem('wh-posSortBy')||'ticker';
 let logSort={col:'entered',dir:'desc'};
 let logQ='';
 
@@ -1419,7 +1419,18 @@ function switchView(v){
 // ════════════════════════════════════════════════════════
 // RENDER
 // ════════════════════════════════════════════════════════
+function _saveUIState(){
+  localStorage.setItem('wh-view',view);
+  localStorage.setItem('wh-expanded',JSON.stringify([...expanded]));
+  localStorage.setItem('wh-minimised',JSON.stringify([...minimised]));
+  localStorage.setItem('wh-hidden',JSON.stringify([...hidden]));
+  localStorage.setItem('wh-showClosed',showClosed);
+  localStorage.setItem('wh-showHidden',showHidden);
+  localStorage.setItem('wh-posSortBy',posSortBy);
+}
+
 function render(){
+  _saveUIState();
   renderSidebar();
   const c=document.getElementById('content');
   if(view==='positions')c.innerHTML=renderPositions();
@@ -1429,6 +1440,7 @@ function render(){
 }
 
 function renderSidebar(){
+  document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
   const s=calcOverall();
   const wl=calcWinLoss();
   const ytd=calcYTD();
