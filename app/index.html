@@ -244,7 +244,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .rot-shares{font-size:10px;color:var(--text3);flex-shrink:0;white-space:nowrap}
 .rot-price{font-size:12px;font-weight:300;color:var(--silver);flex-shrink:0;white-space:nowrap}
 .rot-dte-badge{
-  font-size:9px;font-weight:300;padding:2px 7px;border-radius:10px;
+  font-size:12px;font-weight:500;padding:3px 10px;border-radius:10px;
   flex-shrink:0;white-space:nowrap;border:1px solid;
 }
 .rot-badge{
@@ -873,10 +873,15 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
           <span id="theme-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--orange);border-radius:50%;transition:.2s"></span>
         </label>
       </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+        <span style="font-size:13px;color:var(--text2)">Date format</span>
+        <select id="date-fmt-select" onchange="setDateFmt(this.value)" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">
+          <option value="uk">DD/MM</option>
+          <option value="us">MM/DD</option>
+        </select>
+      </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
-      <button class="btn btn-ghost btn-full" onclick="openImport();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg><span>Import CSV</span></button>
-      <button class="btn btn-ghost btn-full" onclick="exportCSV();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg><span>Export CSV</span></button>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <div id="settings-user" style="font-size:11px;color:var(--text3);padding:0 14px"></div>
       <button id="settings-signout" class="btn btn-ghost btn-full" style="text-align:left;padding:10px 14px;font-size:13px;color:var(--red)" onclick="doSignOut()">⎋ Sign Out</button>
@@ -1318,8 +1323,9 @@ function fmtMoney(n){
   return(n<0?'-$':'$')+abs;
 }
 function fmt2(n,dp=2){return n!=null&&!isNaN(n)?parseFloat(n).toFixed(dp):'—';}
-function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return`${day}/${m}/${y.slice(2)}`;}
-function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return`${day}/${m}/${y.slice(2)}`;}
+let dateFmt=localStorage.getItem('wh-dateFmt')||'uk'; // uk | us
+function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
+function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function colorN(n){return n==null?'m':n>=0?'g':'r';}
 function dteCls(dte){return dte<=3?'r':dte<=14?'o':'g';}
 
@@ -1621,7 +1627,7 @@ function renderRotationMini(wheel){
 function fmtDateShort(d){
   if(!d)return'—';
   const[,m,day]=d.split('-');
-  return`${day}/${m}`;
+  return dateFmt==='us'?`${m}/${day}`:`${day}/${m}`;
 }
 function fmtMonYear(d){
   if(!d)return'—';
@@ -1725,7 +1731,7 @@ function renderRotationWindow(wheel){
   const _strike=openLegForDTE?.strike;
   const _pctToStrike=rawP!=null&&_strike?((rawP-_strike)/_strike*100):null;
   const _pctCol=_pctToStrike===null?'var(--text3)':_pctToStrike<0?'var(--red)':_pctToStrike<5?'var(--yellow)':'var(--green)';
-  const _pctHtml=_pctToStrike!==null?`<span style="font-size:11px;font-weight:300"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:12px;font-weight:300;color:var(--silver)">TO STRIKE</span></span>`:'';
+  const _pctHtml=_pctToStrike!==null?`<span style="font-size:11px;font-weight:300"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:12px;font-weight:300;color:var(--silver)">To Strike</span></span>`:'';
   const _dteCl=activeDTE!==null?dteCls(activeDTE):'g';
   const _dteColor=_dteCl==='r'?'var(--red)':_dteCl==='o'?'var(--orange)':'var(--green)';
   const dteBadge=activeDTE!==null
@@ -1823,8 +1829,7 @@ function renderRotationWindow(wheel){
       ${rotNumHtml(wheel,isOpen)}
       <span class="rot-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
       ${headerPriceHtml}
-      <span class="rot-label">${_dateSpan}</span>
-      ${_pctHtml}
+      <span class="rot-label">${_dateSpan} ${_pctHtml}</span>
       <span class="rot-shares">${shares}</span>
       ${dteBadge}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
@@ -1907,6 +1912,8 @@ function renderLog(){
   }).join('')||'<tr><td colspan="14" style="text-align:center;color:#444;padding:50px">No trades</td></tr>';
   return`
   <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0">
+    <button class="rot-header-btn" onclick="openImport()" title="Import CSV"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg></button>
+    <button class="rot-header-btn" onclick="exportCSV()" title="Export CSV"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg></button>
     <input class="search-inp" type="search" placeholder="Search…" value="${logQ}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
     <span style="color:var(--text3);font-size:11px">${trades.length}</span>
     <span class="toolbar-spacer"></span>
@@ -3883,7 +3890,7 @@ function showSignOutButton(user){
 
 function openSettings(){
   openModal('mSettings');
-  // Sync toggle state
+  // Sync toggle states
   const toggle=document.getElementById('theme-toggle');
   const knob=document.getElementById('theme-knob');
   if(toggle){
@@ -3891,6 +3898,13 @@ function openSettings(){
     toggle.checked=isLight;
     if(knob)knob.style.left=isLight?'18px':'2px';
   }
+  const dateSel=document.getElementById('date-fmt-select');
+  if(dateSel)dateSel.value=dateFmt;
+}
+function setDateFmt(val){
+  dateFmt=val;
+  localStorage.setItem('wh-dateFmt',val);
+  render();
 }
 function toggleTheme(isLight){
   document.documentElement.setAttribute('data-theme',isLight?'light':'');
@@ -4108,6 +4122,7 @@ window.openAddTrade = openAddTrade;
 window.openImport = openImport;
 window.openSettings = openSettings;
 window.toggleTheme = toggleTheme;
+window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
 window.exportCSV = exportCSV;
