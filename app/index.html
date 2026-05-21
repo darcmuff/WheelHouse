@@ -1760,11 +1760,13 @@ function renderRotationWindow(wheel){
 
   // Open position — currently live leg
   const openPos=buildOpenPosition(m.trades);
+  const _opDteCl=openPos?dteCls(openPos.dte):'g';
+  const _opDteColor=_opDteCl==='r'?'var(--red)':_opDteCl==='o'?'var(--yellow)':'var(--green)';
   const openPosHtml=openPos
     ?`<div class="rmb-val" style="font-size:12px;font-weight:500;color:${openPos.action==='CSP'?'var(--green)':'var(--blue)'}">
         ${openPos.action} $${fmt2(openPos.strike)}
       </div>
-      <div class="rmb-sub">exp ${fmtDateShort(openPos.expiry)} · ${openPos.dte}d · ${openPos.shares||0} shares</div>`
+      <div class="rmb-sub">exp ${fmtDateShort(openPos.expiry)} · <span style="color:${_opDteColor};font-weight:500;padding:1px 5px;border:1px solid ${_opDteColor};border-radius:8px;font-size:10px">${openPos.dte}d</span> · ${openPos.shares||0} shares</div>`
     :`<div class="rmb-val m" style="font-size:12px">No open leg</div>
       <div class="rmb-sub">${isOpen?'Waiting for entry':'Strategy closed'}</div>`;
 
