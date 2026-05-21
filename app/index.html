@@ -1913,6 +1913,7 @@ function renderLog(){
   return`
   <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0">
     <span style="font-size:13px;font-weight:300;color:var(--silver)">Trade Log</span>
+    <button class="rot-header-btn" onclick="switchView('positions')" title="Close" style="margin-left:4px"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:16px;height:16px"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
     <span class="toolbar-spacer"></span>
     <input class="search-inp" type="search" placeholder="Search…" value="${logQ}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
     <span style="color:var(--text3);font-size:11px">${trades.length}</span>
