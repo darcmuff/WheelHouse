@@ -621,6 +621,42 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 </div>
 
 <!-- ═══ LAYOUT ═══ -->
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" style="
+  position:fixed;inset:0;z-index:9998;
+  background:#18191c;
+  display:none;align-items:center;justify-content:center;flex-direction:column;
+  font-family:'Inter',sans-serif;
+  transition:opacity .6s;
+">
+  <div style="position:relative;width:80px;height:80px;margin-bottom:24px">
+    <svg viewBox="0 0 120 120" style="width:80px;height:80px;animation:wh-spin 3s linear infinite">
+      <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="2" opacity="0.85"/>
+      <path d="M 48.61 17.5 A 44 44 0 0 1 17.5 71.39" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 20.1 74.32 L 17.5 71.39 L 16.72 75.22" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 28.89 91.11 A 44 44 0 0 1 91.11 91.11" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 92.35 87.4 L 91.11 91.11 L 94.82 89.87" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 102.5 71.39 A 44 44 0 0 1 71.39 17.5" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 67.56 18.28 L 71.39 17.5 L 68.46 14.9" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="60" y1="47" x2="60" y2="20" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+      <line x1="48.74" y1="66.5" x2="25.36" y2="80" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+      <line x1="71.26" y1="66.5" x2="94.64" y2="80" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="60" cy="60" r="13" fill="#0d9488" opacity="0.12"/>
+      <circle cx="60" cy="60" r="10" fill="#0d9488"/>
+      <circle cx="60" cy="60" r="6" fill="#18191c"/>
+      <circle cx="60" cy="60" r="2.5" fill="#14b8a6"/>
+    </svg>
+  </div>
+  <div id="loading-progress" style="width:180px;height:3px;background:#2b2d32;border-radius:3px;overflow:hidden;margin-bottom:12px">
+    <div id="loading-bar" style="width:0%;height:100%;background:#0d9488;border-radius:3px;transition:width .3s"></div>
+  </div>
+  <div id="loading-text" style="font-size:11px;color:#6b7280;letter-spacing:.5px">Loading...</div>
+</div>
+<style>
+@keyframes wh-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+#loading-overlay.fade-out{opacity:0;pointer-events:none}
+</style>
+
 <div id="layout">
 
   <!-- SIDEBAR -->
@@ -3920,13 +3956,20 @@ onAuthStateChanged(_auth, async (user) => {
   if (user) {
     _confirmedUid = user.uid;
 
-    // Hide auth overlay
+    // Swap auth overlay for loading overlay
     document.getElementById('auth-overlay').style.display = 'none';
+    const loadingEl = document.getElementById('loading-overlay');
+    const loadingBar = document.getElementById('loading-bar');
+    const loadingText = document.getElementById('loading-text');
+    loadingEl.style.display = 'flex';
+    loadingBar.style.width = '10%';
+    loadingText.textContent = 'Signing in...';
     showSignOutButton(user);
 
     // FORCED MIGRATION — inline, no external function dependency
     const localData = localStorage.getItem('wheel_tracker_v7');
     if (localData) {
+      loadingText.textContent = 'Migrating data...';
       console.log('Forcing migration...');
       try {
         const oldDb = JSON.parse(localData);
@@ -3943,12 +3986,55 @@ onAuthStateChanged(_auth, async (user) => {
       }
     }
 
-    // Load from Firestore — render and onboarding check happen inside
+    // Load from Firestore
+    loadingBar.style.width = '30%';
+    loadingText.textContent = 'Loading rotations...';
     await loadDBFromFirestore(user.uid);
     window._db=db;
-    // Fetch live prices now that wheels are loaded, then poll every 60s
-    fetchAllQuotes();
-    setInterval(fetchAllQuotes,60000);
+    render();
+
+    // Fetch quotes and logos
+    loadingBar.style.width = '50%';
+    const wheelSyms = db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
+    const allSyms = [...new Set(wheelSyms)];
+    const totalSteps = allSyms.length;
+    let completed = 0;
+
+    // Fire logo fetches in parallel
+    const logoPromises = allSyms.map(sym => fetchLogo(sym));
+
+    // Fetch quotes sequentially with progress
+    for (const sym of allSyms) {
+      loadingText.textContent = `Fetching ${sym}...`;
+      try { await fetchSymbol(sym); } catch(e) { console.warn('Quote:', sym, e.message); }
+      completed++;
+      const pct = 50 + Math.round((completed / Math.max(totalSteps, 1)) * 45);
+      loadingBar.style.width = pct + '%';
+      if (allSyms.length > 1) await new Promise(r => setTimeout(r, 200));
+    }
+
+    // Wait for logos
+    await Promise.allSettled(logoPromises);
+    loadingBar.style.width = '100%';
+    loadingText.textContent = 'Ready';
+
+    // Update prices and render fully
+    const nOk = Object.keys(quotes).length;
+    if (nOk > 0) {
+      db.wheels.forEach(w => {
+        if (w.status === 'open' && quotes[w.ticker]) w.lastPrice = quotes[w.ticker].price;
+      });
+      db.wheels.forEach(w => _saveWheel(w));
+    }
+    render();
+
+    // Fade out loading overlay
+    await new Promise(r => setTimeout(r, 300));
+    loadingEl.classList.add('fade-out');
+    setTimeout(() => { loadingEl.style.display = 'none'; loadingEl.classList.remove('fade-out'); }, 600);
+
+    // Start polling
+    setInterval(fetchAllQuotes, 60000);
   } else {
     _confirmedUid = null;
     showAuthOverlay();
