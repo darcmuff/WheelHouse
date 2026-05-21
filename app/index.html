@@ -1909,11 +1909,12 @@ function renderLog(){
   }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:50px">No trades</td></tr>';
   return`
   <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0">
-    <button class="rot-header-btn" onclick="openImport()" title="Import CSV"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg></button>
-    <button class="rot-header-btn" onclick="exportCSV()" title="Export CSV"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg></button>
+    <span style="font-size:13px;font-weight:300;color:var(--silver)">Trade Log</span>
+    <span class="toolbar-spacer"></span>
     <input class="search-inp" type="search" placeholder="Search…" value="${logQ}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
     <span style="color:var(--text3);font-size:11px">${trades.length}</span>
-    <span class="toolbar-spacer"></span>
+    <button class="btn btn-ghost" onclick="openImport()" style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:14px;height:14px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg>Import</button>
+    <button class="btn btn-ghost" onclick="exportCSV()" style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:14px;height:14px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg>Export</button>
   </div>
   <div class="log-wrap">
     <table class="lt">
