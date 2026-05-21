@@ -1722,6 +1722,10 @@ function renderRotationWindow(wheel){
   const _firstDate=_entered.length?_entered[0]:null;
   const _lastDate=_entered.length?_entered[_entered.length-1]:null;
   const _dateSpan=_firstDate?(isOpen?fmtMonYear(_firstDate)+' → Present':(_lastDate&&_lastDate!==_firstDate?fmtMonYear(_firstDate)+' → '+fmtMonYear(_lastDate):fmtMonYear(_firstDate))):'—';
+  const _strike=openLegForDTE?.strike;
+  const _pctToStrike=rawP!=null&&_strike?((rawP-_strike)/_strike*100):null;
+  const _pctCol=_pctToStrike===null?'var(--text3)':_pctToStrike<0?'var(--red)':_pctToStrike<5?'var(--yellow)':'var(--green)';
+  const _pctHtml=_pctToStrike!==null?`<span style="font-size:11px;font-weight:300"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:12px;font-weight:300;color:var(--silver)">TO STRIKE</span></span>`:'';
   const _dteCl=activeDTE!==null?dteCls(activeDTE):'g';
   const _dteColor=_dteCl==='r'?'var(--red)':_dteCl==='o'?'var(--orange)':'var(--green)';
   const dteBadge=activeDTE!==null
@@ -1820,6 +1824,7 @@ function renderRotationWindow(wheel){
       <span class="rot-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
       ${headerPriceHtml}
       <span class="rot-label">${_dateSpan}</span>
+      ${_pctHtml}
       <span class="rot-shares">${shares}</span>
       ${dteBadge}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
