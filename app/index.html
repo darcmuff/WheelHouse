@@ -1018,14 +1018,17 @@ function _fsSetDoc(...args){return setDoc(...args);}
 function _fsDeleteDoc(...args){return deleteDoc(...args);}
 function _currentUid(){return _confirmedUid;}
 
+function _stripUndefined(o){
+  return Object.fromEntries(Object.entries(o).filter(([,v])=>v!==undefined));
+}
 function _saveWheel(wheel){
   const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
-  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),wheel)
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),_stripUndefined(wheel))
     .catch(e=>console.error('Wheel save failed:',e));
 }
 function _saveTrade(trade){
   const uid=_currentUid();if(!uid||!trade||!trade.id)return;
-  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),trade)
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),_stripUndefined(trade))
     .catch(e=>console.error('Trade save failed:',e));
 }
 function _deleteWheelDoc(wheelId){
@@ -1275,10 +1278,12 @@ function calcCapitalStats(){
   const csps=db.trades.filter(t=>t.action==='CSP'&&t.strike&&t.shares);
   const notionals=csps.map(t=>t.strike*t.shares);
   const maxCap=notionals.length?Math.max(...notionals):0;
-  // Current capital at risk = open CSPs not yet expired
-  const today=new Date().toISOString().slice(0,10);
-  const atRisk=db.trades.filter(t=>t.action==='CSP'&&t.expiry&&t.expiry>=today&&t.strike&&t.shares)
-    .reduce((s,t)=>s+t.strike*t.shares,0);
+  // Current capital at risk = genuinely open CSPs (lifecycle-aware, survives rolls)
+  const atRisk=db.wheels.reduce((s,w)=>{
+    const legs=openOptionLegs(db.trades.filter(t=>t.wheelId===w.id));
+    return s+legs.filter(l=>l.action==='CSP'&&l.strike&&l.shares)
+                .reduce((a,l)=>a+l.strike*l.shares,0);
+  },0);
   const totalFees=db.trades.reduce((s,t)=>s+(t.fees||0),0);
   const s=calcOverall();
   const feesPct=s.premiumCredits>0?(totalFees/s.premiumCredits*100):0;
@@ -1673,22 +1678,32 @@ function buildLastAction(trades){
   return t.action;
 }
 
-function buildOpenPosition(trades){
-  const today=new Date();today.setHours(0,0,0,0);
-  // Walk trades chronologically to find the last unclosed option
-  const sorted=[...trades].sort((a,b)=>{const dc=a.entered.localeCompare(b.entered);if(dc!==0)return dc;const ca=(a.action==='BTC'||a.action==='STC')?0:1,cb=(b.action==='BTC'||b.action==='STC')?0:1;return ca-cb;});
-  let openTrade=null;
-  sorted.forEach(t=>{
+// ── Single source of truth for open option legs ──
+// Walks the lifecycle once; supports laddered/concurrent legs; matches BTC/STC to strike.
+function openOptionLegs(wheelTrades){
+  const today=new Date().toISOString().slice(0,10);
+  const closing=a=>(a==='BTC'||a==='STC')?0:1;
+  const sorted=[...wheelTrades].sort((a,b)=>
+    a.entered.localeCompare(b.entered)||closing(a.action)-closing(b.action));
+  const open=[];
+  for(const t of sorted){
     if(t.action==='CSP'||t.action==='STOC'){
-      openTrade=t;
-    } else if(t.action==='BTC'||t.action==='STC'){
-      openTrade=null;
+      if(!t.expiredWorthless)open.push(t);
+    }else if(t.action==='BTC'||t.action==='STC'){
+      let i=open.findIndex(o=>o.strike===t.strike);   // close the matching strike
+      if(i<0)i=open.length-1;                          // fallback: most recent
+      if(i>=0)open.splice(i,1);
     }
-  });
-  if(!openTrade)return null;
-  if(openTrade.expiredWorthless)return null;
-  if(!openTrade.expiry||new Date(openTrade.expiry)<today)return null;
-  return{action:openTrade.action,strike:openTrade.strike,expiry:openTrade.expiry,shares:openTrade.shares,dte:dteDays(openTrade.expiry)};
+  }
+  return open.filter(o=>o.expiry&&o.expiry>=today);
+}
+
+function buildOpenPosition(trades){
+  const legs=openOptionLegs(trades);
+  if(!legs.length)return null;
+  // Header shows the nearest-expiry live leg
+  const t=[...legs].sort((a,b)=>a.expiry.localeCompare(b.expiry))[0];
+  return{action:t.action,strike:t.strike,expiry:t.expiry,shares:t.shares,dte:dteDays(t.expiry)};
 }
 
 function renderRotationWindow(wheel){
@@ -1933,18 +1948,20 @@ function renderLog(){
 // ── DASHBOARD — redesigned ──
 function getWheelPhase(wheel){
   const m=calcWheel(wheel);
+  const legs=openOptionLegs(m.trades);
   if(m.sharesHeld>0){
-    const hasCC=m.trades.some(t=>t.action==='STOC'&&t.expiry&&!t.expiredWorthless&&dteDays(t.expiry)>=0);
+    const hasCC=legs.some(t=>t.action==='STOC');
     return hasCC?{phase:'CC',label:'Covered Call',cls:'d-phase-cc'}:{phase:'HOLD',label:'Holding Stock',cls:'d-phase-hold'};
   }
-  const hasCSP=m.trades.some(t=>t.action==='CSP'&&t.expiry&&!t.expiredWorthless&&dteDays(t.expiry)>=0);
+  const hasCSP=legs.some(t=>t.action==='CSP');
   return hasCSP?{phase:'CSP',label:'Cash-Secured Put',cls:'d-phase-csp'}:{phase:'IDLE',label:'No Open Leg',cls:'d-phase-idle'};
 }
 
 function buildDashAlerts(){
-  const alerts=[];const todayStr=new Date().toISOString().slice(0,10);
-  db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.expiry&&t.expiry>=todayStr&&!t.expiredWorthless).forEach(t=>{
-    const dte=dteDays(t.expiry);const w=db.wheels.find(x=>x.id===t.wheelId);
+  const alerts=[];
+  db.wheels.forEach(w=>{
+    openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).forEach(t=>{
+    const dte=dteDays(t.expiry);
     const price=(quotes[t.ticker]?.price)||(w?.lastPrice)||null;
     const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
     if(dte!==null&&dte<=7){
@@ -1960,6 +1977,7 @@ function buildDashAlerts(){
       const origDTE=t.days||30;const elapsed=origDTE-dte;
       if(elapsed/origDTE>=0.5&&dte>=3) alerts.push({type:'info',text:`${t.ticker} ${t.action} at ${Math.round(elapsed/origDTE*100)}% of DTE — consider closing`});
     }
+    });
   });
   return alerts.slice(0,6);
 }
@@ -1970,14 +1988,16 @@ function buildMiniCal(){
   const firstDay=new Date(y,m,1).getDay();// 0=Sun
   const startIdx=firstDay===0?6:firstDay-1;// Mon=0
   const expiryDates={};
-  db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.expiry&&!t.expiredWorthless).forEach(t=>{
+  db.wheels.forEach(wh=>{
+    openOptionLegs(db.trades.filter(t=>t.wheelId===wh.id)).forEach(t=>{
     const dte=dteDays(t.expiry);if(dte===null||dte<0)return;
     const d=parseInt(t.expiry.split('-')[2],10);
-    const price=(quotes[t.ticker]?.price)||(db.wheels.find(w=>w.id===t.wheelId)?.lastPrice)||null;
+    const price=(quotes[t.ticker]?.price)||(wh.lastPrice)||null;
     const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
     if(t.expiry.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)){
       expiryDates[d]=itm?'#ef4444':dte<=7?'#fbbf24':'#22c55e';
     }
+    });
   });
   const dayNames=['M','T','W','T','F','S','S'];
   let cells=dayNames.map(d=>`<div class="d-mini-cal-hdr">${d}</div>`).join('');
@@ -1993,9 +2013,8 @@ function buildMiniCal(){
 function renderDash(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();const cap=calcCapitalStats();
   const monthly=calcMonthlyPnL();
-  const todayStr=new Date().toISOString().slice(0,10);
   const openWheels=db.wheels.filter(w=>w.status==='open').sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
-  const liveOpts=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.expiry&&t.expiry>=todayStr&&!t.expiredWorthless).sort((a,b)=>a.expiry.localeCompare(b.expiry));
+  const liveOpts=db.wheels.flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id))).sort((a,b)=>a.expiry.localeCompare(b.expiry));
   const recentTrades=[...db.trades].sort((a,b)=>b.entered.localeCompare(a.entered)).slice(0,8);
   const alerts=buildDashAlerts();
 
@@ -2465,14 +2484,27 @@ function saveTrade(){
   }
   const action=document.getElementById('tf-action').value;
   const deltaRaw=parseFloat(document.getElementById('tf-delta').value);
+  const premium=parseFloat(document.getElementById('tf-premium').value)||0;
+  const fees=parseFloat(document.getElementById('tf-fees').value)||0;
+  const shares=parseFloat(document.getElementById('tf-shares').value)||0;
+  const total=parseFloat(document.getElementById('tf-total').value)||computeTotal(action,premium,shares,fees);
   const data={wheelId,ticker,action,entered,
     expiry:document.getElementById('tf-expiry').value||null,strike:parseFloat(document.getElementById('tf-strike').value)||null,
     delta:isNaN(deltaRaw)?null:deltaRaw,
-    premium:parseFloat(document.getElementById('tf-premium').value)||0,fees:parseFloat(document.getElementById('tf-fees').value)||0,
-    shares:parseFloat(document.getElementById('tf-shares').value)||0,total:parseFloat(document.getElementById('tf-total').value)||0,
+    premium,fees,shares,total,
     days:parseFloat(document.getElementById('tf-days').value)||0,ppd:parseFloat(document.getElementById('tf-ppd').value)||0,
     verified:false,comment:document.getElementById('tf-comment').value.trim()};
-  if(id){const idx=db.trades.findIndex(t=>t.id===id);const old=db.trades[idx];if(idx>=0)db.trades[idx]={id,...data,createdAt:old?.createdAt||new Date().toISOString(),rollId:old?.rollId||undefined};}
+  if(id){
+    const idx=db.trades.findIndex(t=>t.id===id);
+    if(idx>=0){
+      const old=db.trades[idx];
+      const updated={id,...data,createdAt:old.createdAt||new Date().toISOString()};
+      if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
+      if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
+      updated.verified=old.verified||false;                    // preserve verification status
+      db.trades[idx]=updated;
+    }
+  }
   else{
     db.trades.push({id:uid(),createdAt:new Date().toISOString(),...data});
     expanded.add(wheelId);
@@ -3248,6 +3280,7 @@ function autoCalcPMTotal(){
   const f=parseFloat(document.getElementById('pm-fees').value)||0;
   document.getElementById('pm-total').value=computeTotal(a,p,s,f).toFixed(2);
 }
+function autoCalcPMDTE(){autoCalcPMTotal();} // days computed at save time; just keep total fresh
 function savePMTrade(){
   const ticker=document.getElementById('pm-ticker').value.toUpperCase().trim();
   const entered=document.getElementById('pm-entered').value;
@@ -3257,7 +3290,7 @@ function savePMTrade(){
   let wheelId=document.getElementById('pm-wheel').value;
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
-    if(ex){wheelId=ex.id;}else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);wheelId=nw.id;}
+    if(ex){wheelId=ex.id;}else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
   const premium=parseFloat(document.getElementById('pm-premium').value)||0;
   const shares=parseFloat(document.getElementById('pm-shares').value)||0;
@@ -4164,6 +4197,17 @@ window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
+window.onActionChange = onActionChange;
+window.onTickerInput = onTickerInput;
+window.autoCalcDTE = autoCalcDTE;
+window.autoCalcTotal = autoCalcTotal;
+window.autoCalcPPD = autoCalcPPD;
+window.onPMActionChange = onPMActionChange;
+window.onPMTickerInput = onPMTickerInput;
+window.autoCalcPMTotal = autoCalcPMTotal;
+window.autoCalcPMDTE = autoCalcPMDTE;
+window.showXpop = showXpop;
+window.hideXpop = hideXpop;
 
 </script>
 
