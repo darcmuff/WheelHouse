@@ -1187,7 +1187,7 @@ function calcWinLoss(){
         if(stack.length>0){stack.pop();wins++;} // assigned: premium kept = win
       } else if(t.action==='BTC'||t.action==='STC'){
         if(stack.length>0){
-          let i=stack.findIndex(o=>o.strike===t.strike); // close the matching strike
+          let i=stack.findIndex(o=>Number(o.strike)===Number(t.strike)); // numeric match — stored types vary
           if(i<0)i=stack.length-1;                        // fallback: most recent
           const o=stack.splice(i,1)[0];
           if(o.total>=t.total)wins++;else losses++;
@@ -1701,7 +1701,7 @@ function openOptionLegs(wheelTrades){
     if(t.action==='CSP'||t.action==='STOC'){
       if(!t.expiredWorthless)open.push(t);
     }else if(t.action==='BTC'||t.action==='STC'){
-      let i=open.findIndex(o=>o.strike===t.strike);   // close the matching strike
+      let i=open.findIndex(o=>Number(o.strike)===Number(t.strike)); // numeric match — stored types vary (33 vs "33.00")
       if(i<0)i=open.length-1;                          // fallback: most recent
       if(i>=0)open.splice(i,1);
     }
