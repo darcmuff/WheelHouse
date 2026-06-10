@@ -921,7 +921,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, setDoc, deleteDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
   apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
@@ -994,8 +994,11 @@ function loadDB(){
 async function loadDBFromFirestore(userId){
   // No try/catch here — a failed load must throw so the caller can halt boot.
   // Swallowing it made a network blip look like an empty account (onboarding shown).
-  const wheelsSnap=await getDocs(collection(_fsDb,'users',userId,'wheels'));
-  const tradesSnap=await getDocs(collection(_fsDb,'users',userId,'trades'));
+  // getDocsFromServer, not getDocs: plain getDocs silently falls back to the (empty)
+  // local cache when the network is down and reports success — which made a dead
+  // connection look like a brand-new account. Server read or bust.
+  const wheelsSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'wheels'));
+  const tradesSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'trades'));
   db.wheels=wheelsSnap.docs.map(d=>d.data());
   db.trades=tradesSnap.docs.map(d=>d.data());
   render();
