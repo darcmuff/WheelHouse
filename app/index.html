@@ -992,24 +992,16 @@ function loadDB(){
 }
 
 async function loadDBFromFirestore(userId){
-  try{
-    const wheelsSnap=await getDocs(collection(_fsDb,'users',userId,'wheels'));
-    const tradesSnap=await getDocs(collection(_fsDb,'users',userId,'trades'));
-    db.wheels=wheelsSnap.docs.map(d=>d.data());
-    db.trades=tradesSnap.docs.map(d=>d.data());
-    console.log('Firestore loaded:',db.wheels.length,'wheels,',db.trades.length,'trades for uid:',userId);
-    // Migration: sortOrder swap removed — use manual reorder arrows instead
-    // autoMarkExpiredTrades(); // disabled — manual expired clicks are source of truth
-    render();
-    // Show onboarding only if this user genuinely has no rotations
-    if(!db.wheels||db.wheels.length===0){
-      const ob=document.getElementById('onboard-overlay');
-      if(ob)ob.style.display='flex';
-    } else {
-      const ob=document.getElementById('onboard-overlay');
-      if(ob)ob.style.display='none';
-    }
-  }catch(e){console.error('Firestore load failed:',e);}
+  // No try/catch here — a failed load must throw so the caller can halt boot.
+  // Swallowing it made a network blip look like an empty account (onboarding shown).
+  const wheelsSnap=await getDocs(collection(_fsDb,'users',userId,'wheels'));
+  const tradesSnap=await getDocs(collection(_fsDb,'users',userId,'trades'));
+  db.wheels=wheelsSnap.docs.map(d=>d.data());
+  db.trades=tradesSnap.docs.map(d=>d.data());
+  render();
+  // Show onboarding only after a confirmed-successful load with genuinely no rotations
+  const ob=document.getElementById('onboard-overlay');
+  if(ob)ob.style.display=(!db.wheels||db.wheels.length===0)?'flex':'none';
 }
 
 // Firestore helpers
@@ -4085,10 +4077,17 @@ onAuthStateChanged(_auth, async (user) => {
       }
     }
 
-    // Load from Firestore
+    // Load from Firestore — halt boot on failure rather than booting empty
     loadingBar.style.width = '30%';
     loadingText.textContent = 'Loading rotations...';
-    await loadDBFromFirestore(user.uid);
+    try {
+      await loadDBFromFirestore(user.uid);
+    } catch (e) {
+      console.error('Load failed:', e);
+      loadingText.innerHTML = 'Could not load your data — check your connection. '
+        + '<button onclick="location.reload()" style="margin-left:8px;padding:4px 10px;border-radius:6px;border:1px solid var(--border,#444);background:transparent;color:inherit;cursor:pointer">Retry</button>';
+      return; // do NOT proceed to quotes/render/onboarding with an empty db
+    }
     window._db=db;
     render();
 
