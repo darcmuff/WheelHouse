@@ -1740,9 +1740,13 @@ function renderRotationWindow(wheel){
   const _lastDate=_entered.length?_entered[_entered.length-1]:null;
   const _dateSpan=_firstDate?(isOpen?fmtMonYear(_firstDate)+' → Present':(_lastDate&&_lastDate!==_firstDate?fmtMonYear(_firstDate)+' → '+fmtMonYear(_lastDate):fmtMonYear(_firstDate))):'—';
   const _strike=openLegForDTE?.strike;
-  const _pctToStrike=rawP!=null&&_strike?((rawP-_strike)/_strike*100):null;
-  const _pctCol=_pctToStrike===null?'var(--text3)':_pctToStrike<0?'var(--red)':_pctToStrike<5?'var(--yellow)':'var(--green)';
-  const _pctHtml=_pctToStrike!==null?`<span style="font-size:11px;font-weight:300"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:12px;font-weight:300;color:var(--silver)">To Strike</span></span>`:'';
+  const _pctToStrike=rawP!=null&&_strike?((_strike-rawP)/rawP*100):null; // move needed from current price to reach strike
+  const _pctCol='var(--silver)'; // neutral — sign shows which side of the strike; red/green was misleading for CCs
+  // Leg-type-aware ITM check: CSP is ITM when price is below strike; covered call when above
+  const _legAction=openLegForDTE?.action;
+  const _itm=rawP!=null&&_strike?(_legAction==='CSP'?rawP<_strike:_legAction==='STOC'?rawP>_strike:false):false;
+  const _itmTag=_itm?`<span style="font-size:9px;font-weight:600;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:1px">ITM</span>`:'';
+  const _pctHtml=_pctToStrike!==null?`<span style="font-size:11px;font-weight:300"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:12px;font-weight:300;color:var(--silver)">To Strike</span>${_itmTag}</span>`:'';
   const _dteCl=activeDTE!==null?dteCls(activeDTE):'g';
   const _dteColor=_dteCl==='r'?'var(--red)':_dteCl==='o'?'var(--orange)':'var(--green)';
   const dteBadge=activeDTE!==null
