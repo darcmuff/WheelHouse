@@ -1360,6 +1360,7 @@ function hideXpop(){document.getElementById('xpop').classList.remove('vis');}
 let quotes={};
 let sparks={};
 let fetching=false;
+let _pollHandle=null; // quote-poll interval — cleared on sign-out so it never stacks
 let logos={};  // ticker → logo URL (cached per session)
 
 async function fetchSymbol(sym){
@@ -1406,11 +1407,12 @@ async function fetchAllQuotes(){
     const nOk=Object.keys(quotes).length;
     if(nOk>0){
       db.wheels.forEach(w=>{
-        if(w.status==='open'&&quotes[w.ticker]){
+        if(w.status==='open'&&quotes[w.ticker]&&w.lastPrice!==quotes[w.ticker].price){
           w.lastPrice=quotes[w.ticker].price;
+          _saveWheel(w); // persist only real changes — not every wheel every poll
         }
       });
-      db.wheels.forEach(w=>_saveWheel(w));render();
+      render();
     }else if(Object.keys(logos).length>0){
       render(); // re-render even if no quotes, so logos appear
     }
@@ -2583,6 +2585,7 @@ function doImport(){
   const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),ppd:col('ppd'),verified:col('verified'),comment:col('comment')};
   let imported=0,skipped=0,dupes=0;
   const newWheelTickers=new Set();
+  const newWheels=[],newTrades=[]; // track what this import actually creates
   // Build duplicate fingerprint set from existing trades
   const existingFingerprints=new Set(db.trades.map(t=>`${t.ticker}|${t.action}|${t.entered}|${t.strike||''}|${t.shares||''}`));
   for(let i=1;i<lines.length;i++){
@@ -2609,15 +2612,17 @@ function doImport(){
       const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
       wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};
       db.wheels.push(wheel);
+      newWheels.push(wheel);
       newWheelTickers.add(ticker);
     }
     const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
     const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
     const days=parseFloat(get(C.days))||0;
-    db.trades.push({id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days,ppd:days>0?total/days:0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)});
+    const nt={id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days,ppd:days>0?total/days:0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)};
+    db.trades.push(nt);newTrades.push(nt);
     imported++;
   }
-  db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mImport');document.getElementById('import-csv').value='';render();
+  newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');document.getElementById('import-csv').value='';render();
   // Fetch logos and prices for any new rotations
   newWheelTickers.forEach(ticker=>{
     fetchSymbol(ticker).then(()=>{
@@ -3855,15 +3860,16 @@ function confirmParsed(){
     if(wheelId==='new'||!wheelId){
       const ex=db.wheels.find(w=>w.ticker===trades[0].ticker&&w.status==='open');
       if(ex){wheelId=ex.id;}
-      else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);wheelId=nw.id;}
+      else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
     trades.forEach(p=>{
-      db.trades.push({id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
+      const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-        rollId:p.rollId,verified:false,comment:'via SmartScan (roll)'});
+        rollId:p.rollId,verified:false,comment:'via SmartScan (roll)'};
+      db.trades.push(nt);_saveTrade(nt); // save only what was touched
     });
-    expanded.add(wheelId);db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mPaste');parsedTradeData=null;
+    expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
     try{render();}catch(e){console.error('SmartScan roll render error:',e);}
     return;
   }
@@ -3873,14 +3879,15 @@ function confirmParsed(){
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===p.ticker&&w.status==='open');
     if(ex){wheelId=ex.id;}
-    else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:p.ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:p.entered,sortOrder:mo+1};db.wheels.push(nw);wheelId=nw.id;}
+    else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:p.ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:p.entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
-  db.trades.push({id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
+  const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-    verified:false,comment:'via SmartScan'});
+    verified:false,comment:'via SmartScan'};
+  db.trades.push(nt);_saveTrade(nt); // save only what was touched
   expanded.add(wheelId);
-  db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mPaste');parsedTradeData=null;
+  closeModal('mPaste');parsedTradeData=null;
   try{render();}catch(e){console.error('SmartScan render error:',e);alert('Trade saved but display error: '+e.message+'\n\nRefresh the page to see your trade.');}
 }
 
@@ -4110,9 +4117,11 @@ onAuthStateChanged(_auth, async (user) => {
     const nOk = Object.keys(quotes).length;
     if (nOk > 0) {
       db.wheels.forEach(w => {
-        if (w.status === 'open' && quotes[w.ticker]) w.lastPrice = quotes[w.ticker].price;
+        if (w.status === 'open' && quotes[w.ticker] && w.lastPrice !== quotes[w.ticker].price) {
+          w.lastPrice = quotes[w.ticker].price;
+          _saveWheel(w); // persist only real changes
+        }
       });
-      db.wheels.forEach(w => _saveWheel(w));
     }
     render();
 
@@ -4121,10 +4130,13 @@ onAuthStateChanged(_auth, async (user) => {
     loadingEl.classList.add('fade-out');
     setTimeout(() => { loadingEl.style.display = 'none'; loadingEl.classList.remove('fade-out'); }, 600);
 
-    // Start polling
-    setInterval(fetchAllQuotes, 60000);
+    // Start polling — clear any existing handle first so re-logins never stack intervals
+    clearInterval(_pollHandle);
+    _pollHandle = setInterval(fetchAllQuotes, 60000);
   } else {
     _confirmedUid = null;
+    clearInterval(_pollHandle);
+    _pollHandle = null;
     showAuthOverlay();
   }
 });
