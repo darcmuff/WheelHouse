@@ -1998,25 +1998,31 @@ function runDataHealth(){
         open.push(t);
       }else if(t.action==='BTC'||t.action==='STC'){
         const ks=Number(t.strike);
-        let i=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        // Prefer clean (unflagged) legs at every tier — a closer should only pair with a
+        // flagged-expired leg when no clean candidate exists; cuts false contradictions in same-strike chains.
+        let i=open.findIndex(o=>!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(i<0)i=open.findIndex(o=>!o.expiredWorthless&&Number(o.strike)===ks);
+        if(i<0)i=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
         if(i<0)i=open.findIndex(o=>Number(o.strike)===ks);
         if(i<0&&(t.strike==null||t.strike===''))i=open.length-1;
         if(i<0){
           issues.push({sev:'red',tradeId:t.id,text:`${tk} ${t.action}${t.strike?' $'+fmt2(t.strike):''} on ${fmtDateFull(t.entered)} closes nothing — no matching open position (orphan closer)`});
         }else{
           const o=open[i];
-          if(o.expiredWorthless)issues.push({sev:'red',tradeId:o.id,text:`${tk} ${o.action} $${fmt2(o.strike)} is marked expired-worthless, but a ${t.action} closed it on ${fmtDateFull(t.entered)} — it can't be both`});
+          if(o.expiredWorthless)issues.push({sev:'red',tradeId:o.id,text:`${tk} ${o.action} $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but a ${t.action} closed it on ${fmtDateFull(t.entered)} — it can't be both`});
           open.splice(i,1);
         }
       }else if(t.action==='IN'){
         const ks=Number(t.strike);
-        let i=open.findIndex(o=>o.action==='CSP'&&Number(o.strike)===ks);
+        let i=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless&&Number(o.strike)===ks);
+        if(i<0)i=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless);
+        if(i<0)i=open.findIndex(o=>o.action==='CSP'&&Number(o.strike)===ks);
         if(i<0)i=open.findIndex(o=>o.action==='CSP');
         if(i<0){
           issues.push({sev:'red',tradeId:t.id,text:`${tk} assignment (IN) on ${fmtDateFull(t.entered)} has no open CSP behind it — shares appeared from nowhere`});
         }else{
           const o=open[i];
-          if(o.expiredWorthless)issues.push({sev:'red',tradeId:o.id,text:`${tk} CSP $${fmt2(o.strike)} is marked expired-worthless, but shares were assigned against it on ${fmtDateFull(t.entered)} — it can't be both`});
+          if(o.expiredWorthless)issues.push({sev:'red',tradeId:o.id,text:`${tk} CSP $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but shares were assigned against it on ${fmtDateFull(t.entered)} — it can't be both`});
           open.splice(i,1);
         }
         sharesHeld+=Number(t.shares)||0;
@@ -2031,7 +2037,7 @@ function runDataHealth(){
       if(o.expiredWorthless)return; // manually resolved — fine
       if(o.expiry&&o.expiry<today){
         const daysAgo=Math.max(1,Math.round((new Date(today)-new Date(o.expiry))/86400000));
-        issues.push({sev:'amber',tradeId:o.id,text:`${esc(o.ticker||w.ticker||'?')} ${o.action} $${fmt2(o.strike)} expired ${daysAgo}d ago — never closed, assigned, or marked expired`});
+        issues.push({sev:'amber',tradeId:o.id,text:`${esc(o.ticker||w.ticker||'?')} ${o.action} $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} expired ${daysAgo}d ago — never closed, assigned, or marked expired`});
       }
     });
   });
