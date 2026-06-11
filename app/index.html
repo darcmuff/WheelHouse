@@ -1176,24 +1176,31 @@ function calcOverall(){
 function calcWinLoss(){
   let wins=0,losses=0,openOpts=0;
   db.wheels.forEach(wheel=>{
-    const closingAction=a=>(a==='BTC'||a==='STC')?0:1;
+    const closingAction=a=>(a==='BTC'||a==='STC')?1:0; // same day: openers first
     const trades=db.trades.filter(t=>t.wheelId===wheel.id)
       .sort((a,b)=>{const dc=a.entered.localeCompare(b.entered);if(dc!==0)return dc;return closingAction(a.action)-closingAction(b.action);});
-    const stack=[];// each item: {total, expired, strike}
+    const stack=[];// each item: {total, expired, strike, expiry}
+    const popLastLive=()=>{for(let j=stack.length-1;j>=0;j--){if(!stack[j].expired)return stack.splice(j,1)[0];}return stack.pop();};
     for(const t of trades){
       if(t.action==='CSP'||t.action==='STOC'){
-        stack.push({total:t.total,expired:!!t.expiredWorthless,strike:t.strike}); // never auto-win the prior open
+        stack.push({total:t.total,expired:!!t.expiredWorthless,strike:t.strike,expiry:t.expiry||null}); // never auto-win the prior open
       } else if(t.action==='IN'){
-        if(stack.length>0){stack.pop();wins++;} // assigned: premium kept = win
+        if(stack.length>0){popLastLive();wins++;} // assigned: premium kept = win (prefer a live leg)
       } else if(t.action==='BTC'||t.action==='STC'){
         if(stack.length>0){
-          let i=stack.findIndex(o=>Number(o.strike)===Number(t.strike)); // numeric match — stored types vary
-          if(i<0)i=stack.length-1;                        // fallback: most recent
-          const o=stack.splice(i,1)[0];
-          if(o.total>=t.total)wins++;else losses++;
+          const ks=Number(t.strike);
+          // 1) exact live contract: strike + expiry
+          let i=stack.findIndex(o=>!o.expired&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          // 2) earliest live leg at that strike (expired legs can't be bought back)
+          if(i<0)i=stack.findIndex(o=>!o.expired&&Number(o.strike)===ks);
+          // 3) strike match incl. expired — contradictory data: the recorded buyback outranks the flag
+          if(i<0)i=stack.findIndex(o=>Number(o.strike)===ks);
+          // 4) closer with no strike recorded: most recent live leg
+          if(i<0&&(t.strike==null||t.strike==='')){const o=popLastLive();if(o){(o.total>=t.total)?wins++:losses++;}continue;}
+          if(i>=0){const o=stack.splice(i,1)[0];(o.total>=t.total)?wins++:losses++;}
         }
       } else if(t.action==='OUT'){
-        if(stack.length>0){stack.pop();wins++;} // called away closes one leg, not the whole stack
+        if(stack.length>0){popLastLive();wins++;} // called away closes one leg, not the whole stack
       }
     }
     // Remaining on stack: expired flag = confirmed win; closed wheel without flag = unresolved (excluded); open wheel = still live
@@ -1693,7 +1700,7 @@ function buildLastAction(trades){
 // Walks the lifecycle once; supports laddered/concurrent legs; matches BTC/STC to strike.
 function openOptionLegs(wheelTrades){
   const today=new Date().toISOString().slice(0,10);
-  const closing=a=>(a==='BTC'||a==='STC')?0:1;
+  const closing=a=>(a==='BTC'||a==='STC')?1:0; // same day: openers first — strike+expiry matching pairs closers correctly
   const sorted=[...wheelTrades].sort((a,b)=>
     a.entered.localeCompare(b.entered)||closing(a.action)-closing(b.action));
   const open=[];
@@ -1701,9 +1708,14 @@ function openOptionLegs(wheelTrades){
     if(t.action==='CSP'||t.action==='STOC'){
       if(!t.expiredWorthless)open.push(t);
     }else if(t.action==='BTC'||t.action==='STC'){
-      let i=open.findIndex(o=>Number(o.strike)===Number(t.strike)); // numeric match — stored types vary (33 vs "33.00")
-      if(i<0)i=open.length-1;                          // fallback: most recent
-      if(i>=0)open.splice(i,1);
+      const ks=Number(t.strike);
+      // 1) exact contract: same strike AND same expiry (closes the right leg in same-strike chains)
+      let i=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+      // 2) earliest open leg at that strike
+      if(i<0)i=open.findIndex(o=>Number(o.strike)===ks);
+      // 3) only if the closer carries no strike at all: most recent leg
+      if(i<0&&(t.strike==null||t.strike===''))i=open.length-1;
+      if(i>=0)open.splice(i,1);          // no strike match + strike present = orphan closer; eat nothing
     }
   }
   return open.filter(o=>o.expiry&&o.expiry>=today);
