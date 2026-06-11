@@ -2019,11 +2019,15 @@ function runDataHealth(){
         open.push(t);
       }else if(t.action==='BTC'||t.action==='STC'){
         const ks=Number(t.strike);
-        // Prefer clean (unflagged) legs at every tier — a closer should only pair with a
-        // flagged-expired leg when no clean candidate exists; cuts false contradictions in same-strike chains.
+        // An option can only be bought/sold to close while it still exists —
+        // a leg whose expiry predates the closer is never the right pair.
+        const live=o=>!o.expiry||o.expiry>=t.entered;
+        // Tiers: prefer unflagged, then live-at-close, then strike match; degrade gracefully.
         let i=open.findIndex(o=>!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(i<0)i=open.findIndex(o=>!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
         if(i<0)i=open.findIndex(o=>!o.expiredWorthless&&Number(o.strike)===ks);
         if(i<0)i=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(i<0)i=open.findIndex(o=>live(o)&&Number(o.strike)===ks);
         if(i<0)i=open.findIndex(o=>Number(o.strike)===ks);
         if(i<0&&(t.strike==null||t.strike===''))i=open.length-1;
         if(i<0){
@@ -2034,10 +2038,26 @@ function runDataHealth(){
           open.splice(i,1);
         }
       }else if(t.action==='IN'){
-        const ks=Number(t.strike);
+        // Assignments settle at strike × shares — derive the strike when it wasn't recorded
+        let ks=Number(t.strike);
+        if((!ks||isNaN(ks))&&t.shares&&t.total)ks=Math.round((Number(t.total)/Number(t.shares))*100)/100;
+        // Fallback picker: the CSP whose expiry most recently passed on/before the assignment date
+        // (assignment happens at expiry — never pair with an ancient leg when a just-expired one exists)
+        const pickByExpiry=flagOk=>{
+          let best=-1,bestExp='';
+          open.forEach((o,idx)=>{
+            if(o.action!=='CSP')return;
+            if(!flagOk&&o.expiredWorthless)return;
+            const e=o.expiry||'';
+            if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+          });
+          return best;
+        };
         let i=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless&&Number(o.strike)===ks);
+        if(i<0)i=pickByExpiry(false);
         if(i<0)i=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless);
         if(i<0)i=open.findIndex(o=>o.action==='CSP'&&Number(o.strike)===ks);
+        if(i<0)i=pickByExpiry(true);
         if(i<0)i=open.findIndex(o=>o.action==='CSP');
         if(i<0){
           issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} assignment (IN) on ${fmtDateFull(t.entered)} has no open CSP behind it — shares appeared from nowhere`});
