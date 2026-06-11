@@ -2361,7 +2361,7 @@ function markExpiredWorthless(wheelId,tradeId){
 function markExpiredFromModal(){
   const id=document.getElementById('tf-id').value;if(!id)return;
   const t=db.trades.find(x=>x.id===id);if(!t)return;
-  t.expiredWorthless=true;
+  t.expiredWorthless=!t.expiredWorthless; // toggle: allows correcting a mistaken expired click
   _saveTrade(t);closeModal('mTrade');render();
 }
 function openEditWheel(id){
@@ -2466,10 +2466,23 @@ function openEditTrade(id){
   document.getElementById('tf-comment').value=t.comment||'';
   document.getElementById('tf-delete-btn').style.display='inline-flex';
   document.getElementById('mTradeTitle').textContent='Edit Trade';
-  const isExpiredEligible=(t.action==='CSP'||t.action==='STOC')&&!t.expiredWorthless;
   const _expBtn=document.getElementById('tf-expired-btn');
-  _expBtn.style.display=isExpiredEligible?'inline-flex':'none';
-  if(isExpiredEligible){const _liveDTE=t.expiry?Math.max(0,dteDays(t.expiry)||0):99;const _canExpire=_liveDTE===0;_expBtn.disabled=!_canExpire;_expBtn.style.opacity=_canExpire?'1':'0.35';_expBtn.style.cursor=_canExpire?'pointer':'not-allowed';}
+  if((t.action==='CSP'||t.action==='STOC')&&!t.expiredWorthless){
+    // Not yet marked: offer ★ Expired, enabled only once expiry has passed
+    _expBtn.style.display='inline-flex';
+    _expBtn.textContent='★ Expired';
+    _expBtn.style.borderColor='var(--green)';_expBtn.style.color='var(--green)';_expBtn.style.background='rgba(34,197,94,.12)';
+    const _liveDTE=t.expiry?Math.max(0,dteDays(t.expiry)||0):99;const _canExpire=_liveDTE===0;
+    _expBtn.disabled=!_canExpire;_expBtn.style.opacity=_canExpire?'1':'0.35';_expBtn.style.cursor=_canExpire?'pointer':'not-allowed';
+  }else if((t.action==='CSP'||t.action==='STOC')&&t.expiredWorthless){
+    // Already marked: offer the undo
+    _expBtn.style.display='inline-flex';
+    _expBtn.textContent='✕ Un-mark Expired';
+    _expBtn.style.borderColor='var(--yellow)';_expBtn.style.color='var(--yellow)';_expBtn.style.background='rgba(251,191,36,.10)';
+    _expBtn.disabled=false;_expBtn.style.opacity='1';_expBtn.style.cursor='pointer';
+  }else{
+    _expBtn.style.display='none';
+  }
   const caDiv=document.getElementById('tg-created-at');
   if(t.createdAt){const caDate=t.createdAt.slice(0,10);document.getElementById('tf-created-at').value=fmtDateFull(caDate)+' ('+new Date(t.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+')';caDiv.style.display='';}
   else{caDiv.style.display='none';}
