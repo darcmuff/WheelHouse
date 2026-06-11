@@ -954,7 +954,7 @@ const SEED_DATA = {
 function autoMarkExpiredTrades(){
   // Sort: by entered date; on same date closings (BTC/STC) always before openings (CSP/STOC)
   const closingAction=a=>(a==='BTC'||a==='STC')?0:1;
-  let changed=false;
+  const changedIds=new Set(); // save only the trades whose flags actually changed
   db.wheels.forEach(w=>{
     const wTrades=db.trades.filter(t=>t.wheelId===w.id)
       .sort((a,b)=>{
@@ -970,21 +970,21 @@ function autoMarkExpiredTrades(){
         if(openId){
           // Previous open had no BTC — mark expired
           const prev=db.trades.find(x=>x.id===openId);
-          if(prev&&!prev.expiredWorthless){prev.expiredWorthless=true;changed=true;}
+          if(prev&&!prev.expiredWorthless){prev.expiredWorthless=true;changedIds.add(prev.id);}
         }
         // Current trade is a fresh open — only clear stale expired flag if expiry is still in the future
-        if(t.expiredWorthless&&t.expiry&&new Date(t.expiry)>=new Date(new Date().toISOString().slice(0,10))){t.expiredWorthless=false;changed=true;}
+        if(t.expiredWorthless&&t.expiry&&new Date(t.expiry)>=new Date(new Date().toISOString().slice(0,10))){t.expiredWorthless=false;changedIds.add(t.id);}
         openId=t.id;
       } else if(t.action==='BTC'||t.action==='STC'){
         // Properly closed — ensure the open is NOT flagged as expired
-        if(openId){const prev=db.trades.find(x=>x.id===openId);if(prev&&prev.expiredWorthless){prev.expiredWorthless=false;changed=true;}}
+        if(openId){const prev=db.trades.find(x=>x.id===openId);if(prev&&prev.expiredWorthless){prev.expiredWorthless=false;changedIds.add(prev.id);}}
         openId=null;
       }
     });
     // Last open trade: only clear expired flag if expiry is still in the future (i.e. genuinely still active)
-    if(openId){const last=db.trades.find(x=>x.id===openId);if(last&&last.expiredWorthless&&last.expiry&&new Date(last.expiry)>=new Date(new Date().toISOString().slice(0,10))){last.expiredWorthless=false;changed=true;}}
+    if(openId){const last=db.trades.find(x=>x.id===openId);if(last&&last.expiredWorthless&&last.expiry&&new Date(last.expiry)>=new Date(new Date().toISOString().slice(0,10))){last.expiredWorthless=false;changedIds.add(last.id);}}
   });
-  if(changed){db.trades.forEach(t=>_saveTrade(t));}
+  if(changedIds.size){db.trades.forEach(t=>{if(changedIds.has(t.id))_saveTrade(t);});}
 }
 function loadDB(){
   // Auth-gated — real load happens in loadDBFromFirestore after sign-in
@@ -1338,6 +1338,9 @@ function fmtMoney(n){
   return(n<0?'-$':'$')+abs;
 }
 function fmt2(n,dp=2){return n!=null&&!isNaN(n)?parseFloat(n).toFixed(dp):'—';}
+// esc — HTML-escape any user-origin string before interpolating into innerHTML.
+// Covers both element context (<>&) and attribute context ("') in one pass.
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let dateFmt=localStorage.getItem('wh-dateFmt')||'uk'; // uk | us
 function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
@@ -1597,7 +1600,7 @@ function renderPositions(){
 
 function rotNumHtml(wheel,isOpen){
   const logoUrl=logos[wheel.ticker];
-  if(logoUrl)return`<img src="${logoUrl}" class="rot-logo ${isOpen?'':'cn'}" alt="${wheel.ticker}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rot-num ${isOpen?'':'cn'}" style="display:none">${wheel.sortOrder||'?'}</div>`;
+  if(logoUrl)return`<img src="${logoUrl}" class="rot-logo ${isOpen?'':'cn'}" alt="${esc(wheel.ticker)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rot-num ${isOpen?'':'cn'}" style="display:none">${wheel.sortOrder||'?'}</div>`;
   return`<div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>`;
 }
 
@@ -1866,7 +1869,7 @@ function renderRotationWindow(wheel){
   <div class="rotation-window ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" style="${hidden.has(wheel.id)?'opacity:.5':''}">
     <div class="rot-header" onclick="toggleExpand('${wheel.id}')">
       ${rotNumHtml(wheel,isOpen)}
-      <span class="rot-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
+      <span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span>
       ${headerPriceHtml}
       <span class="rot-label">${_dateSpan}</span>
       <span class="rot-shares">${shares}</span>
@@ -1933,9 +1936,9 @@ function renderLog(){
     const ppd=t.days>0?'$'+(t.total/t.days).toFixed(2):'—';
     const wh=db.wheels.find(w=>w.id===t.wheelId);
     return`<tr>
-      <td style="font-weight:800" class="${wh?.status==='open'?'o':'m'}">${t.ticker}</td>
+      <td style="font-weight:800" class="${wh?.status==='open'?'o':'m'}">${esc(t.ticker)}</td>
       <td><span class="ab ab-${t.action}">${t.action}</span></td>
-      <td style="font-size:12px;color:var(--text3)">${wh?.label||'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${esc(wh?.label||'—')}</td>
       <td>${fmtDateFull(t.entered)}</td>
       <td>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</td>
       <td>${t.strike?'$'+fmt2(t.strike):'—'}</td>
@@ -1953,7 +1956,7 @@ function renderLog(){
     <span style="font-size:13px;font-weight:300;color:var(--silver)">Trade Log</span>
     <button class="rot-header-btn" onclick="switchView('positions')" title="Close" style="margin-left:4px"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:16px;height:16px"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
     <span class="toolbar-spacer"></span>
-    <input class="search-inp" type="search" placeholder="Search…" value="${logQ}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
+    <input class="search-inp" type="search" placeholder="Search…" value="${esc(logQ)}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
     <span style="color:var(--text3);font-size:11px">${trades.length}</span>
     <button class="btn btn-ghost" onclick="openImport()" style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:14px;height:14px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg>Import</button>
     <button class="btn btn-ghost" onclick="exportCSV()" style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:14px;height:14px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg>Export</button>
@@ -1993,16 +1996,16 @@ function buildDashAlerts(){
     const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
     if(dte!==null&&dte<=7){
       const diff=price!=null&&t.strike?Math.abs(price-t.strike).toFixed(2):'';
-      alerts.push({type:itm?'danger':'warn',text:`${t.ticker} ${t.action} $${fmt2(t.strike)} expires in ${dte}d${itm?' — ITM by $'+diff:''}`});
+      alerts.push({type:itm?'danger':'warn',text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} expires in ${dte}d${itm?' — ITM by $'+diff:''}`});
     }
     if(itm&&dte>7){
-      alerts.push({type:'danger',text:`${t.ticker} ${t.action} $${fmt2(t.strike)} is ITM — assignment risk`});
+      alerts.push({type:'danger',text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} is ITM — assignment risk`});
     }
     // Profit target check (50%+ of credit captured via time decay)
     if(!itm&&t.total>0&&price!=null&&dte>3){
       // Rough theta capture: if >50% of DTE has passed, suggest management
       const origDTE=t.days||30;const elapsed=origDTE-dte;
-      if(elapsed/origDTE>=0.5&&dte>=3) alerts.push({type:'info',text:`${t.ticker} ${t.action} at ${Math.round(elapsed/origDTE*100)}% of DTE — consider closing`});
+      if(elapsed/origDTE>=0.5&&dte>=3) alerts.push({type:'info',text:`${esc(t.ticker)} ${t.action} at ${Math.round(elapsed/origDTE*100)}% of DTE — consider closing`});
     }
     });
   });
@@ -2106,7 +2109,7 @@ function renderDash(){
     const pctCol=pctToStrike===null?'var(--text3)':pctToStrike<0?'#ef4444':pctToStrike<5?'#fbbf24':'#22c55e';
     const basis=m.sharesHeld>0&&m.breakeven!=null?'$'+fmt2(m.breakeven):'—';
     return`<div class="d-table-row" style="grid-template-columns:${posCols};gap:12px">
-      <span style="font-weight:700;color:var(--orange)">${w.ticker}</span>
+      <span style="font-weight:700;color:var(--orange)">${esc(w.ticker)}</span>
       <span><span class="d-phase ${ph.cls}">${ph.label}</span></span>
       <span style="color:var(--text2);white-space:nowrap">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:600;margin-left:6px">/ ${dte}d</span>`:''}</span>
       <span style="color:${pctCol};font-weight:500">${pctToStrike!==null?(pctToStrike>=0?'+':'')+pctToStrike.toFixed(1)+'%':'—'}</span>
@@ -2126,7 +2129,7 @@ function renderDash(){
     const w=db.wheels.find(x=>x.id===t.wheelId);
     return`<div class="d-table-row" style="grid-template-columns:${recCols};gap:12px">
     <span style="color:var(--text3);font-size:11px;white-space:nowrap">${fmtDateFull(t.entered)}</span>
-    <span style="font-weight:700;color:var(--orange)">${t.ticker}</span>
+    <span style="font-weight:700;color:var(--orange)">${esc(t.ticker)}</span>
     <span><span class="ab ab-${t.action}" style="font-size:9px;padding:2px 5px">${t.action}</span></span>
     <span style="color:var(--text2);white-space:nowrap">${t.strike?'$'+fmt2(t.strike):'—'}</span>
     <span style="color:var(--text2);white-space:nowrap">${t.expiry?fmtDateFull(t.expiry):'—'}</span>
@@ -2891,7 +2894,7 @@ function renderAnalytics(){
     const avgA=t.arocs.length?t.arocs.reduce((a,b)=>a+b,0)/t.arocs.length:null;
     const pct=(Math.abs(t.premium)/totalPremium*100);
     return`<tr>
-      <td style="font-weight:700;color:var(--orange)">${t.ticker}</td>
+      <td style="font-weight:700;color:var(--orange)">${esc(t.ticker)}</td>
       <td>${t.cycles}</td>
       <td>${t.trades}</td>
       <td class="${colorN(t.premium)}" style="font-weight:600">${fmtMoney(t.premium)}</td>
@@ -3164,7 +3167,7 @@ function exportCSV(){
     return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
   });
   const hdr=['Ticker','Action','Rotation','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment'];
-  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>`"${v}"`).join(',');});
+  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
   const csv=[hdr.join(','),...rows].join('\n');
   const suffix=q?`-${q}`:'';
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`wheelhouse${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
@@ -3306,7 +3309,7 @@ function populatePMWheelSelect(wheelId,ticker){
   const sel=document.getElementById('pm-wheel');
   sel.innerHTML='<option value="new">+ New Rotation</option>';
   db.wheels.filter(w=>!ticker||w.ticker===ticker).forEach(w=>{
-    sel.innerHTML+=`<option value="${w.id}" ${w.id===wheelId?'selected':''}>${w.label||w.ticker} ${w.status==='open'?'(Open)':'(Closed)'}</option>`;
+    sel.innerHTML+=`<option value="${w.id}" ${w.id===wheelId?'selected':''}>${esc(w.label||w.ticker)} ${w.status==='open'?'(Open)':'(Closed)'}</option>`;
   });
   if(!wheelId&&ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
 }
@@ -3796,14 +3799,14 @@ function showRollPreview(trades){
   let opts='<option value="new">+ Create New Rotation</option>';
   db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
     const sel=(wheelId&&w.id===wheelId)||(!wheelId&&w.ticker===ticker&&w.status==='open');
-    opts+=`<option value="${w.id}"${sel?' selected':''}>${w.label||w.ticker} (${w.status})</option>`;
+    opts+=`<option value="${w.id}"${sel?' selected':''}>${esc(w.label||w.ticker)} (${w.status})</option>`;
   });
   function tradeCard(p){
     const cr=isCredit(p.action);const col=cr?'var(--green)':'var(--red)';const borderCol=cr?'var(--green)':'var(--red)';
     return`<div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${borderCol};border-radius:8px;padding:12px;flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px">
         <span class="ab ab-${p.action}">${p.action}</span>
-        <span style="color:var(--silver);font-weight:700;font-size:13px">${p.ticker}${p.strike?' $'+p.strike:''}</span>
+        <span style="color:var(--silver);font-weight:700;font-size:13px">${esc(p.ticker)}${p.strike?' $'+p.strike:''}</span>
         <span style="margin-left:auto;font-weight:800;color:${col}">${cr?'+':'-'}$${(p.total||0).toFixed(2)}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px;color:var(--text2)">
@@ -3866,7 +3869,7 @@ function showPastePreview(p){
   let opts='<option value="new">+ Create New Rotation</option>';
   db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
     const sel=(wheelId&&w.id===wheelId)||(!wheelId&&w.ticker===p.ticker&&w.status==='open');
-    opts+=`<option value="${w.id}"${sel?' selected':''}>${w.label||w.ticker} (${w.status})</option>`;
+    opts+=`<option value="${w.id}"${sel?' selected':''}>${esc(w.label||w.ticker)} (${w.status})</option>`;
   });
   const totalCol=isCredit(p.action)?'var(--green)':'var(--red)';
   const totalSign=isCredit(p.action)?'+':'-';
@@ -3874,7 +3877,7 @@ function showPastePreview(p){
     <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:8px;padding:14px;margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <span class="ab ab-${p.action}">${p.action}</span>
-        <span style="font-weight:900;font-size:16px;color:var(--silver)">${p.ticker}</span>
+        <span style="font-weight:900;font-size:16px;color:var(--silver)">${esc(p.ticker)}</span>
         ${p.strike?`<span style="color:var(--text2);font-size:13px">$${p.strike} ${p.action==='CSP'?'Put':'Call'}</span>`:''}
         <span style="margin-left:auto;font-size:18px;font-weight:900;color:${totalCol}">${totalSign}$${(p.total||0).toFixed(2)}</span>
       </div>
