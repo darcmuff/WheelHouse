@@ -273,7 +273,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .trade-body.open{display:block;overflow-x:auto}
 .thead-row{
   display:grid;
-  grid-template-columns:minmax(0,72fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,66fr) minmax(0,56fr) minmax(0,86fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,40fr);
+  grid-template-columns:minmax(0,92fr) minmax(0,82fr) minmax(0,82fr) minmax(0,62fr) minmax(0,64fr) minmax(0,54fr) minmax(0,84fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,38fr);
   gap:6px;padding:7px 16px;background:var(--bg3);
   font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);
   min-width:0;
@@ -281,7 +281,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 3px 0 0 var(--teal,#14B8A6);}
 .trow{
   display:grid;
-  grid-template-columns:minmax(0,72fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,66fr) minmax(0,56fr) minmax(0,86fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,40fr);
+  grid-template-columns:minmax(0,92fr) minmax(0,82fr) minmax(0,82fr) minmax(0,62fr) minmax(0,64fr) minmax(0,54fr) minmax(0,84fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,38fr);
   gap:6px;padding:9px 16px;align-items:center;
   font-size:12px;border-top:1px solid var(--border);
   min-width:0;
@@ -290,7 +290,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .trow.roll-trade{border-left:3px solid #0891b2;padding-left:13px;background:rgba(8,145,178,0.07)}
 .roll-badge{font-size:20px;color:#0891b2;margin-left:5px;font-weight:300;vertical-align:middle;line-height:1}
 .trow.expired-trade{border-left:3px solid var(--green);padding-left:13px;background:rgba(34,197,94,0.04)}
-.exp-badge{font-size:10px;font-weight:800;color:var(--green);letter-spacing:.5px;vertical-align:middle;margin-left:6px}
+.exp-badge{font-size:10px;font-weight:800;color:var(--green);letter-spacing:.5px;vertical-align:middle}
 .ab{padding:3px 8px;border-radius:4px;font-size:11px;font-weight:800;white-space:nowrap;display:inline-block;letter-spacing:.3px}
 .ab-CSP{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.28)}
 .ab-BTC{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.28)}
@@ -1935,7 +1935,7 @@ function renderTradeRow(t){
   const rollBadge=t.rollId?'<span class="roll-badge">↻</span>':'';
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
   return`<div class="trow ${rowCls}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
-    <span><span class="ab ab-${t.action}">${t.action}</span>${rollBadge}${expBadge}</span>
+    <span style="display:flex;align-items:center;gap:6px;white-space:nowrap">${rollBadge}<span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?'$'+fmt2(t.strike):'—'}</span>
