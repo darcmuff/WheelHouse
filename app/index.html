@@ -2280,16 +2280,16 @@ function renderDash(){
       ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
     </div>`;
   }).join('');
-  const healthPanel=health.length?`<div class="d-panel" id="health-panel">
+  const healthPanel=`<div class="d-panel" id="health-panel">
     <div class="d-panel-hdr">
       <span class="d-panel-title">Data Health</span>
-      <span style="display:flex;gap:12px;align-items:center">${healthBadge}</span>
+      <span style="display:flex;gap:12px;align-items:center">${health.length?healthBadge:`<span style="color:#22c55e;font-size:11px;font-weight:700">✓ All clear</span>`}</span>
     </div>
-    <div class="d-panel-body">
+    ${health.length?`<div class="d-panel-body">
       <div class="thead-row">${'<span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span>'}</div>
       ${healthRows}
-    </div>
-  </div>`:'';
+    </div>`:`<div style="padding:14px 16px;font-size:12px;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades verified — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
+  </div>`;
 
   // Capital utilisation
   const totalAccount=cap.maxCap||1;// best proxy without account balance input
