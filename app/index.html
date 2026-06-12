@@ -278,6 +278,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);
   min-width:0;
 }
+.trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 3px 0 0 var(--teal,#14B8A6);}
 .trow{
   display:grid;
   grid-template-columns:minmax(0,68fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,76fr) minmax(0,60fr) minmax(0,86fr) minmax(0,44fr) minmax(0,52fr) minmax(0,36fr) minmax(0,52fr) minmax(0,40fr);
@@ -1472,6 +1473,7 @@ let posSortBy=localStorage.getItem('wh-posSortBy')||'ticker';
 let logSort={col:'entered',dir:'desc'};
 let logQ='';
 let healthOpen=false; // data-health panel expanded/collapsed
+let _focusTid=null; // trade highlighted via goToTrade — sticks until an action is taken on it
 
 function goToTrade(wheelId,tradeId){
   const w=db.wheels.find(x=>x.id===wheelId);
@@ -1482,18 +1484,15 @@ function goToTrade(wheelId,tradeId){
     expanded.add(wheelId);
     _saveUIState();
   }
+  _focusTid=tradeId; // sticky highlight — survives re-renders, cleared only when the trade is acted on
   switchView('positions');
-  // After render, scroll to the row and flash it
   setTimeout(()=>{
     const row=document.querySelector(`[data-tid="${tradeId}"]`);
-    if(row){
-      row.scrollIntoView({behavior:'smooth',block:'center'});
-      row.style.transition='background .3s';
-      row.style.background='rgba(20,184,166,.22)';
-      setTimeout(()=>{row.style.background='';},2200);
-    }
+    if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
   },80);
 }
+// Clear the sticky highlight once an action lands on the focused trade (save, delete, expire)
+function _clearFocus(id){if(_focusTid&&(!id||_focusTid===id)){_focusTid=null;}}
 function switchView(v){
   view=v;
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
@@ -1924,7 +1923,7 @@ function renderTradeRow(t){
   const rocDisplay=roc!==null?roc.toFixed(1)+'%':'—';
   const rowCls=[t.rollId?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
   const rollBadge=t.rollId?'<span class="roll-badge">↻</span>':'';
-  return`<div class="trow ${rowCls}" data-tid="${t.id}">
+  return`<div class="trow ${rowCls}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
     <span><span class="ab ab-${t.action}">${t.action}</span>${rollBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
@@ -2113,6 +2112,44 @@ function runDataHealth(){
         const sh=Number(t.shares)||0;
         if(sh>sharesHeld)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} OUT of ${sh} shares on ${fmtDateFull(t.entered)} but only ${sharesHeld} held at that point`});
         sharesHeld-=sh;
+        // Called away resolves the covered call — the STOC mirror of CSP assignment.
+        // Only pair when the strike matches (given, or derived from total/shares: call-aways
+        // settle at exactly strike × shares; a manual market sale almost never lands on a strike).
+        let oks=Number(t.strike);
+        if((!oks||isNaN(oks))&&sh&&t.total)oks=Math.round((Number(t.total)/sh)*100)/100;
+        if(oks){
+          const bestCallable=pred=>{ // prefer the STOC whose expiry most recently passed on/before the call-away date
+            let best=-1,bestExp='';
+            open.forEach((o,idx)=>{
+              if(o.action!=='STOC'||Number(o.strike)!==oks||!pred(o))return;
+              const e=o.expiry||'';
+              if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+            });
+            return best;
+          };
+          const callFlagMsg=o=>issues.push({sev:'red',wheelId:w.id,tradeId:o.id,text:`${tk} STOC $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but shares were called away against it on ${fmtDateFull(t.entered)} — it can't be both`});
+          let outRem=sh||0;
+          if(outRem<=0){ // no share count: consume one whole matching leg
+            let j=bestCallable(o=>!o.expiredWorthless);
+            if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+            if(j<0)j=bestCallable(()=>true);
+            if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+            if(j>=0){const o=open[j];if(o.expiredWorthless)callFlagMsg(o);open.splice(j,1);}
+          }else{
+            while(outRem>0){ // share-aware: partial call-aways consume shares across legs
+              let j=bestCallable(o=>!o.expiredWorthless);
+              if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+              if(j<0)j=bestCallable(()=>true);
+              if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+              if(j<0)break; // no matching STOC = plain manual sale — perfectly legitimate, no issue
+              const o=open[j];
+              if(o.expiredWorthless)callFlagMsg(o);
+              const take=Math.min(outRem,o._rem||outRem);
+              o._rem-=take;outRem-=take;
+              if(o._rem<=0)open.splice(j,1);
+            }
+          }
+        }
       }
     });
     // Anything still open with expiry in the past = lapsed leg awaiting your verdict
@@ -2158,16 +2195,16 @@ function buildDashAlerts(){
     const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
     if(dte!==null&&dte<=7){
       const diff=price!=null&&t.strike?Math.abs(price-t.strike).toFixed(2):'';
-      alerts.push({type:itm?'danger':'warn',text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} expires in ${dte}d${itm?' — ITM by $'+diff:''}`});
+      alerts.push({type:itm?'danger':'warn',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} expires in ${dte}d${itm?' — ITM by $'+diff:''}`});
     }
     if(itm&&dte>7){
-      alerts.push({type:'danger',text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} is ITM — assignment risk`});
+      alerts.push({type:'danger',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} is ITM — assignment risk`});
     }
     // Profit target check (50%+ of credit captured via time decay)
     if(!itm&&t.total>0&&price!=null&&dte>3){
       // Rough theta capture: if >50% of DTE has passed, suggest management
       const origDTE=t.days||30;const elapsed=origDTE-dte;
-      if(elapsed/origDTE>=0.5&&dte>=3) alerts.push({type:'info',text:`${esc(t.ticker)} ${t.action} at ${Math.round(elapsed/origDTE*100)}% of DTE — consider closing`});
+      if(elapsed/origDTE>=0.5&&dte>=3) alerts.push({type:'info',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} at ${Math.round(elapsed/origDTE*100)}% of DTE — consider closing`});
     }
     });
   });
@@ -2216,9 +2253,7 @@ function renderDash(){
   const hAmber=health.filter(i=>i.sev==='amber').length;
   const hGrey=health.filter(i=>i.sev==='grey').length;
   const sevDot={red:'#ef4444',amber:'#fbbf24',grey:'#6b7280'};
-  const healthBadge=health.length===0
-    ?`<span style="color:#22c55e;font-size:11px;font-weight:600">✓ All clear</span>`
-    :[hRed?`<span style="color:#ef4444;font-size:11px;font-weight:700">${hRed} critical</span>`:'',
+  const healthBadge=[hRed?`<span style="color:#ef4444;font-size:11px;font-weight:700">${hRed} critical</span>`:'',
       hAmber?`<span style="color:#fbbf24;font-size:11px;font-weight:700">${hAmber} warning${hAmber>1?'s':''}</span>`:'',
       hGrey?`<span style="color:#6b7280;font-size:11px;font-weight:600">${hGrey} note${hGrey>1?'s':''}</span>`:''].filter(Boolean).join('');
   const healthRows=health.map(i=>`<div class="d-table-row" style="grid-template-columns:14px 1fr 130px;gap:10px;align-items:center">
@@ -2226,13 +2261,13 @@ function renderDash(){
     <span style="font-size:12px;color:var(--text2);line-height:1.5">${i.text}</span>
     ${i.tradeId?`<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-ghost" style="font-size:10px;padding:3px 10px" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button><button class="btn btn-ghost" style="font-size:10px;padding:3px 10px" onclick="openEditTrade('${i.tradeId}')">Edit</button></span>`:'<span></span>'}
   </div>`).join('');
-  const healthPanel=`<div class="d-panel">
-    <div class="d-panel-hdr" ${health.length?`onclick="toggleHealth()" style="cursor:pointer"`:''}>
+  const healthPanel=health.length&&healthOpen?`<div class="d-panel">
+    <div class="d-panel-hdr" onclick="toggleHealth()" style="cursor:pointer">
       <span class="d-panel-title">Data Health</span>
-      <span style="display:flex;gap:12px;align-items:center">${healthBadge}${health.length?`<span style="color:var(--text3);font-size:10px">${healthOpen?'▲ hide':'▼ show'}</span>`:''}</span>
+      <span style="display:flex;gap:12px;align-items:center">${healthBadge}<span style="color:var(--text3);font-size:10px">▲ hide</span></span>
     </div>
-    ${health.length&&healthOpen?`<div class="d-panel-body">${healthRows}</div>`:''}
-  </div>`;
+    <div class="d-panel-body">${healthRows}</div>
+  </div>`:'';
 
   // Capital utilisation
   const totalAccount=cap.maxCap||1;// best proxy without account balance input
@@ -2245,7 +2280,10 @@ function renderDash(){
   const moCompare=lastMo&&thisMo?(thisMo.pNet-lastMo.pNet):null;
 
   // Action count
-  const actionCount=alerts.filter(a=>a.type==='danger'||a.type==='warn').length;
+  // Data Health KPI (replaces Action Needed, which merely duplicated the alert strip below it)
+  const hWorst=hRed?'#ef4444':hAmber?'#fbbf24':hGrey?'#6b7280':'#22c55e';
+  const hVal=health.length===0?'Clean':`${health.length} issue${health.length>1?'s':''}`;
+  const hSub=health.length===0?'ledger verified':[hRed?`${hRed} critical`:'',hAmber?`${hAmber} warning${hAmber>1?'s':''}`:'',hGrey?`${hGrey} note${hGrey>1?'s':''}`:''].filter(Boolean).join(' · ');
 
   // ── KPI cards ──
   function kpi(label,val,sub,col,accent,explain){
@@ -2263,7 +2301,11 @@ function renderDash(){
   const k1=kpi('YTD Income',fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'#22c55e':'#ef4444',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'#22c55e':'#ef4444',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
   const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
-  const k4=kpi('Action Needed',actionCount>0?actionCount+' position'+(actionCount>1?'s':''):'All clear',actionCount>0?'requires attention':'no alerts',actionCount>0?'#ef4444':'#22c55e',false,'Positions expiring within 7 days, options that have moved ITM, or positions where more than 50% of DTE has elapsed. Each alert is a suggested management action.');
+  const k4=`<div class="d-kpi" ${health.length?'onclick="toggleHealth()" style="cursor:pointer"':''} data-xt="Data Health" data-xb="Integrity checks on your trade ledger: lapsed legs awaiting a verdict, contradicted expired flags, orphan closers, assignments without a matching put, oversold shares, missing fields, and duplicate suspects. Click to see the list. Detect-and-ask only — nothing is ever changed automatically.">
+    <div class="d-kpi-label">Data Health<span class="dcard-info" onmouseenter="showXpop(this)" onmouseleave="hideXpop()">?</span></div>
+    <div class="d-kpi-val" style="color:${hWorst}">${health.length===0?'✓ ':''}${hVal}</div>
+    <div class="d-kpi-sub">${hSub}${health.length?` · ${healthOpen?'▲':'▼'}`:''}</div>
+  </div>`;
 
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
@@ -2275,7 +2317,8 @@ function renderDash(){
     <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);flex-shrink:0">Alerts</span>
     ${alerts.map(a=>{
       const dotCol=a.type==='danger'?'#ef4444':a.type==='warn'?'#fbbf24':'var(--orange)';
-      return`<div class="d-alert-item"><span class="d-alert-dot" style="background:${dotCol}"></span>${a.text}</div>`;
+      const click=a.tradeId?` onclick="goToTrade('${a.wheelId}','${a.tradeId}')" style="cursor:pointer" title="Go to trade"`:'';
+      return`<div class="d-alert-item"${click}><span class="d-alert-dot" style="background:${dotCol}"></span>${a.text}</div>`;
     }).join('')}
   </div>`:'';
 
@@ -2554,7 +2597,7 @@ function markExpiredFromModal(){
   const id=document.getElementById('tf-id').value;if(!id)return;
   const t=db.trades.find(x=>x.id===id);if(!t)return;
   t.expiredWorthless=!t.expiredWorthless; // toggle: allows correcting a mistaken expired click
-  _saveTrade(t);closeModal('mTrade');render();
+  _clearFocus(id);_saveTrade(t);closeModal('mTrade');render();
 }
 function openEditWheel(id){
   const w=db.wheels.find(x=>x.id===id);if(!w)return;
@@ -2709,6 +2752,7 @@ function autoCalcDTE(){
 }
 function saveTrade(){
   const id=document.getElementById('tf-id').value;
+  if(id)_clearFocus(id); // editing the focused trade counts as acting on it
   const ticker=document.getElementById('tf-ticker').value.toUpperCase().trim();
   const entered=document.getElementById('tf-entered').value;
   if(!ticker){alert('Ticker required');return;}if(!entered){alert('Entry date required');return;}
@@ -2752,8 +2796,8 @@ function saveTrade(){
   if(updatedTrade)_saveTrade(updatedTrade);
   closeModal('mTrade');render();
 }
-function deleteTrade(id){if(!confirm('Delete this trade?'))return;_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);render();}
-function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;if(!id)return;if(!confirm('Delete this trade?'))return;_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);closeModal('mTrade');render();}
+function deleteTrade(id){if(!confirm('Delete this trade?'))return;_clearFocus(id);_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);render();}
+function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;if(!id)return;if(!confirm('Delete this trade?'))return;_clearFocus(id);_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);closeModal('mTrade');render();}
 
 function openUpdatePrice(id){
   const w=db.wheels.find(x=>x.id===id);if(!w)return;
