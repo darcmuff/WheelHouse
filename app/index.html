@@ -418,9 +418,6 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .d-table-row{display:grid;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;transition:background .12s}
 .d-table-row:hover{background:rgba(255,255,255,.02)}
 .d-table-row:last-child{border-bottom:none}
-.d-alert-strip{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.d-alert-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color .15s}
-.d-alert-item:hover{border-color:var(--orange);color:var(--text)}
 .d-alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .d-phase{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
 .d-phase-csp{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
@@ -2325,13 +2322,24 @@ function renderDash(){
   const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'#22c55e':'#ef4444',false,'Average Annualised Return on Capital across your currently open rotations. Calculated as (net premium ÷ capital at risk) × (365 ÷ days held).');
 
   // ── Alert strip ──
-  const alertHtml=alerts.length?`<div class="d-alert-strip">
-    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);flex-shrink:0">Alerts</span>
-    ${alerts.map(a=>{
+  const aDanger=alerts.filter(a=>a.type==='danger').length;
+  const aWarn=alerts.filter(a=>a.type==='warn').length;
+  const aBadge=[aDanger?`<span style="color:#ef4444;font-size:11px;font-weight:700">${aDanger} urgent</span>`:'',
+    aWarn?`<span style="color:#fbbf24;font-size:11px;font-weight:700">${aWarn} expiring</span>`:''].filter(Boolean).join('');
+  const alertHtml=alerts.length?`<div class="d-panel">
+    <div class="d-panel-hdr">
+      <span class="d-panel-title">Alerts</span>
+      <span style="display:flex;gap:12px;align-items:center">${aBadge}</span>
+    </div>
+    <div class="d-panel-body">${alerts.map(a=>{
       const dotCol=a.type==='danger'?'#ef4444':a.type==='warn'?'#fbbf24':'var(--orange)';
-      const click=a.tradeId?` onclick="goToTrade('${a.wheelId}','${a.tradeId}')" style="cursor:pointer" title="Go to trade"`:'';
-      return`<div class="d-alert-item"${click}><span class="d-alert-dot" style="background:${dotCol}"></span>${a.text}</div>`;
-    }).join('')}
+      const click=a.tradeId?` onclick="goToTrade('${a.wheelId}','${a.tradeId}')" title="Go to trade"`:'';
+      return`<div class="d-table-row"${click} style="grid-template-columns:14px 1fr auto;gap:10px;align-items:center${a.tradeId?';cursor:pointer':''}">
+        <span class="d-alert-dot" style="background:${dotCol}"></span>
+        <span style="font-size:12px;color:var(--text2);line-height:1.5">${a.text}</span>
+        ${a.tradeId?`<span style="color:var(--text3);font-size:10px">→</span>`:'<span></span>'}
+      </div>`;
+    }).join('')}</div>
   </div>`:'';
 
   // ── Positions table ──
