@@ -273,7 +273,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .trade-body.open{display:block;overflow-x:auto}
 .thead-row{
   display:grid;
-  grid-template-columns:minmax(0,68fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,76fr) minmax(0,60fr) minmax(0,86fr) minmax(0,44fr) minmax(0,52fr) minmax(0,36fr) minmax(0,52fr) minmax(0,40fr);
+  grid-template-columns:minmax(0,72fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,66fr) minmax(0,56fr) minmax(0,86fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,40fr);
   gap:6px;padding:7px 16px;background:var(--bg3);
   font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);
   min-width:0;
@@ -281,7 +281,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 3px 0 0 var(--teal,#14B8A6);}
 .trow{
   display:grid;
-  grid-template-columns:minmax(0,68fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,76fr) minmax(0,60fr) minmax(0,86fr) minmax(0,44fr) minmax(0,52fr) minmax(0,36fr) minmax(0,52fr) minmax(0,40fr);
+  grid-template-columns:minmax(0,72fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,66fr) minmax(0,56fr) minmax(0,86fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,40fr);
   gap:6px;padding:9px 16px;align-items:center;
   font-size:12px;border-top:1px solid var(--border);
   min-width:0;
@@ -1336,6 +1336,8 @@ function fmtMoney(n){
   return(n<0?'-$':'$')+abs;
 }
 function fmt2(n,dp=2){return n!=null&&!isNaN(n)?parseFloat(n).toFixed(dp):'—';}
+// fmtPrem — premium price, trailing zeros trimmed, minimum 2 decimals: 0.5400 -> 0.54, 0.265 -> 0.265
+function fmtPrem(n){if(n==null||isNaN(n))return'—';const s=parseFloat(Number(n).toFixed(4));return s.toFixed(Math.max(2,(String(s).split('.')[1]||'').length));}
 // esc — HTML-escape any user-origin string before interpolating into innerHTML.
 // Covers both element context (<>&) and attribute context ("') in one pass.
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -1883,7 +1885,7 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open">
-      <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>DTE</span><span>AROC%</span><span>Δ</span><span>Fees</span><span></span></div>`;
+      <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span></div>`;
     [...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{expandedHtml+=renderTradeRow(t);});
     expandedHtml+=`<div class="rot-actions">
       <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}');event.stopPropagation()">•••</button>
@@ -1923,25 +1925,26 @@ function calcTradeROC(t){
   return((t.total/collateral)*(365/dte)*100);
 }
 function renderTradeRow(t){
-  const _rawDTE=(t.action==='CSP'||t.action==='STOC')&&t.expiry&&!t.expiredWorthless?dteDays(t.expiry):null;
-  const liveDTE=_rawDTE!==null?Math.max(0,_rawDTE):null;
-  const dteDisplay=t.expiredWorthless?'<span class="exp-badge">EXP</span>':(liveDTE!==null?liveDTE+'d':(t.days>0?t.days+'d':'—'));
   const roc=calcTradeROC(t);
   const rocDisplay=roc!==null?roc.toFixed(1)+'%':'—';
+  // PPD — income velocity: net dollars per day of contract life. Credit opens only.
+  const isOpenLeg=t.action==='CSP'||t.action==='STOC';
+  const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
+  const ppdDisplay=ppd!==null?`$${fmt2(ppd)}<span style="color:var(--text3);font-weight:400">/d (${t.days}d)</span>`:'—';
   const rowCls=[t.rollId?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
   const rollBadge=t.rollId?'<span class="roll-badge">↻</span>':'';
+  const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
   return`<div class="trow ${rowCls}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
-    <span><span class="ab ab-${t.action}">${t.action}</span>${rollBadge}</span>
+    <span><span class="ab ab-${t.action}">${t.action}</span>${rollBadge}${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?'$'+fmt2(t.strike):'—'}</span>
-    <span>${t.premium?'$'+fmt2(t.premium,4):'—'}</span>
+    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
     <span>${t.shares||'—'}</span>
     <span class="${isCredit(t.action)?'g':'r'}">${fmtMoney(t.total)}</span>
-    <span>${dteDisplay}</span>
-    <span style="color:${roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${rocDisplay}</span>
-    <span>${t.delta!=null?t.delta.toFixed(2):'—'}</span>
     <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
+    <span style="white-space:nowrap">${ppdDisplay}</span>
+    <span style="color:${roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${rocDisplay}</span>
     <span style="display:flex;gap:3px;justify-content:flex-end">
       <button class="btn btn-ghost btn-icon" onclick="openEditTrade('${t.id}');event.stopPropagation()">•••</button>
     </span>
