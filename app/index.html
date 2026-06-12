@@ -287,6 +287,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   min-width:0;
 }
 .trow:hover{background:var(--bg3)}
+.trow-health{border-top:none}
 .trow.roll-trade{border-left:3px solid #0891b2;padding-left:13px;background:rgba(8,145,178,0.07)}
 .roll-badge{font-size:20px;color:#0891b2;margin-left:5px;font-weight:300;vertical-align:middle;line-height:1}
 .trow.expired-trade{border-left:3px solid var(--green);padding-left:13px;background:rgba(34,197,94,0.04)}
@@ -398,6 +399,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 /* ── NEW DASHBOARD ── */
 .d-grid{display:grid;gap:12px}
 .d-grid-5{grid-template-columns:repeat(5,1fr)}
+.d-grid-4{grid-template-columns:repeat(4,1fr)}
 .d-grid-3{grid-template-columns:repeat(3,1fr)}
 .d-grid-2{grid-template-columns:1fr 1fr}
 .d-grid-73{grid-template-columns:2.4fr 1fr}
@@ -1471,7 +1473,6 @@ let showHidden=localStorage.getItem('wh-showHidden')==='true';
 let posSortBy=localStorage.getItem('wh-posSortBy')||'ticker';
 let logSort={col:'entered',dir:'desc'};
 let logQ='';
-let healthOpen=false; // data-health panel expanded/collapsed
 let _focusTid=null; // trade highlighted via goToTrade — sticks until an action is taken on it
 
 function _revealWheel(wheelId){
@@ -2268,17 +2269,26 @@ function renderDash(){
   const healthBadge=[hRed?`<span style="color:#ef4444;font-size:11px;font-weight:700">${hRed} critical</span>`:'',
       hAmber?`<span style="color:#fbbf24;font-size:11px;font-weight:700">${hAmber} warning${hAmber>1?'s':''}</span>`:'',
       hGrey?`<span style="color:#6b7280;font-size:11px;font-weight:600">${hGrey} note${hGrey>1?'s':''}</span>`:''].filter(Boolean).join('');
-  const healthRows=health.map(i=>`<div class="d-table-row" style="grid-template-columns:14px 1fr 130px;gap:10px;align-items:center">
-    <span class="d-alert-dot" style="background:${sevDot[i.sev]};flex-shrink:0"></span>
-    <span style="font-size:12px;color:var(--text2);line-height:1.5">${i.text}</span>
-    ${i.tradeId?`<span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-ghost" style="font-size:10px;padding:3px 10px" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button><button class="btn btn-ghost" style="font-size:10px;padding:3px 10px" onclick="openEditTrade('${i.tradeId}')">Edit</button></span>`:'<span></span>'}
-  </div>`).join('');
-  const healthPanel=health.length&&healthOpen?`<div class="d-panel" id="health-panel">
-    <div class="d-panel-hdr" onclick="toggleHealth()" style="cursor:pointer">
+  const healthRows=health.map(i=>{
+    const t=db.trades.find(x=>x.id===i.tradeId);
+    return`<div style="border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 16px 0">
+        <span class="d-alert-dot" style="background:${sevDot[i.sev]};flex-shrink:0"></span>
+        <span style="font-size:12px;color:var(--text2);line-height:1.5;flex:1">${i.text}</span>
+        ${i.tradeId?`<button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;flex-shrink:0" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button>`:''}
+      </div>
+      ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
+    </div>`;
+  }).join('');
+  const healthPanel=health.length?`<div class="d-panel" id="health-panel">
+    <div class="d-panel-hdr">
       <span class="d-panel-title">Data Health</span>
-      <span style="display:flex;gap:12px;align-items:center">${healthBadge}<span style="color:var(--text3);font-size:10px">▲ hide</span></span>
+      <span style="display:flex;gap:12px;align-items:center">${healthBadge}</span>
     </div>
-    <div class="d-panel-body">${healthRows}</div>
+    <div class="d-panel-body">
+      <div class="thead-row">${'<span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span>'}</div>
+      ${healthRows}
+    </div>
   </div>`:'';
 
   // Capital utilisation
@@ -2292,10 +2302,7 @@ function renderDash(){
   const moCompare=lastMo&&thisMo?(thisMo.pNet-lastMo.pNet):null;
 
   // Action count
-  // Data Health KPI (replaces Action Needed, which merely duplicated the alert strip below it)
-  const hWorst=hRed?'#ef4444':hAmber?'#fbbf24':hGrey?'#6b7280':'#22c55e';
-  const hVal=health.length===0?'Clean':`${health.length} issue${health.length>1?'s':''}`;
-  const hSub=health.length===0?'ledger verified':[hRed?`${hRed} critical`:'',hAmber?`${hAmber} warning${hAmber>1?'s':''}`:'',hGrey?`${hGrey} note${hGrey>1?'s':''}`:''].filter(Boolean).join(' · ');
+
 
   // ── KPI cards ──
   function kpi(label,val,sub,col,accent,explain){
@@ -2313,11 +2320,6 @@ function renderDash(){
   const k1=kpi('YTD Income',fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'#22c55e':'#ef4444',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'#22c55e':'#ef4444',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
   const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
-  const k4=`<div class="d-kpi" ${health.length?'onclick="toggleHealth()" style="cursor:pointer"':''} data-xt="Data Health" data-xb="Integrity checks on your trade ledger: lapsed legs awaiting a verdict, contradicted expired flags, orphan closers, assignments without a matching put, oversold shares, missing fields, and duplicate suspects. Click to see the list. Detect-and-ask only — nothing is ever changed automatically.">
-    <div class="d-kpi-label">Data Health<span class="dcard-info" onmouseenter="showXpop(this)" onmouseleave="hideXpop()">?</span></div>
-    <div class="d-kpi-val" style="color:${hWorst}">${health.length===0?'✓ ':''}${hVal}</div>
-    <div class="d-kpi-sub">${hSub}${health.length?` <span style="color:var(--teal,#14B8A6);font-weight:600">· ${healthOpen?'▲ hide issues':'▼ view issues'}</span>`:''}</div>
-  </div>`;
 
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
@@ -2413,7 +2415,7 @@ function renderDash(){
   return`<div style="padding:14px 16px 50px;display:flex;flex-direction:column;gap:10px">
 
     <!-- KPI Row -->
-    <div class="d-grid d-grid-5">${k1}${k2}${k3}${k4}${k5}</div>
+    <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div>
 
     <!-- Alert strip -->
     ${alertHtml}
@@ -4496,10 +4498,6 @@ window.cyclePosSort = cyclePosSort;
 window.toggleSortMenu = toggleSortMenu;
 window.closeSortMenu = closeSortMenu;
 window.openEditTrade = openEditTrade;
-window.toggleHealth = function(){
-  healthOpen=!healthOpen;render();
-  if(healthOpen)setTimeout(()=>{document.getElementById('health-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'});},80);
-};
 window.goToTrade = goToTrade;
 window.goToWheel = goToWheel; // module-scope rule: inline handlers need window exposure
 window.sortLog = sortLog;
