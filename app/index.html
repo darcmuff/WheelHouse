@@ -695,7 +695,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
     <div style="border-bottom:1px solid var(--border)">
       <div class="nav-item" data-view="dash" onclick="switchView('dash')">
-        <span class="nav-icon">◈</span>Dashboard
+        <span class="nav-icon">◈</span>Dashboard<span id="nav-health-badge"></span>
       </div>
       <div class="nav-item active" data-view="positions" onclick="switchView('positions')">
         <span class="nav-icon">⊞</span>Rotations
@@ -1534,6 +1534,15 @@ function render(){
 
 function renderSidebar(){
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
+  // Health badge on the Dashboard nav item — visible from any view
+  const _hb=document.getElementById('nav-health-badge');
+  if(_hb){
+    const _hi=runDataHealth();
+    if(_hi.length){
+      const worst=_hi.some(i=>i.sev==='red')?'#ef4444':_hi.some(i=>i.sev==='amber')?'#fbbf24':'#6b7280';
+      _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:10px;font-weight:800;border-radius:9px;padding:1px 7px;line-height:1.4">${_hi.length}</span>`;
+    }else _hb.innerHTML='';
+  }
   const s=calcOverall();
   const wl=calcWinLoss();
   const ytd=calcYTD();
