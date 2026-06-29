@@ -3903,6 +3903,9 @@ function parseSmartText(raw){
   // "Mar 20 2026" / "March 20, 2026"
   const rx2=new RegExp(`(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2}),?\\s+(\\d{4})`,'gi');
   while((m=rx2.exec(full))!==null){const monAbbr=m[1].slice(0,3).toLowerCase();const mon=MON_MAP[monAbbr];if(!mon)continue;allDates.push(new Date(parseInt(m[3]),mon-1,parseInt(m[2])));}
+  // "Jul 2" / "Jun 29" (month-first, NO year — Robinhood US confirmations). Skip if a year follows (rx2 owns those) or if the number is a contract/share count.
+  const rx2b=new RegExp(`(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2})\\b(?!\\s*,?\\s*\\d{4})(?!\\s+(?:contracts?|shares?|put|call)\\b)`,'gi');
+  while((m=rx2b.exec(full))!==null){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(!mon)continue;allDates.push(new Date(today.getFullYear(),mon-1,parseInt(m[2])));}
   // MM/DD/YYYY or MM/DD/YY (US format — Schwab, E*Trade, Fidelity)
   const rx3=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g;
   while((m=rx3.exec(full))!==null){const yr=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);allDates.push(new Date(yr,parseInt(m[1])-1,parseInt(m[2])));}
