@@ -3460,6 +3460,15 @@ function toISO(day,monStr,forEntry){
   return`${yr}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 
+function extractDate(str,forEntry){
+  if(!str)return null;
+  let m=new RegExp(`(\\d{1,2})\\s+(${MON_PAT})\\b`,'i').exec(str);   // day-first: "2 Jul", "20 Mar"
+  if(m)return toISO(m[1],m[2],forEntry);
+  m=new RegExp(`\\b(${MON_PAT})\\s+(\\d{1,2})\\b`,'i').exec(str);    // month-first: "Jul 2", "Jun 29"
+  if(m)return toISO(m[2],m[1],forEntry);
+  return null;
+}
+
 function parseRobinhoodText(raw){
   // Normalise — collapse Windows line endings, trim each line
   const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
@@ -3476,8 +3485,7 @@ function parseRobinhoodText(raw){
   r.strike=strikeM?parseFloat(strikeM[1]):null;
   const optTypeM=/\b(call|put)\b/i.exec(title);
   const optType=optTypeM?.[1]?.toLowerCase()||null;
-  const expM=new RegExp(`(\\d{1,2})\\s+(${MON_PAT})\\b`,'i').exec(title);
-  r.expiry=expM?toISO(expM[1],expM[2],false):null;
+  r.expiry=extractDate(title,false);
 
   // ── Position effect ──
   const posIdx=lines.findIndex(l=>/^position effect$/i.test(l));
@@ -3507,15 +3515,14 @@ function parseRobinhoodText(raw){
   for(let i=0;i<lines.length;i++){
     if(/^filled$/i.test(lines[i])){
       const nxt=lines[i+1]||'';
-      const dm=new RegExp(`^(\\d{1,2})\\s+(${MON_PAT})\\b`,'i').exec(nxt);
-      if(dm){entered=toISO(dm[1],dm[2],true);break;}
+      const iso=extractDate(nxt,true);
+      if(iso){entered=iso;break;}
     }
   }
   // Fallback: line 2 date
   if(!entered){
     const l2=lines[1]||'';
-    const dm=new RegExp(`(\\d{1,2})\\s+(${MON_PAT})\\b`,'i').exec(l2);
-    entered=dm?toISO(dm[1],dm[2],true):new Date().toISOString().slice(0,10);
+    entered=extractDate(l2,true)||new Date().toISOString().slice(0,10);
   }
   r.entered=entered;
 
