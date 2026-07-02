@@ -289,6 +289,10 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .trow:hover{background:var(--bg3)}
 .trow-health{border-top:none}
 .trow.roll-trade{border-left:3px solid #0891b2;padding-left:13px;background:rgba(8,145,178,0.07)}
+.chain-row{display:flex;gap:14px;align-items:baseline;padding:6px 16px 8px 13px;border-left:3px solid #0891b2;background:rgba(8,145,178,0.12);font-size:11.5px;border-top:1px dashed rgba(8,145,178,0.35)}
+.chain-row .chain-tag{color:#22d3ee;font-weight:700;letter-spacing:.4px;text-transform:uppercase;font-size:10px}
+.chain-row .chain-net{font-weight:700}
+.chain-row .chain-be{color:var(--text2)}
 .roll-badge{font-size:15px;color:#0891b2;font-weight:400;line-height:1}
 .action-cell{display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:0}
 .roll-slot{flex:0 0 16px;display:flex;align-items:center;justify-content:center}
@@ -1745,38 +1749,42 @@ function buildLastAction(trades){
 // Share-aware lifecycle walk — mirrors runDataHealth's pairing exactly, minus the issue
 // detection. Legs carry `_rem` (remaining shares); BTC/STC/IN/OUT consume shares, not
 // whole legs, so partial assignments and partial closes leave the correct remainder open.
-// Returned legs expose `_rem` — capital maths must use it, not `shares`.
-function openOptionLegs(wheelTrades){
-  const today=new Date().toISOString().slice(0,10);
+// Returns {open, pairs}: open legs (with `_rem`) plus a map of closerId → [{legId, shares}]
+// recording exactly which opener legs each closer consumed — the raw material for roll chains.
+function walkLegPairs(wheelTrades){
   const closing=a=>(a==='BTC'||a==='STC'||a==='IN'||a==='OUT')?1:0; // same-day: openers first
   const sorted=[...wheelTrades].sort((a,b)=>
     (a.entered||'').localeCompare(b.entered||'')||closing(a.action)-closing(b.action));
-  const open=[]; // includes expiredWorthless legs so closers pair identically to the health engine; filtered at return
+  const open=[]; // includes expiredWorthless legs so closers pair identically to the health engine
+  const pairs={}; // closer trade id → [{legId, shares consumed}]
+  const record=(closer,leg,shares)=>{(pairs[closer.id]=pairs[closer.id]||[]).push({legId:leg.id,shares});};
   for(const t of sorted){
     if(t.action==='CSP'||t.action==='STOC'){
       open.push({...t,_rem:Number(t.shares)||0});
     }else if(t.action==='BTC'||t.action==='STC'){
       const ks=Number(t.strike);
       const live=o=>!o.expiry||o.expiry>=t.entered; // a leg can only be closed while it still exists
+      const nk=o=>!(t.rollId&&o.rollId===t.rollId); // a roll closer never consumes its own replacement opener
       const findLeg=()=>{
-        let j=open.findIndex(o=>!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-        if(j<0)j=open.findIndex(o=>!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
-        if(j<0)j=open.findIndex(o=>!o.expiredWorthless&&Number(o.strike)===ks);
-        if(j<0)j=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-        if(j<0)j=open.findIndex(o=>live(o)&&Number(o.strike)===ks);
-        if(j<0)j=open.findIndex(o=>Number(o.strike)===ks);
-        if(j<0&&(t.strike==null||t.strike===''))j=open.length-1;
+        let j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&live(o)&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&Number(o.strike)===ks);
+        if(j<0&&(t.strike==null||t.strike===''))j=open.findLastIndex(o=>nk(o));
         return j;
       };
       let rem=Number(t.shares)||0;
       if(rem<=0){ // closer with no share count: consume one whole leg
-        const j=findLeg();if(j>=0)open.splice(j,1);
+        const j=findLeg();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
       }else{
         while(rem>0){
           const j=findLeg();
           if(j<0)break; // orphan closer (strike present, no match) eats nothing
           const o=open[j];
           const take=Math.min(rem,o._rem||rem);
+          record(t,o,take);
           o._rem-=take;rem-=take;
           if(o._rem<=0)open.splice(j,1);
         }
@@ -1807,13 +1815,14 @@ function openOptionLegs(wheelTrades){
       };
       let inRem=Number(t.shares)||0;
       if(inRem<=0){
-        const j=findCSP();if(j>=0)open.splice(j,1);
+        const j=findCSP();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
       }else{
         while(inRem>0){ // partial assignments consume shares across legs
           const j=findCSP();
           if(j<0)break;
           const o=open[j];
           const take=Math.min(inRem,o._rem||inRem);
+          record(t,o,take);
           o._rem-=take;inRem-=take;
           if(o._rem<=0)open.splice(j,1);
         }
@@ -1842,13 +1851,14 @@ function openOptionLegs(wheelTrades){
         };
         let outRem=sh;
         if(outRem<=0){
-          const j=findSTOC();if(j>=0)open.splice(j,1);
+          const j=findSTOC();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
         }else{
           while(outRem>0){
             const j=findSTOC();
             if(j<0)break; // no matching STOC = plain manual sale — legitimate, consumes nothing
             const o=open[j];
             const take=Math.min(outRem,o._rem||outRem);
+            record(t,o,take);
             o._rem-=take;outRem-=take;
             if(o._rem<=0)open.splice(j,1);
           }
@@ -1856,8 +1866,67 @@ function openOptionLegs(wheelTrades){
       }
     }
   }
+  return{open,pairs};
+}
+
+function openOptionLegs(wheelTrades){
+  const today=new Date().toISOString().slice(0,10);
   // Open = unflagged, unexpired, with shares still unresolved (or no share count recorded at all)
-  return open.filter(o=>!o.expiredWorthless&&o.expiry&&o.expiry>=today&&(o._rem>0||!Number(o.shares)));
+  return walkLegPairs(wheelTrades).open
+    .filter(o=>!o.expiredWorthless&&o.expiry&&o.expiry>=today&&(o._rem>0||!Number(o.shares)));
+}
+
+// ── Roll-chain campaign P&L ──
+// A rollId couples one closer (BTC/STC) to its replacement opener. The chain behind a
+// rolled leg is its full ancestry: this opener ← its roll's closer ← the leg(s) that
+// closer actually consumed (from walkLegPairs) ← their rolls ← ... and so on to the
+// original fresh entry. Chains can MERGE — one 8-lot closer consuming two 4-lot legs —
+// so ancestry is a tree walked with a seen-set, not a simple linked list.
+// Returns {trades, rolls, net, live, breakeven} or null if the leg isn't part of a chain.
+function buildRollChain(wheelTrades,tipId){
+  const byId={};wheelTrades.forEach(t=>{byId[t.id]=t;});
+  const tip=byId[tipId];
+  if(!tip||!tip.rollId||!(tip.action==='CSP'||tip.action==='STOC'))return null;
+  const{open,pairs}=walkLegPairs(wheelTrades);
+  const closerByRoll={}; // rollId → the closer half of the pair
+  wheelTrades.forEach(t=>{if(t.rollId&&(t.action==='BTC'||t.action==='STC'))closerByRoll[t.rollId]=t;});
+  const seen=new Set(),chain=[];let rolls=0;
+  const visit=opener=>{
+    if(!opener||seen.has(opener.id))return;
+    seen.add(opener.id);chain.push(opener);
+    if(!opener.rollId)return; // root — the original fresh entry
+    const closer=closerByRoll[opener.rollId];
+    if(!closer||seen.has(closer.id))return;
+    seen.add(closer.id);chain.push(closer);rolls++;
+    (pairs[closer.id]||[]).forEach(p=>visit(byId[p.legId])); // branches on merged chains
+  };
+  visit(tip);
+  if(rolls===0)return null; // rollId present but pair incomplete — nothing to sum
+  // The campaign includes its ending: any plain (non-roll) closer that consumed the tip —
+  // the final buyback that took the chain off the books.
+  Object.entries(pairs).forEach(([cid,arr])=>{
+    const c=byId[cid];
+    if(c&&!c.rollId&&!seen.has(cid)&&arr.some(p=>p.legId===tipId)){seen.add(cid);chain.push(c);}
+  });
+  const net=chain.reduce((s,t)=>s+(isCredit(t.action)?(t.total||0):-(t.total||0)),0);
+  const today=new Date().toISOString().slice(0,10);
+  const liveLeg=open.find(o=>o.id===tipId&&!o.expiredWorthless&&o.expiry&&o.expiry>=today&&o._rem>0);
+  // Breakeven buyback: the per-share price at which closing the live leg leaves the whole
+  // campaign at exactly zero. Close cheaper and the chain is green.
+  const breakeven=liveLeg&&liveLeg._rem>0?net/liveLeg._rem:null;
+  return{trades:chain,rolls,net,live:!!liveLeg,breakeven};
+}
+
+// A leg is a chain TIP when nothing rolled onward from it: it's either still open, or it
+// was closed by a plain (non-roll) closer. Only tips display the chain summary line.
+function isChainTip(wheelTrades,leg){
+  if(!leg.rollId||!(leg.action==='CSP'||leg.action==='STOC'))return false;
+  const{pairs}=walkLegPairs(wheelTrades);
+  for(const t of wheelTrades){
+    if(t.rollId&&t.rollId!==leg.rollId&&(t.action==='BTC'||t.action==='STC')
+      &&(pairs[t.id]||[]).some(p=>p.legId===leg.id))return false; // a later roll consumed it
+  }
+  return true;
 }
 
 function buildOpenPosition(trades){
@@ -1992,7 +2061,7 @@ function renderRotationWindow(wheel){
   if(exp){
     expandedHtml=`<div class="trade-body open">
       <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span></div>`;
-    [...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{expandedHtml+=renderTradeRow(t);});
+    [...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{expandedHtml+=renderTradeRow(t,m.trades);});
     expandedHtml+=`<div class="rot-actions">
       <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}');event.stopPropagation()">•••</button>
 
@@ -2030,7 +2099,21 @@ function calcTradeROC(t){
   if(!dte)return null;
   return((t.total/collateral)*(365/dte)*100);
 }
-function renderTradeRow(t){
+function renderTradeRow(t,wheelTrades){
+  // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
+  let chainHtml='';
+  if(wheelTrades&&t.rollId&&isChainTip(wheelTrades,t)){
+    const c=buildRollChain(wheelTrades,t.id);
+    if(c){
+      const netCls=c.net>=0?'g':'r';
+      const beHtml=c.live
+        ?(c.breakeven!=null&&c.breakeven>0
+          ?`<span class="chain-be">breakeven buyback ≤ $${fmtPrem(c.breakeven)} — close cheaper and the whole chain is green</span>`
+          :`<span class="chain-be">chain is underwater — no green buyback exists at any price</span>`)
+        :`<span class="chain-be">chain complete</span>`;
+      chainHtml=`<div class="chain-row"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span><span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
+    }
+  }
   const roc=calcTradeROC(t);
   const rocDisplay=roc!==null?roc.toFixed(1)+'%':'—';
   // PPD — income velocity: net dollars per day of contract life. Credit opens only.
@@ -2054,7 +2137,7 @@ function renderTradeRow(t){
     <span style="display:flex;gap:3px;justify-content:flex-end">
       <button class="btn btn-ghost btn-icon" onclick="openEditTrade('${t.id}');event.stopPropagation()">•••</button>
     </span>
-  </div>`;
+  </div>${chainHtml}`;
 }
 
 // ── LOG ──
