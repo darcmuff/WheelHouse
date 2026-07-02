@@ -1300,7 +1300,7 @@ function calcCapitalStats(){
   const atRisk=db.wheels.reduce((s,w)=>{
     const legs=openOptionLegs(db.trades.filter(t=>t.wheelId===w.id));
     return s+legs.filter(l=>l.action==='CSP'&&l.strike&&l.shares)
-                .reduce((a,l)=>a+l.strike*l.shares,0);
+                .reduce((a,l)=>a+l.strike*(l._rem??l.shares),0); // _rem = shares still at risk after partial assigns/closes
   },0);
   const totalFees=db.trades.reduce((s,t)=>s+(t.fees||0),0);
   const s=calcOverall();
@@ -1742,28 +1742,122 @@ function buildLastAction(trades){
 }
 
 // ── Single source of truth for open option legs ──
-// Walks the lifecycle once; supports laddered/concurrent legs; matches BTC/STC to strike.
+// Share-aware lifecycle walk — mirrors runDataHealth's pairing exactly, minus the issue
+// detection. Legs carry `_rem` (remaining shares); BTC/STC/IN/OUT consume shares, not
+// whole legs, so partial assignments and partial closes leave the correct remainder open.
+// Returned legs expose `_rem` — capital maths must use it, not `shares`.
 function openOptionLegs(wheelTrades){
   const today=new Date().toISOString().slice(0,10);
-  const closing=a=>(a==='BTC'||a==='STC')?1:0; // same day: openers first — strike+expiry matching pairs closers correctly
+  const closing=a=>(a==='BTC'||a==='STC'||a==='IN'||a==='OUT')?1:0; // same-day: openers first
   const sorted=[...wheelTrades].sort((a,b)=>
-    a.entered.localeCompare(b.entered)||closing(a.action)-closing(b.action));
-  const open=[];
+    (a.entered||'').localeCompare(b.entered||'')||closing(a.action)-closing(b.action));
+  const open=[]; // includes expiredWorthless legs so closers pair identically to the health engine; filtered at return
   for(const t of sorted){
     if(t.action==='CSP'||t.action==='STOC'){
-      if(!t.expiredWorthless)open.push(t);
+      open.push({...t,_rem:Number(t.shares)||0});
     }else if(t.action==='BTC'||t.action==='STC'){
       const ks=Number(t.strike);
-      // 1) exact contract: same strike AND same expiry (closes the right leg in same-strike chains)
-      let i=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-      // 2) earliest open leg at that strike
-      if(i<0)i=open.findIndex(o=>Number(o.strike)===ks);
-      // 3) only if the closer carries no strike at all: most recent leg
-      if(i<0&&(t.strike==null||t.strike===''))i=open.length-1;
-      if(i>=0)open.splice(i,1);          // no strike match + strike present = orphan closer; eat nothing
+      const live=o=>!o.expiry||o.expiry>=t.entered; // a leg can only be closed while it still exists
+      const findLeg=()=>{
+        let j=open.findIndex(o=>!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>live(o)&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>Number(o.strike)===ks);
+        if(j<0&&(t.strike==null||t.strike===''))j=open.length-1;
+        return j;
+      };
+      let rem=Number(t.shares)||0;
+      if(rem<=0){ // closer with no share count: consume one whole leg
+        const j=findLeg();if(j>=0)open.splice(j,1);
+      }else{
+        while(rem>0){
+          const j=findLeg();
+          if(j<0)break; // orphan closer (strike present, no match) eats nothing
+          const o=open[j];
+          const take=Math.min(rem,o._rem||rem);
+          o._rem-=take;rem-=take;
+          if(o._rem<=0)open.splice(j,1);
+        }
+      }
+    }else if(t.action==='IN'){
+      // Assignment consumes the CSP behind it — settles at strike × shares
+      let ks=Number(t.strike);
+      if((!ks||isNaN(ks))&&t.shares&&t.total)ks=Math.round((Number(t.total)/Number(t.shares))*100)/100;
+      const bestAssignable=pred=>{ // prefer the CSP whose expiry most recently passed on/before the assignment date
+        let best=-1,bestExp='';
+        open.forEach((o,idx)=>{
+          if(o.action!=='CSP'||!pred(o))return;
+          const e=o.expiry||'';
+          if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+        });
+        return best;
+      };
+      const findCSP=()=>{
+        let j=bestAssignable(o=>!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=bestAssignable(o=>!o.expiredWorthless);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless);
+        if(j<0)j=bestAssignable(o=>Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&Number(o.strike)===ks);
+        if(j<0)j=bestAssignable(()=>true);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP');
+        return j;
+      };
+      let inRem=Number(t.shares)||0;
+      if(inRem<=0){
+        const j=findCSP();if(j>=0)open.splice(j,1);
+      }else{
+        while(inRem>0){ // partial assignments consume shares across legs
+          const j=findCSP();
+          if(j<0)break;
+          const o=open[j];
+          const take=Math.min(inRem,o._rem||inRem);
+          o._rem-=take;inRem-=take;
+          if(o._rem<=0)open.splice(j,1);
+        }
+      }
+    }else if(t.action==='OUT'){
+      // Called away resolves the covered call — only pair when strike matches
+      const sh=Number(t.shares)||0;
+      let oks=Number(t.strike);
+      if((!oks||isNaN(oks))&&sh&&t.total)oks=Math.round((Number(t.total)/sh)*100)/100;
+      if(oks){
+        const bestCallable=pred=>{ // prefer the STOC whose expiry most recently passed on/before the call-away date
+          let best=-1,bestExp='';
+          open.forEach((o,idx)=>{
+            if(o.action!=='STOC'||Number(o.strike)!==oks||!pred(o))return;
+            const e=o.expiry||'';
+            if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+          });
+          return best;
+        };
+        const findSTOC=()=>{
+          let j=bestCallable(o=>!o.expiredWorthless);
+          if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+          if(j<0)j=bestCallable(()=>true);
+          if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+          return j;
+        };
+        let outRem=sh;
+        if(outRem<=0){
+          const j=findSTOC();if(j>=0)open.splice(j,1);
+        }else{
+          while(outRem>0){
+            const j=findSTOC();
+            if(j<0)break; // no matching STOC = plain manual sale — legitimate, consumes nothing
+            const o=open[j];
+            const take=Math.min(outRem,o._rem||outRem);
+            o._rem-=take;outRem-=take;
+            if(o._rem<=0)open.splice(j,1);
+          }
+        }
+      }
     }
   }
-  return open.filter(o=>o.expiry&&o.expiry>=today);
+  // Open = unflagged, unexpired, with shares still unresolved (or no share count recorded at all)
+  return open.filter(o=>!o.expiredWorthless&&o.expiry&&o.expiry>=today&&(o._rem>0||!Number(o.shares)));
 }
 
 function buildOpenPosition(trades){
