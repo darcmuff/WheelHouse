@@ -3893,7 +3893,7 @@ function parseSmartText(raw){
   const allDates=[];
   let m;
   // "20 Mar" / "20 Mar 2026" / "20 March 2026"
-  const rx1=new RegExp(`(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?\\b`,'gi');
+  const rx1=new RegExp(`(?<![\\d.$])(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?\\b`,'gi');
   while((m=rx1.exec(full))!==null){
     const monAbbr=m[2].slice(0,3).toLowerCase();
     const mon=MON_MAP[monAbbr];if(!mon)continue;
