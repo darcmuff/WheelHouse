@@ -3,7 +3,10 @@
 // Extracts the live function from app/index.html so tests never go stale.
 const { load } = require('./extract');
 
-const { openOptionLegs } = load([{ kind: 'fn', name: 'openOptionLegs' }]);
+const { openOptionLegs } = load([
+  { kind: 'fn', name: 'walkLegPairs' },
+  { kind: 'fn', name: 'openOptionLegs' },
+]);
 
 // ── date helpers: everything relative to today so tests never rot ──
 const d = (offsetDays) => {
