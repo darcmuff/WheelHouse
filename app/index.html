@@ -13,11 +13,11 @@
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <meta property="og:title" content="WheelHouse — Options Wheel Tracker">
 <meta property="og:description" content="Track, analyse and optimise your options wheel strategy.">
-<meta property="og:image" content="https://darcmuff.github.io/WheelHouse/wheelhouse-share.png">
-<meta property="og:url" content="https://darcmuff.github.io/WheelHouse">
+<meta property="og:image" content="https://wheelhouse-tracker.netlify.app/wheelhouse-share.png">
+<meta property="og:url" content="https://wheelhouse-tracker.netlify.app/app/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://darcmuff.github.io/WheelHouse/wheelhouse-share.png">
+<meta name="twitter:image" content="https://wheelhouse-tracker.netlify.app/wheelhouse-share.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#18191c">
 <!-- Firebase loaded inside main module script -->
@@ -244,7 +244,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .rot-shares{font-size:10px;color:var(--text3);flex-shrink:0;white-space:nowrap}
 .rot-price{font-size:12px;font-weight:300;color:var(--silver);flex-shrink:0;white-space:nowrap}
 .rot-dte-badge{
-  font-size:9px;font-weight:300;padding:2px 7px;border-radius:10px;
+  font-size:10px;font-weight:400;padding:2px 8px;border-radius:10px;
   flex-shrink:0;white-space:nowrap;border:1px solid;
 }
 .rot-badge{
@@ -273,21 +273,29 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .trade-body.open{display:block;overflow-x:auto}
 .thead-row{
   display:grid;
-  grid-template-columns:minmax(0,68fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,76fr) minmax(0,60fr) minmax(0,86fr) minmax(0,44fr) minmax(0,52fr) minmax(0,36fr) minmax(0,52fr) minmax(0,40fr);
+  grid-template-columns:minmax(0,120fr) minmax(0,82fr) minmax(0,82fr) minmax(0,62fr) minmax(0,64fr) minmax(0,54fr) minmax(0,84fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,38fr);
   gap:6px;padding:7px 16px;background:var(--bg3);
   font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);
   min-width:0;
 }
+.trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 3px 0 0 var(--teal,#14B8A6);}
 .trow{
   display:grid;
-  grid-template-columns:minmax(0,68fr) minmax(0,90fr) minmax(0,90fr) minmax(0,64fr) minmax(0,76fr) minmax(0,60fr) minmax(0,86fr) minmax(0,44fr) minmax(0,52fr) minmax(0,36fr) minmax(0,52fr) minmax(0,40fr);
+  grid-template-columns:minmax(0,120fr) minmax(0,82fr) minmax(0,82fr) minmax(0,62fr) minmax(0,64fr) minmax(0,54fr) minmax(0,84fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,38fr);
   gap:6px;padding:9px 16px;align-items:center;
   font-size:12px;border-top:1px solid var(--border);
   min-width:0;
 }
 .trow:hover{background:var(--bg3)}
+.trow-health{border-top:none}
 .trow.roll-trade{border-left:3px solid #0891b2;padding-left:13px;background:rgba(8,145,178,0.07)}
-.roll-badge{font-size:20px;color:#0891b2;margin-left:5px;font-weight:300;vertical-align:middle;line-height:1}
+.chain-row{display:flex;gap:14px;align-items:baseline;padding:6px 16px 8px 13px;border-left:3px solid #0891b2;background:rgba(8,145,178,0.12);font-size:11.5px;border-top:1px dashed rgba(8,145,178,0.35)}
+.chain-row .chain-tag{color:#22d3ee;font-weight:700;letter-spacing:.4px;text-transform:uppercase;font-size:10px}
+.chain-row .chain-net{font-weight:500;font-variant-numeric:tabular-nums}
+.chain-row .chain-be{color:var(--text2)}
+.roll-badge{font-size:15px;color:#0891b2;font-weight:400;line-height:1}
+.action-cell{display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:0}
+.roll-slot{flex:0 0 16px;display:flex;align-items:center;justify-content:center}
 .trow.expired-trade{border-left:3px solid var(--green);padding-left:13px;background:rgba(34,197,94,0.04)}
 .exp-badge{font-size:10px;font-weight:800;color:var(--green);letter-spacing:.5px;vertical-align:middle}
 .ab{padding:3px 8px;border-radius:4px;font-size:11px;font-weight:800;white-space:nowrap;display:inline-block;letter-spacing:.3px}
@@ -397,6 +405,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 /* ── NEW DASHBOARD ── */
 .d-grid{display:grid;gap:12px}
 .d-grid-5{grid-template-columns:repeat(5,1fr)}
+.d-grid-4{grid-template-columns:repeat(4,1fr)}
 .d-grid-3{grid-template-columns:repeat(3,1fr)}
 .d-grid-2{grid-template-columns:1fr 1fr}
 .d-grid-73{grid-template-columns:2.4fr 1fr}
@@ -417,9 +426,6 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .d-table-row{display:grid;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;transition:background .12s}
 .d-table-row:hover{background:rgba(255,255,255,.02)}
 .d-table-row:last-child{border-bottom:none}
-.d-alert-strip{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.d-alert-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color .15s}
-.d-alert-item:hover{border-color:var(--orange);color:var(--text)}
 .d-alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .d-phase{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
 .d-phase-csp{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
@@ -621,6 +627,42 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 </div>
 
 <!-- ═══ LAYOUT ═══ -->
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" style="
+  position:fixed;inset:0;z-index:9998;
+  background:#18191c;
+  display:none;align-items:center;justify-content:center;flex-direction:column;
+  font-family:'Inter',sans-serif;
+  transition:opacity .6s;
+">
+  <div style="position:relative;width:80px;height:80px;margin-bottom:24px">
+    <svg viewBox="0 0 120 120" style="width:80px;height:80px;animation:wh-spin 3s linear infinite">
+      <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="2" opacity="0.85"/>
+      <path d="M 48.61 17.5 A 44 44 0 0 1 17.5 71.39" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 20.1 74.32 L 17.5 71.39 L 16.72 75.22" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 28.89 91.11 A 44 44 0 0 1 91.11 91.11" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 92.35 87.4 L 91.11 91.11 L 94.82 89.87" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 102.5 71.39 A 44 44 0 0 1 71.39 17.5" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 67.56 18.28 L 71.39 17.5 L 68.46 14.9" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="60" y1="47" x2="60" y2="20" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+      <line x1="48.74" y1="66.5" x2="25.36" y2="80" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+      <line x1="71.26" y1="66.5" x2="94.64" y2="80" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="60" cy="60" r="13" fill="#0d9488" opacity="0.12"/>
+      <circle cx="60" cy="60" r="10" fill="#0d9488"/>
+      <circle cx="60" cy="60" r="6" fill="#18191c"/>
+      <circle cx="60" cy="60" r="2.5" fill="#14b8a6"/>
+    </svg>
+  </div>
+  <div id="loading-progress" style="width:180px;height:3px;background:#2b2d32;border-radius:3px;overflow:hidden;margin-bottom:12px">
+    <div id="loading-bar" style="width:0%;height:100%;background:#0d9488;border-radius:3px;transition:width .3s"></div>
+  </div>
+  <div id="loading-text" style="font-size:11px;color:#6b7280;letter-spacing:.5px">Loading...</div>
+</div>
+<style>
+@keyframes wh-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+#loading-overlay.fade-out{opacity:0;pointer-events:none}
+</style>
+
 <div id="layout">
 
   <!-- SIDEBAR -->
@@ -659,7 +701,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 
     <div style="border-bottom:1px solid var(--border)">
       <div class="nav-item" data-view="dash" onclick="switchView('dash')">
-        <span class="nav-icon">◈</span>Dashboard
+        <span class="nav-icon">◈</span>Dashboard<span id="nav-health-badge"></span>
       </div>
       <div class="nav-item active" data-view="positions" onclick="switchView('positions')">
         <span class="nav-icon">⊞</span>Rotations
@@ -711,6 +753,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
         <select id="tf-action" onchange="onActionChange()">
           <option value="CSP">CSP — Cash Secured Put</option>
           <option value="BTC">BTC — Buy To Close</option>
+          <option value="STC">STC — Sell To Close</option>
           <option value="STOC">STOC — Sell To Open Call (Covered)</option>
           <option value="IN">IN — Buy Shares (assignment)</option>
           <option value="OUT">OUT — Sell Shares</option>
@@ -764,7 +807,6 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     <div id="paste-step1">
       <!-- SmartScan panel -->
       <div id="paste-panel-smartscan">
-        <input type="hidden" id="paste-broker" value="smart">
         <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Paste any trade confirmation — Robinhood, Tastytrade, IBKR, Schwab, E*Trade, Fidelity, Webull, eToro, Trading 212 or any other broker. SmartScan figures it out.</p>
         <textarea id="paste-raw" style="width:100%;height:180px;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:11px;border-radius:7px;font-size:12px;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
         <div id="paste-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></div>
@@ -779,6 +821,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
             <select id="pm-action" onchange="onPMActionChange()">
               <option value="CSP">CSP — Cash Secured Put</option>
               <option value="BTC">BTC — Buy To Close</option>
+              <option value="STC">STC — Sell To Close</option>
               <option value="STOC">STOC — Sell To Open Call</option>
               <option value="IN">IN — Buy Shares</option>
               <option value="OUT">OUT — Sell Shares</option>
@@ -837,10 +880,15 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
           <span id="theme-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--orange);border-radius:50%;transition:.2s"></span>
         </label>
       </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+        <span style="font-size:13px;color:var(--text2)">Date format</span>
+        <select id="date-fmt-select" onchange="setDateFmt(this.value)" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">
+          <option value="uk">DD/MM</option>
+          <option value="us">MM/DD</option>
+        </select>
+      </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
-      <button class="btn btn-ghost btn-full" onclick="openImport();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg><span>Import CSV</span></button>
-      <button class="btn btn-ghost btn-full" onclick="exportCSV();closeModal('mSettings')" style="text-align:left;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg><span>Export CSV</span></button>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <div id="settings-user" style="font-size:11px;color:var(--text3);padding:0 14px"></div>
       <button id="settings-signout" class="btn btn-ghost btn-full" style="text-align:left;padding:10px 14px;font-size:13px;color:var(--red)" onclick="doSignOut()">⎋ Sign Out</button>
@@ -849,14 +897,12 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 </div>
 
 <script>
-// Preview bypass — runs before Firebase module loads
-// Hides auth overlay when not on the live Netlify domain
+// Legacy GitHub Pages deployment — redirect to the live app. Never fake a user.
 (function(){
   var h=window.location.hostname;
-  if(h.indexOf('netlify.app')===-1 && h!=='localhost' && h!=='127.0.0.1'){
-    window.__wheelPreview=true;
-    var ov=document.getElementById('auth-overlay');
-    if(ov)ov.style.display='none';
+  if(h.indexOf('github.io')!==-1){
+    window.location.replace('https://wheelhouse-tracker.netlify.app/app/');
+    return;
   }
   // Restore theme preference
   var theme=localStorage.getItem('wh-theme');
@@ -869,7 +915,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     var ct=document.getElementById('content');
     if(sb)sb.classList.add('collapsed');
     if(btn)btn.style.display='flex';
-    if(ct)ct.style.marginLeft='0';
+    if(ct){ct.style.marginLeft='0';ct.style.paddingLeft='36px';}
   }
 })();
 </script>
@@ -880,7 +926,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, setDoc, deleteDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
   apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
@@ -913,7 +959,7 @@ const SEED_DATA = {
 function autoMarkExpiredTrades(){
   // Sort: by entered date; on same date closings (BTC/STC) always before openings (CSP/STOC)
   const closingAction=a=>(a==='BTC'||a==='STC')?0:1;
-  let changed=false;
+  const changedIds=new Set(); // save only the trades whose flags actually changed
   db.wheels.forEach(w=>{
     const wTrades=db.trades.filter(t=>t.wheelId===w.id)
       .sort((a,b)=>{
@@ -929,21 +975,21 @@ function autoMarkExpiredTrades(){
         if(openId){
           // Previous open had no BTC — mark expired
           const prev=db.trades.find(x=>x.id===openId);
-          if(prev&&!prev.expiredWorthless){prev.expiredWorthless=true;changed=true;}
+          if(prev&&!prev.expiredWorthless){prev.expiredWorthless=true;changedIds.add(prev.id);}
         }
         // Current trade is a fresh open — only clear stale expired flag if expiry is still in the future
-        if(t.expiredWorthless&&t.expiry&&new Date(t.expiry)>=new Date(new Date().toISOString().slice(0,10))){t.expiredWorthless=false;changed=true;}
+        if(t.expiredWorthless&&t.expiry&&new Date(t.expiry)>=new Date(new Date().toISOString().slice(0,10))){t.expiredWorthless=false;changedIds.add(t.id);}
         openId=t.id;
       } else if(t.action==='BTC'||t.action==='STC'){
         // Properly closed — ensure the open is NOT flagged as expired
-        if(openId){const prev=db.trades.find(x=>x.id===openId);if(prev&&prev.expiredWorthless){prev.expiredWorthless=false;changed=true;}}
+        if(openId){const prev=db.trades.find(x=>x.id===openId);if(prev&&prev.expiredWorthless){prev.expiredWorthless=false;changedIds.add(prev.id);}}
         openId=null;
       }
     });
     // Last open trade: only clear expired flag if expiry is still in the future (i.e. genuinely still active)
-    if(openId){const last=db.trades.find(x=>x.id===openId);if(last&&last.expiredWorthless&&last.expiry&&new Date(last.expiry)>=new Date(new Date().toISOString().slice(0,10))){last.expiredWorthless=false;changed=true;}}
+    if(openId){const last=db.trades.find(x=>x.id===openId);if(last&&last.expiredWorthless&&last.expiry&&new Date(last.expiry)>=new Date(new Date().toISOString().slice(0,10))){last.expiredWorthless=false;changedIds.add(last.id);}}
   });
-  if(changed){db.trades.forEach(t=>_saveTrade(t));}
+  if(changedIds.size){db.trades.forEach(t=>{if(changedIds.has(t.id))_saveTrade(t);});}
 }
 function loadDB(){
   // Auth-gated — real load happens in loadDBFromFirestore after sign-in
@@ -951,30 +997,19 @@ function loadDB(){
 }
 
 async function loadDBFromFirestore(userId){
-  try{
-    const wheelsSnap=await getDocs(collection(_fsDb,'users',userId,'wheels'));
-    const tradesSnap=await getDocs(collection(_fsDb,'users',userId,'trades'));
-    db.wheels=wheelsSnap.docs.map(d=>d.data());
-    db.trades=tradesSnap.docs.map(d=>d.data());
-    console.log('Firestore loaded:',db.wheels.length,'wheels,',db.trades.length,'trades for uid:',userId);
-    // Migration: swap sortOrder for w_sofi2 / w_sofi3
-    const w2=db.wheels.find(w=>w.id==='w_sofi2');
-    const w3=db.wheels.find(w=>w.id==='w_sofi3');
-    if(w2&&w3&&w2.sortOrder===2&&w3.sortOrder===3){
-      w2.sortOrder=3;w3.sortOrder=2;
-      _saveWheel(w2);_saveWheel(w3);
-    }
-    // autoMarkExpiredTrades(); // disabled — manual expired clicks are source of truth
-    render();
-    // Show onboarding only if this user genuinely has no rotations
-    if(!db.wheels||db.wheels.length===0){
-      const ob=document.getElementById('onboard-overlay');
-      if(ob)ob.style.display='flex';
-    } else {
-      const ob=document.getElementById('onboard-overlay');
-      if(ob)ob.style.display='none';
-    }
-  }catch(e){console.error('Firestore load failed:',e);}
+  // No try/catch here — a failed load must throw so the caller can halt boot.
+  // Swallowing it made a network blip look like an empty account (onboarding shown).
+  // getDocsFromServer, not getDocs: plain getDocs silently falls back to the (empty)
+  // local cache when the network is down and reports success — which made a dead
+  // connection look like a brand-new account. Server read or bust.
+  const wheelsSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'wheels'));
+  const tradesSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'trades'));
+  db.wheels=wheelsSnap.docs.map(d=>d.data());
+  db.trades=tradesSnap.docs.map(d=>d.data());
+  render();
+  // Show onboarding only after a confirmed-successful load with genuinely no rotations
+  const ob=document.getElementById('onboard-overlay');
+  if(ob)ob.style.display=(!db.wheels||db.wheels.length===0)?'flex':'none';
 }
 
 // Firestore helpers
@@ -983,14 +1018,17 @@ function _fsSetDoc(...args){return setDoc(...args);}
 function _fsDeleteDoc(...args){return deleteDoc(...args);}
 function _currentUid(){return _confirmedUid;}
 
+function _stripUndefined(o){
+  return Object.fromEntries(Object.entries(o).filter(([,v])=>v!==undefined));
+}
 function _saveWheel(wheel){
   const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
-  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),wheel)
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),_stripUndefined(wheel))
     .catch(e=>console.error('Wheel save failed:',e));
 }
 function _saveTrade(trade){
   const uid=_currentUid();if(!uid||!trade||!trade.id)return;
-  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),trade)
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),_stripUndefined(trade))
     .catch(e=>console.error('Trade save failed:',e));
 }
 function _deleteWheelDoc(wheelId){
@@ -1012,8 +1050,8 @@ function saveDB(){
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
-const CREDITS=new Set(['CSP','STOC','OUT','DIV']);
-const OPTIONS=new Set(['CSP','BTC','STOC']);
+const CREDITS=new Set(['CSP','STOC','STC','OUT','DIV']); // STC receives cash
+const OPTIONS=new Set(['CSP','BTC','STOC','STC']);
 const STOCKS=new Set(['IN','OUT']);
 function isCredit(a){return CREDITS.has(a);}
 function computeTotal(action,premium,shares,fees){
@@ -1034,7 +1072,7 @@ function calcWheel(wheel){
       case 'CSP': credits+=total;premiumCredits+=total;break;
       case 'BTC': debits+=total;premiumDebits+=total;break;
       case 'STOC':credits+=total;premiumCredits+=total;break;
-      case 'STC': debits+=total;premiumDebits+=total;break;
+      case 'STC': credits+=total;premiumCredits+=total;break; // selling to close receives cash
       case 'IN':  debits+=total;sharesHeld+=(t.shares||0);break;
       case 'OUT': credits+=total;sharesHeld-=(t.shares||0);break;
       case 'DIV': credits+=total;break;
@@ -1054,17 +1092,22 @@ function calcWheel(wheel){
 function calcAROC(wheel,m){
   if(!m.trades.length)return null;
   const cspTrades=m.trades.filter(t=>t.action==='CSP'&&t.strike&&t.shares);
-  let cap=0;
-  if(cspTrades.length){cap=Math.max(...cspTrades.map(t=>t.strike*t.shares));}
-  else if(m.sharesHeld>0&&m.breakeven!=null){cap=m.breakeven*m.sharesHeld;}
+  let cap=cspTrades.length?Math.max(...cspTrades.map(t=>t.strike*t.shares)):0;
+  if(!cap&&m.sharesHeld>0&&m.breakeven!=null)cap=m.breakeven*m.sharesHeld;
   if(!cap)return null;
   const sorted=[...m.trades].sort((a,b)=>a.entered.localeCompare(b.entered));
   const first=new Date(sorted[0].entered);first.setHours(0,0,0,0);
-  const last=wheel.status==='open'?new Date():new Date(sorted[sorted.length-1].entered);last.setHours(0,0,0,0);
+  let last=wheel.status==='open'?new Date():new Date(sorted[sorted.length-1].entered);
+  if(wheel.status!=='open'){
+    // Closed: run to the final option's expiry, not the last entry date
+    const lastExp=m.trades.filter(t=>t.expiry).map(t=>t.expiry).sort().pop();
+    if(lastExp&&new Date(lastExp)>last)last=new Date(lastExp);
+  }
+  last.setHours(0,0,0,0);
   const days=Math.max(1,Math.round((last-first)/86400000)+1);
   const roc=(m.premiumNet/cap)*100;
-  const aroc=roc*(365/days);
-  return{roc,aroc,cap,days};
+  if(wheel.status==='open'&&days<14)return{roc,aroc:null,cap,days}; // too young to annualise
+  return{roc,aroc:roc*(365/days),cap,days};
 }
 
 // Monthly P&L — group all trades by YYYY-MM
@@ -1079,7 +1122,7 @@ function calcMonthlyPnL(){
       case'CSP': mo[ym].credits+=v;mo[ym].pCr+=v;break;
       case'BTC': mo[ym].debits+=v;mo[ym].pDb+=v;break;
       case'STOC':mo[ym].credits+=v;mo[ym].pCr+=v;break;
-      case'STC': mo[ym].debits+=v;mo[ym].pDb+=v;break;
+      case'STC': mo[ym].credits+=v;mo[ym].pCr+=v;break;
       case'IN':  mo[ym].debits+=v;break;
       case'OUT': mo[ym].credits+=v;break;
       case'DIV': mo[ym].credits+=v;break;
@@ -1138,24 +1181,40 @@ function calcOverall(){
 function calcWinLoss(){
   let wins=0,losses=0,openOpts=0;
   db.wheels.forEach(wheel=>{
-    const closingAction=a=>(a==='BTC'||a==='STC')?0:1;
+    const closingAction=a=>(a==='BTC'||a==='STC')?1:0; // same day: openers first
     const trades=db.trades.filter(t=>t.wheelId===wheel.id)
       .sort((a,b)=>{const dc=a.entered.localeCompare(b.entered);if(dc!==0)return dc;return closingAction(a.action)-closingAction(b.action);});
-    const stack=[];// each item: {total, expired}
+    const stack=[];// each item: {total, expired, strike, expiry}
+    const popLastLive=()=>{for(let j=stack.length-1;j>=0;j--){if(!stack[j].expired)return stack.splice(j,1)[0];}return stack.pop();};
     for(const t of trades){
       if(t.action==='CSP'||t.action==='STOC'){
-        if(stack.length>0){stack.pop();wins++;}
-        stack.push({total:t.total,expired:!!t.expiredWorthless});
+        stack.push({total:t.total,expired:!!t.expiredWorthless,strike:t.strike,expiry:t.expiry||null}); // never auto-win the prior open
       } else if(t.action==='IN'){
-        if(stack.length>0){stack.pop();wins++;}
+        if(stack.length>0){popLastLive();wins++;} // assigned: premium kept = win (prefer a live leg)
       } else if(t.action==='BTC'||t.action==='STC'){
-        if(stack.length>0){const o=stack.pop();if(o.total>=t.total)wins++;else losses++;}
+        if(stack.length>0){
+          const ks=Number(t.strike);
+          // 1) exact live contract: strike + expiry
+          let i=stack.findIndex(o=>!o.expired&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          // 2) earliest live leg at that strike (expired legs can't be bought back)
+          if(i<0)i=stack.findIndex(o=>!o.expired&&Number(o.strike)===ks);
+          // 3) strike match incl. expired — contradictory data: the recorded buyback outranks the flag
+          if(i<0)i=stack.findIndex(o=>Number(o.strike)===ks);
+          // 4) closer with no strike recorded: most recent live leg
+          if(i<0&&(t.strike==null||t.strike==='')){const o=popLastLive();if(o){(o.total>=t.total)?wins++:losses++;}continue;}
+          if(i>=0){const o=stack.splice(i,1)[0];(o.total>=t.total)?wins++:losses++;}
+        }
       } else if(t.action==='OUT'){
-        while(stack.length>0){stack.pop();wins++;}
+        if(stack.length>0){popLastLive();wins++;} // called away closes one leg, not the whole stack
       }
     }
-    // Remaining on stack: expired = confirmed win; open wheel = still live
-    while(stack.length>0){const o=stack.pop();if(wheel.status==='closed'||o.expired)wins++;else openOpts++;}
+    // Remaining on stack: expired flag = confirmed win; closed wheel without flag = unresolved (excluded); open wheel = still live
+    while(stack.length>0){
+      const o=stack.pop();
+      if(o.expired)wins++;
+      else if(wheel.status==='closed'){/* unresolved — excluded from W/L */}
+      else openOpts++;
+    }
   });
   const tot=wins+losses;
   return{wins,losses,openOpts,wr:tot>0?((wins/tot)*100).toFixed(1):null};
@@ -1172,8 +1231,8 @@ function calcYTD(){
   db.trades.forEach(t=>{
     if(!t.entered||t.entered<start)return;
     const v=t.total||0;
-    if(t.action==='CSP'||t.action==='STOC')sc+=v;
-    else if(t.action==='BTC'||t.action==='STC')sd+=v;
+    if(t.action==='CSP'||t.action==='STOC'||t.action==='STC')sc+=v;
+    else if(t.action==='BTC')sd+=v;
     else if(t.action==='OUT')stockOut+=v;
     else if(t.action==='IN')stockIn+=v;
     else if(t.action==='DIV')divs+=v;
@@ -1240,10 +1299,12 @@ function calcCapitalStats(){
   const csps=db.trades.filter(t=>t.action==='CSP'&&t.strike&&t.shares);
   const notionals=csps.map(t=>t.strike*t.shares);
   const maxCap=notionals.length?Math.max(...notionals):0;
-  // Current capital at risk = open CSPs not yet expired
-  const today=new Date().toISOString().slice(0,10);
-  const atRisk=db.trades.filter(t=>t.action==='CSP'&&t.expiry&&t.expiry>=today&&t.strike&&t.shares)
-    .reduce((s,t)=>s+t.strike*t.shares,0);
+  // Current capital at risk = genuinely open CSPs (lifecycle-aware, survives rolls)
+  const atRisk=db.wheels.reduce((s,w)=>{
+    const legs=openOptionLegs(db.trades.filter(t=>t.wheelId===w.id));
+    return s+legs.filter(l=>l.action==='CSP'&&l.strike&&l.shares)
+                .reduce((a,l)=>a+l.strike*(l._rem??l.shares),0); // _rem = shares still at risk after partial assigns/closes
+  },0);
   const totalFees=db.trades.reduce((s,t)=>s+(t.fees||0),0);
   const s=calcOverall();
   const feesPct=s.premiumCredits>0?(totalFees/s.premiumCredits*100):0;
@@ -1282,8 +1343,14 @@ function fmtMoney(n){
   return(n<0?'-$':'$')+abs;
 }
 function fmt2(n,dp=2){return n!=null&&!isNaN(n)?parseFloat(n).toFixed(dp):'—';}
-function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return`${day}/${m}/${y.slice(2)}`;}
-function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return`${day}/${m}/${y.slice(2)}`;}
+// fmtPrem — premium price, trailing zeros trimmed, minimum 2 decimals: 0.5400 -> 0.54, 0.265 -> 0.265
+function fmtPrem(n){if(n==null||isNaN(n))return'—';const s=parseFloat(Number(n).toFixed(4));return s.toFixed(Math.max(2,(String(s).split('.')[1]||'').length));}
+// esc — HTML-escape any user-origin string before interpolating into innerHTML.
+// Covers both element context (<>&) and attribute context ("') in one pass.
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+let dateFmt=localStorage.getItem('wh-dateFmt')||'uk'; // uk | us
+function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
+function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function colorN(n){return n==null?'m':n>=0?'g':'r';}
 function dteCls(dte){return dte<=3?'r':dte<=14?'o':'g';}
 
@@ -1319,6 +1386,7 @@ function hideXpop(){document.getElementById('xpop').classList.remove('vis');}
 let quotes={};
 let sparks={};
 let fetching=false;
+let _pollHandle=null; // quote-poll interval — cleared on sign-out so it never stacks
 let logos={};  // ticker → logo URL (cached per session)
 
 async function fetchSymbol(sym){
@@ -1365,11 +1433,12 @@ async function fetchAllQuotes(){
     const nOk=Object.keys(quotes).length;
     if(nOk>0){
       db.wheels.forEach(w=>{
-        if(w.status==='open'&&quotes[w.ticker]){
+        if(w.status==='open'&&quotes[w.ticker]&&w.lastPrice!==quotes[w.ticker].price){
           w.lastPrice=quotes[w.ticker].price;
+          _saveWheel(w); // persist only real changes — not every wheel every poll
         }
       });
-      db.wheels.forEach(w=>_saveWheel(w));render();
+      render();
     }else if(Object.keys(logos).length>0){
       render(); // re-render even if no quotes, so logos appear
     }
@@ -1400,16 +1469,45 @@ function buildSpark(prices,isUp,w=52,h=20){
 // ════════════════════════════════════════════════════════
 // VIEW STATE
 // ════════════════════════════════════════════════════════
-let view='positions';
-let expanded=new Set();
-let minimised=new Set();   // rotations collapsed to single row
-let hidden=new Set();      // rotations hidden from view entirely
-let showClosed=false;      // toggle to reveal closed rotations
-let showHidden=false;      // toggle to reveal hidden rotations
-let posSortBy='ticker'; // ticker | recent | pnl | dte
+let view=localStorage.getItem('wh-view')||'positions';
+let expanded=new Set(JSON.parse(localStorage.getItem('wh-expanded')||'[]'));
+let minimised=new Set(JSON.parse(localStorage.getItem('wh-minimised')||'[]'));
+let hidden=new Set(JSON.parse(localStorage.getItem('wh-hidden')||'[]'));
+let showClosed=localStorage.getItem('wh-showClosed')==='true';
+let showHidden=localStorage.getItem('wh-showHidden')==='true';
+let posSortBy=localStorage.getItem('wh-posSortBy')||'ticker';
 let logSort={col:'entered',dir:'desc'};
 let logQ='';
+let _focusTid=null; // trade highlighted via goToTrade — sticks until an action is taken on it
 
+function _revealWheel(wheelId){
+  const w=db.wheels.find(x=>x.id===wheelId);
+  if(!w)return;
+  if(w.status==='closed'&&!showClosed)showClosed=true;
+  if(hidden.has(wheelId)&&!showHidden)showHidden=true;
+  minimised.delete(wheelId);
+  expanded.add(wheelId);
+  _saveUIState();
+}
+function goToWheel(wheelId){
+  _revealWheel(wheelId);
+  switchView('positions');
+  setTimeout(()=>{
+    const el=document.getElementById('rw-'+wheelId);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },80);
+}
+function goToTrade(wheelId,tradeId){
+  _revealWheel(wheelId);
+  _focusTid=tradeId; // sticky highlight — survives re-renders, cleared only when the trade is acted on
+  switchView('positions');
+  setTimeout(()=>{
+    const row=document.querySelector(`[data-tid="${tradeId}"]`);
+    if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
+  },80);
+}
+// Clear the sticky highlight once an action lands on the focused trade (save, delete, expire)
+function _clearFocus(id){if(_focusTid&&(!id||_focusTid===id)){_focusTid=null;}}
 function switchView(v){
   view=v;
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
@@ -1419,7 +1517,18 @@ function switchView(v){
 // ════════════════════════════════════════════════════════
 // RENDER
 // ════════════════════════════════════════════════════════
+function _saveUIState(){
+  localStorage.setItem('wh-view',view);
+  localStorage.setItem('wh-expanded',JSON.stringify([...expanded]));
+  localStorage.setItem('wh-minimised',JSON.stringify([...minimised]));
+  localStorage.setItem('wh-hidden',JSON.stringify([...hidden]));
+  localStorage.setItem('wh-showClosed',showClosed);
+  localStorage.setItem('wh-showHidden',showHidden);
+  localStorage.setItem('wh-posSortBy',posSortBy);
+}
+
 function render(){
+  _saveUIState();
   renderSidebar();
   const c=document.getElementById('content');
   if(view==='positions')c.innerHTML=renderPositions();
@@ -1429,6 +1538,16 @@ function render(){
 }
 
 function renderSidebar(){
+  document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
+  // Health badge on the Dashboard nav item — visible from any view
+  const _hb=document.getElementById('nav-health-badge');
+  if(_hb){
+    const _hi=runDataHealth();
+    if(_hi.length){
+      const worst=_hi.some(i=>i.sev==='red')?'#ef4444':_hi.some(i=>i.sev==='amber')?'#fbbf24':'#6b7280';
+      _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:10px;font-weight:800;border-radius:9px;padding:1px 7px;line-height:1.4">${_hi.length}</span>`;
+    }else _hb.innerHTML='';
+  }
   const s=calcOverall();
   const wl=calcWinLoss();
   const ytd=calcYTD();
@@ -1500,7 +1619,7 @@ function renderPositions(){
   });
 
   // Toolbar
-  const sortLabels={dte:'Expiry',recent:'Recent',ticker:'A–Z',pnl:'P/L'};
+  const sortLabels={manual:'Manual',dte:'Expiry',recent:'Recent',ticker:'A–Z',pnl:'P/L'};
   const sortOpts=Object.entries(sortLabels).map(([k,v])=>`<button class="sort-dropdown-item ${posSortBy===k?'active':''}" onclick="setPosSort('${k}');closeSortMenu()">${v}</button>`).join('');
   const toolbar=`<div class="pos-toolbar">
     <div style="position:relative;display:flex;align-items:center">
@@ -1526,7 +1645,7 @@ function renderPositions(){
 
 function rotNumHtml(wheel,isOpen){
   const logoUrl=logos[wheel.ticker];
-  if(logoUrl)return`<img src="${logoUrl}" class="rot-logo ${isOpen?'':'cn'}" alt="${wheel.ticker}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rot-num ${isOpen?'':'cn'}" style="display:none">${wheel.sortOrder||'?'}</div>`;
+  if(logoUrl)return`<img src="${logoUrl}" class="rot-logo ${isOpen?'':'cn'}" alt="${esc(wheel.ticker)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rot-num ${isOpen?'':'cn'}" style="display:none">${wheel.sortOrder||'?'}</div>`;
   return`<div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>`;
 }
 
@@ -1573,7 +1692,7 @@ function renderRotationMini(wheel){
 function fmtDateShort(d){
   if(!d)return'—';
   const[,m,day]=d.split('-');
-  return`${day}/${m}`;
+  return dateFmt==='us'?`${m}/${day}`:`${day}/${m}`;
 }
 function fmtMonYear(d){
   if(!d)return'—';
@@ -1625,22 +1744,196 @@ function buildLastAction(trades){
   return t.action;
 }
 
-function buildOpenPosition(trades){
-  const today=new Date();today.setHours(0,0,0,0);
-  // Walk trades chronologically to find the last unclosed option
-  const sorted=[...trades].sort((a,b)=>{const dc=a.entered.localeCompare(b.entered);if(dc!==0)return dc;const ca=(a.action==='BTC'||a.action==='STC')?0:1,cb=(b.action==='BTC'||b.action==='STC')?0:1;return ca-cb;});
-  let openTrade=null;
-  sorted.forEach(t=>{
+// ── Single source of truth for open option legs ──
+// Share-aware lifecycle walk — mirrors runDataHealth's pairing exactly, minus the issue
+// detection. Legs carry `_rem` (remaining shares); BTC/STC/IN/OUT consume shares, not
+// whole legs, so partial assignments and partial closes leave the correct remainder open.
+// Returns {open, pairs}: open legs (with `_rem`) plus a map of closerId → [{legId, shares}]
+// recording exactly which opener legs each closer consumed — the raw material for roll chains.
+function walkLegPairs(wheelTrades){
+  const closing=a=>(a==='BTC'||a==='STC'||a==='IN'||a==='OUT')?1:0; // same-day: openers first
+  const sorted=[...wheelTrades].sort((a,b)=>
+    (a.entered||'').localeCompare(b.entered||'')||closing(a.action)-closing(b.action));
+  const open=[]; // includes expiredWorthless legs so closers pair identically to the health engine
+  const pairs={}; // closer trade id → [{legId, shares consumed}]
+  const record=(closer,leg,shares)=>{(pairs[closer.id]=pairs[closer.id]||[]).push({legId:leg.id,shares});};
+  for(const t of sorted){
     if(t.action==='CSP'||t.action==='STOC'){
-      openTrade=t;
-    } else if(t.action==='BTC'||t.action==='STC'){
-      openTrade=null;
+      open.push({...t,_rem:Number(t.shares)||0});
+    }else if(t.action==='BTC'||t.action==='STC'){
+      const ks=Number(t.strike);
+      const live=o=>!o.expiry||o.expiry>=t.entered; // a leg can only be closed while it still exists
+      const nk=o=>!(t.rollId&&o.rollId===t.rollId); // a roll closer never consumes its own replacement opener
+      const findLeg=()=>{
+        let j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&live(o)&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&Number(o.strike)===ks);
+        if(j<0&&(t.strike==null||t.strike===''))j=open.findLastIndex(o=>nk(o));
+        return j;
+      };
+      let rem=Number(t.shares)||0;
+      if(rem<=0){ // closer with no share count: consume one whole leg
+        const j=findLeg();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
+      }else{
+        while(rem>0){
+          const j=findLeg();
+          if(j<0)break; // orphan closer (strike present, no match) eats nothing
+          const o=open[j];
+          const take=Math.min(rem,o._rem||rem);
+          record(t,o,take);
+          o._rem-=take;rem-=take;
+          if(o._rem<=0)open.splice(j,1);
+        }
+      }
+    }else if(t.action==='IN'){
+      // Assignment consumes the CSP behind it — settles at strike × shares
+      let ks=Number(t.strike);
+      if((!ks||isNaN(ks))&&t.shares&&t.total)ks=Math.round((Number(t.total)/Number(t.shares))*100)/100;
+      const bestAssignable=pred=>{ // prefer the CSP whose expiry most recently passed on/before the assignment date
+        let best=-1,bestExp='';
+        open.forEach((o,idx)=>{
+          if(o.action!=='CSP'||!pred(o))return;
+          const e=o.expiry||'';
+          if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+        });
+        return best;
+      };
+      const findCSP=()=>{
+        let j=bestAssignable(o=>!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=bestAssignable(o=>!o.expiredWorthless);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless);
+        if(j<0)j=bestAssignable(o=>Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&Number(o.strike)===ks);
+        if(j<0)j=bestAssignable(()=>true);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP');
+        return j;
+      };
+      let inRem=Number(t.shares)||0;
+      if(inRem<=0){
+        const j=findCSP();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
+      }else{
+        while(inRem>0){ // partial assignments consume shares across legs
+          const j=findCSP();
+          if(j<0)break;
+          const o=open[j];
+          const take=Math.min(inRem,o._rem||inRem);
+          record(t,o,take);
+          o._rem-=take;inRem-=take;
+          if(o._rem<=0)open.splice(j,1);
+        }
+      }
+    }else if(t.action==='OUT'){
+      // Called away resolves the covered call — only pair when strike matches
+      const sh=Number(t.shares)||0;
+      let oks=Number(t.strike);
+      if((!oks||isNaN(oks))&&sh&&t.total)oks=Math.round((Number(t.total)/sh)*100)/100;
+      if(oks){
+        const bestCallable=pred=>{ // prefer the STOC whose expiry most recently passed on/before the call-away date
+          let best=-1,bestExp='';
+          open.forEach((o,idx)=>{
+            if(o.action!=='STOC'||Number(o.strike)!==oks||!pred(o))return;
+            const e=o.expiry||'';
+            if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+          });
+          return best;
+        };
+        const findSTOC=()=>{
+          let j=bestCallable(o=>!o.expiredWorthless);
+          if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+          if(j<0)j=bestCallable(()=>true);
+          if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+          return j;
+        };
+        let outRem=sh;
+        if(outRem<=0){
+          const j=findSTOC();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
+        }else{
+          while(outRem>0){
+            const j=findSTOC();
+            if(j<0)break; // no matching STOC = plain manual sale — legitimate, consumes nothing
+            const o=open[j];
+            const take=Math.min(outRem,o._rem||outRem);
+            record(t,o,take);
+            o._rem-=take;outRem-=take;
+            if(o._rem<=0)open.splice(j,1);
+          }
+        }
+      }
     }
+  }
+  return{open,pairs};
+}
+
+function openOptionLegs(wheelTrades){
+  const today=new Date().toISOString().slice(0,10);
+  // Open = unflagged, unexpired, with shares still unresolved (or no share count recorded at all)
+  return walkLegPairs(wheelTrades).open
+    .filter(o=>!o.expiredWorthless&&o.expiry&&o.expiry>=today&&(o._rem>0||!Number(o.shares)));
+}
+
+// ── Roll-chain campaign P&L ──
+// A rollId couples one closer (BTC/STC) to its replacement opener. The chain behind a
+// rolled leg is its full ancestry: this opener ← its roll's closer ← the leg(s) that
+// closer actually consumed (from walkLegPairs) ← their rolls ← ... and so on to the
+// original fresh entry. Chains can MERGE — one 8-lot closer consuming two 4-lot legs —
+// so ancestry is a tree walked with a seen-set, not a simple linked list.
+// Returns {trades, rolls, net, live, breakeven} or null if the leg isn't part of a chain.
+function buildRollChain(wheelTrades,tipId){
+  const byId={};wheelTrades.forEach(t=>{byId[t.id]=t;});
+  const tip=byId[tipId];
+  if(!tip||!tip.rollId||!(tip.action==='CSP'||tip.action==='STOC'))return null;
+  const{open,pairs}=walkLegPairs(wheelTrades);
+  const closerByRoll={}; // rollId → the closer half of the pair
+  wheelTrades.forEach(t=>{if(t.rollId&&(t.action==='BTC'||t.action==='STC'))closerByRoll[t.rollId]=t;});
+  const seen=new Set(),chain=[];let rolls=0;
+  const visit=opener=>{
+    if(!opener||seen.has(opener.id))return;
+    seen.add(opener.id);chain.push(opener);
+    if(!opener.rollId)return; // root — the original fresh entry
+    const closer=closerByRoll[opener.rollId];
+    if(!closer||seen.has(closer.id))return;
+    seen.add(closer.id);chain.push(closer);rolls++;
+    (pairs[closer.id]||[]).forEach(p=>visit(byId[p.legId])); // branches on merged chains
+  };
+  visit(tip);
+  if(rolls===0)return null; // rollId present but pair incomplete — nothing to sum
+  // The campaign includes its ending: any plain (non-roll) closer that consumed the tip —
+  // the final buyback that took the chain off the books.
+  Object.entries(pairs).forEach(([cid,arr])=>{
+    const c=byId[cid];
+    if(c&&!c.rollId&&!seen.has(cid)&&arr.some(p=>p.legId===tipId)){seen.add(cid);chain.push(c);}
   });
-  if(!openTrade)return null;
-  if(openTrade.expiredWorthless)return null;
-  if(!openTrade.expiry||new Date(openTrade.expiry)<today)return null;
-  return{action:openTrade.action,strike:openTrade.strike,expiry:openTrade.expiry,shares:openTrade.shares,dte:dteDays(openTrade.expiry)};
+  const net=chain.reduce((s,t)=>s+(isCredit(t.action)?(t.total||0):-(t.total||0)),0);
+  const today=new Date().toISOString().slice(0,10);
+  const liveLeg=open.find(o=>o.id===tipId&&!o.expiredWorthless&&o.expiry&&o.expiry>=today&&o._rem>0);
+  // Breakeven buyback: the per-share price at which closing the live leg leaves the whole
+  // campaign at exactly zero. Close cheaper and the chain is green.
+  const breakeven=liveLeg&&liveLeg._rem>0?net/liveLeg._rem:null;
+  return{trades:chain,rolls,net,live:!!liveLeg,breakeven};
+}
+
+// A leg is a chain TIP when nothing rolled onward from it: it's either still open, or it
+// was closed by a plain (non-roll) closer. Only tips display the chain summary line.
+function isChainTip(wheelTrades,leg){
+  if(!leg.rollId||!(leg.action==='CSP'||leg.action==='STOC'))return false;
+  const{pairs}=walkLegPairs(wheelTrades);
+  for(const t of wheelTrades){
+    if(t.rollId&&t.rollId!==leg.rollId&&(t.action==='BTC'||t.action==='STC')
+      &&(pairs[t.id]||[]).some(p=>p.legId===leg.id))return false; // a later roll consumed it
+  }
+  return true;
+}
+
+function buildOpenPosition(trades){
+  const legs=openOptionLegs(trades);
+  if(!legs.length)return null;
+  // Header shows the nearest-expiry live leg
+  const t=[...legs].sort((a,b)=>a.expiry.localeCompare(b.expiry))[0];
+  return{action:t.action,strike:t.strike,expiry:t.expiry,shares:t.shares,dte:dteDays(t.expiry)};
 }
 
 function renderRotationWindow(wheel){
@@ -1674,6 +1967,14 @@ function renderRotationWindow(wheel){
   const _firstDate=_entered.length?_entered[0]:null;
   const _lastDate=_entered.length?_entered[_entered.length-1]:null;
   const _dateSpan=_firstDate?(isOpen?fmtMonYear(_firstDate)+' → Present':(_lastDate&&_lastDate!==_firstDate?fmtMonYear(_firstDate)+' → '+fmtMonYear(_lastDate):fmtMonYear(_firstDate))):'—';
+  const _strike=openLegForDTE?.strike;
+  const _pctToStrike=rawP!=null&&_strike?((_strike-rawP)/rawP*100):null; // move needed from current price to reach strike
+  const _pctCol='var(--silver)'; // neutral — sign shows which side of the strike; red/green was misleading for CCs
+  // Leg-type-aware ITM check: CSP is ITM when price is below strike; covered call when above
+  const _legAction=openLegForDTE?.action;
+  const _itm=rawP!=null&&_strike?(_legAction==='CSP'?rawP<_strike:_legAction==='STOC'?rawP>_strike:false):false;
+  const _itmTag=_itm?`<span style="font-size:9px;font-weight:600;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:1px">ITM</span>`:'';
+  const _pctHtml=_pctToStrike!==null?`<span style="font-size:11px;font-weight:300"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:12px;font-weight:300;color:var(--silver)">To Strike</span>${_itmTag}</span>`:'';
   const _dteCl=activeDTE!==null?dteCls(activeDTE):'g';
   const _dteColor=_dteCl==='r'?'var(--red)':_dteCl==='o'?'var(--orange)':'var(--green)';
   const dteBadge=activeDTE!==null
@@ -1702,11 +2003,14 @@ function renderRotationWindow(wheel){
 
   // Open position — currently live leg
   const openPos=buildOpenPosition(m.trades);
+  const _opDteCl=openPos?dteCls(openPos.dte):'g';
+  const _opDteColor=_opDteCl==='r'?'var(--red)':_opDteCl==='o'?'var(--yellow)':'var(--green)';
   const openPosHtml=openPos
     ?`<div class="rmb-val" style="font-size:12px;font-weight:500;color:${openPos.action==='CSP'?'var(--green)':'var(--blue)'}">
         ${openPos.action} $${fmt2(openPos.strike)}
       </div>
-      <div class="rmb-sub">exp ${fmtDateShort(openPos.expiry)} · ${openPos.dte}d · ${openPos.shares||0} shares</div>`
+      <div class="rmb-sub">exp <span style="color:${_opDteColor};font-weight:400;padding:1px 6px;border:1px solid ${_opDteColor};border-radius:10px;font-size:10px">${fmtDateShort(openPos.expiry)} (${openPos.dte}d)</span></div>
+      <div class="rmb-sub">${openPos.shares||0} shares</div>`
     :`<div class="rmb-val m" style="font-size:12px">No open leg</div>
       <div class="rmb-sub">${isOpen?'Waiting for entry':'Strategy closed'}</div>`;
 
@@ -1726,7 +2030,7 @@ function renderRotationWindow(wheel){
       <div class="rmb-lbl">Net P&amp;L</div>
       <div class="rmb-val ${colorN(m.netPnL)}">${fmtMoney(m.netPnL)}</div>
       <div class="rmb-sub">Premium: <span class="${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</span></div>
-      ${aroc?`<div class="rmb-sub">AROC: <span class="${colorN(aroc.aroc)}">${aroc.aroc.toFixed(1)}%</span> &middot; ROC: <span class="${colorN(aroc.roc)}">${aroc.roc.toFixed(1)}%</span></div>`:''}
+      ${aroc?`<div class="rmb-sub">${aroc.aroc!=null?`AROC: <span class="${colorN(aroc.aroc)}">${aroc.aroc.toFixed(1)}%</span> &middot; `:''}ROC: <span class="${colorN(aroc.roc)}">${aroc.roc.toFixed(1)}%</span>${aroc.aroc==null?` <span style="color:var(--text3)">(too early to annualise)</span>`:''}</div>`:''}
     </div>
     <div class="rmb-col">
       <div class="rmb-lbl">${cspCollateral?'Collateral':'Breakeven'}</div>
@@ -1755,8 +2059,8 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open">
-      <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>DTE</span><span>AROC%</span><span>Δ</span><span>Fees</span><span></span></div>`;
-    [...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{expandedHtml+=renderTradeRow(t);});
+      <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span></div>`;
+    [...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{expandedHtml+=renderTradeRow(t,m.trades);});
     expandedHtml+=`<div class="rot-actions">
       <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}');event.stopPropagation()">•••</button>
 
@@ -1769,12 +2073,14 @@ function renderRotationWindow(wheel){
   <div class="rotation-window ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" style="${hidden.has(wheel.id)?'opacity:.5':''}">
     <div class="rot-header" onclick="toggleExpand('${wheel.id}')">
       ${rotNumHtml(wheel,isOpen)}
-      <span class="rot-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
+      <span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span>
       ${headerPriceHtml}
       <span class="rot-label">${_dateSpan}</span>
       <span class="rot-shares">${shares}</span>
-      ${dteBadge}
+      ${_pctHtml}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
+      ${posSortBy==='manual'?`<button class="rot-header-btn" onclick="event.stopPropagation();moveWheel('${wheel.id}',-1)" title="Move up"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" transform="rotate(180 128 128)"/></svg></button>
+      <button class="rot-header-btn" onclick="event.stopPropagation();moveWheel('${wheel.id}',1)" title="Move down"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:16px;height:16px"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></button>`:``}
       <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>
       <button class="rot-header-btn" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:20px;height:20px"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>
     </div>
@@ -1792,30 +2098,45 @@ function calcTradeROC(t){
   if(!dte)return null;
   return((t.total/collateral)*(365/dte)*100);
 }
-function renderTradeRow(t){
-  const _rawDTE=(t.action==='CSP'||t.action==='STOC')&&t.expiry&&!t.expiredWorthless?dteDays(t.expiry):null;
-  const liveDTE=_rawDTE!==null?Math.max(0,_rawDTE):null;
-  const dteDisplay=t.expiredWorthless?'<span class="exp-badge">EXP</span>':(liveDTE!==null?liveDTE+'d':(t.days>0?t.days+'d':'—'));
+function renderTradeRow(t,wheelTrades){
+  // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
+  let chainHtml='';
+  if(wheelTrades&&t.rollId&&isChainTip(wheelTrades,t)){
+    const c=buildRollChain(wheelTrades,t.id);
+    if(c){
+      const netCls=c.net>=0?'g':'r';
+      const beHtml=c.live
+        ?(c.breakeven!=null&&c.breakeven>0
+          ?`<span class="chain-be">breakeven buyback ≤ $${fmtPrem(c.breakeven)} — close cheaper and the whole chain is green</span>`
+          :`<span class="chain-be">chain is underwater — no green buyback exists at any price</span>`)
+        :`<span class="chain-be">chain complete</span>`;
+      chainHtml=`<div class="chain-row"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span><span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
+    }
+  }
   const roc=calcTradeROC(t);
   const rocDisplay=roc!==null?roc.toFixed(1)+'%':'—';
+  // PPD — income velocity: net dollars per day of contract life. Credit opens only.
+  const isOpenLeg=t.action==='CSP'||t.action==='STOC';
+  const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
+  const ppdDisplay=ppd!==null?`$${fmt2(ppd)}<span style="color:var(--text3);font-weight:400">/d (${t.days}d)</span>`:'—';
   const rowCls=[t.rollId?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
   const rollBadge=t.rollId?'<span class="roll-badge">↻</span>':'';
-  return`<div class="trow ${rowCls}">
-    <span><span class="ab ab-${t.action}">${t.action}</span>${rollBadge}</span>
+  const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
+  return`<div class="trow ${rowCls}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
+    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?'$'+fmt2(t.strike):'—'}</span>
-    <span>${t.premium?'$'+fmt2(t.premium,4):'—'}</span>
+    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
     <span>${t.shares||'—'}</span>
     <span class="${isCredit(t.action)?'g':'r'}">${fmtMoney(t.total)}</span>
-    <span>${dteDisplay}</span>
-    <span style="color:${roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${rocDisplay}</span>
-    <span>${t.delta!=null?t.delta.toFixed(2):'—'}</span>
     <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
+    <span style="white-space:nowrap">${ppdDisplay}</span>
+    <span style="color:${roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${rocDisplay}</span>
     <span style="display:flex;gap:3px;justify-content:flex-end">
       <button class="btn btn-ghost btn-icon" onclick="openEditTrade('${t.id}');event.stopPropagation()">•••</button>
     </span>
-  </div>`;
+  </div>${chainHtml}`;
 }
 
 // ── LOG ──
@@ -1834,9 +2155,9 @@ function renderLog(){
     const ppd=t.days>0?'$'+(t.total/t.days).toFixed(2):'—';
     const wh=db.wheels.find(w=>w.id===t.wheelId);
     return`<tr>
-      <td style="font-weight:800" class="${wh?.status==='open'?'o':'m'}">${t.ticker}</td>
+      <td style="font-weight:800" class="${wh?.status==='open'?'o':'m'}">${esc(t.ticker)}</td>
       <td><span class="ab ab-${t.action}">${t.action}</span></td>
-      <td style="font-size:12px;color:var(--text3)">${wh?.label||'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${esc(wh?.label||'—')}</td>
       <td>${fmtDateFull(t.entered)}</td>
       <td>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</td>
       <td>${t.strike?'$'+fmt2(t.strike):'—'}</td>
@@ -1844,19 +2165,20 @@ function renderLog(){
       <td>${t.fees?'$'+fmt2(t.fees):'—'}</td>
       <td>${t.shares||'—'}</td>
       <td class="${isCredit(t.action)?'g':'r'}">${fmtMoney(t.total)}</td>
-      <td>${t.days||'—'}</td>
-      <td>${ppd}</td>
-      <td style="color:var(--text3);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.comment||''}</td>
       <td>
         <button class="btn btn-ghost btn-icon" onclick="openEditTrade('${t.id}')">•••</button>
       </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="14" style="text-align:center;color:#444;padding:50px">No trades</td></tr>';
+  }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:50px">No trades</td></tr>';
   return`
   <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0">
-    <input class="search-inp" type="search" placeholder="Search…" value="${logQ}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
-    <span style="color:var(--text3);font-size:11px">${trades.length}</span>
+    <span style="font-size:13px;font-weight:300;color:var(--silver)">Trade Log</span>
+    <button class="rot-header-btn" onclick="switchView('positions')" title="Close" style="margin-left:4px"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:16px;height:16px"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
     <span class="toolbar-spacer"></span>
+    <input class="search-inp" type="search" placeholder="Search…" value="${esc(logQ)}" oninput="setLogQ(this.value)" style="width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text)">
+    <span style="color:var(--text3);font-size:11px">${trades.length}</span>
+    <button class="btn btn-ghost" onclick="openImport()" style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:14px;height:14px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg>Import</button>
+    <button class="btn btn-ghost" onclick="exportCSV()" style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:14px;height:14px;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg>Export</button>
   </div>
   <div class="log-wrap">
     <table class="lt">
@@ -1864,8 +2186,8 @@ function renderLog(){
         ${th('ticker','Ticker')}${th('action','Action')}<th>Rotation</th>
         ${th('entered','Entered')}${th('expiry','Expiry')}
         ${th('strike','Strike')}${th('premium','Premium')}<th>Fees</th>
-        ${th('shares','Shares')}${th('total','Total')}${th('days','Days')}
-        <th>PPD</th><th>Comment</th><th></th>
+        ${th('shares','Shares')}${th('total','Total')}
+        <th></th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -1873,35 +2195,211 @@ function renderLog(){
 }
 
 // ── DASHBOARD — redesigned ──
+// ── DATA HEALTH ──
+// Detects inconsistent trade records. Detect-and-ask only — never mutates anything.
+// One lifecycle walk per rotation: tracks open option legs + a running share ledger.
+function runDataHealth(){
+  const issues=[]; // {sev:'red'|'amber'|'grey', tradeId, text}
+  const today=new Date().toISOString().slice(0,10);
+  const closing=a=>(a==='BTC'||a==='STC'||a==='IN'||a==='OUT')?1:0; // same-day: openers first (mirrors openOptionLegs)
+  db.wheels.forEach(w=>{
+    const trades=db.trades.filter(t=>t.wheelId===w.id);
+    const sorted=[...trades].sort((a,b)=>(a.entered||'').localeCompare(b.entered||'')||closing(a.action)-closing(b.action));
+    const open=[]; // every open option leg, including expired-flagged ones (so contradictions are visible)
+    let sharesHeld=0;
+    sorted.forEach(t=>{
+      const tk=esc(t.ticker||w.ticker||'?');
+      if(t.action==='CSP'||t.action==='STOC'){
+        if(!t.strike)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action} entered ${fmtDateFull(t.entered)} has no strike — collateral and P&L maths break without it`});
+        if(!t.shares)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action} entered ${fmtDateFull(t.entered)} has no share count — collateral and P&L maths break without it`});
+        if(!t.expiry)issues.push({sev:'amber',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action} entered ${fmtDateFull(t.entered)} has no expiry date`});
+        open.push({...t,_rem:Number(t.shares)||0}); // legs carry remaining shares — partial assigns/closes consume shares, not whole legs
+      }else if(t.action==='BTC'||t.action==='STC'){
+        const ks=Number(t.strike);
+        // An option can only be bought/sold to close while it still exists —
+        // a leg whose expiry predates the closer is never the right pair.
+        const live=o=>!o.expiry||o.expiry>=t.entered;
+        const nk=o=>!(t.rollId&&o.rollId===t.rollId); // a roll closer never consumes its own replacement opener (mirrors walkLegPairs)
+        // Tiers: prefer unflagged, then live-at-close, then strike match; degrade gracefully.
+        const findLeg=()=>{
+          let j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&live(o)&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&Number(o.strike)===ks);
+          if(j<0&&(t.strike==null||t.strike===''))j=open.findLastIndex(o=>nk(o));
+          return j;
+        };
+        const i=findLeg();
+        const closeFlagMsg=o=>issues.push({sev:'red',wheelId:w.id,tradeId:o.id,text:`${tk} ${o.action} $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but a ${t.action} closed it on ${fmtDateFull(t.entered)} — it can't be both`});
+        let rem=Number(t.shares)||0;
+        if(rem<=0){ // closer with no share count: consume one whole leg
+          if(i<0){
+            issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action}${t.strike?' $'+fmt2(t.strike):''} on ${fmtDateFull(t.entered)} closes nothing — no matching open position (orphan closer)`});
+          }else{
+            const o=open[i];if(o.expiredWorthless)closeFlagMsg(o);open.splice(i,1);
+          }
+        }else{
+          let consumedAny=false;
+          while(rem>0){
+            const j=findLeg();
+            if(j<0)break;
+            const o=open[j];
+            if(o.expiredWorthless)closeFlagMsg(o);
+            consumedAny=true;
+            const take=Math.min(rem,o._rem||rem);
+            o._rem-=take;rem-=take;
+            if(o._rem<=0)open.splice(j,1);
+          }
+          if(!consumedAny)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action}${t.strike?' $'+fmt2(t.strike):''} on ${fmtDateFull(t.entered)} closes nothing — no matching open position (orphan closer)`});
+        }
+      }else if(t.action==='IN'){
+        // Assignments settle at strike × shares — derive the strike when it wasn't recorded
+        let ks=Number(t.strike);
+        if((!ks||isNaN(ks))&&t.shares&&t.total)ks=Math.round((Number(t.total)/Number(t.shares))*100)/100;
+        // Assignment happens at expiry — among candidate legs, always prefer the one whose
+        // expiry most recently passed on/before the assignment date, at every tier.
+        const bestAssignable=pred=>{
+          let best=-1,bestExp='';
+          open.forEach((o,idx)=>{
+            if(o.action!=='CSP'||!pred(o))return;
+            const e=o.expiry||'';
+            if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+          });
+          return best;
+        };
+        const findCSP=()=>{
+          let j=bestAssignable(o=>!o.expiredWorthless&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless&&Number(o.strike)===ks);
+          if(j<0)j=bestAssignable(o=>!o.expiredWorthless);
+          if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless);
+          if(j<0)j=bestAssignable(o=>Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>o.action==='CSP'&&Number(o.strike)===ks);
+          if(j<0)j=bestAssignable(()=>true);
+          if(j<0)j=open.findIndex(o=>o.action==='CSP');
+          return j;
+        };
+        const assignFlagMsg=o=>issues.push({sev:'red',wheelId:w.id,tradeId:o.id,text:`${tk} CSP $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but shares were assigned against it on ${fmtDateFull(t.entered)} — it can't be both`});
+        let inRem=Number(t.shares)||0;
+        if(inRem<=0){ // assignment with no share count: consume one whole leg
+          const j=findCSP();
+          if(j<0)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} assignment (IN) on ${fmtDateFull(t.entered)} has no open CSP behind it — shares appeared from nowhere`});
+          else{const o=open[j];if(o.expiredWorthless)assignFlagMsg(o);open.splice(j,1);}
+        }else{
+          let consumedAny=false;
+          while(inRem>0){ // partial assignments are real broker behaviour — consume shares across legs
+            const j=findCSP();
+            if(j<0)break;
+            const o=open[j];
+            if(o.expiredWorthless)assignFlagMsg(o);
+            consumedAny=true;
+            const take=Math.min(inRem,o._rem||inRem);
+            o._rem-=take;inRem-=take;
+            if(o._rem<=0)open.splice(j,1);
+          }
+          if(!consumedAny)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} assignment (IN) on ${fmtDateFull(t.entered)} has no open CSP behind it — shares appeared from nowhere`});
+        }
+        sharesHeld+=Number(t.shares)||0;
+      }else if(t.action==='OUT'){
+        const sh=Number(t.shares)||0;
+        if(sh>sharesHeld)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} OUT of ${sh} shares on ${fmtDateFull(t.entered)} but only ${sharesHeld} held at that point`});
+        sharesHeld-=sh;
+        // Called away resolves the covered call — the STOC mirror of CSP assignment.
+        // Only pair when the strike matches (given, or derived from total/shares: call-aways
+        // settle at exactly strike × shares; a manual market sale almost never lands on a strike).
+        let oks=Number(t.strike);
+        if((!oks||isNaN(oks))&&sh&&t.total)oks=Math.round((Number(t.total)/sh)*100)/100;
+        if(oks){
+          const bestCallable=pred=>{ // prefer the STOC whose expiry most recently passed on/before the call-away date
+            let best=-1,bestExp='';
+            open.forEach((o,idx)=>{
+              if(o.action!=='STOC'||Number(o.strike)!==oks||!pred(o))return;
+              const e=o.expiry||'';
+              if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+            });
+            return best;
+          };
+          const callFlagMsg=o=>issues.push({sev:'red',wheelId:w.id,tradeId:o.id,text:`${tk} STOC $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but shares were called away against it on ${fmtDateFull(t.entered)} — it can't be both`});
+          let outRem=sh||0;
+          if(outRem<=0){ // no share count: consume one whole matching leg
+            let j=bestCallable(o=>!o.expiredWorthless);
+            if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+            if(j<0)j=bestCallable(()=>true);
+            if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+            if(j>=0){const o=open[j];if(o.expiredWorthless)callFlagMsg(o);open.splice(j,1);}
+          }else{
+            while(outRem>0){ // share-aware: partial call-aways consume shares across legs
+              let j=bestCallable(o=>!o.expiredWorthless);
+              if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+              if(j<0)j=bestCallable(()=>true);
+              if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+              if(j<0)break; // no matching STOC = plain manual sale — perfectly legitimate, no issue
+              const o=open[j];
+              if(o.expiredWorthless)callFlagMsg(o);
+              const take=Math.min(outRem,o._rem||outRem);
+              o._rem-=take;outRem-=take;
+              if(o._rem<=0)open.splice(j,1);
+            }
+          }
+        }
+      }
+    });
+    // Anything still open with expiry in the past = lapsed leg awaiting your verdict
+    open.forEach(o=>{
+      if(o.expiredWorthless)return; // manually resolved — fine
+      if(o.expiry&&o.expiry<today){
+        const daysAgo=Math.max(1,Math.round((new Date(today)-new Date(o.expiry))/86400000));
+        const partial=o._rem&&o.shares&&o._rem<Number(o.shares)?` (${o._rem} of ${o.shares} shares unresolved)`:'';
+        issues.push({sev:'amber',wheelId:w.id,tradeId:o.id,text:`${esc(o.ticker||w.ticker||'?')} ${o.action} $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} expired ${daysAgo}d ago — never closed, assigned, or marked expired${partial}`});
+      }
+    });
+  });
+  // Duplicate suspects — identical fingerprint incl. total (partial fills usually differ on total)
+  const seen={};
+  db.trades.forEach(t=>{
+    const fp=`${t.ticker}|${t.action}|${t.entered}|${t.strike||''}|${t.shares||''}|${t.total||''}|${(t.comment||'').trim()}`; // differing comments (e.g. 'Partial assignment') = intentionally distinct entries
+    (seen[fp]=seen[fp]||[]).push(t);
+  });
+  Object.values(seen).forEach(arr=>{
+    if(arr.length>1)issues.push({sev:'grey',wheelId:arr[0].wheelId,tradeId:arr[0].id,text:`${esc(arr[0].ticker)} ${arr[0].action} on ${fmtDateFull(arr[0].entered)} appears ${arr.length}× with identical details — duplicates, or genuine partial fills?`});
+  });
+  const order={red:0,amber:1,grey:2};
+  return issues.sort((a,b)=>order[a.sev]-order[b.sev]);
+}
+
 function getWheelPhase(wheel){
   const m=calcWheel(wheel);
+  const legs=openOptionLegs(m.trades);
   if(m.sharesHeld>0){
-    const hasCC=m.trades.some(t=>t.action==='STOC'&&t.expiry&&!t.expiredWorthless&&dteDays(t.expiry)>=0);
+    const hasCC=legs.some(t=>t.action==='STOC');
     return hasCC?{phase:'CC',label:'Covered Call',cls:'d-phase-cc'}:{phase:'HOLD',label:'Holding Stock',cls:'d-phase-hold'};
   }
-  const hasCSP=m.trades.some(t=>t.action==='CSP'&&t.expiry&&!t.expiredWorthless&&dteDays(t.expiry)>=0);
+  const hasCSP=legs.some(t=>t.action==='CSP');
   return hasCSP?{phase:'CSP',label:'Cash-Secured Put',cls:'d-phase-csp'}:{phase:'IDLE',label:'No Open Leg',cls:'d-phase-idle'};
 }
 
 function buildDashAlerts(){
-  const alerts=[];const todayStr=new Date().toISOString().slice(0,10);
-  db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.expiry&&t.expiry>=todayStr&&!t.expiredWorthless).forEach(t=>{
-    const dte=dteDays(t.expiry);const w=db.wheels.find(x=>x.id===t.wheelId);
+  const alerts=[];
+  db.wheels.forEach(w=>{
+    openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).forEach(t=>{
+    const dte=dteDays(t.expiry);
     const price=(quotes[t.ticker]?.price)||(w?.lastPrice)||null;
     const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
     if(dte!==null&&dte<=7){
       const diff=price!=null&&t.strike?Math.abs(price-t.strike).toFixed(2):'';
-      alerts.push({type:itm?'danger':'warn',text:`${t.ticker} ${t.action} $${fmt2(t.strike)} expires in ${dte}d${itm?' — ITM by $'+diff:''}`});
+      alerts.push({type:itm?'danger':'warn',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} expires in ${dte}d${itm?' — ITM by $'+diff:''}`});
     }
     if(itm&&dte>7){
-      alerts.push({type:'danger',text:`${t.ticker} ${t.action} $${fmt2(t.strike)} is ITM — assignment risk`});
+      alerts.push({type:'danger',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} is ITM — assignment risk`});
     }
     // Profit target check (50%+ of credit captured via time decay)
     if(!itm&&t.total>0&&price!=null&&dte>3){
       // Rough theta capture: if >50% of DTE has passed, suggest management
       const origDTE=t.days||30;const elapsed=origDTE-dte;
-      if(elapsed/origDTE>=0.5&&dte>=3) alerts.push({type:'info',text:`${t.ticker} ${t.action} at ${Math.round(elapsed/origDTE*100)}% of DTE — consider closing`});
+      if(elapsed/origDTE>=0.5&&dte>=3) alerts.push({type:'info',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} at ${Math.round(elapsed/origDTE*100)}% of DTE — consider closing`});
     }
+    });
   });
   return alerts.slice(0,6);
 }
@@ -1911,15 +2409,18 @@ function buildMiniCal(){
   const daysInMonth=new Date(y,m+1,0).getDate();
   const firstDay=new Date(y,m,1).getDay();// 0=Sun
   const startIdx=firstDay===0?6:firstDay-1;// Mon=0
-  const expiryDates={};
-  db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.expiry&&!t.expiredWorthless).forEach(t=>{
+  const expiryDates={};const expiryTargets={};
+  db.wheels.forEach(wh=>{
+    openOptionLegs(db.trades.filter(t=>t.wheelId===wh.id)).forEach(t=>{
     const dte=dteDays(t.expiry);if(dte===null||dte<0)return;
     const d=parseInt(t.expiry.split('-')[2],10);
-    const price=(quotes[t.ticker]?.price)||(db.wheels.find(w=>w.id===t.wheelId)?.lastPrice)||null;
+    const price=(quotes[t.ticker]?.price)||(wh.lastPrice)||null;
     const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
     if(t.expiry.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)){
       expiryDates[d]=itm?'#ef4444':dte<=7?'#fbbf24':'#22c55e';
+      if(!expiryTargets[d])expiryTargets[d]={wheelId:wh.id,tradeId:t.id}; // first expiring leg that day
     }
+    });
   });
   const dayNames=['M','T','W','T','F','S','S'];
   let cells=dayNames.map(d=>`<div class="d-mini-cal-hdr">${d}</div>`).join('');
@@ -1927,7 +2428,8 @@ function buildMiniCal(){
   for(let d=1;d<=daysInMonth;d++){
     const isToday=d===today.getDate();
     const dotCol=expiryDates[d]||null;
-    cells+=`<div class="d-mini-cal-day${isToday?' today':''}">${d}${dotCol?`<div class="d-mini-cal-dot" style="background:${dotCol}"></div>`:''}</div>`;
+    const tgt=expiryTargets[d];
+    cells+=`<div class="d-mini-cal-day${isToday?' today':''}"${tgt?` onclick="goToTrade('${tgt.wheelId}','${tgt.tradeId}')" style="cursor:pointer" title="Go to expiring position"`:''}>${d}${dotCol?`<div class="d-mini-cal-dot" style="background:${dotCol}"></div>`:''}</div>`;
   }
   return cells;
 }
@@ -1935,11 +2437,41 @@ function buildMiniCal(){
 function renderDash(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();const cap=calcCapitalStats();
   const monthly=calcMonthlyPnL();
-  const todayStr=new Date().toISOString().slice(0,10);
   const openWheels=db.wheels.filter(w=>w.status==='open').sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
-  const liveOpts=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.expiry&&t.expiry>=todayStr&&!t.expiredWorthless).sort((a,b)=>a.expiry.localeCompare(b.expiry));
+  const liveOpts=db.wheels.flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id))).sort((a,b)=>a.expiry.localeCompare(b.expiry));
   const recentTrades=[...db.trades].sort((a,b)=>b.entered.localeCompare(a.entered)).slice(0,8);
   const alerts=buildDashAlerts();
+
+  // ── Data Health panel ──
+  const health=runDataHealth();
+  const hRed=health.filter(i=>i.sev==='red').length;
+  const hAmber=health.filter(i=>i.sev==='amber').length;
+  const hGrey=health.filter(i=>i.sev==='grey').length;
+  const sevDot={red:'#ef4444',amber:'#fbbf24',grey:'#6b7280'};
+  const healthBadge=[hRed?`<span style="color:#ef4444;font-size:11px;font-weight:700">${hRed} critical</span>`:'',
+      hAmber?`<span style="color:#fbbf24;font-size:11px;font-weight:700">${hAmber} warning${hAmber>1?'s':''}</span>`:'',
+      hGrey?`<span style="color:#6b7280;font-size:11px;font-weight:600">${hGrey} note${hGrey>1?'s':''}</span>`:''].filter(Boolean).join('');
+  const healthRows=health.map(i=>{
+    const t=db.trades.find(x=>x.id===i.tradeId);
+    return`<div style="border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 16px 0">
+        <span class="d-alert-dot" style="background:${sevDot[i.sev]};flex-shrink:0"></span>
+        <span style="font-size:12px;color:var(--text2);line-height:1.5;flex:1">${i.text}</span>
+        ${i.tradeId?`<button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;flex-shrink:0" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button>`:''}
+      </div>
+      ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
+    </div>`;
+  }).join('');
+  const healthPanel=`<div class="d-panel" id="health-panel">
+    <div class="d-panel-hdr">
+      <span class="d-panel-title">Data Health</span>
+      <span style="display:flex;gap:12px;align-items:center">${health.length?healthBadge:`<span style="color:#22c55e;font-size:11px;font-weight:700">✓ All clear</span>`}</span>
+    </div>
+    ${health.length?`<div class="d-panel-body">
+      <div class="thead-row">${'<span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span>'}</div>
+      ${healthRows}
+    </div>`:`<div style="padding:14px 16px;font-size:12px;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades verified — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
+  </div>`;
 
   // Capital utilisation
   const totalAccount=cap.maxCap||1;// best proxy without account balance input
@@ -1952,7 +2484,7 @@ function renderDash(){
   const moCompare=lastMo&&thisMo?(thisMo.pNet-lastMo.pNet):null;
 
   // Action count
-  const actionCount=alerts.filter(a=>a.type==='danger'||a.type==='warn').length;
+
 
   // ── KPI cards ──
   function kpi(label,val,sub,col,accent,explain){
@@ -1970,20 +2502,31 @@ function renderDash(){
   const k1=kpi('YTD Income',fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'#22c55e':'#ef4444',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'#22c55e':'#ef4444',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
   const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
-  const k4=kpi('Action Needed',actionCount>0?actionCount+' position'+(actionCount>1?'s':''):'All clear',actionCount>0?'requires attention':'no alerts',actionCount>0?'#ef4444':'#22c55e',false,'Positions expiring within 7 days, options that have moved ITM, or positions where more than 50% of DTE has elapsed. Each alert is a suggested management action.');
 
   // AROC trailing
-  const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(Boolean);
+  const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
   const avgArocVal=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
   const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'#22c55e':'#ef4444',false,'Average Annualised Return on Capital across your currently open rotations. Calculated as (net premium ÷ capital at risk) × (365 ÷ days held).');
 
   // ── Alert strip ──
-  const alertHtml=alerts.length?`<div class="d-alert-strip">
-    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);flex-shrink:0">Alerts</span>
-    ${alerts.map(a=>{
+  const aDanger=alerts.filter(a=>a.type==='danger').length;
+  const aWarn=alerts.filter(a=>a.type==='warn').length;
+  const aBadge=[aDanger?`<span style="color:#ef4444;font-size:11px;font-weight:700">${aDanger} urgent</span>`:'',
+    aWarn?`<span style="color:#fbbf24;font-size:11px;font-weight:700">${aWarn} expiring</span>`:''].filter(Boolean).join('');
+  const alertHtml=alerts.length?`<div class="d-panel">
+    <div class="d-panel-hdr">
+      <span class="d-panel-title">Alerts</span>
+      <span style="display:flex;gap:12px;align-items:center">${aBadge}</span>
+    </div>
+    <div class="d-panel-body">${alerts.map(a=>{
       const dotCol=a.type==='danger'?'#ef4444':a.type==='warn'?'#fbbf24':'var(--orange)';
-      return`<div class="d-alert-item"><span class="d-alert-dot" style="background:${dotCol}"></span>${a.text}</div>`;
-    }).join('')}
+      const click=a.tradeId?` onclick="goToTrade('${a.wheelId}','${a.tradeId}')" title="Go to trade"`:'';
+      return`<div class="d-table-row"${click} style="grid-template-columns:14px 1fr auto;gap:10px;align-items:center${a.tradeId?';cursor:pointer':''}">
+        <span class="d-alert-dot" style="background:${dotCol}"></span>
+        <span style="font-size:12px;color:var(--text2);line-height:1.5">${a.text}</span>
+        ${a.tradeId?`<span style="color:var(--text3);font-size:10px">→</span>`:'<span></span>'}
+      </div>`;
+    }).join('')}</div>
   </div>`:'';
 
   // ── Positions table ──
@@ -2001,8 +2544,8 @@ function renderDash(){
     const pctToStrike=price!=null&&strike?((price-strike)/strike*100):null;
     const pctCol=pctToStrike===null?'var(--text3)':pctToStrike<0?'#ef4444':pctToStrike<5?'#fbbf24':'#22c55e';
     const basis=m.sharesHeld>0&&m.breakeven!=null?'$'+fmt2(m.breakeven):'—';
-    return`<div class="d-table-row" style="grid-template-columns:${posCols};gap:12px">
-      <span style="font-weight:700;color:var(--orange)">${w.ticker}</span>
+    return`<div class="d-table-row" style="grid-template-columns:${posCols};gap:12px;cursor:pointer" onclick="goToWheel('${w.id}')" title="Go to rotation">
+      <span style="font-weight:700;color:var(--orange)">${esc(w.ticker)}</span>
       <span><span class="d-phase ${ph.cls}">${ph.label}</span></span>
       <span style="color:var(--text2);white-space:nowrap">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:600;margin-left:6px">/ ${dte}d</span>`:''}</span>
       <span style="color:${pctCol};font-weight:500">${pctToStrike!==null?(pctToStrike>=0?'+':'')+pctToStrike.toFixed(1)+'%':'—'}</span>
@@ -2020,9 +2563,9 @@ function renderDash(){
   </div>`;
   const recRows=recentTrades.map(t=>{
     const w=db.wheels.find(x=>x.id===t.wheelId);
-    return`<div class="d-table-row" style="grid-template-columns:${recCols};gap:12px">
+    return`<div class="d-table-row" style="grid-template-columns:${recCols};gap:12px;cursor:pointer" onclick="goToTrade('${t.wheelId}','${t.id}')" title="Go to trade">
     <span style="color:var(--text3);font-size:11px;white-space:nowrap">${fmtDateFull(t.entered)}</span>
-    <span style="font-weight:700;color:var(--orange)">${t.ticker}</span>
+    <span style="font-weight:700;color:var(--orange)">${esc(t.ticker)}</span>
     <span><span class="ab ab-${t.action}" style="font-size:9px;padding:2px 5px">${t.action}</span></span>
     <span style="color:var(--text2);white-space:nowrap">${t.strike?'$'+fmt2(t.strike):'—'}</span>
     <span style="color:var(--text2);white-space:nowrap">${t.expiry?fmtDateFull(t.expiry):'—'}</span>
@@ -2054,10 +2597,13 @@ function renderDash(){
   return`<div style="padding:14px 16px 50px;display:flex;flex-direction:column;gap:10px">
 
     <!-- KPI Row -->
-    <div class="d-grid d-grid-5">${k1}${k2}${k3}${k4}${k5}</div>
+    <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div>
 
     <!-- Alert strip -->
     ${alertHtml}
+
+    <!-- Data Health -->
+    ${healthPanel}
 
     <!-- Monthly Premium — full width -->
     <div class="d-panel">
@@ -2257,8 +2803,8 @@ function markExpiredWorthless(wheelId,tradeId){
 function markExpiredFromModal(){
   const id=document.getElementById('tf-id').value;if(!id)return;
   const t=db.trades.find(x=>x.id===id);if(!t)return;
-  t.expiredWorthless=true;
-  _saveTrade(t);closeModal('mTrade');render();
+  t.expiredWorthless=!t.expiredWorthless; // toggle: allows correcting a mistaken expired click
+  _clearFocus(id);_saveTrade(t);closeModal('mTrade');render();
 }
 function openEditWheel(id){
   const w=db.wheels.find(x=>x.id===id);if(!w)return;
@@ -2303,6 +2849,15 @@ function saveWheel(){
   }
   _saveWheel(wheel);closeModal('mWheel');render();
 }
+function moveWheel(id,dir){
+  posSortBy='manual';localStorage.setItem('wh-posSortBy','manual');
+  const sorted=db.wheels.slice().sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  const idx=sorted.findIndex(w=>w.id===id);if(idx<0)return;
+  const swapIdx=idx+dir;if(swapIdx<0||swapIdx>=sorted.length)return;
+  const a=sorted[idx],b=sorted[swapIdx];
+  const tmp=a.sortOrder;a.sortOrder=b.sortOrder;b.sortOrder=tmp;
+  _saveWheel(a);_saveWheel(b);render();
+}
 function toggleStatus(id){const w=db.wheels.find(x=>x.id===id);if(!w)return;w.status=w.status==='open'?'closed':'open';_saveWheel(w);render();}
 function deleteWheel(id){
   if(!confirm('Delete this rotation and ALL its trades? Cannot be undone.'))return;
@@ -2340,6 +2895,9 @@ function openAddTrade(wheelId){
 }
 function openEditTrade(id){
   const t=db.trades.find(x=>x.id===id);if(!t)return;
+  if(![...document.getElementById('tf-action').options].some(o=>o.value===t.action)){
+    alert(`Action ${t.action} can't be edited here yet.`);return; // never silently convert
+  }
   document.getElementById('tf-id').value=t.id;document.getElementById('tf-ticker').value=t.ticker;
   document.getElementById('tf-action').value=t.action;document.getElementById('tf-entered').value=t.entered;
   document.getElementById('tf-expiry').value=t.expiry||'';document.getElementById('tf-strike').value=t.strike||'';
@@ -2350,10 +2908,23 @@ function openEditTrade(id){
   document.getElementById('tf-comment').value=t.comment||'';
   document.getElementById('tf-delete-btn').style.display='inline-flex';
   document.getElementById('mTradeTitle').textContent='Edit Trade';
-  const isExpiredEligible=(t.action==='CSP'||t.action==='STOC')&&!t.expiredWorthless;
   const _expBtn=document.getElementById('tf-expired-btn');
-  _expBtn.style.display=isExpiredEligible?'inline-flex':'none';
-  if(isExpiredEligible){const _liveDTE=t.expiry?Math.max(0,dteDays(t.expiry)||0):99;const _canExpire=_liveDTE===0;_expBtn.disabled=!_canExpire;_expBtn.style.opacity=_canExpire?'1':'0.35';_expBtn.style.cursor=_canExpire?'pointer':'not-allowed';}
+  if((t.action==='CSP'||t.action==='STOC')&&!t.expiredWorthless){
+    // Not yet marked: offer ★ Expired, enabled only once expiry has passed
+    _expBtn.style.display='inline-flex';
+    _expBtn.textContent='★ Expired';
+    _expBtn.style.borderColor='var(--green)';_expBtn.style.color='var(--green)';_expBtn.style.background='rgba(34,197,94,.12)';
+    const _liveDTE=t.expiry?Math.max(0,dteDays(t.expiry)||0):99;const _canExpire=_liveDTE===0;
+    _expBtn.disabled=!_canExpire;_expBtn.style.opacity=_canExpire?'1':'0.35';_expBtn.style.cursor=_canExpire?'pointer':'not-allowed';
+  }else if((t.action==='CSP'||t.action==='STOC')&&t.expiredWorthless){
+    // Already marked: offer the undo
+    _expBtn.style.display='inline-flex';
+    _expBtn.textContent='✕ Un-mark Expired';
+    _expBtn.style.borderColor='var(--yellow)';_expBtn.style.color='var(--yellow)';_expBtn.style.background='rgba(251,191,36,.10)';
+    _expBtn.disabled=false;_expBtn.style.opacity='1';_expBtn.style.cursor='pointer';
+  }else{
+    _expBtn.style.display='none';
+  }
   const caDiv=document.getElementById('tg-created-at');
   if(t.createdAt){const caDate=t.createdAt.slice(0,10);document.getElementById('tf-created-at').value=fmtDateFull(caDate)+' ('+new Date(t.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+')';caDiv.style.display='';}
   else{caDiv.style.display='none';}
@@ -2388,6 +2959,7 @@ function autoCalcDTE(){
 }
 function saveTrade(){
   const id=document.getElementById('tf-id').value;
+  if(id)_clearFocus(id); // editing the focused trade counts as acting on it
   const ticker=document.getElementById('tf-ticker').value.toUpperCase().trim();
   const entered=document.getElementById('tf-entered').value;
   if(!ticker){alert('Ticker required');return;}if(!entered){alert('Entry date required');return;}
@@ -2398,14 +2970,27 @@ function saveTrade(){
   }
   const action=document.getElementById('tf-action').value;
   const deltaRaw=parseFloat(document.getElementById('tf-delta').value);
+  const premium=parseFloat(document.getElementById('tf-premium').value)||0;
+  const fees=parseFloat(document.getElementById('tf-fees').value)||0;
+  const shares=parseFloat(document.getElementById('tf-shares').value)||0;
+  const total=parseFloat(document.getElementById('tf-total').value)||computeTotal(action,premium,shares,fees);
   const data={wheelId,ticker,action,entered,
     expiry:document.getElementById('tf-expiry').value||null,strike:parseFloat(document.getElementById('tf-strike').value)||null,
     delta:isNaN(deltaRaw)?null:deltaRaw,
-    premium:parseFloat(document.getElementById('tf-premium').value)||0,fees:parseFloat(document.getElementById('tf-fees').value)||0,
-    shares:parseFloat(document.getElementById('tf-shares').value)||0,total:parseFloat(document.getElementById('tf-total').value)||0,
+    premium,fees,shares,total,
     days:parseFloat(document.getElementById('tf-days').value)||0,ppd:parseFloat(document.getElementById('tf-ppd').value)||0,
     verified:false,comment:document.getElementById('tf-comment').value.trim()};
-  if(id){const idx=db.trades.findIndex(t=>t.id===id);const old=db.trades[idx];if(idx>=0)db.trades[idx]={id,...data,createdAt:old?.createdAt||new Date().toISOString(),rollId:old?.rollId||undefined};}
+  if(id){
+    const idx=db.trades.findIndex(t=>t.id===id);
+    if(idx>=0){
+      const old=db.trades[idx];
+      const updated={id,...data,createdAt:old.createdAt||new Date().toISOString()};
+      if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
+      if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
+      updated.verified=old.verified||false;                    // preserve verification status
+      db.trades[idx]=updated;
+    }
+  }
   else{
     db.trades.push({id:uid(),createdAt:new Date().toISOString(),...data});
     expanded.add(wheelId);
@@ -2418,8 +3003,8 @@ function saveTrade(){
   if(updatedTrade)_saveTrade(updatedTrade);
   closeModal('mTrade');render();
 }
-function deleteTrade(id){if(!confirm('Delete this trade?'))return;_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);render();}
-function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;if(!id)return;if(!confirm('Delete this trade?'))return;_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);closeModal('mTrade');render();}
+function deleteTrade(id){if(!confirm('Delete this trade?'))return;_clearFocus(id);_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);render();}
+function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;if(!id)return;if(!confirm('Delete this trade?'))return;_clearFocus(id);_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);closeModal('mTrade');render();}
 
 function openUpdatePrice(id){
   const w=db.wheels.find(x=>x.id===id);if(!w)return;
@@ -2482,7 +3067,11 @@ function doImport(){
   const hdr=lines[0].split(',').map(h=>h.replace(/['"]/g,'').trim().toLowerCase().replace(/:$/,''));
   const col=n=>hdr.indexOf(n);
   const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),ppd:col('ppd'),verified:col('verified'),comment:col('comment')};
-  let imported=0,skipped=0;
+  let imported=0,skipped=0,dupes=0;
+  const newWheelTickers=new Set();
+  const newWheels=[],newTrades=[]; // track what this import actually creates
+  // Build duplicate fingerprint set from existing trades
+  const existingFingerprints=new Set(db.trades.map(t=>`${t.ticker}|${t.action}|${t.entered}|${t.strike||''}|${t.shares||''}`));
   for(let i=1;i<lines.length;i++){
     const line=lines[i].trim();if(!line)continue;
     const v=parseCSVLine(line);
@@ -2492,22 +3081,50 @@ function doImport(){
     const action=ACTION_MAP[rawAction]||rawAction.toUpperCase();
     if(!VALID_ACTIONS.has(action)){skipped++;continue;}
     const entered=normDate(get(C.entered));if(!entered){skipped++;continue;}
+    const strike=parseFloat(get(C.strike))||null;
+    const shares=parseFloat(get(C.shares))||0;
+    // Duplicate check
+    const fp=`${ticker}|${action}|${entered}|${strike||''}|${shares||''}`;
+    if(existingFingerprints.has(fp)){dupes++;continue;}
+    existingFingerprints.add(fp);
     let wheel=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
-    if(!wheel){const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);wheel={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(wheel);}
-    const premium=parseFloat(get(C.premium))||0,shares=parseFloat(get(C.shares))||0,fees=parseFloat(get(C.fees))||0;
+    if(!wheel){
+      const existing=db.wheels.filter(w=>w.ticker===ticker).length;
+      const now=new Date();
+      const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
+      const label=`Rotation ${existing+1} — ${mon} ${now.getFullYear()}`;
+      const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
+      wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};
+      db.wheels.push(wheel);
+      newWheels.push(wheel);
+      newWheelTickers.add(ticker);
+    }
+    const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
     const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
     const days=parseFloat(get(C.days))||0;
-    db.trades.push({id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike:parseFloat(get(C.strike))||null,premium,fees,shares,total,days,ppd:days>0?total/days:0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)});
+    const nt={id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days,ppd:days>0?total/days:0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)};
+    db.trades.push(nt);newTrades.push(nt);
     imported++;
   }
-  db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mImport');document.getElementById('import-csv').value='';render();
-  alert(`Import complete: ${imported} trades added, ${skipped} skipped.`);
+  newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');document.getElementById('import-csv').value='';render();
+  // Fetch logos and prices for any new rotations
+  newWheelTickers.forEach(ticker=>{
+    fetchSymbol(ticker).then(()=>{
+      const w=db.wheels.find(x=>x.ticker===ticker&&x.status==='open');
+      if(w&&quotes[ticker]){w.lastPrice=quotes[ticker].price;_saveWheel(w);render();}
+    }).catch(()=>{});
+    fetchLogo(ticker).then(()=>render()).catch(()=>{});
+  });
+  const parts=[`${imported} imported`];
+  if(dupes>0)parts.push(`${dupes} duplicates skipped`);
+  if(skipped>0)parts.push(`${skipped} invalid skipped`);
+  alert(`Import complete: ${parts.join(', ')}.`);
 }
 function renderAnalytics(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();
   const timing=calcTimingStats();const bw=calcBestWorst();const cap=calcCapitalStats();
   const streaks=calcStreaks();const breakdown=calcTradeBreakdown();const monthly=calcMonthlyPnL();
-  const allAroc=db.wheels.filter(w=>w.status==='closed').map(w=>calcAROC(w,calcWheel(w))).filter(Boolean);
+  const allAroc=db.wheels.filter(w=>w.status==='closed').map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
   const avgAroc=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
   const avgRoc=allAroc.length?allAroc.reduce((a,b)=>a+b.roc,0)/allAroc.length:null;
   const totalTrades=db.trades.length;
@@ -2555,7 +3172,7 @@ function renderAnalytics(){
     tickerMap[w.ticker].premium+=m.premiumNet;
     tickerMap[w.ticker].trades+=m.trades.length;
     tickerMap[w.ticker].cycles++;
-    if(ar)tickerMap[w.ticker].arocs.push(ar.aroc);
+    if(ar&&ar.aroc!=null)tickerMap[w.ticker].arocs.push(ar.aroc);
   });
   const tickerBoard=Object.values(tickerMap).sort((a,b)=>b.premium-a.premium);
 
@@ -2717,7 +3334,7 @@ function renderAnalytics(){
     const avgA=t.arocs.length?t.arocs.reduce((a,b)=>a+b,0)/t.arocs.length:null;
     const pct=(Math.abs(t.premium)/totalPremium*100);
     return`<tr>
-      <td style="font-weight:700;color:var(--orange)">${t.ticker}</td>
+      <td style="font-weight:700;color:var(--orange)">${esc(t.ticker)}</td>
       <td>${t.cycles}</td>
       <td>${t.trades}</td>
       <td class="${colorN(t.premium)}" style="font-weight:600">${fmtMoney(t.premium)}</td>
@@ -2751,7 +3368,7 @@ function renderAnalytics(){
       <td class="${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</td>
       <td class="${colorN(rotRealised)}" style="font-weight:600">${fmtMoney(rotRealised)}</td>
       <td>${m.breakeven!=null?'$'+fmt2(m.breakeven):'—'}</td>
-      <td class="${ar?colorN(ar.aroc):'m'}" style="font-weight:700">${ar?ar.aroc.toFixed(1)+'%':'—'}</td>
+      <td class="${ar&&ar.aroc!=null?colorN(ar.aroc):'m'}" style="font-weight:700">${ar&&ar.aroc!=null?ar.aroc.toFixed(1)+'%':'—'}</td>
     </tr>`;
   }).join('');
 
@@ -2990,7 +3607,7 @@ function exportCSV(){
     return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
   });
   const hdr=['Ticker','Action','Rotation','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment'];
-  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>`"${v}"`).join(',');});
+  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
   const csv=[hdr.join(','),...rows].join('\n');
   const suffix=q?`-${q}`:'';
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`wheelhouse${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
@@ -2998,114 +3615,11 @@ function exportCSV(){
 }
 
 // ════════════════════════════════════════════════════════
-// PASTE TRADE — ROBINHOOD PARSER
+// PASTE TRADE — SMARTSCAN
 // ════════════════════════════════════════════════════════
 let parsedTradeData=null;
 const MON_PAT='Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
 const MON_MAP={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
-
-function toISO(day,monStr,forEntry){
-  const mon=MON_MAP[monStr.toLowerCase()];if(!mon)return null;
-  const d=parseInt(day),today=new Date();
-  let yr=today.getFullYear();
-  const dt=new Date(yr,mon-1,d);
-  if(forEntry){if(dt>today)yr--;}  // entry date in future = last year
-  else{const wkAgo=new Date(today);wkAgo.setDate(wkAgo.getDate()-7);if(dt<wkAgo)yr++;} // expiry in past = next year
-  return`${yr}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-}
-
-function parseRobinhoodText(raw){
-  // Normalise — collapse Windows line endings, trim each line
-  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines=text.split('\n').map(l=>l.trim());
-  const r={};
-
-  // ── Title line: "Sell SOFI $20 Call 20 Mar" ──
-  const title=lines[0]||'';
-  const dirM=/^(buy|sell)\b/i.exec(title);
-  const direction=dirM?.[1]?.toLowerCase();
-  const tickM=/^(?:buy|sell)\s+([A-Z]+)/i.exec(title);
-  r.ticker=tickM?.[1]?.toUpperCase()||null;
-  const strikeM=/\$(\d+(?:\.\d+)?)\s+(?:call|put)/i.exec(title);
-  r.strike=strikeM?parseFloat(strikeM[1]):null;
-  const optTypeM=/\b(call|put)\b/i.exec(title);
-  const optType=optTypeM?.[1]?.toLowerCase()||null;
-  const expM=new RegExp(`(\\d{1,2})\\s+(${MON_PAT})\\b`,'i').exec(title);
-  r.expiry=expM?toISO(expM[1],expM[2],false):null;
-
-  // ── Position effect ──
-  const posIdx=lines.findIndex(l=>/^position effect$/i.test(l));
-  const posEffect=posIdx>=0?(lines[posIdx+1]||'').toLowerCase():null;
-
-  // ── Filled quantity: "4 contracts at $0.31" ──
-  const fqIdx=lines.findIndex(l=>/^filled quantity$/i.test(l));
-  if(fqIdx>=0){
-    const fqLine=lines[fqIdx+1]||'';
-    const conM=/(\d+)\s+contracts?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(fqLine);
-    const shM=/(\d+)\s+shares?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(fqLine);
-    if(conM){r.shares=parseInt(conM[1])*100;r.premium=parseFloat(conM[2]);}
-    else if(shM){r.shares=parseInt(shM[1]);r.premium=parseFloat(shM[2]);}
-  }
-  // Fallback scan
-  if(!r.shares){
-    for(const l of lines){
-      const c=/(\d+)\s+contracts?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(l);
-      if(c){r.shares=parseInt(c[1])*100;r.premium=parseFloat(c[2]);break;}
-      const s=/(\d+)\s+shares?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(l);
-      if(s){r.shares=parseInt(s[1]);r.premium=parseFloat(s[2]);break;}
-    }
-  }
-
-  // ── Entry date — find "Filled" line (not "Filled quantity") followed by date ──
-  let entered=null;
-  for(let i=0;i<lines.length;i++){
-    if(/^filled$/i.test(lines[i])){
-      const nxt=lines[i+1]||'';
-      const dm=new RegExp(`^(\\d{1,2})\\s+(${MON_PAT})\\b`,'i').exec(nxt);
-      if(dm){entered=toISO(dm[1],dm[2],true);break;}
-    }
-  }
-  // Fallback: line 2 date
-  if(!entered){
-    const l2=lines[1]||'';
-    const dm=new RegExp(`(\\d{1,2})\\s+(${MON_PAT})\\b`,'i').exec(l2);
-    entered=dm?toISO(dm[1],dm[2],true):new Date().toISOString().slice(0,10);
-  }
-  r.entered=entered;
-
-  // ── Fees ──
-  const regFeeIdx=lines.findIndex(l=>/^est\.?\s*regulatory fees?$/i.test(l));
-  const conFeeIdx=lines.findIndex(l=>/^contract fee$/i.test(l));
-  const commIdx=lines.findIndex(l=>/^commission$/i.test(l));
-  const feeVal=i=>i>=0?parseFloat((lines[i+1]||'').replace(/[^0-9.]/g,''))||0:0;
-  r.fees=feeVal(regFeeIdx)+feeVal(conFeeIdx)+feeVal(commIdx);
-
-  // ── Total from Est credit / Est debit ──
-  const credIdx=lines.findIndex(l=>/^est\.?\s*credit$/i.test(l));
-  const debtIdx=lines.findIndex(l=>/^est\.?\s*debit$/i.test(l));
-  if(credIdx>=0)r.total=parseFloat((lines[credIdx+1]||'').replace(/[^0-9.]/g,''))||0;
-  else if(debtIdx>=0)r.total=parseFloat((lines[debtIdx+1]||'').replace(/[^0-9.]/g,''))||0;
-  else r.total=r.premium&&r.shares?computeTotal(r.action,r.premium,r.shares,r.fees):0;
-
-  // ── Determine action ──
-  if(optType==='call'){
-    if(direction==='sell'&&posEffect==='open')r.action='STOC';
-    else if(direction==='sell'&&posEffect==='close')r.action='STC';
-    else r.action='BTC';
-  }else if(optType==='put'){
-    if(direction==='sell')r.action='CSP';
-    else r.action='BTC';
-  }else{
-    r.action=direction==='buy'?'IN':'OUT';
-    r.expiry=null;r.strike=null;
-  }
-
-  // ── DTE & PPD ──
-  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
-  r.ppd=r.days>0?(r.total/r.days):0;
-
-  return r;
-}
 
 function switchPasteTab(tab){
   const isSmartScan=tab==='smartscan';
@@ -3132,7 +3646,7 @@ function populatePMWheelSelect(wheelId,ticker){
   const sel=document.getElementById('pm-wheel');
   sel.innerHTML='<option value="new">+ New Rotation</option>';
   db.wheels.filter(w=>!ticker||w.ticker===ticker).forEach(w=>{
-    sel.innerHTML+=`<option value="${w.id}" ${w.id===wheelId?'selected':''}>${w.label||w.ticker} ${w.status==='open'?'(Open)':'(Closed)'}</option>`;
+    sel.innerHTML+=`<option value="${w.id}" ${w.id===wheelId?'selected':''}>${esc(w.label||w.ticker)} ${w.status==='open'?'(Open)':'(Closed)'}</option>`;
   });
   if(!wheelId&&ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
 }
@@ -3152,6 +3666,7 @@ function autoCalcPMTotal(){
   const f=parseFloat(document.getElementById('pm-fees').value)||0;
   document.getElementById('pm-total').value=computeTotal(a,p,s,f).toFixed(2);
 }
+function autoCalcPMDTE(){autoCalcPMTotal();} // days computed at save time; just keep total fresh
 function savePMTrade(){
   const ticker=document.getElementById('pm-ticker').value.toUpperCase().trim();
   const entered=document.getElementById('pm-entered').value;
@@ -3161,7 +3676,7 @@ function savePMTrade(){
   let wheelId=document.getElementById('pm-wheel').value;
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
-    if(ex){wheelId=ex.id;}else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);wheelId=nw.id;}
+    if(ex){wheelId=ex.id;}else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
   const premium=parseFloat(document.getElementById('pm-premium').value)||0;
   const shares=parseFloat(document.getElementById('pm-shares').value)||0;
@@ -3213,145 +3728,6 @@ function confirmRoll(){
   const pt=db.trades.find(t=>t.id===prevId);
   if(nt){nt.rollId=rid;_saveTrade(nt);}if(pt){pt.rollId=rid;_saveTrade(pt);}
   render();closeModal('mRoll');pendingRollData=null;
-}
-
-// ── Tastytrade parser ──
-// "Sold 4 SOFI 03/20/2026 20 Call @ 0.31"
-function parseTastytradeText(raw){
-  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
-  const r={};
-  // Title: "Sold 4 SOFI 03/20/2026 20 Call @ 0.31" or "Bought 4 SOFI..."
-  const title=lines[0]||'';
-  const dirM=/^(sold|bought|buy|sell)\b/i.exec(title);
-  const direction=(/^(sold|sell)/i.test(dirM?.[1]||''))?'sell':'buy';
-  const tickM=/^(?:sold|bought|buy|sell)\s+\d+\s+([A-Z]+)/i.exec(title);
-  r.ticker=tickM?.[1]?.toUpperCase()||null;
-  // Date MM/DD/YYYY or MM/DD/YY
-  const dateM=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(title);
-  if(dateM){const yr=dateM[3].length===2?'20'+dateM[3]:dateM[3];r.expiry=`${yr}-${dateM[1].padStart(2,'0')}-${dateM[2].padStart(2,'0')}`;}
-  const strikeM=/\b(\d+(?:\.\d+)?)\s+(?:call|put)\b/i.exec(title);
-  r.strike=strikeM?parseFloat(strikeM[1]):null;
-  const optTypeM=/\b(call|put)\b/i.exec(title);
-  const optType=optTypeM?.[1]?.toLowerCase()||null;
-  const premM=/@ ?\$?(\d+(?:\.\d+)?)/.exec(title);
-  r.premium=premM?parseFloat(premM[1]):null;
-  // Quantity
-  const qtyM=/^(?:sold|bought|buy|sell)\s+(\d+)\s+/i.exec(title);
-  const contracts=qtyM?parseInt(qtyM[1]):null;
-  r.shares=contracts?contracts*100:null;
-  // Entry date — look for "Date:" or "Executed:" line
-  const dateLineIdx=lines.findIndex(l=>/^(date|executed|filled|trade date)[:\s]/i.test(l));
-  if(dateLineIdx>=0){const dm=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(lines[dateLineIdx]);if(dm){const yr=dm[3].length===2?'20'+dm[3]:dm[3];r.entered=`${yr}-${dm[1].padStart(2,'0')}-${dm[2].padStart(2,'0')}`;}}
-  if(!r.entered)r.entered=new Date().toISOString().slice(0,10);
-  // Fees
-  const commIdx=lines.findIndex(l=>/^commissions?/i.test(l));
-  const feeIdx=lines.findIndex(l=>/^(?:regulatory\s+)?fees?$/i.test(l));
-  const feeVal=i=>i>=0?parseFloat((lines[i+1]||lines[i].split(/[\s:]+/).pop()||'').replace(/[^0-9.]/g,''))||0:0;
-  r.fees=feeVal(commIdx)+feeVal(feeIdx);
-  // Total
-  const creditIdx=lines.findIndex(l=>/net credit|total credit|received/i.test(l));
-  const debitIdx=lines.findIndex(l=>/net debit|total debit/i.test(l));
-  if(creditIdx>=0){const m=/\$?([\d,.]+)/.exec(lines[creditIdx+1]||lines[creditIdx]);r.total=m?parseFloat(m[1].replace(/,/g,'')):null;}
-  else if(debitIdx>=0){const m=/\$?([\d,.]+)/.exec(lines[debitIdx+1]||lines[debitIdx]);r.total=m?parseFloat(m[1].replace(/,/g,'')):null;}
-  // Action
-  if(optType==='call'){r.action=direction==='sell'?'STOC':'BTC';}
-  else if(optType==='put'){r.action=direction==='sell'?'CSP':'BTC';}
-  else{r.action=direction==='buy'?'IN':'OUT';r.expiry=null;r.strike=null;}
-  if(!r.total&&r.premium&&r.shares)r.total=computeTotal(r.action,r.premium,r.shares,r.fees);
-  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
-  r.ppd=r.days>0?r.total/r.days:0;
-  return r;
-}
-
-// ── IBKR parser ──
-// "Order filled: Sell 4 SOFI Mar2026 20 Call"
-function parseIBKRText(raw){
-  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
-  const r={};
-  const full=lines.join('\n');
-  // Symbol
-  const symM=/Symbol[:\s]+([A-Z]+)/i.exec(full);r.ticker=symM?.[1]?.toUpperCase()||null;
-  // Action
-  const actM=/Action[:\s]+(buy|sell)/i.exec(full);
-  const direction=(/sell/i.test(actM?.[1]||''))?'sell':'buy';
-  // Quantity
-  const qtyM=/Quantity[:\s]+(\d+)/i.exec(full);
-  const qty=qtyM?parseInt(qtyM[1]):null;
-  // Option details "Call Strike 20.00 Exp 20Mar2026" or "20Mar2026 20 Call"
-  const strikeM=/Strike[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.strike=strikeM?parseFloat(strikeM[1]):null;
-  const optTypeM=/\b(call|put)\b/i.exec(full);const optType=optTypeM?.[1]?.toLowerCase()||null;
-  // Expiry formats: "20Mar2026" or "Mar 20, 2026" or "2026-03-20"
-  const expM1=/(\d{1,2})(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(\d{4})/i.exec(full);
-  const expM2=/Exp(?:iry|iration)?[:\s]+(\d{4}-\d{2}-\d{2})/i.exec(full);
-  if(expM1){const mon=MON_MAP[expM1[2].toLowerCase()];r.expiry=`${expM1[3]}-${String(mon).padStart(2,'0')}-${expM1[1].padStart(2,'0')}`;}
-  else if(expM2){r.expiry=expM2[1];}
-  r.shares=qty?(optType?qty*100:qty):null;
-  // Fill price
-  const fillM=/Fill\s*Price[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.premium=fillM?parseFloat(fillM[1]):null;
-  // Commission
-  const commM=/Commission[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.fees=commM?parseFloat(commM[1]):0;
-  // Entry date
-  const tradeDateM=/(?:Trade|Execution)\s*Date[:\s]+(\d{4}-\d{2}-\d{2})/i.exec(full);
-  r.entered=tradeDateM?tradeDateM[1]:new Date().toISOString().slice(0,10);
-  // Action
-  if(optType==='call'){r.action=direction==='sell'?'STOC':'BTC';}
-  else if(optType==='put'){r.action=direction==='sell'?'CSP':'BTC';}
-  else{r.action=direction==='buy'?'IN':'OUT';r.expiry=null;r.strike=null;}
-  r.total=r.premium&&r.shares?computeTotal(r.action,r.premium,r.shares,r.fees):0;
-  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
-  r.ppd=r.days>0?r.total/r.days:0;
-  return r;
-}
-
-// ── Schwab / TD Ameritrade parser ──
-// "Action: Sell to Open" "Security: SOFI Mar 20 2026 $20.00 Call"
-function parseSchwabText(raw){
-  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
-  const r={};
-  const full=lines.join('\n');
-  // Action line
-  const actM=/Action[:\s]+(buy to open|buy to close|sell to open|sell to close|bought|sold|buy|sell)/i.exec(full);
-  const actRaw=(actM?.[1]||'').toLowerCase();
-  const direction=/buy/.test(actRaw)?'buy':'sell';
-  const posEffect=/close/.test(actRaw)?'close':'open';
-  // Security: "SOFI Mar 20 2026 $20.00 Call"
-  const secIdx=lines.findIndex(l=>/^Security[:\s]/i.test(l));
-  const secLine=secIdx>=0?lines[secIdx].replace(/^Security[:\s]+/i,'').trim():(lines[0]||'');
-  const tickM=/^([A-Z]+)\s/i.exec(secLine);r.ticker=tickM?.[1]?.toUpperCase()||null;
-  const strikeM=/\$(\d+(?:\.\d+)?)\s+(?:call|put)/i.exec(secLine);r.strike=strikeM?parseFloat(strikeM[1]):null;
-  const optTypeM=/\b(call|put)\b/i.exec(secLine);const optType=optTypeM?.[1]?.toLowerCase()||null;
-  // Expiry "Mar 20 2026" or "03/20/2026"
-  const expM1=new RegExp(`(${MON_PAT})\\s+(\\d{1,2}),?\\s+(\\d{4})`,'i').exec(secLine);
-  const expM2=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(secLine);
-  if(expM1){const mon=MON_MAP[expM1[1].toLowerCase()];r.expiry=`${expM1[3]}-${String(mon).padStart(2,'0')}-${expM1[2].padStart(2,'0')}`;}
-  else if(expM2){r.expiry=`${expM2[3]}-${expM2[1].padStart(2,'0')}-${expM2[2].padStart(2,'0')}`;}
-  // Quantity
-  const qtyM=/Quantity[:\s]+(\d+)/i.exec(full);const qty=qtyM?parseInt(qtyM[1]):null;
-  r.shares=qty?(optType?qty*100:qty):null;
-  // Price
-  const priceM=/Price[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.premium=priceM?parseFloat(priceM[1]):null;
-  // Fees
-  const feeM=/(?:Commissions?|Fees?)[\/\s&,]*(?:Fees?)?[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.fees=feeM?parseFloat(feeM[1]):0;
-  // Total
-  const credM=/Estimated?\s+Credit[:\s]+\$?([\d,.]+)/i.exec(full);
-  const debtM=/Estimated?\s+(?:Cost|Debit)[:\s]+\$?([\d,.]+)/i.exec(full);
-  if(credM)r.total=parseFloat(credM[1].replace(/,/g,''));
-  else if(debtM)r.total=parseFloat(debtM[1].replace(/,/g,''));
-  // Entry date
-  const dateM=/(?:Order\s+)?(?:Placed|Filled|Executed|Date)[:\s]+(\d{1,2}\/\d{1,2}\/\d{4})/i.exec(full);
-  if(dateM){const p=dateM[1].split('/');r.entered=`${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;}
-  else r.entered=new Date().toISOString().slice(0,10);
-  // Action
-  if(optType==='call'){r.action=direction==='sell'&&posEffect==='open'?'STOC':direction==='sell'?'STC':'BTC';}
-  else if(optType==='put'){r.action=direction==='sell'?'CSP':'BTC';}
-  else{r.action=direction==='buy'?'IN':'OUT';r.expiry=null;r.strike=null;}
-  if(!r.total&&r.premium&&r.shares)r.total=computeTotal(r.action,r.premium,r.shares,r.fees);
-  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
-  r.ppd=r.days>0?r.total/r.days:0;
-  return r;
 }
 
 // ── SmartScan — broker-agnostic pattern hunter ──
@@ -3439,7 +3815,7 @@ function parseSmartText(raw){
   const allDates=[];
   let m;
   // "20 Mar" / "20 Mar 2026" / "20 March 2026"
-  const rx1=new RegExp(`(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?\\b`,'gi');
+  const rx1=new RegExp(`(?<![\\d.$])(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?\\b`,'gi');
   while((m=rx1.exec(full))!==null){
     const monAbbr=m[2].slice(0,3).toLowerCase();
     const mon=MON_MAP[monAbbr];if(!mon)continue;
@@ -3449,6 +3825,9 @@ function parseSmartText(raw){
   // "Mar 20 2026" / "March 20, 2026"
   const rx2=new RegExp(`(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2}),?\\s+(\\d{4})`,'gi');
   while((m=rx2.exec(full))!==null){const monAbbr=m[1].slice(0,3).toLowerCase();const mon=MON_MAP[monAbbr];if(!mon)continue;allDates.push(new Date(parseInt(m[3]),mon-1,parseInt(m[2])));}
+  // "Jul 2" / "Jun 29" (month-first, NO year — Robinhood US confirmations). Skip if a year follows (rx2 owns those) or if the number is a contract/share count.
+  const rx2b=new RegExp(`(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2})\\b(?!\\s*,?\\s*\\d{4})(?!\\s+(?:contracts?|shares?|put|call)\\b)`,'gi');
+  while((m=rx2b.exec(full))!==null){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(!mon)continue;allDates.push(new Date(today.getFullYear(),mon-1,parseInt(m[2])));}
   // MM/DD/YYYY or MM/DD/YY (US format — Schwab, E*Trade, Fidelity)
   const rx3=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g;
   while((m=rx3.exec(full))!==null){const yr=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);allDates.push(new Date(yr,parseInt(m[1])-1,parseInt(m[2])));}
@@ -3621,14 +4000,14 @@ function showRollPreview(trades){
   let opts='<option value="new">+ Create New Rotation</option>';
   db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
     const sel=(wheelId&&w.id===wheelId)||(!wheelId&&w.ticker===ticker&&w.status==='open');
-    opts+=`<option value="${w.id}"${sel?' selected':''}>${w.label||w.ticker} (${w.status})</option>`;
+    opts+=`<option value="${w.id}"${sel?' selected':''}>${esc(w.label||w.ticker)} (${w.status})</option>`;
   });
   function tradeCard(p){
     const cr=isCredit(p.action);const col=cr?'var(--green)':'var(--red)';const borderCol=cr?'var(--green)':'var(--red)';
     return`<div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${borderCol};border-radius:8px;padding:12px;flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px">
         <span class="ab ab-${p.action}">${p.action}</span>
-        <span style="color:var(--silver);font-weight:700;font-size:13px">${p.ticker}${p.strike?' $'+p.strike:''}</span>
+        <span style="color:var(--silver);font-weight:700;font-size:13px">${esc(p.ticker)}${p.strike?' $'+p.strike:''}</span>
         <span style="margin-left:auto;font-weight:800;color:${col}">${cr?'+':'-'}$${(p.total||0).toFixed(2)}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px;color:var(--text2)">
@@ -3658,7 +4037,6 @@ function showRollPreview(trades){
 
 function parsePaste(){
   const raw=document.getElementById('paste-raw').value.trim();
-  const broker=document.getElementById('paste-broker').value;
   const errEl=document.getElementById('paste-error');
   errEl.style.display='none';
   if(!raw){errEl.textContent='Paste some text first.';errEl.style.display='block';return;}
@@ -3668,16 +4046,7 @@ function parsePaste(){
       const rollTrades=parseRollTrades(raw);
       if(rollTrades){parsedTradeData=rollTrades;showRollPreview(rollTrades);return;}
     }
-    let p;
-    try{
-      if(broker==='robinhood')p=parseRobinhoodText(raw);
-      else if(broker==='tastytrade')p=parseTastytradeText(raw);
-      else if(broker==='ibkr')p=parseIBKRText(raw);
-      else if(broker==='schwab')p=parseSchwabText(raw);
-      else p=parseSmartText(raw);
-    }catch(e){p=null;}
-    // If specific parser failed to get ticker/action, fall back to smart scan
-    if(!p||!p.ticker||!p.action)p=parseSmartText(raw);
+    let p=parseSmartText(raw);
     if(!p.ticker){errEl.textContent='Could not find ticker symbol. Make sure you copied the full confirmation.';errEl.style.display='block';return;}
     if(!p.action){errEl.textContent='Could not determine trade type (Buy/Sell, Call/Put, Open/Close).';errEl.style.display='block';return;}
     parsedTradeData=p;
@@ -3691,7 +4060,7 @@ function showPastePreview(p){
   let opts='<option value="new">+ Create New Rotation</option>';
   db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
     const sel=(wheelId&&w.id===wheelId)||(!wheelId&&w.ticker===p.ticker&&w.status==='open');
-    opts+=`<option value="${w.id}"${sel?' selected':''}>${w.label||w.ticker} (${w.status})</option>`;
+    opts+=`<option value="${w.id}"${sel?' selected':''}>${esc(w.label||w.ticker)} (${w.status})</option>`;
   });
   const totalCol=isCredit(p.action)?'var(--green)':'var(--red)';
   const totalSign=isCredit(p.action)?'+':'-';
@@ -3699,7 +4068,7 @@ function showPastePreview(p){
     <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:8px;padding:14px;margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <span class="ab ab-${p.action}">${p.action}</span>
-        <span style="font-weight:900;font-size:16px;color:var(--silver)">${p.ticker}</span>
+        <span style="font-weight:900;font-size:16px;color:var(--silver)">${esc(p.ticker)}</span>
         ${p.strike?`<span style="color:var(--text2);font-size:13px">$${p.strike} ${p.action==='CSP'?'Put':'Call'}</span>`:''}
         <span style="margin-left:auto;font-size:18px;font-weight:900;color:${totalCol}">${totalSign}$${(p.total||0).toFixed(2)}</span>
       </div>
@@ -3726,15 +4095,16 @@ function confirmParsed(){
     if(wheelId==='new'||!wheelId){
       const ex=db.wheels.find(w=>w.ticker===trades[0].ticker&&w.status==='open');
       if(ex){wheelId=ex.id;}
-      else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);wheelId=nw.id;}
+      else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
     trades.forEach(p=>{
-      db.trades.push({id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
+      const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-        rollId:p.rollId,verified:false,comment:'via SmartScan (roll)'});
+        rollId:p.rollId,verified:false,comment:'via SmartScan (roll)'};
+      db.trades.push(nt);_saveTrade(nt); // save only what was touched
     });
-    expanded.add(wheelId);db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mPaste');parsedTradeData=null;
+    expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
     try{render();}catch(e){console.error('SmartScan roll render error:',e);}
     return;
   }
@@ -3744,14 +4114,15 @@ function confirmParsed(){
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===p.ticker&&w.status==='open');
     if(ex){wheelId=ex.id;}
-    else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:p.ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:p.entered,sortOrder:mo+1};db.wheels.push(nw);wheelId=nw.id;}
+    else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:p.ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:p.entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
-  db.trades.push({id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
+  const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-    verified:false,comment:'via SmartScan'});
+    verified:false,comment:'via SmartScan'};
+  db.trades.push(nt);_saveTrade(nt); // save only what was touched
   expanded.add(wheelId);
-  db.wheels.forEach(w=>_saveWheel(w));db.trades.forEach(t=>_saveTrade(t));closeModal('mPaste');parsedTradeData=null;
+  closeModal('mPaste');parsedTradeData=null;
   try{render();}catch(e){console.error('SmartScan render error:',e);alert('Trade saved but display error: '+e.message+'\n\nRefresh the page to see your trade.');}
 }
 
@@ -3830,7 +4201,7 @@ function showSignOutButton(user){
 
 function openSettings(){
   openModal('mSettings');
-  // Sync toggle state
+  // Sync toggle states
   const toggle=document.getElementById('theme-toggle');
   const knob=document.getElementById('theme-knob');
   if(toggle){
@@ -3838,6 +4209,13 @@ function openSettings(){
     toggle.checked=isLight;
     if(knob)knob.style.left=isLight?'18px':'2px';
   }
+  const dateSel=document.getElementById('date-fmt-select');
+  if(dateSel)dateSel.value=dateFmt;
+}
+function setDateFmt(val){
+  dateFmt=val;
+  localStorage.setItem('wh-dateFmt',val);
+  render();
 }
 function toggleTheme(isLight){
   document.documentElement.setAttribute('data-theme',isLight?'light':'');
@@ -3852,7 +4230,7 @@ function toggleSidebar(){
   sb.classList.toggle('collapsed');
   const collapsed=sb.classList.contains('collapsed');
   localStorage.setItem('wh-sidebar',collapsed?'collapsed':'open');
-  if(content)content.style.marginLeft=collapsed?'0':'200px';
+  if(content){content.style.marginLeft=collapsed?'0':'200px';content.style.paddingLeft=collapsed?'36px':'';}
   if(btn)btn.style.display=collapsed?'flex':'none';
 }
 async function doSignOut(){
@@ -3894,27 +4272,24 @@ function showAuthOverlay() {
   render();
 }
 
-// ── PREVIEW MODE: skip auth when not on Netlify (local preview / Claude file viewer) ──
-const _isPreview = !!window.__wheelPreview;
-if(_isPreview){
-  _confirmedUid='preview-user';
-  db={wheels:[],trades:[]};
-  window._db=db;
-  render();
-}
-
 onAuthStateChanged(_auth, async (user) => {
-  if(_isPreview) return; // skip auth flow in preview mode
   if (user) {
     _confirmedUid = user.uid;
 
-    // Hide auth overlay
+    // Swap auth overlay for loading overlay
     document.getElementById('auth-overlay').style.display = 'none';
+    const loadingEl = document.getElementById('loading-overlay');
+    const loadingBar = document.getElementById('loading-bar');
+    const loadingText = document.getElementById('loading-text');
+    loadingEl.style.display = 'flex';
+    loadingBar.style.width = '10%';
+    loadingText.textContent = 'Signing in...';
     showSignOutButton(user);
 
     // FORCED MIGRATION — inline, no external function dependency
     const localData = localStorage.getItem('wheel_tracker_v7');
     if (localData) {
+      loadingText.textContent = 'Migrating data...';
       console.log('Forcing migration...');
       try {
         const oldDb = JSON.parse(localData);
@@ -3931,14 +4306,69 @@ onAuthStateChanged(_auth, async (user) => {
       }
     }
 
-    // Load from Firestore — render and onboarding check happen inside
-    await loadDBFromFirestore(user.uid);
+    // Load from Firestore — halt boot on failure rather than booting empty
+    loadingBar.style.width = '30%';
+    loadingText.textContent = 'Loading rotations...';
+    try {
+      await loadDBFromFirestore(user.uid);
+    } catch (e) {
+      console.error('Load failed:', e);
+      loadingText.innerHTML = 'Could not load your data — check your connection. '
+        + '<button onclick="location.reload()" style="margin-left:8px;padding:4px 10px;border-radius:6px;border:1px solid var(--border,#444);background:transparent;color:inherit;cursor:pointer">Retry</button>';
+      return; // do NOT proceed to quotes/render/onboarding with an empty db
+    }
     window._db=db;
-    // Fetch live prices now that wheels are loaded, then poll every 60s
-    fetchAllQuotes();
-    setInterval(fetchAllQuotes,60000);
+    render();
+
+    // Fetch quotes and logos
+    loadingBar.style.width = '50%';
+    const wheelSyms = db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
+    const allSyms = [...new Set(wheelSyms)];
+    const totalSteps = allSyms.length;
+    let completed = 0;
+
+    // Fire logo fetches in parallel
+    const logoPromises = allSyms.map(sym => fetchLogo(sym));
+
+    // Fetch quotes sequentially with progress
+    for (const sym of allSyms) {
+      loadingText.textContent = `Fetching ${sym}...`;
+      try { await fetchSymbol(sym); } catch(e) { console.warn('Quote:', sym, e.message); }
+      completed++;
+      const pct = 50 + Math.round((completed / Math.max(totalSteps, 1)) * 45);
+      loadingBar.style.width = pct + '%';
+      if (allSyms.length > 1) await new Promise(r => setTimeout(r, 200));
+    }
+
+    // Wait for logos
+    await Promise.allSettled(logoPromises);
+    loadingBar.style.width = '100%';
+    loadingText.textContent = 'Ready';
+
+    // Update prices and render fully
+    const nOk = Object.keys(quotes).length;
+    if (nOk > 0) {
+      db.wheels.forEach(w => {
+        if (w.status === 'open' && quotes[w.ticker] && w.lastPrice !== quotes[w.ticker].price) {
+          w.lastPrice = quotes[w.ticker].price;
+          _saveWheel(w); // persist only real changes
+        }
+      });
+    }
+    render();
+
+    // Fade out loading overlay
+    await new Promise(r => setTimeout(r, 300));
+    loadingEl.classList.add('fade-out');
+    setTimeout(() => { loadingEl.style.display = 'none'; loadingEl.classList.remove('fade-out'); }, 600);
+
+    // Start polling — clear any existing handle first so re-logins never stack intervals
+    clearInterval(_pollHandle);
+    _pollHandle = setInterval(fetchAllQuotes, 60000);
   } else {
     _confirmedUid = null;
+    clearInterval(_pollHandle);
+    _pollHandle = null;
     showAuthOverlay();
   }
 });
@@ -3987,6 +4417,7 @@ window.doImport = doImport;
 window.openPasteTrade = openPasteTrade;
 window.openEditWheel = openEditWheel;
 window.toggleStatus = toggleStatus;
+window.moveWheel = moveWheel;
 window.deleteWheel = deleteWheel;
 window.toggleExpand = toggleExpand;
 window.toggleMinimise = toggleMinimise;
@@ -4000,15 +4431,29 @@ window.cyclePosSort = cyclePosSort;
 window.toggleSortMenu = toggleSortMenu;
 window.closeSortMenu = closeSortMenu;
 window.openEditTrade = openEditTrade;
+window.goToTrade = goToTrade;
+window.goToWheel = goToWheel; // module-scope rule: inline handlers need window exposure
 window.sortLog = sortLog;
 window.openAddTrade = openAddTrade;
 window.openImport = openImport;
 window.openSettings = openSettings;
 window.toggleTheme = toggleTheme;
+window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
+window.onActionChange = onActionChange;
+window.onTickerInput = onTickerInput;
+window.autoCalcDTE = autoCalcDTE;
+window.autoCalcTotal = autoCalcTotal;
+window.autoCalcPPD = autoCalcPPD;
+window.onPMActionChange = onPMActionChange;
+window.onPMTickerInput = onPMTickerInput;
+window.autoCalcPMTotal = autoCalcPMTotal;
+window.autoCalcPMDTE = autoCalcPMDTE;
+window.showXpop = showXpop;
+window.hideXpop = hideXpop;
 
 </script>
 
