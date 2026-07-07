@@ -807,7 +807,6 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     <div id="paste-step1">
       <!-- SmartScan panel -->
       <div id="paste-panel-smartscan">
-        <input type="hidden" id="paste-broker" value="smart">
         <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Paste any trade confirmation — Robinhood, Tastytrade, IBKR, Schwab, E*Trade, Fidelity, Webull, eToro, Trading 212 or any other broker. SmartScan figures it out.</p>
         <textarea id="paste-raw" style="width:100%;height:180px;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:11px;border-radius:7px;font-size:12px;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
         <div id="paste-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></div>
@@ -3621,121 +3620,11 @@ function exportCSV(){
 }
 
 // ════════════════════════════════════════════════════════
-// PASTE TRADE — ROBINHOOD PARSER
+// PASTE TRADE — SMARTSCAN
 // ════════════════════════════════════════════════════════
 let parsedTradeData=null;
 const MON_PAT='Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
 const MON_MAP={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
-
-function toISO(day,monStr,forEntry){
-  const mon=MON_MAP[monStr.toLowerCase()];if(!mon)return null;
-  const d=parseInt(day),today=new Date();
-  let yr=today.getFullYear();
-  const dt=new Date(yr,mon-1,d);
-  if(forEntry){if(dt>today)yr--;}  // entry date in future = last year
-  else{const wkAgo=new Date(today);wkAgo.setDate(wkAgo.getDate()-7);if(dt<wkAgo)yr++;} // expiry in past = next year
-  return`${yr}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-}
-
-function extractDate(str,forEntry){
-  if(!str)return null;
-  let m=new RegExp(`(\\d{1,2})\\s+(${MON_PAT})\\b`,'i').exec(str);   // day-first: "2 Jul", "20 Mar"
-  if(m)return toISO(m[1],m[2],forEntry);
-  m=new RegExp(`\\b(${MON_PAT})\\s+(\\d{1,2})\\b`,'i').exec(str);    // month-first: "Jul 2", "Jun 29"
-  if(m)return toISO(m[2],m[1],forEntry);
-  return null;
-}
-
-function parseRobinhoodText(raw){
-  // Normalise — collapse Windows line endings, trim each line
-  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines=text.split('\n').map(l=>l.trim());
-  const r={};
-
-  // ── Title line: "Sell SOFI $20 Call 20 Mar" ──
-  const title=lines[0]||'';
-  const dirM=/^(buy|sell)\b/i.exec(title);
-  const direction=dirM?.[1]?.toLowerCase();
-  const tickM=/^(?:buy|sell)\s+([A-Z]+)/i.exec(title);
-  r.ticker=tickM?.[1]?.toUpperCase()||null;
-  const strikeM=/\$(\d+(?:\.\d+)?)\s+(?:call|put)/i.exec(title);
-  r.strike=strikeM?parseFloat(strikeM[1]):null;
-  const optTypeM=/\b(call|put)\b/i.exec(title);
-  const optType=optTypeM?.[1]?.toLowerCase()||null;
-  r.expiry=extractDate(title,false);
-
-  // ── Position effect ──
-  const posIdx=lines.findIndex(l=>/^position effect$/i.test(l));
-  const posEffect=posIdx>=0?(lines[posIdx+1]||'').toLowerCase():null;
-
-  // ── Filled quantity: "4 contracts at $0.31" ──
-  const fqIdx=lines.findIndex(l=>/^filled quantity$/i.test(l));
-  if(fqIdx>=0){
-    const fqLine=lines[fqIdx+1]||'';
-    const conM=/(\d+)\s+contracts?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(fqLine);
-    const shM=/(\d+)\s+shares?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(fqLine);
-    if(conM){r.shares=parseInt(conM[1])*100;r.premium=parseFloat(conM[2]);}
-    else if(shM){r.shares=parseInt(shM[1]);r.premium=parseFloat(shM[2]);}
-  }
-  // Fallback scan
-  if(!r.shares){
-    for(const l of lines){
-      const c=/(\d+)\s+contracts?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(l);
-      if(c){r.shares=parseInt(c[1])*100;r.premium=parseFloat(c[2]);break;}
-      const s=/(\d+)\s+shares?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(l);
-      if(s){r.shares=parseInt(s[1]);r.premium=parseFloat(s[2]);break;}
-    }
-  }
-
-  // ── Entry date — find "Filled" line (not "Filled quantity") followed by date ──
-  let entered=null;
-  for(let i=0;i<lines.length;i++){
-    if(/^filled$/i.test(lines[i])){
-      const nxt=lines[i+1]||'';
-      const iso=extractDate(nxt,true);
-      if(iso){entered=iso;break;}
-    }
-  }
-  // Fallback: line 2 date
-  if(!entered){
-    const l2=lines[1]||'';
-    entered=extractDate(l2,true)||new Date().toISOString().slice(0,10);
-  }
-  r.entered=entered;
-
-  // ── Fees ──
-  const regFeeIdx=lines.findIndex(l=>/^est\.?\s*regulatory fees?$/i.test(l));
-  const conFeeIdx=lines.findIndex(l=>/^contract fee$/i.test(l));
-  const commIdx=lines.findIndex(l=>/^commission$/i.test(l));
-  const feeVal=i=>i>=0?parseFloat((lines[i+1]||'').replace(/[^0-9.]/g,''))||0:0;
-  r.fees=feeVal(regFeeIdx)+feeVal(conFeeIdx)+feeVal(commIdx);
-
-  // ── Total from Est credit / Est debit ──
-  const credIdx=lines.findIndex(l=>/^est\.?\s*credit$/i.test(l));
-  const debtIdx=lines.findIndex(l=>/^est\.?\s*debit$/i.test(l));
-  if(credIdx>=0)r.total=parseFloat((lines[credIdx+1]||'').replace(/[^0-9.]/g,''))||0;
-  else if(debtIdx>=0)r.total=parseFloat((lines[debtIdx+1]||'').replace(/[^0-9.]/g,''))||0;
-  else r.total=r.premium&&r.shares?computeTotal(r.action,r.premium,r.shares,r.fees):0;
-
-  // ── Determine action ──
-  if(optType==='call'){
-    if(direction==='sell'&&posEffect==='open')r.action='STOC';
-    else if(direction==='sell'&&posEffect==='close')r.action='STC';
-    else r.action='BTC';
-  }else if(optType==='put'){
-    if(direction==='sell')r.action='CSP';
-    else r.action='BTC';
-  }else{
-    r.action=direction==='buy'?'IN':'OUT';
-    r.expiry=null;r.strike=null;
-  }
-
-  // ── DTE & PPD ──
-  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
-  r.ppd=r.days>0?(r.total/r.days):0;
-
-  return r;
-}
 
 function switchPasteTab(tab){
   const isSmartScan=tab==='smartscan';
@@ -3844,145 +3733,6 @@ function confirmRoll(){
   const pt=db.trades.find(t=>t.id===prevId);
   if(nt){nt.rollId=rid;_saveTrade(nt);}if(pt){pt.rollId=rid;_saveTrade(pt);}
   render();closeModal('mRoll');pendingRollData=null;
-}
-
-// ── Tastytrade parser ──
-// "Sold 4 SOFI 03/20/2026 20 Call @ 0.31"
-function parseTastytradeText(raw){
-  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
-  const r={};
-  // Title: "Sold 4 SOFI 03/20/2026 20 Call @ 0.31" or "Bought 4 SOFI..."
-  const title=lines[0]||'';
-  const dirM=/^(sold|bought|buy|sell)\b/i.exec(title);
-  const direction=(/^(sold|sell)/i.test(dirM?.[1]||''))?'sell':'buy';
-  const tickM=/^(?:sold|bought|buy|sell)\s+\d+\s+([A-Z]+)/i.exec(title);
-  r.ticker=tickM?.[1]?.toUpperCase()||null;
-  // Date MM/DD/YYYY or MM/DD/YY
-  const dateM=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(title);
-  if(dateM){const yr=dateM[3].length===2?'20'+dateM[3]:dateM[3];r.expiry=`${yr}-${dateM[1].padStart(2,'0')}-${dateM[2].padStart(2,'0')}`;}
-  const strikeM=/\b(\d+(?:\.\d+)?)\s+(?:call|put)\b/i.exec(title);
-  r.strike=strikeM?parseFloat(strikeM[1]):null;
-  const optTypeM=/\b(call|put)\b/i.exec(title);
-  const optType=optTypeM?.[1]?.toLowerCase()||null;
-  const premM=/@ ?\$?(\d+(?:\.\d+)?)/.exec(title);
-  r.premium=premM?parseFloat(premM[1]):null;
-  // Quantity
-  const qtyM=/^(?:sold|bought|buy|sell)\s+(\d+)\s+/i.exec(title);
-  const contracts=qtyM?parseInt(qtyM[1]):null;
-  r.shares=contracts?contracts*100:null;
-  // Entry date — look for "Date:" or "Executed:" line
-  const dateLineIdx=lines.findIndex(l=>/^(date|executed|filled|trade date)[:\s]/i.test(l));
-  if(dateLineIdx>=0){const dm=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(lines[dateLineIdx]);if(dm){const yr=dm[3].length===2?'20'+dm[3]:dm[3];r.entered=`${yr}-${dm[1].padStart(2,'0')}-${dm[2].padStart(2,'0')}`;}}
-  if(!r.entered)r.entered=new Date().toISOString().slice(0,10);
-  // Fees
-  const commIdx=lines.findIndex(l=>/^commissions?/i.test(l));
-  const feeIdx=lines.findIndex(l=>/^(?:regulatory\s+)?fees?$/i.test(l));
-  const feeVal=i=>i>=0?parseFloat((lines[i+1]||lines[i].split(/[\s:]+/).pop()||'').replace(/[^0-9.]/g,''))||0:0;
-  r.fees=feeVal(commIdx)+feeVal(feeIdx);
-  // Total
-  const creditIdx=lines.findIndex(l=>/net credit|total credit|received/i.test(l));
-  const debitIdx=lines.findIndex(l=>/net debit|total debit/i.test(l));
-  if(creditIdx>=0){const m=/\$?([\d,.]+)/.exec(lines[creditIdx+1]||lines[creditIdx]);r.total=m?parseFloat(m[1].replace(/,/g,'')):null;}
-  else if(debitIdx>=0){const m=/\$?([\d,.]+)/.exec(lines[debitIdx+1]||lines[debitIdx]);r.total=m?parseFloat(m[1].replace(/,/g,'')):null;}
-  // Action
-  if(optType==='call'){r.action=direction==='sell'?'STOC':'BTC';}
-  else if(optType==='put'){r.action=direction==='sell'?'CSP':'BTC';}
-  else{r.action=direction==='buy'?'IN':'OUT';r.expiry=null;r.strike=null;}
-  if(!r.total&&r.premium&&r.shares)r.total=computeTotal(r.action,r.premium,r.shares,r.fees);
-  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
-  r.ppd=r.days>0?r.total/r.days:0;
-  return r;
-}
-
-// ── IBKR parser ──
-// "Order filled: Sell 4 SOFI Mar2026 20 Call"
-function parseIBKRText(raw){
-  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
-  const r={};
-  const full=lines.join('\n');
-  // Symbol
-  const symM=/Symbol[:\s]+([A-Z]+)/i.exec(full);r.ticker=symM?.[1]?.toUpperCase()||null;
-  // Action
-  const actM=/Action[:\s]+(buy|sell)/i.exec(full);
-  const direction=(/sell/i.test(actM?.[1]||''))?'sell':'buy';
-  // Quantity
-  const qtyM=/Quantity[:\s]+(\d+)/i.exec(full);
-  const qty=qtyM?parseInt(qtyM[1]):null;
-  // Option details "Call Strike 20.00 Exp 20Mar2026" or "20Mar2026 20 Call"
-  const strikeM=/Strike[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.strike=strikeM?parseFloat(strikeM[1]):null;
-  const optTypeM=/\b(call|put)\b/i.exec(full);const optType=optTypeM?.[1]?.toLowerCase()||null;
-  // Expiry formats: "20Mar2026" or "Mar 20, 2026" or "2026-03-20"
-  const expM1=/(\d{1,2})(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(\d{4})/i.exec(full);
-  const expM2=/Exp(?:iry|iration)?[:\s]+(\d{4}-\d{2}-\d{2})/i.exec(full);
-  if(expM1){const mon=MON_MAP[expM1[2].toLowerCase()];r.expiry=`${expM1[3]}-${String(mon).padStart(2,'0')}-${expM1[1].padStart(2,'0')}`;}
-  else if(expM2){r.expiry=expM2[1];}
-  r.shares=qty?(optType?qty*100:qty):null;
-  // Fill price
-  const fillM=/Fill\s*Price[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.premium=fillM?parseFloat(fillM[1]):null;
-  // Commission
-  const commM=/Commission[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.fees=commM?parseFloat(commM[1]):0;
-  // Entry date
-  const tradeDateM=/(?:Trade|Execution)\s*Date[:\s]+(\d{4}-\d{2}-\d{2})/i.exec(full);
-  r.entered=tradeDateM?tradeDateM[1]:new Date().toISOString().slice(0,10);
-  // Action
-  if(optType==='call'){r.action=direction==='sell'?'STOC':'BTC';}
-  else if(optType==='put'){r.action=direction==='sell'?'CSP':'BTC';}
-  else{r.action=direction==='buy'?'IN':'OUT';r.expiry=null;r.strike=null;}
-  r.total=r.premium&&r.shares?computeTotal(r.action,r.premium,r.shares,r.fees):0;
-  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
-  r.ppd=r.days>0?r.total/r.days:0;
-  return r;
-}
-
-// ── Schwab / TD Ameritrade parser ──
-// "Action: Sell to Open" "Security: SOFI Mar 20 2026 $20.00 Call"
-function parseSchwabText(raw){
-  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
-  const r={};
-  const full=lines.join('\n');
-  // Action line
-  const actM=/Action[:\s]+(buy to open|buy to close|sell to open|sell to close|bought|sold|buy|sell)/i.exec(full);
-  const actRaw=(actM?.[1]||'').toLowerCase();
-  const direction=/buy/.test(actRaw)?'buy':'sell';
-  const posEffect=/close/.test(actRaw)?'close':'open';
-  // Security: "SOFI Mar 20 2026 $20.00 Call"
-  const secIdx=lines.findIndex(l=>/^Security[:\s]/i.test(l));
-  const secLine=secIdx>=0?lines[secIdx].replace(/^Security[:\s]+/i,'').trim():(lines[0]||'');
-  const tickM=/^([A-Z]+)\s/i.exec(secLine);r.ticker=tickM?.[1]?.toUpperCase()||null;
-  const strikeM=/\$(\d+(?:\.\d+)?)\s+(?:call|put)/i.exec(secLine);r.strike=strikeM?parseFloat(strikeM[1]):null;
-  const optTypeM=/\b(call|put)\b/i.exec(secLine);const optType=optTypeM?.[1]?.toLowerCase()||null;
-  // Expiry "Mar 20 2026" or "03/20/2026"
-  const expM1=new RegExp(`(${MON_PAT})\\s+(\\d{1,2}),?\\s+(\\d{4})`,'i').exec(secLine);
-  const expM2=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(secLine);
-  if(expM1){const mon=MON_MAP[expM1[1].toLowerCase()];r.expiry=`${expM1[3]}-${String(mon).padStart(2,'0')}-${expM1[2].padStart(2,'0')}`;}
-  else if(expM2){r.expiry=`${expM2[3]}-${expM2[1].padStart(2,'0')}-${expM2[2].padStart(2,'0')}`;}
-  // Quantity
-  const qtyM=/Quantity[:\s]+(\d+)/i.exec(full);const qty=qtyM?parseInt(qtyM[1]):null;
-  r.shares=qty?(optType?qty*100:qty):null;
-  // Price
-  const priceM=/Price[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.premium=priceM?parseFloat(priceM[1]):null;
-  // Fees
-  const feeM=/(?:Commissions?|Fees?)[\/\s&,]*(?:Fees?)?[:\s]+\$?(\d+(?:\.\d+)?)/i.exec(full);r.fees=feeM?parseFloat(feeM[1]):0;
-  // Total
-  const credM=/Estimated?\s+Credit[:\s]+\$?([\d,.]+)/i.exec(full);
-  const debtM=/Estimated?\s+(?:Cost|Debit)[:\s]+\$?([\d,.]+)/i.exec(full);
-  if(credM)r.total=parseFloat(credM[1].replace(/,/g,''));
-  else if(debtM)r.total=parseFloat(debtM[1].replace(/,/g,''));
-  // Entry date
-  const dateM=/(?:Order\s+)?(?:Placed|Filled|Executed|Date)[:\s]+(\d{1,2}\/\d{1,2}\/\d{4})/i.exec(full);
-  if(dateM){const p=dateM[1].split('/');r.entered=`${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;}
-  else r.entered=new Date().toISOString().slice(0,10);
-  // Action
-  if(optType==='call'){r.action=direction==='sell'&&posEffect==='open'?'STOC':direction==='sell'?'STC':'BTC';}
-  else if(optType==='put'){r.action=direction==='sell'?'CSP':'BTC';}
-  else{r.action=direction==='buy'?'IN':'OUT';r.expiry=null;r.strike=null;}
-  if(!r.total&&r.premium&&r.shares)r.total=computeTotal(r.action,r.premium,r.shares,r.fees);
-  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
-  r.ppd=r.days>0?r.total/r.days:0;
-  return r;
 }
 
 // ── SmartScan — broker-agnostic pattern hunter ──
@@ -4292,7 +4042,6 @@ function showRollPreview(trades){
 
 function parsePaste(){
   const raw=document.getElementById('paste-raw').value.trim();
-  const broker=document.getElementById('paste-broker').value;
   const errEl=document.getElementById('paste-error');
   errEl.style.display='none';
   if(!raw){errEl.textContent='Paste some text first.';errEl.style.display='block';return;}
@@ -4302,16 +4051,7 @@ function parsePaste(){
       const rollTrades=parseRollTrades(raw);
       if(rollTrades){parsedTradeData=rollTrades;showRollPreview(rollTrades);return;}
     }
-    let p;
-    try{
-      if(broker==='robinhood')p=parseRobinhoodText(raw);
-      else if(broker==='tastytrade')p=parseTastytradeText(raw);
-      else if(broker==='ibkr')p=parseIBKRText(raw);
-      else if(broker==='schwab')p=parseSchwabText(raw);
-      else p=parseSmartText(raw);
-    }catch(e){p=null;}
-    // If specific parser failed to get ticker/action, fall back to smart scan
-    if(!p||!p.ticker||!p.action)p=parseSmartText(raw);
+    let p=parseSmartText(raw);
     if(!p.ticker){errEl.textContent='Could not find ticker symbol. Make sure you copied the full confirmation.';errEl.style.display='block';return;}
     if(!p.action){errEl.textContent='Could not determine trade type (Buy/Sell, Call/Put, Open/Close).';errEl.style.display='block';return;}
     parsedTradeData=p;
