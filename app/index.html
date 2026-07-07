@@ -2219,24 +2219,19 @@ function runDataHealth(){
         // An option can only be bought/sold to close while it still exists —
         // a leg whose expiry predates the closer is never the right pair.
         const live=o=>!o.expiry||o.expiry>=t.entered;
+        const nk=o=>!(t.rollId&&o.rollId===t.rollId); // a roll closer never consumes its own replacement opener (mirrors walkLegPairs)
         // Tiers: prefer unflagged, then live-at-close, then strike match; degrade gracefully.
-        let i=open.findIndex(o=>!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-        if(i<0)i=open.findIndex(o=>!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
-        if(i<0)i=open.findIndex(o=>!o.expiredWorthless&&Number(o.strike)===ks);
-        if(i<0)i=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-        if(i<0)i=open.findIndex(o=>live(o)&&Number(o.strike)===ks);
-        if(i<0)i=open.findIndex(o=>Number(o.strike)===ks);
-        if(i<0&&(t.strike==null||t.strike===''))i=open.length-1;
         const findLeg=()=>{
-          let j=open.findIndex(o=>!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-          if(j<0)j=open.findIndex(o=>!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
-          if(j<0)j=open.findIndex(o=>!o.expiredWorthless&&Number(o.strike)===ks);
-          if(j<0)j=open.findIndex(o=>t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-          if(j<0)j=open.findIndex(o=>live(o)&&Number(o.strike)===ks);
-          if(j<0)j=open.findIndex(o=>Number(o.strike)===ks);
-          if(j<0&&(t.strike==null||t.strike===''))j=open.length-1;
+          let j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&live(o)&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&Number(o.strike)===ks);
+          if(j<0&&(t.strike==null||t.strike===''))j=open.findLastIndex(o=>nk(o));
           return j;
         };
+        const i=findLeg();
         const closeFlagMsg=o=>issues.push({sev:'red',wheelId:w.id,tradeId:o.id,text:`${tk} ${o.action} $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but a ${t.action} closed it on ${fmtDateFull(t.entered)} — it can't be both`});
         let rem=Number(t.shares)||0;
         if(rem<=0){ // closer with no share count: consume one whole leg
