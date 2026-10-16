@@ -498,6 +498,18 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .b{color:var(--blue)}.y{color:var(--yellow)}.m{color:var(--text3)}.w{color:var(--text)}
 .empty{text-align:center;padding:70px 20px;color:var(--text3)}
 .empty h3{font-size:20px;margin-bottom:9px;color:var(--text2)}
+.imp-drop{border:2px dashed #0d9488;border-radius:9px;padding:16px;text-align:center;color:#99f6e4;background:#0f2e2a;cursor:pointer;margin-bottom:10px;font-size:14px;transition:background .15s}
+.imp-drop.drag{background:#134e48;border-color:#5eead4}
+#import-preview{margin-top:10px;font-size:13px}
+.imp-broker{color:#5eead4;margin-bottom:8px}
+.imp-tbl-wrap{max-height:240px;overflow:auto;border:1px solid var(--border2);border-radius:7px}
+.imp-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.imp-tbl th{position:sticky;top:0;background:#141414;color:var(--text3);text-align:left;padding:5px 6px;font-weight:600}
+.imp-tbl td{padding:4px 6px;border-top:1px solid var(--border2);white-space:nowrap}
+.imp-sub{margin-top:8px;color:#fca5a5}
+.imp-bad{margin:4px 0 0 18px;color:var(--text3);font-size:12px;max-height:120px;overflow:auto}
+.imp-err{background:#3b1a1a;border:1px solid #7f1d1d;color:#fca5a5;padding:8px 10px;border-radius:7px}
+.btn:disabled{opacity:.45;cursor:default}
 .hint{font-size:14px;color:var(--text3);margin-bottom:15px;line-height:1.7}
 </style>
 </head>
@@ -866,9 +878,12 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 <div class="mb" id="mImport">
   <div class="mbox">
     <div class="mtitle"><span>Import CSV</span><span class="mx" onclick="closeModal('mImport')">✕</span></div>
-    <p class="hint">Paste your CoveredWheel CSV export. Trades matched to open rotations by ticker; new rotations created automatically.</p>
-    <textarea id="import-csv" style="width:100%;height:185px;background:#141414;border:1px solid var(--border2);color:var(--text);padding:10px;border-radius:7px;font-size:13px;font-family:monospace;resize:vertical" placeholder="Paste CSV here…"></textarea>
-    <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" onclick="doImport()">Import</button></div>
+    <p class="hint">Drop a trade-log CSV from any broker (Robinhood, Tastytrade, IBKR, Schwab, Fidelity, E*Trade, Webull…) or your CoveredWheel export. Check the preview, then tap Import.</p>
+    <div id="import-drop" class="imp-drop"><div style="font-size:22px">⬇</div><div><b>Drop CSV here</b> or tap to choose a file</div><div id="import-fname" style="color:var(--text3);font-size:12px;margin-top:4px"></div></div>
+    <input type="file" id="import-file" accept=".csv,text/csv,text/plain" style="display:none">
+    <textarea id="import-csv" style="width:100%;height:110px;background:#141414;border:1px solid var(--border2);color:var(--text);padding:10px;border-radius:7px;font-size:13px;font-family:monospace;resize:vertical" placeholder="…or paste CSV here"></textarea>
+    <div id="import-preview"></div>
+    <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" id="import-go" disabled onclick="doImport()">Import</button></div>
   </div>
 </div>
 <!-- MODAL: Settings -->
@@ -3029,7 +3044,7 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.mb').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);});});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mb.open').forEach(el=>closeModal(el.id));});
 
-function openImport(){openModal('mImport');}
+function openImport(){openModal('mImport');initImportDrop();}
 const ACTION_MAP={'csp: cash secured put':'CSP','btc: buy to close':'BTC','stoc: sell to open call':'STOC','stc: sell to close':'STC','in: buy shares':'IN','out: sell shares':'OUT','div: dividend':'DIV','stop: sell to open put':'CSP','acc: assigned covered call':'OUT','acp: assigned cash put':'IN','exp: expired worthless':'EXP','csp':'CSP','btc':'BTC','stoc':'STOC','stc':'STC','in':'IN','out':'OUT','div':'DIV','stop':'CSP','acc':'OUT','acp':'IN','exp':'EXP'};
 const VALID_ACTIONS=new Set(['CSP','BTC','STOC','STC','IN','OUT','DIV','EXP']);
 function parseCSVLine(line){const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur.trim());cur='';}else cur+=ch;}r.push(cur.trim());return r;}
@@ -3065,29 +3080,268 @@ function normDate(s){
   if(/^\d{4}\/\d{2}\/\d{2}$/.test(s)){const[y,mo,d]=s.split('/');return`${y}-${mo}-${d}`;}
   return s;
 }
+// ── Broker-agnostic CSV import (pure; tested from node via tests/brokerimport.test.js) ──
+function brokerCSVLib(){
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  const pad=n=>String(n).padStart(2,'0');
+  const yr=y=>{y=parseInt(y,10);return y<100?2000+y:y;};
+  // Full-text CSV parser: quotes, "" escapes, commas/newlines inside quotes, CRLF, BOM
+  function parseCSVText(text){
+    text=String(text||'').replace(/^\uFEFF/,'');
+    const rows=[];let row=[],cur='',q=false;
+    for(let i=0;i<text.length;i++){
+      const ch=text[i];
+      if(q){
+        if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}
+        else cur+=ch;
+      }else if(ch==='"')q=true;
+      else if(ch===','){row.push(cur.trim());cur='';}
+      else if(ch==='\n'||ch==='\r'){
+        if(ch==='\r'&&text[i+1]==='\n')i++;
+        row.push(cur.trim());rows.push(row);row=[];cur='';
+      }else cur+=ch;
+    }
+    if(cur!==''||row.length){row.push(cur.trim());rows.push(row);}
+    return rows.filter(r=>r.some(c=>c!==''));
+  }
+  // "$1,234.50" "(12.00)" "-3" → number, or NaN
+  function num(s){
+    if(s==null)return NaN;s=String(s).trim();if(!s||s==='--')return NaN;
+    let neg=false;
+    if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1);}
+    s=s.replace(/[$£€,\s]/g,'');
+    if(s.endsWith('-')){neg=!neg;s=s.slice(0,-1);}
+    const n=parseFloat(s);return isNaN(n)?NaN:(neg?-n:n);
+  }
+  // Pull the first date out of "01/10/2025 as of 01/09/2025", "2025-01-10, 10:32", "20250110;103211", ISO times
+  function pickDate(s){
+    s=String(s||'').trim();if(!s)return'';
+    let m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
+    m=/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/.exec(s);if(m)return`${yr(m[3])}-${pad(m[1])}-${pad(m[2])}`;
+    m=/^(\d{4})(\d{2})(\d{2})\b/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
+    const d=normDate(s.split(/[,;T]/)[0]);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
+  }
+  // Option contract from OCC symbols or human descriptions → {ticker,expiry,strike,pc}
+  function parseOption(s){
+    if(!s)return null;s=String(s).trim();let m;
+    const T='([A-Z][A-Z0-9.]{0,9})';
+    // OCC: "AAPL  250117P00150000" / "AAPL250117P00150000" / ".AAPL250117P150" / "-AAPL250117P150"
+    m=new RegExp('^[-.]?'+T+'\\s*(\\d{2})(\\d{2})(\\d{2})([CP])(\\d{8}|\\d+(?:\\.\\d+)?)$').exec(s.toUpperCase());
+    if(m){const k=m[6].length===8&&!m[6].includes('.')?parseInt(m[6],10)/1000:parseFloat(m[6]);return{ticker:m[1],expiry:`${yr(m[2])}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
+    const PC='(PUT|CALL|P|C)';
+    const fin=(t,y,mo,d,k,pc)=>({ticker:t.toUpperCase(),expiry:`${yr(y)}-${pad(mo)}-${pad(d)}`,strike:parseFloat(String(k).replace(/[$,]/g,'')),pc:pc.toUpperCase()[0]});
+    const U=s.toUpperCase();
+    // "AAPL 01/17/2025 150.00 P" / "AAPL 1/17/2025 Put $150.00" / "AAPL 01/17/25 150 P"
+    m=new RegExp('^'+T+'\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\s+(?:'+PC+'\\s+\\$?([\\d.,]+)|\\$?([\\d.,]+)\\s+'+PC+')\\b').exec(U);
+    if(m)return fin(m[1],m[4],m[2],m[3],m[6]||m[7],m[5]||m[8]);
+    // IBKR "AAPL 17JAN25 150 P"
+    m=new RegExp('^'+T+'\\s+(\\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\\d{2,4})\\s+\\$?([\\d.]+)\\s+'+PC+'\\b').exec(U);
+    if(m)return fin(m[1],m[4],MONS[m[3].toLowerCase()],m[2],m[5],m[6]);
+    // E*Trade "AAPL Jan 17 '25 $150 Put"
+    m=new RegExp('^'+T+"\\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\\w*\\s+(\\d{1,2}),?\\s+'?(\\d{2,4})\\s+\\$?([\\d.]+)\\s+"+PC+'\\b').exec(U);
+    if(m)return fin(m[1],m[4],MONS[m[2].toLowerCase()],m[3],m[5],m[6]);
+    // Fidelity "... PUT (AAPL) APPLE INC JAN 17 25 $150 (100 SHS)"
+    m=/\b(PUT|CALL)\s+\(([A-Z][A-Z0-9.]{0,9})\).*?\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{1,2})\s+(\d{2,4})\s+\$([\d.,]+)/.exec(U);
+    if(m)return fin(m[2],m[5],MONS[m[3].toLowerCase()],m[4],m[6],m[1]);
+    return null;
+  }
+  const norm=h=>String(h||'').toLowerCase().replace(/\(\$\)/g,'').replace(/\s+/g,' ').trim();
+  const SYN={
+    date:['activity date','trade date','run date','transactiondate','transaction date','date/time','tradedate','filled time','date','time','trade time'],
+    symbol:['symbol','instrument','ticker','security','contract','financial instrument'],
+    underlying:['underlying symbol','underlying','root symbol','root'],
+    desc:['description','name','security description'],
+    action:['trans code','action','transaction type','transactiontype','activity','sub type','type','side','buy/sell','open/close','code','activity type'],
+    qty:['quantity','qty','filled','contracts','shares'],
+    price:['price','average price','avg price','t. price','trade price','tradeprice','execution price'],
+    fees:['fees','commission','commissions','comm/fee','fees & comm','ibcommission','reg fee','fee'],
+    amount:['amount','net amount','proceeds','value','net cash','netcash','total'],
+    expiry:['expiration date','expiration','expiry','exp date','expiry date'],
+    strike:['strike price','strike'],
+    pc:['call or put','put/call','put call','option type','right','call/put'],
+    status:['status']
+  };
+  const MULTI=new Set(['action','fees']);
+  function mapCols(hdr){
+    const h=hdr.map(norm),C={};
+    for(const k in SYN){
+      const idx=[];
+      SYN[k].forEach(s=>{h.forEach((x,i)=>{if(x===s&&!idx.includes(i))idx.push(i);});});
+      C[k]=MULTI.has(k)?idx:(idx.length?idx[0]:-1);
+    }
+    // prefer filled over total qty, avg price over limit price
+    return C;
+  }
+  function detectBroker(hdr,firstCell){
+    const h=hdr.map(norm),has=s=>h.includes(s);
+    if(has('ticker')&&has('action')&&has('entered'))return'CoveredWheel';
+    if(firstCell==='trades'||has('t. price')||has('comm/fee')||has('ibcommission'))return'Interactive Brokers';
+    if(has('trans code')&&has('instrument'))return'Robinhood';
+    if(has('underlying symbol')||(has('sub type')&&has('instrument type')))return'Tastytrade';
+    if(has('fees & comm'))return'Schwab';
+    if(has('run date'))return'Fidelity';
+    if(has('transactiondate')||has('transactiontype'))return'E*Trade';
+    if(has('filled time')||(has('side')&&has('placed time')))return'Webull';
+    return'Generic';
+  }
+  function findHeader(rows){
+    let best=-1,bestScore=0;
+    const all=new Set([].concat(...Object.values(SYN)).concat(['ticker','entered']));
+    for(let i=0;i<Math.min(rows.length,40);i++){
+      const r=rows[i];const cells=(r[0]==='Trades'&&r[1]==='Header')?r.slice(2):r;
+      const score=cells.filter(c=>all.has(norm(c))).length;
+      if(score>bestScore&&cells.length>=3){best=i;bestScore=score;}
+    }
+    return bestScore>=3?best:-1;
+  }
+  // Decide WheelHouse action from broker wording; returns action code, 'SKIP:<why>', or ''
+  function classify(text,opt,qty,broker){
+    let t=' '+String(text||'').toLowerCase().replace(/[_]/g,' ').replace(/\s+/g,' ')+' ';
+    const pc=opt?opt.pc:'';
+    const w=re=>re.test(t);
+    if(!opt){
+      if(w(/dividend|\bcdiv\b|\bdiv\b/))return'SKIP:dividend';
+      if(w(/transfer|deposit|withdraw|\bach\b|journal|interest|wire|\bfee\b|sweep|\bacati?s?\b/))return'SKIP:cash/transfer';
+      return'SKIP:not an option trade';
+    }
+    if(w(/\boexp\b|expir|\bep\b/))return'EXP';
+    if(w(/\boasgn\b|assign|exercis/)||(broker==='Interactive Brokers'&&w(/\ba\b/)))return pc==='P'?'IN':'OUT';
+    // shorthand codes
+    t=t.replace(/\bsto\b/g,' sell to open ').replace(/\bbtc\b/g,' buy to close ').replace(/\bbto\b/g,' buy to open ').replace(/\bstc\b/g,' sell to close ');
+    const sell=w(/\bsell|\bsold\b|\bshort\b/),buy=w(/\bbuy|\bbought\b/);
+    let open=w(/\bopen(ing)?\b/),close=w(/\bclos(e|ing)\b/);
+    if(broker==='Interactive Brokers'&&!open&&!close){if(w(/\bo\b/))open=true;if(w(/\bc\b/))close=true;}
+    let isSell=sell&&!buy,isBuy=buy&&!sell;
+    if(!isSell&&!isBuy&&!isNaN(qty)&&qty!==0){isSell=qty<0;isBuy=qty>0;}
+    if(!open&&!close&&broker==='Webull'){open=isSell;close=isBuy;}
+    if(isSell&&open)return pc==='P'?'CSP':'STOC';
+    if(isBuy&&close)return'BTC';
+    if(isSell&&close)return'STC';
+    if(isBuy&&open)return'SKIP:buy to open (not a wheel leg)';
+    return'';
+  }
+  function parseNative(text){
+    const rows=[],bad=[];
+    const lines=text.split('\n');
+    const hdr=lines[0].split(',').map(h=>h.replace(/['"]/g,'').trim().toLowerCase().replace(/:$/,''));
+    const col=n=>hdr.indexOf(n);
+    const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),verified:col('verified'),comment:col('comment')};
+    for(let i=1;i<lines.length;i++){
+      const line=lines[i].trim();if(!line)continue;
+      const v=parseCSVLine(line);
+      const get=(c,def='')=>c>-1&&c<v.length?v[c].replace(/^"|"$/g,'').trim():def;
+      const ticker=get(C.ticker).toUpperCase();if(!ticker){bad.push({line:i+1,raw:line,reason:'no ticker'});continue;}
+      const rawAction=get(C.action).toLowerCase();
+      const action=ACTION_MAP[rawAction]||rawAction.toUpperCase();
+      if(!VALID_ACTIONS.has(action)){bad.push({line:i+1,raw:line,reason:'unknown action'});continue;}
+      const entered=normDate(get(C.entered));if(!entered){bad.push({line:i+1,raw:line,reason:'no date'});continue;}
+      const strike=parseFloat(get(C.strike))||null,shares=parseFloat(get(C.shares))||0;
+      const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
+      const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
+      rows.push({ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days:parseFloat(get(C.days))||0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)});
+    }
+    return{broker:'CoveredWheel',rows,unrecognised:bad,skipped:[]};
+  }
+  function parseBrokerCSV(text){
+    text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
+    if(!text)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Empty file'};
+    let rows=parseCSVText(text);
+    const hi=findHeader(rows);
+    if(hi<0)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Could not find a header row (expected columns like Date, Symbol, Action, Quantity, Price).'};
+    const ib=rows[hi][0]==='Trades'&&rows[hi][1]==='Header';
+    let hdr=ib?rows[hi].slice(2):rows[hi];
+    const broker=detectBroker(hdr,ib?'trades':'');
+    if(broker==='CoveredWheel'&&hi===0)return parseNative(text);
+    const C=mapCols(hdr);
+    const out=[],bad=[],skip=[];
+    for(let i=hi+1;i<rows.length;i++){
+      let v=rows[i];
+      if(ib){if(v[0]!=='Trades')continue;if(v[1]!=='Data')continue;v=v.slice(2);}
+      const raw=rows[i].join(',');
+      if(v.length<3){continue;}
+      // repeated header rows / totals / disclaimers
+      if(norm(v[0])===norm(hdr[0])){continue;}
+      const g=c=>c>-1&&c<v.length?v[c]:'';
+      const gs=cs=>cs.map(c=>g(c)).filter(Boolean).join(' ');
+      if(C.status>-1&&g(C.status)&&!/fill/i.test(g(C.status))){skip.push({line:i+1,raw,reason:'order not filled'});continue;}
+      const desc=g(C.desc),sym=g(C.symbol);
+      let opt=parseOption(sym)||parseOption(desc)||parseOption(gs(C.action));
+      // explicit option columns (Tastytrade, generic)
+      if(!opt&&C.strike>-1&&num(g(C.strike))>0&&C.expiry>-1&&g(C.expiry)){
+        const pcs=(g(C.pc)||'').toUpperCase()[0];
+        const tk=(g(C.underlying)||sym.split(/\s/)[0]||'').toUpperCase();
+        if((pcs==='P'||pcs==='C')&&tk)opt={ticker:tk,expiry:pickDate(g(C.expiry)),strike:num(g(C.strike)),pc:pcs};
+      }
+      const entered=pickDate(g(C.date));
+      const qtyRaw=num(g(C.qty));
+      const actText=gs(C.action)+(broker==='Fidelity'||!gs(C.action)?' '+desc:'');
+      const act=classify(actText,opt,qtyRaw,broker);
+      if(act.startsWith('SKIP:')){skip.push({line:i+1,raw,reason:act.slice(5)});continue;}
+      if(!act){bad.push({line:i+1,raw,reason:'could not tell the trade type'});continue;}
+      if(!entered){bad.push({line:i+1,raw,reason:'no trade date'});continue;}
+      const contracts=Math.abs(qtyRaw)||1;
+      const shares=Math.round(contracts*100);
+      let fees=0;C.fees.forEach(c=>{const f=num(g(c));if(!isNaN(f))fees+=Math.abs(f);});
+      fees=Math.round(fees*100)/100;
+      const amt=Math.abs(num(g(C.amount)));
+      let premium,total;
+      if(act==='IN'||act==='OUT'){premium=opt.strike;fees=0;total=computeTotal(act,premium,shares,0);}
+      else if(act==='EXP'){premium=0;fees=0;total=0;}
+      else{
+        premium=Math.abs(num(g(C.price)));
+        if(isNaN(premium)||premium===0)premium=!isNaN(amt)&&amt>0?Math.round((amt+(act==='BTC'?-fees:fees))/shares*10000)/10000:0;
+        else if(!isNaN(amt)&&amt>0&&premium*shares>20*amt)premium=premium/100; // per-contract price
+        total=!isNaN(amt)&&amt>0?amt:computeTotal(act,premium,shares,fees);
+      }
+      total=Math.round(total*100)/100;
+      const days=opt.expiry&&entered?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
+      out.push({ticker:opt.ticker,action:act,entered,expiry:opt.expiry||null,strike:opt.strike||null,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${broker}`});
+    }
+    return{broker,rows:out,unrecognised:bad,skipped:skip};
+  }
+  return{parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV};
+}
+const BCSV=brokerCSVLib();
+let _importParsed=null;
+function importPreview(){
+  const txt=document.getElementById('import-csv').value;
+  const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
+  if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
+  const p=BCSV.parseBrokerCSV(txt);_importParsed=p;
+  if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
+  const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
+  const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
+  const badH=p.unrecognised.length?`<div class="imp-sub">Couldn't understand ${p.unrecognised.length} row${p.unrecognised.length>1?'s':''} (not imported):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'';
+  const skipH=p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">Skipped ${p.skipped.length} non-wheel row${p.skipped.length>1?'s':''} (share trades, dividends, transfers…)</div>`:'';
+  box.innerHTML=`<div class="imp-broker">Detected: <b>${esc(p.broker)}</b> · ${p.rows.length} trade${p.rows.length===1?'':'s'} found</div>`+
+    (p.rows.length?`<div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+badH+skipH;
+  btn.disabled=!p.rows.length;btn.textContent=p.rows.length?`Import ${p.rows.length}`:'Import';
+}
+function importLoadFile(file){
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=()=>{document.getElementById('import-csv').value=r.result;document.getElementById('import-fname').textContent=file.name;importPreview();};
+  r.readAsText(file);
+}
+function initImportDrop(){
+  const z=document.getElementById('import-drop'),fi=document.getElementById('import-file'),ta=document.getElementById('import-csv');
+  if(!z||z._wired)return;z._wired=true;
+  z.addEventListener('click',()=>fi.click());
+  fi.addEventListener('change',()=>{importLoadFile(fi.files[0]);fi.value='';});
+  ['dragenter','dragover'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.remove('drag');}));
+  z.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];importLoadFile(f);});
+  let t;ta.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(importPreview,250);});
+}
 function doImport(){
-  const csv=document.getElementById('import-csv').value.trim();if(!csv)return;
-  const lines=csv.split('\n');if(lines.length<2){alert('No data rows found');return;}
-  const hdr=lines[0].split(',').map(h=>h.replace(/['"]/g,'').trim().toLowerCase().replace(/:$/,''));
-  const col=n=>hdr.indexOf(n);
-  const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),ppd:col('ppd'),verified:col('verified'),comment:col('comment')};
-  let imported=0,skipped=0,dupes=0;
+  if(!_importParsed)importPreview();
+  const p=_importParsed;if(!p||!p.rows.length)return;
+  let imported=0,dupes=0;
   const newWheelTickers=new Set();
-  const newWheels=[],newTrades=[]; // track what this import actually creates
-  // Build duplicate fingerprint set from existing trades
+  const newWheels=[],newTrades=[];
   const existingFingerprints=new Set(db.trades.map(t=>`${t.ticker}|${t.action}|${t.entered}|${t.strike||''}|${t.shares||''}`));
-  for(let i=1;i<lines.length;i++){
-    const line=lines[i].trim();if(!line)continue;
-    const v=parseCSVLine(line);
-    const get=(c,def='')=>c>-1&&c<v.length?v[c].replace(/^"|"$/g,'').trim():def;
-    const ticker=get(C.ticker).toUpperCase();if(!ticker){skipped++;continue;}
-    const rawAction=get(C.action).toLowerCase();
-    const action=ACTION_MAP[rawAction]||rawAction.toUpperCase();
-    if(!VALID_ACTIONS.has(action)){skipped++;continue;}
-    const entered=normDate(get(C.entered));if(!entered){skipped++;continue;}
-    const strike=parseFloat(get(C.strike))||null;
-    const shares=parseFloat(get(C.shares))||0;
-    // Duplicate check
+  for(const r of p.rows){
+    const{ticker,action,entered,strike,shares}=r;
     const fp=`${ticker}|${action}|${entered}|${strike||''}|${shares||''}`;
     if(existingFingerprints.has(fp)){dupes++;continue;}
     existingFingerprints.add(fp);
@@ -3099,18 +3353,15 @@ function doImport(){
       const label=`Rotation ${existing+1} — ${mon} ${now.getFullYear()}`;
       const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
       wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};
-      db.wheels.push(wheel);
-      newWheels.push(wheel);
-      newWheelTickers.add(ticker);
+      db.wheels.push(wheel);newWheels.push(wheel);newWheelTickers.add(ticker);
     }
-    const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
-    const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
-    const days=parseFloat(get(C.days))||0;
-    const nt={id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days,ppd:days>0?total/days:0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)};
-    db.trades.push(nt);newTrades.push(nt);
-    imported++;
+    const days=r.days||0;
+    const nt={id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:r.expiry||null,strike,premium:r.premium||0,fees:r.fees||0,shares,total:r.total||0,days,ppd:days>0?(r.total||0)/days:0,verified:!!r.verified,comment:r.comment||''};
+    db.trades.push(nt);newTrades.push(nt);imported++;
   }
-  newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');document.getElementById('import-csv').value='';render();
+  newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');
+  document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();render();
+
   // Fetch logos and prices for any new rotations
   newWheelTickers.forEach(ticker=>{
     fetchSymbol(ticker).then(()=>{
