@@ -58,7 +58,7 @@ const tt = L.parseBrokerCSV(`Date,Type,Sub Type,Action,Symbol,Instrument Type,De
 2025-01-25T00:00:00-0500,Money Movement,Balance Adjustment,,,,Regulatory fee adjustment,-0.01,0,,,0.00,,,,,,,,USD`);
 check('tastytrade: detected', tt.broker === 'Tastytrade', tt.broker);
 check('tastytrade: actions', acts(tt) === 'CSP,STOC,EXP,OUT', acts(tt));
-check('tastytrade: per-contract avg price scaled', tt.rows[0].premium === 0.3 && tt.rows[0].fees === 1.14 && tt.rows[0].total === 30, tt.rows[0]);
+check('tastytrade: per-contract avg price scaled', tt.rows[0].premium === 0.3 && tt.rows[0].fees === 1.14 && tt.rows[0].total === 28.86, tt.rows[0]);
 check('tastytrade: called away OUT', tt.rows[3].ticker === 'TSLA' && tt.rows[3].total === 45000);
 check('tastytrade: equity + money movement skipped', tt.skipped.length === 2, tt.skipped);
 
@@ -144,5 +144,48 @@ check('generic: explicit option columns', acts(gen) === 'CSP' && gen.rows[0].tic
 check('generic: BTO skipped, unknown listed', gen.skipped.length === 1 && gen.unrecognised.length === 1);
 check('no header → error', !!L.parseBrokerCSV('hello\nworld').error);
 
+// ── full-field checks + messy CSV layouts ──
+const F = ['entered','ticker','action','strike','expiry','shares','premium','fees','total'];
+let fOk = 0, fAll = 0;
+function full(name, res, rows) {
+  check(`${name}: ${rows.length} trade(s)`, res.rows.length === rows.length, res.rows.map(r => F.map(f => r[f])));
+  rows.forEach((e, i) => { const g = res.rows[i] || {};
+    const bad = F.filter((f, k) => { fAll++; const ok = typeof e[k] === 'number' ? Math.abs((g[f] ?? NaN) - e[k]) < 0.006 : g[f] === e[k]; ok && fOk++; return !ok; });
+    check(`${name} #${i+1} all fields`, !bad.length, bad.map(f => `${f}: ${g[f]} ≠ ${e[F.indexOf(f)]}`)); });
+}
+full('robinhood full', rh, [
+  ['2025-01-10','AAPL','CSP',150,'2025-01-17',100,1.25,0,124.95],
+  ['2025-01-15','AAPL','BTC',150,'2025-01-17',100,0.20,0,20.05],
+  ['2025-01-17','SOFI','EXP',14,'2025-01-17',200,0,0,0],
+  ['2025-01-17','F','IN',10,'2025-01-17',100,10,0,1000]]);
+full('schwab full', sc, [
+  ['2025-01-10','AMD','CSP',110,'2025-01-17',100,2.10,0.66,209.34],
+  ['2025-01-17','AMD','IN',110,'2025-01-17',100,110,0,11000],
+  ['2025-01-21','AMD','STOC',115,'2025-01-31',100,1.50,0.66,149.34]]);
+full('ibkr full', ib, [
+  ['2025-01-10','AAPL','CSP',150,'2025-01-17',100,1.25,1.05,123.95],
+  ['2025-01-15','AAPL','BTC',150,'2025-01-17',100,0.20,1.05,21.05],
+  ['2025-01-10','MSFT','STOC',400,'2025-01-17',200,4.50,2.10,897.90],
+  ['2025-01-17','MSFT','EXP',400,'2025-01-17',200,0,0,0]]);
+full('etrade full', et, [
+  ['2025-01-10','NVDA','CSP',130,'2025-01-17',100,2.15,0.67,214.33],
+  ['2025-01-17','NVDA','EXP',130,'2025-01-17',100,0,0,0],
+  ['2025-01-20','NVDA','BTC',140,'2025-01-31',100,0.50,0.67,50.67]]);
+// repeated header rows mid-file, totals row, paren negatives, wrapped quoted description, day-first dates
+full('messy generic CSV', L.parseBrokerCSV(`Account Export,,,,,,
+Generated 31/03/2025,,,,,,
+Date,Action,Symbol,Description,Quantity,Price,Fees,Amount
+05/03/2025,Sell to Open,KO 03/21/2025 62.00 P,"PUT COCA-COLA
+$62 EXP 21/03/25",1,0.80,0.65,79.35
+Date,Action,Symbol,Description,Quantity,Price,Fees,Amount
+14/03/2025,Buy to Close,KO 03/21/2025 62.00 P,PUT COCA-COLA,1,0.10,0.65,(10.65)
+,,,,,,Total,68.70`), [
+  ['2025-03-05','KO','CSP',62,'2025-03-21',100,0.80,0.65,79.35],
+  ['2025-03-14','KO','BTC',62,'2025-03-21',100,0.10,0.65,10.65]]);
+const t212c = L.parseBrokerCSV(`Action,Time,ISIN,Ticker,Name,No. of shares,Price / share,Currency (Price / share),Exchange rate,Total,Currency (Total)
+Market buy,2025-01-14 10:00:01,US0378331005,AAPL,Apple,1.5,180.20,USD,1.25,216.24,GBP
+Dividend (Dividend),2025-02-14 10:00:01,US0378331005,AAPL,Apple,1.5,0.25,USD,1.25,0.30,GBP`);
+check('trading 212 CSV: detected, no trades invented', t212c.broker === 'Trading 212' && t212c.rows.length === 0 && t212c.skipped.length === 2, t212c);
+console.log(`CSV field accuracy: ${fOk}/${fAll} (${(100*fOk/fAll).toFixed(1)}%)`);
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

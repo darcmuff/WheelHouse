@@ -1,4 +1,4 @@
-const CACHE = 'wheelhouse-v3';
+const CACHE = 'wheelhouse-v4';
 const STATIC = [
   '/WheelHouse/',
   '/WheelHouse/index.html',

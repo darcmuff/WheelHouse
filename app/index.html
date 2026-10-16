@@ -878,9 +878,9 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 <div class="mb" id="mImport">
   <div class="mbox">
     <div class="mtitle"><span>Import CSV</span><span class="mx" onclick="closeModal('mImport')">✕</span></div>
-    <p class="hint">Drop a trade-log CSV from any broker (Robinhood, Tastytrade, IBKR, Schwab, Fidelity, E*Trade, Webull…) or your CoveredWheel export. Check the preview, then tap Import.</p>
-    <div id="import-drop" class="imp-drop"><div style="font-size:22px">⬇</div><div><b>Drop CSV here</b> or tap to choose a file</div><div id="import-fname" style="color:var(--text3);font-size:12px;margin-top:4px"></div></div>
-    <input type="file" id="import-file" accept=".csv,text/csv,text/plain" style="display:none">
+    <p class="hint">Drop a trade-log CSV or PDF statement from any broker (Robinhood, Tastytrade, IBKR, Schwab, Fidelity, E*Trade, Webull…) or your CoveredWheel export. Check the preview, then tap Import.</p>
+    <div id="import-drop" class="imp-drop"><div style="font-size:22px">⬇</div><div><b>Drop CSV or PDF here</b> or tap to choose a file</div><div id="import-fname" style="color:var(--text3);font-size:12px;margin-top:4px"></div></div>
+    <input type="file" id="import-file" accept=".csv,.pdf,text/csv,text/plain,application/pdf" style="display:none">
     <textarea id="import-csv" style="width:100%;height:110px;background:#141414;border:1px solid var(--border2);color:var(--text);padding:10px;border-radius:7px;font-size:13px;font-family:monospace;resize:vertical" placeholder="…or paste CSV here"></textarea>
     <div id="import-preview"></div>
     <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" id="import-go" disabled onclick="doImport()">Import</button></div>
@@ -3084,6 +3084,9 @@ function normDate(s){
 function brokerCSVLib(){
   const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
   const pad=n=>String(n).padStart(2,'0');
+  let _dmy=false;
+  // whole-document day-first detection: any a/b/yyyy with a>12, or UK/EU broker
+  const sniffDMY=t=>{let dm=false,md=false;for(const m of String(t).matchAll(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/g)){if(+m[1]>12)dm=true;if(+m[2]>12)md=true;}return dm&&!md?true:md?false:/trading ?212|etoro|\bgbp\b|£/i.test(t);};
   const yr=y=>{y=parseInt(y,10);return y<100?2000+y:y;};
   // Full-text CSV parser: quotes, "" escapes, commas/newlines inside quotes, CRLF, BOM
   function parseCSVText(text){
@@ -3117,7 +3120,7 @@ function brokerCSVLib(){
   function pickDate(s){
     s=String(s||'').trim();if(!s)return'';
     let m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
-    m=/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/.exec(s);if(m)return`${yr(m[3])}-${pad(m[1])}-${pad(m[2])}`;
+    m=/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/.exec(s);if(m){let a=+m[1],b=+m[2];if(a>12||(_dmy&&b<=12)){const t=a;a=b;b=t;}return`${yr(m[3])}-${pad(a)}-${pad(b)}`;}
     m=/^(\d{4})(\d{2})(\d{2})\b/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
     const d=normDate(s.split(/[,;T]/)[0]);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
   }
@@ -3134,6 +3137,9 @@ function brokerCSVLib(){
     // "AAPL 01/17/2025 150.00 P" / "AAPL 1/17/2025 Put $150.00" / "AAPL 01/17/25 150 P"
     m=new RegExp('^'+T+'\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\s+(?:'+PC+'\\s+\\$?([\\d.,]+)|\\$?([\\d.,]+)\\s+'+PC+')\\b').exec(U);
     if(m)return fin(m[1],m[4],m[2],m[3],m[6]||m[7],m[5]||m[8]);
+    // "AAPL $150 Put 1/17/2025"
+    m=new RegExp('^'+T+'\\s+\\$([\\d.,]+)\\s+(PUT|CALL)\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\b').exec(U);
+    if(m)return fin(m[1],m[6],m[4],m[5],m[2],m[3]);
     // IBKR "AAPL 17JAN25 150 P"
     m=new RegExp('^'+T+'\\s+(\\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\\d{2,4})\\s+\\$?([\\d.]+)\\s+'+PC+'\\b').exec(U);
     if(m)return fin(m[1],m[4],MONS[m[3].toLowerCase()],m[2],m[5],m[6]);
@@ -3182,6 +3188,8 @@ function brokerCSVLib(){
     if(has('run date'))return'Fidelity';
     if(has('transactiondate')||has('transactiontype'))return'E*Trade';
     if(has('filled time')||(has('side')&&has('placed time')))return'Webull';
+    if(has('price / share')||has('no. of shares'))return'Trading 212';
+    if(has('position id')||(has('units')&&has('details')))return'eToro';
     return'Generic';
   }
   function findHeader(rows){
@@ -3213,7 +3221,7 @@ function brokerCSVLib(){
     if(broker==='Interactive Brokers'&&!open&&!close){if(w(/\bo\b/))open=true;if(w(/\bc\b/))close=true;}
     let isSell=sell&&!buy,isBuy=buy&&!sell;
     if(!isSell&&!isBuy&&!isNaN(qty)&&qty!==0){isSell=qty<0;isBuy=qty>0;}
-    if(!open&&!close&&broker==='Webull'){open=isSell;close=isBuy;}
+    if(!open&&!close&&(broker==='Webull'||broker==='Statement')){open=isSell;close=isBuy;}
     if(isSell&&open)return pc==='P'?'CSP':'STOC';
     if(isBuy&&close)return'BTC';
     if(isSell&&close)return'STC';
@@ -3245,6 +3253,7 @@ function brokerCSVLib(){
   function parseBrokerCSV(text){
     text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
     if(!text)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Empty file'};
+    _dmy=sniffDMY(text);
     let rows=parseCSVText(text);
     const hi=findHeader(rows);
     if(hi<0)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Could not find a header row (expected columns like Date, Symbol, Action, Quantity, Price).'};
@@ -3253,6 +3262,7 @@ function brokerCSVLib(){
     const broker=detectBroker(hdr,ib?'trades':'');
     if(broker==='CoveredWheel'&&hi===0)return parseNative(text);
     const C=mapCols(hdr);
+    if(C.date>-1)_dmy=sniffDMY(rows.slice(hi+1).map(r=>(ib?r.slice(2):r)[C.date]||'').join('\n')+(/trading ?212|etoro/i.test(broker)?' etoro':''));
     const out=[],bad=[],skip=[];
     for(let i=hi+1;i<rows.length;i++){
       let v=rows[i];
@@ -3292,6 +3302,7 @@ function brokerCSVLib(){
         if(isNaN(premium)||premium===0)premium=!isNaN(amt)&&amt>0?Math.round((amt+(act==='BTC'?-fees:fees))/shares*10000)/10000:0;
         else if(!isNaN(amt)&&amt>0&&premium*shares>20*amt)premium=premium/100; // per-contract price
         total=!isNaN(amt)&&amt>0?amt:computeTotal(act,premium,shares,fees);
+        if(!isNaN(amt)&&amt>0&&fees>0&&Math.abs(premium*shares-amt)<0.006)total=isCredit(act)?amt-fees:amt+fees; // gross proceeds + separate commission
       }
       total=Math.round(total*100)/100;
       const days=opt.expiry&&entered?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
@@ -3299,15 +3310,138 @@ function brokerCSVLib(){
     }
     return{broker,rows:out,unrecognised:bad,skipped:skip};
   }
-  return{parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV};
+  // ── PDF statements: text → trades ──
+  // pdf.js text items ({str, transform:[..,x,y], page}) → lines, grouping by y so table rows stay intact
+  function pdfItemsToLines(items){
+    const groups=[];
+    items.forEach(it=>{
+      if(!it||!String(it.str||'').trim())return;
+      const pg=it.page||1,x=it.transform[4],y=it.transform[5];
+      let g=groups.find(g=>g.pg===pg&&Math.abs(g.y-y)<=2.5);
+      if(!g){g={pg,y,items:[]};groups.push(g);}
+      g.items.push({x,s:String(it.str).trim()});
+    });
+    groups.sort((a,b)=>a.pg-b.pg||b.y-a.y);
+    return groups.map(g=>g.items.sort((a,b)=>a.x-b.x).map(i=>i.s).join('  ')).join('\n');
+  }
+  // find an option contract anywhere in a line → {opt,start,end}
+  function findOption(line){
+    const re=/[A-Z][A-Z0-9.]{0,9}\s*\d{6}[CP]\d{3,8}(?:\.\d+)?|(?:PUT|CALL)\s+\([A-Z][A-Z0-9.]{0,9}\)[^$]*\$[\d.,]+/gi;
+    let m;
+    while((m=re.exec(line))){const o=parseOption(m[0].replace(/^[-.]/,''));if(o)return{opt:o,start:m.index,end:m.index+m[0].length};}
+    const words=[...line.matchAll(/\S+/g)];
+    for(let i=0;i<words.length;i++){
+      if(!/^[A-Z][A-Z0-9.]{0,9}$/.test(words[i][0]))continue;
+      for(let n=3;n<=Math.min(7,words.length-i);n++){
+        const st=words[i].index,last=words[i+n-1],en=last.index+last[0].length;
+        const o=parseOption(line.slice(st,en));
+        if(o)return{opt:o,start:st,end:en};
+      }
+    }
+    return null;
+  }
+  function stmtDate(s){
+    let d;
+    const m=/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i.exec(s);
+    if(m)return`${m[3]}-${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`;
+    const m2=/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})\b/i.exec(s);
+    if(m2)return`${m2[3]}-${pad(MONS[m2[2].slice(0,3).toLowerCase()])}-${pad(m2[1])}`;
+    if(/(\d{4})-(\d{2})-(\d{2})|\b\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}\b|^\d{8}\b/.test(s))return pickDate(s);
+    return'';
+  }
+  function detectSource(text){
+    const t=text.toLowerCase();
+    const B=[['Robinhood','robinhood'],['Tastytrade','tastytrade'],['Tastytrade','tastyworks'],['Interactive Brokers','interactive brokers'],['Schwab','schwab'],['Fidelity','fidelity'],['E*Trade','e*trade'],['E*Trade','etrade'],['Webull','webull'],['Trading 212','trading 212'],['Trading 212','trading212'],['eToro','etoro']];
+    for(const[n,k]of B)if(t.includes(k))return n;
+    return'PDF statement';
+  }
+  function parseStatementText(text){
+    text=String(text||'').replace(/\r\n?/g,'\n');
+    const src=detectSource(text);
+    if(text.replace(/\s/g,'').length<20)return{broker:src,rows:[],unrecognised:[],skipped:[],error:"This PDF has no readable text — it looks like a scanned image. WheelHouse can't read scanned PDFs; download a text statement or CSV from your broker instead."};
+    // day-first sniff ignores dates inside option descriptions
+    _dmy=sniffDMY(text.split('\n').map(l=>{const f=findOption(l);return f?l.slice(0,f.start)+' '+l.slice(f.end):l;}).join('\n'));
+    const lines=text.split('\n').map(l=>l.trim());
+    const rows=[],bad=[],skip=[];let lastDate='',optLines=0;
+    const SUMMARY=/^(?:total|totals|subtotal|sub-total|net|realized|unrealized|year to date|ytd|summary|balance|opening|closing|beginning|ending|page\b)/i;
+    for(let i=0;i<lines.length;i++){
+      const L=lines[i];if(!L)continue;
+      const f=findOption(L);
+      if(!f){if(L.length<=14){const d=stmtDate(L);if(d)lastDate=d;}continue;}
+      optLines++;
+      if(SUMMARY.test(L)||/\b(?:realized|unrealized|gain|loss|p\/l|position|market value)\b/i.test(L.slice(0,f.start))){skip.push({line:i+1,raw:L,reason:'summary line, not a trade'});continue;}
+      let rest=(L.slice(0,f.start)+' '+L.slice(f.end)).replace(/\(\s*\d+\s*SHS\s*\)/gi,' ');
+      // "Trade date 01/10/2025" on the next line beats a yearless settlement date
+      const nxt=(lines[i+1]||'')+' '+(lines[i+2]&&!findOption(lines[i+1]||'')?lines[i+2]:'');
+      const td=/trade\s*date[:\s]+([^\s].{0,20})/i.exec(nxt);
+      const dSrc=rest.replace(/\$[\d.,]+/g,' ');
+      let entered=td?stmtDate(td[1]):'';
+      if(!entered){entered=stmtDate(dSrc);if(entered)lastDate=entered;else entered=lastDate;}
+      const numTxt=rest.replace(/\b(\d+)S\b/g,'$1').replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{1,2}\.\d{1,2}\.\d{2,4}\b|\d{4}-\d{2}-\d{2}(?:,?\s+\d{1,2}:\d{2}(?::\d{2})?)?|\b\d{1,2}:\d{2}(?::\d{2})?\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/gi,' ');
+      const nums=[...numTxt.matchAll(/(?:^|\s)(\(?-?[$£€]?\d[\d,]*(?:\.\d+)?\)?-?)(?=\s|$)/g)].map(m=>num(m[1])).filter(n=>!isNaN(n));
+      const qi=nums.findIndex(n=>Number.isInteger(Math.abs(n))&&n!==0&&Math.abs(n)<1000);
+      const act=classify(rest,f.opt,qi>-1?nums[qi]:NaN,'Statement');
+      if(act==='SKIP:buy to open (not a wheel leg)')continue;
+      if(!act||act.startsWith('SKIP:')){bad.push({line:i+1,raw:L,reason:'could not tell the trade type'});continue;}
+      if(!entered){bad.push({line:i+1,raw:L,reason:'no trade date'});continue;}
+      const contracts=qi>-1?Math.abs(nums[qi]):1,shares=contracts*100;
+      const opt=f.opt;let premium=0,total=0,fees=0;
+      if(act==='IN'||act==='OUT'){premium=opt.strike;total=computeTotal(act,premium,shares,0);}
+      else if(act!=='EXP'){
+        const after=nums.slice(qi+1).map(Math.abs);
+        // premium = first plausible per-share price; total = a later number ≈ premium×shares (± fees)
+        let best=null;
+        for(let a=0;a<after.length;a++){const pr=after[a];if(!(pr>0&&pr<2000))continue;
+          for(let b=after.length-1;b>a;b--){const am=after[b];const diff=Math.abs(pr*shares-am);
+            if(diff<=Math.max(3,am*0.08)&&diff<=contracts*15){best={pr,am,diff,mid:after.slice(b+1,b+2)};break;}}
+          if(best)break;}
+        if(best){premium=best.pr;total=best.am;
+          const fee=best.mid.find(x=>Math.abs(x-best.diff)<0.006);
+          fees=Math.round(best.diff*100)/100;
+          // IBKR-style: proceeds = gross, comm column separate → net it
+          if(best.diff<0.006){const c=best.mid.find(x=>x>0&&x<contracts*15);if(c){fees=c;total=act==='BTC'||act==='STC'&&false?best.am+c:(isCredit(act)?best.am-c:best.am+c);}}
+          void fee;
+        }else{premium=after.find(x=>x>0&&x<2000)||0;total=computeTotal(act,premium,shares,0);}
+      }
+      total=Math.round(total*100)/100;
+      const days=opt.expiry?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
+      rows.push({ticker:opt.ticker,action:act,entered,expiry:opt.expiry,strike:opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`});
+    }
+    // single trade confirmation: contract may be split across lines
+    if(!rows.length){
+      const flat=lines.filter(Boolean).join(' ');
+      const f=findOption(flat);
+      if(f){
+        const rest=flat.slice(0,f.start)+' '+flat.slice(f.end);
+        let act=classify(rest,f.opt,NaN,'Statement');
+        let sm={};try{sm=typeof parseSmartText==='function'?(parseSmartText(text)||{}):{};}catch(e){}
+        if(!act||act.startsWith('SKIP:'))act=sm.action&&VALID_ACTIONS.has(sm.action)?sm.action:'';
+        const fl=/(?:filled|executed|trade\s*date|date)[:\s]+(?:on\s+)?([A-Za-z0-9\/.,\- ]{6,20})/i.exec(rest);
+        const entered=(fl&&stmtDate(fl[1]))||stmtDate(rest.replace(/\$[\d.,]+/g,' '));
+        const cm=/(\d+)\s+contracts?\b|contracts?[:\s]+(\d+)/i.exec(rest);
+        const contracts=cm?+(cm[1]||cm[2]):(sm.shares?sm.shares/100:1),shares=contracts*100;
+        const pm=/(?:average|avg\.?|fill|limit)?\s*price[:\s]+\$?([\d.]+)/i.exec(rest);
+        const premium=pm?+pm[1]:(sm.premium||0);
+        const fm=/(?:fees?|commissions?)[^$\d]{0,20}\$?([\d.]+)/i.exec(rest);const fees=fm?+fm[1]:(sm.fees||0);
+        const tm=/(?:net\s+amount|net\s+credit|net\s+debit|total|amount)[:\s]+\$?([\d,.]+)/i.exec(rest);
+        if(act&&entered){
+          const total=Math.round((tm?num(tm[1]):computeTotal(act,premium,shares,fees))*100)/100;
+          const days=Math.max(0,Math.round((Date.parse(f.opt.expiry)-Date.parse(entered))/864e5));
+          return{broker:src+' confirmation',rows:[{ticker:f.opt.ticker,action:act,entered,expiry:f.opt.expiry,strike:f.opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`}],unrecognised:[],skipped:[]};
+        }
+      }
+    }
+    return{broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')};
+  }
+  return{parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
 }
 const BCSV=brokerCSVLib();
 let _importParsed=null;
-function importPreview(){
-  const txt=document.getElementById('import-csv').value;
+function importPreview(pre){
+  const txt=pre?'x':document.getElementById('import-csv').value;
   const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
   if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
-  const p=BCSV.parseBrokerCSV(txt);_importParsed=p;
+  const p=pre||BCSV.parseBrokerCSV(txt);_importParsed=p;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
   const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
   const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
@@ -3319,9 +3453,23 @@ function importPreview(){
 }
 function importLoadFile(file){
   if(!file)return;
+  document.getElementById('import-fname').textContent=file.name;
+  if(/\.pdf$/i.test(file.name)||file.type==='application/pdf'){importLoadPDF(file);return;}
   const r=new FileReader();
   r.onload=()=>{document.getElementById('import-csv').value=r.result;document.getElementById('import-fname').textContent=file.name;importPreview();};
   r.readAsText(file);
+}
+let _pdfjs=null;
+async function importLoadPDF(file){
+  const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
+  box.innerHTML='<div class="imp-broker">Reading PDF…</div>';btn.disabled=true;_importParsed=null;
+  try{
+    if(!_pdfjs){const V='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';_pdfjs=await import(V+'pdf.min.mjs');_pdfjs.GlobalWorkerOptions.workerSrc=V+'pdf.worker.min.mjs';}
+    const doc=await _pdfjs.getDocument({data:await file.arrayBuffer()}).promise;
+    const items=[];
+    for(let n=1;n<=doc.numPages;n++){const tc=await(await doc.getPage(n)).getTextContent();tc.items.forEach(it=>items.push({str:it.str,transform:it.transform,page:n}));}
+    importPreview(BCSV.parseStatementText(BCSV.pdfItemsToLines(items)));
+  }catch(e){importPreview({broker:'PDF',rows:[],unrecognised:[],skipped:[],error:"Couldn't open this PDF ("+(e&&e.message||e)+"). If it's password-protected, remove the password first; you need to be online the first time a PDF is read."});}
 }
 function initImportDrop(){
   const z=document.getElementById('import-drop'),fi=document.getElementById('import-file'),ta=document.getElementById('import-csv');
