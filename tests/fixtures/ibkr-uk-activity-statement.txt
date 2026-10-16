@@ -1,0 +1,156 @@
+Activity Statement
+January 1, 2025 - December 31, 2025
+Help
+Interactive Brokers (U.K.) Limited, [address removed]. Authorised and regulated by the Financial Conduct Authority
+Account Information
+Name  ACCOUNT HOLDER
+Account  U0000000
+Account Type  Individual
+Customer Type  Individual
+Account Capabilities  Cash
+Base Currency  GBP
+Net Asset Value
+December 31, 2024  December 31, 2025
+Change in NAV  Total
+Total  Long  Short  Total  Change
+Starting Value  485,866.84
+Cash  4.80  6,779.92  0.00  6,779.92  6,775.11
+Mark-to-Market  16,535.97
+Stock  485,862.03  576,251.65  0.00  576,251.65  90,389.62
+Position Transfers  75,552.34
+Options  0.00  0.00  -5,189.62  -5,189.62  -5,189.62
+Other Fees  -12.51
+Total  485,866.84  583,031.57  -5,189.62  577,841.94  91,975.11
+Commissions  -98.19
+Time Weighted Rate of Return  3.47%  Sales Tax  -2.50
+Ending Value  577,841.94
+Mark-to-Market Performance Summary
+Quantity  Price  Mark-to-Market P/L
+Symbol  Prior  Current  Prior  Current  Position  Transaction  Commissions  Other  Total  Code
+Stocks
+TSLA  1,505.5  1,726.5  403.8400  449.7200  40,409.64  0.00  0.00  0.00  40,409.64
+Total Stocks  40,409.64  0.00  0.00  0.00  40,409.64
+Equity and Index Options
+TSLA 07FEB25 440 C  0  0  --  --  50.85  -4.42  -0.84  0.00  45.59
+TSLA 07FEB25 460 C  0  0  --  --  9.14  5.28  -1.22  0.00  13.21
+TSLA 14FEB25 370 C  0  0  --  --  23.77  15.45  -1.49  0.00  37.74
+TSLA 14FEB25 397.5 C  0  0  --  --  41.62  25.18  -0.86  0.00  65.95
+TSLA 14FEB25 410 C  0  0  --  --  162.62  -33.52  -1.90  0.00  127.20
+TSLA 14FEB25 430 C  0  0  --  --  65.59  6.96  -1.32  0.00  71.23
+TSLA 21FEB25 395 C  0  0  --  --  61.02  34.16  -0.84  0.00  94.35
+TSLA 21FEB25 400 C  0  0  --  --  18.63  21.00  -1.23  0.00  38.40
+Generated: 2026-10-16, 07:35:31 EDT  Page: 1
+Mark-to-Market Performance Summary
+Quantity  Price  Mark-to-Market P/L
+Symbol  Prior  Current  Prior  Current  Position  Transaction  Commissions  Other  Total  Code
+Open Positions
+Symbol  Quantity  Mult  Cost Price  Cost Basis  Close Price  Value  Unrealized P/L  Unrealized P/L %  Code
+Stocks
+USD
+TSLA  1,726.5  1  266.5467883  460,193.03  449.7200  776,441.58  316,248.55  68.72
+Total  460,193.03  776,441.58  316,248.55
+Total in GBP  341,541.46  576,251.65  234,710.19
+Symbol  Quantity  Mult  Cost Price  Cost Basis  Close Price  Value  Unrealized P/L  Unrealized P/L %  Code
+Equity and Index Options
+USD
+TSLA 09JAN26 510 C  -5  100  0.8633311  -431.67  0.6350  -317.50  114.17  26.45
+TSLA 18SEP26 500 C  -1  100  73.8494881  -7,384.95  66.7500  -6,675.00  709.95  9.61
+Total  -7,816.61  -6,992.50  824.11
+Total in GBP  -5,801.26  -5,189.62  611.63
+Forex Balances
+Description  Quantity  Cost Price  Cost Basis in GBP  Close Price  Value in GBP  Unrealized P/L in GBP  Code
+Trades
+Realized P/L
+Symbol  Date/Time  Quantity  T. Price  C. Price  Proceeds  Comm/Fee  Basis  Realized P/L  MTM P/L  Code
+%
+Equity and Index Options
+USD
+2025-02-03,
+TSLA 07FEB25 440 C  -1  0.5800  0.6350  58.00  -1.05  -56.95  0.00  0.00  -5.50  O
+14:00:58
+2025-02-07,
+TSLA 07FEB25 440 C  1  0.0000  0.0000  0.00  0.00  56.95  56.95  100.00  0.00  C;Ep
+16:20:00
+Activity Statement - January 1, 2025 - December 31, 2025  Page: 6
+Trades
+Total TSLA 07FEB25 440 C  0  58.00  -1.05  0.00  56.95  100.00  -5.50
+2025-02-04,
+TSLA 07FEB25 460 C  -1  0.1800  0.1141  18.00  -1.52  -16.48  0.00  0.00  6.59  O
+09:58:59
+2025-02-07,
+TSLA 07FEB25 460 C  1  0.0000  0.0000  0.00  0.00  16.48  16.48  100.00  0.00  C;Ep
+16:20:00
+Total TSLA 07FEB25 460 C  0  18.00  -1.52  0.00  16.48  100.00  6.59
+2025-02-12,
+TSLA 14FEB25 370 C  -1  0.6900  0.3000  69.00  -0.81  -68.19  0.00  0.00  39.00  O
+13:07:55
+2025-02-14,
+TSLA 14FEB25 370 C  1  0.2000  0.0000  -20.00  -1.06  68.19  47.13  69.12  -20.00  C
+10:01:47
+Total TSLA 14FEB25 370 C  0  49.00  -1.87  0.00  47.13  69.12  19.00
+2025-02-10,
+TSLA 14FEB25 397.5 C  -1  0.8300  0.5186  83.00  -1.06  -81.94  0.00  0.00  31.14  O
+11:04:19
+2025-02-14,
+TSLA 14FEB25 397.5 C  1  0.0000  0.0000  0.00  0.00  81.94  81.94  100.00  0.00  C;Ep
+16:20:00
+Total TSLA 14FEB25 397.5 C  0  83.00  -1.06  0.00  81.94  100.00  31.14
+2025-02-06,
+TSLA 14FEB25 410 C  -1  1.6600  2.0350  166.00  -0.81  -165.19  0.00  0.00  -37.50  O
+14:57:53
+11:10:32
+2025-10-23,
+TSLA 24OCT25 395 C  1  30.8800  54.1206  -3,088.00  -1.05  4,899.01  1,809.96  36.95  2,324.06  C
+10:13:48
+Total TSLA 24OCT25 395 C  0  1,812.00  -2.04  0.00  1,809.96  36.95  2,025.24
+2025-10-13,
+TSLA 24OCT25 500 C  -1  2.7900  4.0500  279.00  -1.05  -277.95  0.00  0.00  -126.00  O
+09:56:39
+2025-10-24,
+TSLA 24OCT25 500 C  1  0.0000  0.0000  0.00  0.00  277.95  277.95  100.00  0.00  C;Ep
+16:20:00
+Total TSLA 24OCT25 500 C  0  279.00  -1.05  0.00  277.95  100.00  -126.00
+2025-11-05,
+TSLA 14NOV25 450 C  1  15.0000  25.3283  -1,500.00  -1.05  1,501.05  0.00  0.00  1,032.83  O
+10:15:52
+2025-11-11,
+TSLA 14NOV25 450 C  -1  3.3200  3.9500  332.00  -1.05  -1,501.05  -1,170.10  -77.95  -63.00  C
+12:12:41
+Total TSLA 14NOV25 450 C  0  -1,168.00  -2.10  0.00  -1,170.10  -77.95  969.83
+2025-10-23,
+TSLA 21NOV25 415 C  -1  30.9500  47.9573  3,095.00  -1.05  -3,093.95  0.00  0.00  -1,700.73  O
+10:13:48
+2025-11-21,
+2025-10-14,
+TSLA 18SEP26 500 C  -1  73.8600  75.0250  7,386.00  -1.05  -7,384.95  0.00  0.00  -116.50  O
+12:18:08
+Activity Statement - January 1, 2025 - December 31, 2025  Page: 12
+Trades
+Total TSLA 18SEP26 500 C  -1  7,386.00  -1.05  -7,384.95  0.00  0.00  -116.50
+Total  9,279.00  -130.06  -7,816.61  1,332.32  1,766.49
+Total in GBP  6,970.09  -98.19  -5,820.86  1,051.04  1,360.11
+Symbol  Date/Time  Quantity  T. Price  Proceeds  Comm in GBP  MTM in GBP  Code
+Forex
+USD
+2025-02-03,
+GBP.USD  3.96841206  1.24542198  -4.94  0.00  0.00
+17:00:00
+2025-04-02,
+GBP.USD  0.03118794  1.30109974  -0.04  0.00  0.00
+17:00:00
+Transfers
+Symbol  Date  Type  Direction  Xfer Company  Xfer Account  Quantity  Xfer Price  Market Value  Realized P/L  Cash Amount  Code
+Stocks
+USD
+TSLA  2025-10-02  FOP  In  --  4642439  221  --  101,540.66  0.00  0.00
+Financial Instrument Information
+Symbol  Description  Conid  Security ID  Underlying  Listing Exch  Multiplier  Type  Code
+Stocks
+TSLA  TESLA INC  76792991  US88160R1014  TSLA  NASDAQ  1  COMMON
+Activity Statement - January 1, 2025 - December 31, 2025  Page: 15
+Financial Instrument Information
+Symbol  Description  Conid  Underlying  Listing Exch  Multiplier  Expiry  Delivery Month  Type  Strike  Code
+Equity and Index Options
+TSLA 250207C00440000  TSLA 07FEB25 440 C  751189368  TSLA  CBOE  100  2025-02-07  2025-02  C  440
+TSLA 250207C00460000  TSLA 07FEB25 460 C  751189575  TSLA  CBOE  100  2025-02-07  2025-02  C  460
+TSLA 250214C00370000  TSLA 14FEB25 370 C  752013395  TSLA  CBOE  100  2025-02-14  2025-02  C  370

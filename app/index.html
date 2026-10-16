@@ -3316,12 +3316,14 @@ function brokerCSVLib(){
     const groups=[];
     items.forEach(it=>{
       if(!it||!String(it.str||'').trim())return;
-      const pg=it.page||1,x=it.transform[4],y=it.transform[5];
+      // handle rotated (landscape) pages: text direction comes from the matrix
+      const t=it.transform,pg=it.page||1,rot=Math.abs(t[1])>Math.abs(t[0]);
+      const y=rot?(t[1]>0?t[4]:-t[4]):-t[5],x=rot?(t[1]>0?t[5]:-t[5]):t[4];
       let g=groups.find(g=>g.pg===pg&&Math.abs(g.y-y)<=2.5);
       if(!g){g={pg,y,items:[]};groups.push(g);}
       g.items.push({x,s:String(it.str).trim()});
     });
-    groups.sort((a,b)=>a.pg-b.pg||b.y-a.y);
+    groups.sort((a,b)=>a.pg-b.pg||a.y-b.y);
     return groups.map(g=>g.items.sort((a,b)=>a.x-b.x).map(i=>i.s).join('  ')).join('\n');
   }
   // find an option contract anywhere in a line → {opt,start,end}
@@ -3364,8 +3366,13 @@ function brokerCSVLib(){
     const lines=text.split('\n').map(l=>l.trim());
     const rows=[],bad=[],skip=[];let lastDate='',optLines=0;
     const SUMMARY=/^(?:total|totals|subtotal|sub-total|net|realized|unrealized|year to date|ytd|summary|balance|opening|closing|beginning|ending|page\b)/i;
+    const NOTRADE=/^(?:mark-to-market performance summary|realized (?:&|and) unrealized performance summary|open positions|financial instrument information|net stock position summary|codes|cash report|positions|holdings|portfolio(?: summary)?|position summary|forex balances|notes|legal notes)$/i;
+    const TRADESEC=/^(?:trades|transactions|trade confirmations?|account activity|activity|transaction (?:details|history)|options activity(?: summary)?)$/i;
+    const sectioned=lines.some(l=>TRADESEC.test(l))&&lines.some(l=>NOTRADE.test(l));
+    let active=true;
     for(let i=0;i<lines.length;i++){
       const L=lines[i];if(!L)continue;
+      if(sectioned){if(TRADESEC.test(L)){active=true;continue;}if(NOTRADE.test(L)){active=false;continue;}if(!active)continue;}
       const f=findOption(L);
       if(!f){if(L.length<=14){const d=stmtDate(L);if(d)lastDate=d;}continue;}
       optLines++;
@@ -3380,7 +3387,7 @@ function brokerCSVLib(){
       const numTxt=rest.replace(/\b(\d+)S\b/g,'$1').replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{1,2}\.\d{1,2}\.\d{2,4}\b|\d{4}-\d{2}-\d{2}(?:,?\s+\d{1,2}:\d{2}(?::\d{2})?)?|\b\d{1,2}:\d{2}(?::\d{2})?\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/gi,' ');
       const nums=[...numTxt.matchAll(/(?:^|\s)(\(?-?[$£€]?\d[\d,]*(?:\.\d+)?\)?-?)(?=\s|$)/g)].map(m=>num(m[1])).filter(n=>!isNaN(n));
       const qi=nums.findIndex(n=>Number.isInteger(Math.abs(n))&&n!==0&&Math.abs(n)<1000);
-      const act=classify(rest,f.opt,qi>-1?nums[qi]:NaN,'Statement');
+      const act=classify(rest,f.opt,qi>-1?nums[qi]:NaN,src==='Interactive Brokers'?'Interactive Brokers':'Statement');
       if(act==='SKIP:buy to open (not a wheel leg)')continue;
       if(!act||act.startsWith('SKIP:')){bad.push({line:i+1,raw:L,reason:'could not tell the trade type'});continue;}
       if(!entered){bad.push({line:i+1,raw:L,reason:'no trade date'});continue;}
@@ -3391,9 +3398,11 @@ function brokerCSVLib(){
         const after=nums.slice(qi+1).map(Math.abs);
         // premium = first plausible per-share price; total = a later number ≈ premium×shares (± fees)
         let best=null;
-        for(let a=0;a<after.length;a++){const pr=after[a];if(!(pr>0&&pr<2000))continue;
-          for(let b=after.length-1;b>a;b--){const am=after[b];const diff=Math.abs(pr*shares-am);
-            if(diff<=Math.max(3,am*0.08)&&diff<=contracts*15){best={pr,am,diff,mid:after.slice(b+1,b+2)};break;}}
+        // pass 1: an amount exactly = price×shares (gross proceeds, fee in the next column); pass 2: within fee tolerance (net amount)
+        for(const exact of[true,false]){
+          for(let a=0;a<after.length&&!best;a++){const pr=after[a];if(!(pr>0&&pr<2000))continue;
+            for(let b=a+1;b<after.length;b++){const am=after[b];const diff=Math.abs(pr*shares-am);
+              if(exact?diff<0.006:(diff<=Math.max(3,am*0.08)&&diff<=contracts*15)){best={pr,am,diff,mid:after.slice(b+1,b+2)};break;}}}
           if(best)break;}
         if(best){premium=best.pr;total=best.am;
           const fee=best.mid.find(x=>Math.abs(x-best.diff)<0.006);

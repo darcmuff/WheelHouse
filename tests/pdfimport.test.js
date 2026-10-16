@@ -194,6 +194,32 @@ Total  137.40`), [
   ['2025-02-03','KO','CSP',62,'2025-02-21',200,0.80,1.30,158.70],
   ['2025-02-14','KO','BTC',62,'2025-02-21',200,0.10,1.30,21.30]], { unsure: 0 });
 
+// ── REAL statement regression: IBKR (U.K.) annual Activity Statement, landscape pages, anonymised.
+// Date sits on the line above each trade, page breaks repeat "Trades", and option lines also appear in
+// Mark-to-Market / Realized / Open Positions / Financial Instrument sections, which must never become trades.
+// Ground truth built independently from pdftotext -layout of the original PDF.
+expect('IBKR UK real statement (anonymised)', S(require('fs').readFileSync(require('path').join(__dirname,'fixtures','ibkr-uk-activity-statement.txt'),'utf8')), [
+  ["2025-02-03","TSLA","STOC",440,"2025-02-07",100,0.58,1.05,56.95],
+  ["2025-02-07","TSLA","EXP",440,"2025-02-07",100,0,0,0],
+  ["2025-02-04","TSLA","STOC",460,"2025-02-07",100,0.18,1.52,16.48],
+  ["2025-02-07","TSLA","EXP",460,"2025-02-07",100,0,0,0],
+  ["2025-02-12","TSLA","STOC",370,"2025-02-14",100,0.69,0.81,68.19],
+  ["2025-02-14","TSLA","BTC",370,"2025-02-14",100,0.2,1.06,21.06],
+  ["2025-02-10","TSLA","STOC",397.5,"2025-02-14",100,0.83,1.06,81.94],
+  ["2025-02-14","TSLA","EXP",397.5,"2025-02-14",100,0,0,0],
+  ["2025-02-06","TSLA","STOC",410,"2025-02-14",100,1.66,0.81,165.19],
+  ["2025-10-23","TSLA","BTC",395,"2025-10-24",100,30.88,1.05,3089.05],
+  ["2025-10-13","TSLA","STOC",500,"2025-10-24",100,2.79,1.05,277.95],
+  ["2025-10-24","TSLA","EXP",500,"2025-10-24",100,0,0,0],
+  ["2025-11-11","TSLA","STC",450,"2025-11-14",100,3.32,1.05,330.95],
+  ["2025-10-23","TSLA","STOC",415,"2025-11-21",100,30.95,1.05,3093.95],
+  ["2025-10-14","TSLA","STOC",500,"2026-09-18",100,73.86,1.05,7384.95]
+], { broker: 'Interactive Brokers', unsure: 0 });
+// rotated (landscape) page: pdf.js matrix [0,7,-7,0,row,col]
+check('pdfItemsToLines: rotated page rows/cols', L.pdfItemsToLines([
+  { str: 'B', transform: [0,7,-7,0,128,244], page: 1 }, { str: 'A', transform: [0,7,-7,0,128,38], page: 1 },
+  { str: 'Title', transform: [0,10,-10,0,50,40], page: 1 }]) === 'Title\nA  B');
+
 // ── Scanned PDF ──
 check('scanned/image PDF → clear message', /scanned/.test(S('   \n  \n').error || ''));
 
