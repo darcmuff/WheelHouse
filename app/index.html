@@ -1979,7 +1979,7 @@ function renderSidebar(){
   // Health badge on the Dashboard nav item — visible from any view
   const _hb=document.getElementById('nav-health-badge');
   if(_hb){
-    const _hi=runDataHealth();
+    const _hi=allDataHealth();
     if(_hi.length){
       const worst=_hi.some(i=>i.sev==='red')?'#ef4444':_hi.some(i=>i.sev==='amber')?'#fbbf24':'#6b7280';
       _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:10px;font-weight:800;border-radius:9px;padding:1px 7px;line-height:1.4">${_hi.length}</span>`;
@@ -2635,6 +2635,12 @@ function renderLog(){
 // ── DATA HEALTH ──
 // Detects inconsistent trade records. Detect-and-ask only — never mutates anything.
 // One lifecycle walk per rotation: tracks open option legs + a running share ledger.
+// wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
+function allDataHealth(){
+  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10)).map(i=>({...i,text:'Options · '+esc(i.text)}));}catch(e){console.warn('options health',e);}
+  return runDataHealth().concat(o);
+}
+function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
 function runDataHealth(){
   const issues=[]; // {sev:'red'|'amber'|'grey', tradeId, text}
   const today=new Date().toISOString().slice(0,10);
@@ -2880,7 +2886,7 @@ function renderDash(){
   const alerts=buildDashAlerts();
 
   // ── Data Health panel ──
-  const health=runDataHealth();
+  const health=allDataHealth();
   const hRed=health.filter(i=>i.sev==='red').length;
   const hAmber=health.filter(i=>i.sev==='amber').length;
   const hGrey=health.filter(i=>i.sev==='grey').length;
@@ -2894,7 +2900,7 @@ function renderDash(){
       <div style="display:flex;align-items:center;gap:10px;padding:9px 16px 0">
         <span class="d-alert-dot" style="background:${sevDot[i.sev]};flex-shrink:0"></span>
         <span style="font-size:12px;color:var(--text2);line-height:1.5;flex:1">${i.text}</span>
-        ${i.tradeId?`<button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;flex-shrink:0" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button>`:''}
+        ${i.tradeId?`<button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;flex-shrink:0" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button>`:i.legId?`<button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;flex-shrink:0" onclick="goToOpt('${i.legId}')">Go to</button>`:''}
       </div>
       ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
     </div>`;
@@ -5286,6 +5292,7 @@ window.authGoogle = authGoogle;
 window.authForgot = authForgot;
 window.onboardSubmit = onboardSubmit;
 window.switchView = switchView;
+window.goToOpt = goToOpt;
 window.setOptFilter = setOptFilter;
 window.openOptAdd = openOptAdd;
 window.openOptEdit = openOptEdit;
