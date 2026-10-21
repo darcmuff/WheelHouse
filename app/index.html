@@ -967,12 +967,13 @@ let _confirmedUid = null;
 // DATA
 // ════════════════════════════════════════════════════════
 const DB_KEY = 'wheel_tracker_v7';
-let db = { wheels:[], trades:[] };
+let db = { wheels:[], trades:[], opts:[] };
 window._db=db;
 
 const SEED_DATA = {
   wheels:[],
-  trades:[]
+  trades:[],
+  opts:[]
 };
 
 function autoMarkExpiredTrades(){
@@ -1025,6 +1026,9 @@ async function loadDBFromFirestore(userId){
   const tradesSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'trades'));
   db.wheels=wheelsSnap.docs.map(d=>d.data());
   db.trades=tradesSnap.docs.map(d=>d.data());
+  // Options legs live in their own collection; a failure here (e.g. rules not yet updated) must not block the wheel app
+  try{const oSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'optlegs'));db.opts=oSnap.docs.map(d=>d.data());}
+  catch(e){console.warn('Options legs load failed (check Firestore rules for optlegs):',e.message);db.opts=[];_optsLoadError=e.message;}
   render();
   // Show onboarding only after a confirmed-successful load with genuinely no rotations
   const ob=document.getElementById('onboard-overlay');
@@ -1050,6 +1054,17 @@ function _saveTrade(trade){
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),_stripUndefined(trade))
     .catch(e=>console.error('Trade save failed:',e));
 }
+let _optsLoadError='';
+function _saveOpt(leg){
+  const uid=_currentUid();if(!uid||!leg||!leg.id)return;
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(leg))
+    .catch(e=>{console.error('Option save failed:',e);toastOptErr(e);});
+}
+function _deleteOptDoc(id){
+  const uid=_currentUid();if(!uid)return;
+  _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'optlegs',id)).catch(e=>console.error('Option delete failed:',e));
+}
+function toastOptErr(e){if(/permission/i.test(e&&e.message||''))alert('Could not save option position: Firestore rules do not allow the optlegs collection yet. See Settings → Options setup.');}
 function _deleteWheelDoc(wheelId){
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheelId))
@@ -1066,6 +1081,7 @@ function saveDB(){
   const uid=_currentUid();if(!uid)return;
   db.wheels.forEach(w=>_saveWheel(w));
   db.trades.forEach(t=>_saveTrade(t));
+  (db.opts||[]).forEach(l=>_saveOpt(l));
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
@@ -1082,6 +1098,151 @@ function computeTotal(action,premium,shares,fees){
 // ════════════════════════════════════════════════════════
 // CALCULATIONS
 // ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// OPTIONS POSITIONS (non-wheel legs) — pure maths, tested from node (tests/options.test.js)
+// Stored in users/{uid}/optlegs — separate from trades so wheel maths never sees them.
+// ════════════════════════════════════════════════════════
+function optionsLib(){
+  const MULT=100,DAY=864e5,RATE=0.04;
+  const r2=n=>Math.round(n*100)/100;
+  const dte=(expiry,today)=>{if(!expiry)return null;const t=today?Date.parse(today):Date.parse(new Date().toISOString().slice(0,10));return Math.round((Date.parse(expiry)-t)/DAY);};
+  const sign=l=>l.side==='long'?1:-1;
+  // cash at open: long pays (negative), short receives (positive); fees always cost
+  const openCash=l=>r2(-sign(l)*(+l.entryPrice||0)*MULT*(+l.qty||0)-(+l.fees||0));
+  const closeCash=l=>{if(l.status==='open')return 0;const p=(l.status==='expired'?0:(+l.closePrice||0));return r2(sign(l)*p*MULT*(+l.qty||0)-(+l.closeFees||0));};
+  const costBasis=l=>r2(Math.abs((+l.entryPrice||0)*MULT*(+l.qty||0))+(l.side==='long'?(+l.fees||0):-(+l.fees||0)));
+  function legPnL(l){
+    const realized=l.status==='open'?0:r2(openCash(l)+closeCash(l));
+    let unrealized=null;
+    if(l.status==='open'&&l.mark!=null&&l.mark!=='')unrealized=r2(openCash(l)+sign(l)*(+l.mark)*MULT*(+l.qty||0));
+    return{realized,unrealized,openCash:openCash(l),costBasis:costBasis(l)};
+  }
+  function tenor(l,today){const d=dte(l.expiry,today);if(d==null)return'';if(d<=9)return'weekly';if(d<=60)return'monthly';if(d>=270)return'leap';return'longer';}
+  // ── Black-Scholes (no dividends) ──
+  const ncdf=x=>{const t=1/(1+0.2316419*Math.abs(x));const d=0.3989423*Math.exp(-x*x/2);const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p;};
+  const npdf=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+  function bs(type,S,K,T,vol,r=RATE){
+    if(!(S>0&&K>0))return null;
+    if(T<=0||vol<=0){const iv=type==='C'?Math.max(0,S-K):Math.max(0,K-S);return{price:iv,delta:type==='C'?(S>K?1:0):(S<K?-1:0),gamma:0,theta:0,vega:0};}
+    const sq=Math.sqrt(T),d1=(Math.log(S/K)+(r+vol*vol/2)*T)/(vol*sq),d2=d1-vol*sq,disc=Math.exp(-r*T);
+    const price=type==='C'?S*ncdf(d1)-K*disc*ncdf(d2):K*disc*ncdf(-d2)-S*ncdf(-d1);
+    const delta=type==='C'?ncdf(d1):ncdf(d1)-1;
+    const theta=(-S*npdf(d1)*vol/(2*sq)-(type==='C'?1:-1)*r*K*disc*ncdf(type==='C'?d2:-d2))/365; // per day, per share
+    return{price,delta,gamma:npdf(d1)/(S*vol*sq),theta,vega:S*npdf(d1)*sq/100};
+  }
+  function impliedVol(type,price,S,K,T,r=RATE){
+    if(!(price>0&&S>0&&K>0&&T>0))return null;
+    let lo=0.01,hi=5;
+    const intrinsic=type==='C'?Math.max(0,S-K*Math.exp(-r*T)):Math.max(0,K*Math.exp(-r*T)-S);
+    if(price<intrinsic-1e-6)return null;
+    for(let i=0;i<100;i++){const m=(lo+hi)/2;const p=bs(type,S,K,T,m,r).price;if(p>price)hi=m;else lo=m;if(hi-lo<1e-5)break;}
+    return(lo+hi)/2;
+  }
+  // Greeks for a position (per contract × qty × side). Uses live greeks if present, else BS from iv (given or implied from mark).
+  function legGreeks(l,spot,today){
+    const d=dte(l.expiry,today);if(d==null||!(spot>0))return null;
+    const T=Math.max(d,0)/365;let iv=l.iv>0?+l.iv:null,src='live';
+    if(l.delta==null||l.theta==null||l.markSrc==='manual'||!l.markSrc){
+      if(!iv&&l.mark>0)iv=impliedVol(l.type,+l.mark,spot,+l.strike,Math.max(T,1/365));
+      if(!iv)return null;
+      const g=bs(l.type,spot,+l.strike,T,iv);if(!g)return null;src='bs';
+      return{delta:r2(g.delta*sign(l)*(+l.qty)*MULT),theta:r2(g.theta*sign(l)*(+l.qty)*MULT),iv,src};
+    }
+    return{delta:r2(+l.delta*sign(l)*(+l.qty)*MULT),theta:r2(+l.theta*sign(l)*(+l.qty)*MULT),iv,src};
+  }
+  function occ(l){const e=String(l.expiry||'').replace(/-/g,'').slice(2);return`${String(l.underlying||'').toUpperCase()}${e}${l.type}${String(Math.round((+l.strike)*1000)).padStart(8,'0')}`;}
+  function strategyName(legs){
+    const open=legs;if(open.length===1){const l=open[0];return`${l.side==='long'?'Long':'Short'} ${l.type==='C'?'call':'put'}`;}
+    const types=new Set(open.map(l=>l.type)),exps=new Set(open.map(l=>l.expiry)),sides=new Set(open.map(l=>l.side));
+    if(open.length===2){
+      if(types.size===1&&exps.size===1&&sides.size===2)return`${open[0].type==='C'?'Call':'Put'} vertical`;
+      if(types.size===1&&exps.size===2)return open[0].strike===open[1].strike?'Calendar':'Diagonal';
+      if(types.size===2&&exps.size===1&&sides.size===1)return`${open[0].strike===open[1].strike?'Straddle':'Strangle'} (${open[0].side})`;
+    }
+    if(open.length===4&&types.size===2&&exps.size===1&&sides.size===2)return'Iron condor';
+    return`${open.length}-leg`;
+  }
+  function groupSummary(legs,today){
+    const g={legs,realized:0,unrealized:0,hasMark:true,openCash:0,status:legs.some(l=>l.status==='open')?'open':'closed'};
+    legs.forEach(l=>{const p=legPnL(l);g.realized+=p.realized;g.openCash+=p.openCash;if(l.status==='open'){if(p.unrealized==null)g.hasMark=false;else g.unrealized+=p.unrealized;}});
+    g.realized=r2(g.realized);g.unrealized=g.hasMark?r2(g.unrealized):null;g.strategy=strategyName(legs);
+    const ds=legs.filter(l=>l.status==='open').map(l=>dte(l.expiry,today)).filter(x=>x!=null);g.dte=ds.length?Math.min(...ds):null;
+    return g;
+  }
+  function groups(legs){const m=new Map();legs.forEach(l=>{const k=l.groupId||l.id;if(!m.has(k))m.set(k,[]);m.get(k).push(l);});return[...m.entries()].map(([id,ls])=>({id,legs:ls}));}
+  // portfolio summary — kept separate from wheel income
+  function portfolio(legs,spots,today){
+    const s={open:0,closed:0,realized:0,unrealized:0,unmarked:0,longPremium:0,shortPremium:0,delta:0,theta:0,greeksMissing:0,byUnderlying:{}};
+    legs.forEach(l=>{
+      const p=legPnL(l);
+      if(l.status==='open'){
+        s.open++;if(p.unrealized==null)s.unmarked++;else s.unrealized+=p.unrealized;
+        if(l.side==='long')s.longPremium+=p.costBasis;else s.shortPremium+=p.costBasis;
+        const g=legGreeks(l,spots&&spots[l.underlying],today);
+        if(g){s.delta+=g.delta;s.theta+=g.theta;}else s.greeksMissing++;
+        const u=s.byUnderlying[l.underlying]=s.byUnderlying[l.underlying]||{legs:0,delta:0,unrealized:0};u.legs++;if(g)u.delta+=g.delta;if(p.unrealized!=null)u.unrealized+=p.unrealized;
+      }else{s.closed++;s.realized+=p.realized;}
+    });
+    ['realized','unrealized','longPremium','shortPremium','theta'].forEach(k=>s[k]=r2(s[k]));s.delta=r2(s.delta);
+    return s;
+  }
+  // Close/roll: returns new leg objects (caller saves). Roll = close old + open new in same group.
+  function closeLeg(l,price,date,fees){return{...l,status:'closed',closePrice:+price||0,closeDate:date,closeFees:+fees||0};}
+  function expireLeg(l){return{...l,status:'expired',closePrice:0,closeDate:l.expiry,closeFees:0};}
+  function rollLeg(l,close,open,newId){
+    const closed=closeLeg(l,close.price,close.date,close.fees);
+    const nl={...l,id:newId,strike:+open.strike,expiry:open.expiry,entryPrice:+open.price,entryDate:close.date,fees:+open.fees||0,qty:+(open.qty||l.qty),status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,markAt:null,markSrc:null,delta:null,theta:null,iv:null,rolledFrom:l.id,groupId:l.groupId||l.id};
+    closed.groupId=l.groupId||l.id;
+    return[closed,nl];
+  }
+  // Import fills → legs. fills: {ticker,side:'long'|'short',effect:'open'|'close',type,strike,expiry,qty,price,fees,date}
+  function applyFills(existing,fills,mkId){
+    const legs=existing.map(l=>({...l})),created=[],changed=new Set(),unmatched=[];
+    const key=f=>`${f.ticker}|${f.type}|${+f.strike}|${f.expiry}`;
+    [...fills].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.effect==='open'?-1:1)).forEach(f=>{
+      if(f.effect==='open'){
+        const l={id:mkId(),groupId:null,underlying:f.ticker,type:f.type,side:f.side,strike:+f.strike,expiry:f.expiry,qty:+f.qty,entryPrice:+f.price,entryDate:f.date,fees:+f.fees||0,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:f.comment||''};
+        l.groupId=l.id;legs.push(l);created.push(l);
+      }else{
+        const l=legs.find(x=>x.status==='open'&&key({ticker:x.underlying,type:x.type,strike:x.strike,expiry:x.expiry})===key(f)&&x.side===f.side);
+        if(!l){unmatched.push(f);return;}
+        if(+f.qty<+l.qty){ // partial close: split leg
+          const rest={...l,id:mkId(),qty:+l.qty-(+f.qty),fees:0};legs.push(rest);created.push(rest);l.qty=+f.qty;
+        }
+        Object.assign(l,f.expired?{status:'expired',closePrice:0,closeDate:f.date,closeFees:0}:{status:'closed',closePrice:+f.price,closeDate:f.date,closeFees:+f.fees||0});
+        if(!created.includes(l))changed.add(l.id);
+      }
+    });
+    return{legs,created,changed:[...changed],unmatched};
+  }
+  function health(legs,wheels,today){
+    today=today||new Date().toISOString().slice(0,10);
+    const out=[];const nm=l=>`${l.underlying} ${l.expiry||'?'} ${l.strike||'?'}${l.type||'?'}`;
+    const seen={};
+    legs.forEach(l=>{
+      if(!l.underlying)out.push({sev:'red',legId:l.id,text:`Option leg ${l.id} has no underlying`});
+      if(!(l.strike>0))out.push({sev:'red',legId:l.id,text:`${nm(l)} has no strike`});
+      if(!l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} has no expiry`});
+      if(!(l.qty>0))out.push({sev:'red',legId:l.id,text:`${nm(l)} has no contract quantity`});
+      if(l.type!=='C'&&l.type!=='P')out.push({sev:'red',legId:l.id,text:`${nm(l)} is neither call nor put`});
+      if(l.side!=='long'&&l.side!=='short')out.push({sev:'red',legId:l.id,text:`${nm(l)} has no long/short side`});
+      if(l.entryPrice==null||l.entryPrice==='')out.push({sev:'amber',legId:l.id,text:`${nm(l)} has no entry premium`});
+      if(l.status==='open'&&l.expiry&&l.expiry<today)out.push({sev:'amber',legId:l.id,text:`${nm(l)} expired ${l.expiry} but is still open — close, expire or record assignment`});
+      if(l.status==='closed'&&(l.closePrice==null||!l.closeDate))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is closed but has no close price/date`});
+      if(l.closeDate&&l.entryDate&&l.closeDate<l.entryDate)out.push({sev:'red',legId:l.id,text:`${nm(l)} closed before it was opened`});
+      if(l.entryDate&&l.expiry&&l.entryDate>l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} opened after its expiry`});
+      if(l.wheelId&&!wheels.some(w=>w.id===l.wheelId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is attached to a rotation that no longer exists`});
+      if(l.wheelId){const w=wheels.find(w=>w.id===l.wheelId);if(w&&w.ticker&&w.ticker!==l.underlying)out.push({sev:'grey',legId:l.id,text:`${nm(l)} is attached to the ${w.ticker} rotation — different underlying`});}
+      if(l.status==='open'&&l.markAt&&(Date.parse(today)-Date.parse(l.markAt.slice(0,10)))/DAY>5)out.push({sev:'grey',legId:l.id,text:`${nm(l)} mark is stale (${l.markAt.slice(0,10)})`});
+      const fp=`${l.underlying}|${l.type}|${l.strike}|${l.expiry}|${l.side}|${l.entryDate}|${l.qty}|${l.entryPrice}`;(seen[fp]=seen[fp]||[]).push(l);
+    });
+    Object.values(seen).forEach(a=>{if(a.length>1)out.push({sev:'grey',legId:a[0].id,text:`${nm(a[0])} appears ${a.length}× with identical details — duplicates?`});});
+    return out;
+  }
+  return{dte,legPnL,tenor,bs,impliedVol,legGreeks,occ,strategyName,groupSummary,groups,portfolio,closeLeg,expireLeg,rollLeg,applyFills,health,costBasis};
+}
+const OPTS=optionsLib();
+
 function calcWheel(wheel){
   const trades=db.trades.filter(t=>t.wheelId===wheel.id).sort((a,b)=>a.entered.localeCompare(b.entered));
   let credits=0,debits=0,sharesHeld=0,premiumCredits=0,premiumDebits=0;
@@ -4681,6 +4842,9 @@ async function migrateLocalStorage(userId) {
     });
     (blob.trades || []).forEach(t => {
       if (t && t.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'trades', t.id), t));
+    });
+    (blob.opts || []).forEach(l => {
+      if (l && l.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'optlegs', l.id), l));
     });
     await Promise.all(writes);
     localStorage.removeItem('wheel_tracker_v7');
