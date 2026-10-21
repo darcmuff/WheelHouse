@@ -3643,7 +3643,7 @@ function brokerCSVLib(){
     if(isSell&&open)return pc==='P'?'CSP':'STOC';
     if(isBuy&&close)return'BTC';
     if(isSell&&close)return'STC';
-    if(isBuy&&open)return'SKIP:buy to open (not a wheel leg)';
+    if(isBuy&&open)return'BTO'; // long option — routed to Options positions, never to the wheel
     return'';
   }
   function parseNative(text){
@@ -3667,6 +3667,23 @@ function brokerCSVLib(){
       rows.push({ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days:parseFloat(get(C.days))||0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)});
     }
     return{broker:'CoveredWheel',rows,unrecognised:bad,skipped:[]};
+  }
+  // Long options (buy-to-open and the closes/expiries of those same contracts in this file) leave the wheel rows
+  // and become Options-position fills. Wheel rows are otherwise untouched.
+  function splitLongs(res){
+    if(!res||!res.rows)return res;
+    const k=r=>`${r.ticker}|${r.strike}|${r.expiry}`;
+    const pcOf=r=>r._pc||'';
+    const longs=new Set(res.rows.filter(r=>r.action==='BTO').map(k));
+    const shortOpen=new Set(res.rows.filter(r=>r.action==='CSP'||r.action==='STOC').map(k));
+    const fills=[],keep=[];
+    res.rows.forEach(r=>{
+      const isLong=r.action==='BTO'||(longs.has(k(r))&&!shortOpen.has(k(r))&&(r.action==='STC'||r.action==='EXP'||r.action==='OUT'||r.action==='IN'));
+      if(!isLong){keep.push(r);return;}
+      fills.push({ticker:r.ticker,side:'long',effect:r.action==='BTO'?'open':'close',expired:r.action==='EXP',type:r._pc||(r.action==='IN'?'C':'C'),strike:r.strike,expiry:r.expiry,qty:Math.round((r.shares||100)/100),price:r.action==='EXP'?0:(r.action==='IN'||r.action==='OUT'?0:r.premium),fees:r.fees||0,date:r.entered,total:r.total,comment:r.comment||''});
+    });
+    keep.forEach(r=>delete r._pc);
+    return{...res,rows:keep,optionFills:(res.optionFills||[]).concat(fills)};
   }
   function parseBrokerCSV(text){
     text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
@@ -3713,7 +3730,7 @@ function brokerCSVLib(){
       fees=Math.round(fees*100)/100;
       const amt=Math.abs(num(g(C.amount)));
       let premium,total;
-      if(act==='IN'||act==='OUT'){premium=opt.strike;fees=0;total=computeTotal(act,premium,shares,0);}
+      if((act==='IN'||act==='OUT')){premium=opt.strike;fees=0;total=computeTotal(act,premium,shares,0);}
       else if(act==='EXP'){premium=0;fees=0;total=0;}
       else{
         premium=Math.abs(num(g(C.price)));
@@ -3724,9 +3741,9 @@ function brokerCSVLib(){
       }
       total=Math.round(total*100)/100;
       const days=opt.expiry&&entered?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
-      out.push({ticker:opt.ticker,action:act,entered,expiry:opt.expiry||null,strike:opt.strike||null,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${broker}`});
+      out.push({_pc:opt.pc,ticker:opt.ticker,action:act,entered,expiry:opt.expiry||null,strike:opt.strike||null,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${broker}`});
     }
-    return{broker,rows:out,unrecognised:bad,skipped:skip};
+    return splitLongs({broker,rows:out,unrecognised:bad,skipped:skip});
   }
   // ── PDF statements: text → trades ──
   // pdf.js text items ({str, transform:[..,x,y], page}) → lines, grouping by y so table rows stay intact
@@ -3806,7 +3823,6 @@ function brokerCSVLib(){
       const nums=[...numTxt.matchAll(/(?:^|\s)(\(?-?[$£€]?\d[\d,]*(?:\.\d+)?\)?-?)(?=\s|$)/g)].map(m=>num(m[1])).filter(n=>!isNaN(n));
       const qi=nums.findIndex(n=>Number.isInteger(Math.abs(n))&&n!==0&&Math.abs(n)<1000);
       const act=classify(rest,f.opt,qi>-1?nums[qi]:NaN,src==='Interactive Brokers'?'Interactive Brokers':'Statement');
-      if(act==='SKIP:buy to open (not a wheel leg)')continue;
       if(!act||act.startsWith('SKIP:')){bad.push({line:i+1,raw:L,reason:'could not tell the trade type'});continue;}
       if(!entered){bad.push({line:i+1,raw:L,reason:'no trade date'});continue;}
       const contracts=qi>-1?Math.abs(nums[qi]):1,shares=contracts*100;
@@ -3832,7 +3848,7 @@ function brokerCSVLib(){
       }
       total=Math.round(total*100)/100;
       const days=opt.expiry?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
-      rows.push({ticker:opt.ticker,action:act,entered,expiry:opt.expiry,strike:opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`});
+      rows.push({_pc:opt.pc,ticker:opt.ticker,action:act,entered,expiry:opt.expiry,strike:opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`});
     }
     // single trade confirmation: contract may be split across lines
     if(!rows.length){
@@ -3854,21 +3870,33 @@ function brokerCSVLib(){
         if(act&&entered){
           const total=Math.round((tm?num(tm[1]):computeTotal(act,premium,shares,fees))*100)/100;
           const days=Math.max(0,Math.round((Date.parse(f.opt.expiry)-Date.parse(entered))/864e5));
-          return{broker:src+' confirmation',rows:[{ticker:f.opt.ticker,action:act,entered,expiry:f.opt.expiry,strike:f.opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`}],unrecognised:[],skipped:[]};
+          return splitLongs({broker:src+' confirmation',rows:[{_pc:f.opt.pc,ticker:f.opt.ticker,action:act,entered,expiry:f.opt.expiry,strike:f.opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`}],unrecognised:[],skipped:[]});
         }
       }
     }
-    return{broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')};
+    return splitLongs({broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')});
   }
-  return{parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
+  return{splitLongs,parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
 }
 const BCSV=brokerCSVLib();
 let _importParsed=null;
+// rows that close a long leg already in Options (and no wheel short on that contract) → options fills
+function _routeToOpenLongs(p){
+  if(!p||!p.rows)return p;
+  const longs=(db.opts||[]).filter(l=>l.status==='open'&&l.side==='long');if(!longs.length)return p;
+  const fills=[...(p.optionFills||[])],keep=[];
+  p.rows.forEach(r=>{
+    const l=(r.action==='STC'||r.action==='EXP')&&longs.find(l=>l.underlying===r.ticker&&+l.strike===+r.strike&&l.expiry===r.expiry);
+    if(l)fills.push({ticker:r.ticker,side:'long',effect:'close',expired:r.action==='EXP',type:l.type,strike:r.strike,expiry:r.expiry,qty:Math.round((r.shares||100)/100),price:r.action==='EXP'?0:r.premium,fees:r.fees||0,date:r.entered});
+    else keep.push(r);
+  });
+  return{...p,rows:keep,optionFills:fills};
+}
 function importPreview(pre){
   const txt=pre?'x':document.getElementById('import-csv').value;
   const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
   if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
-  const p=pre||BCSV.parseBrokerCSV(txt);_importParsed=p;
+  const p=_routeToOpenLongs(pre||BCSV.parseBrokerCSV(txt));_importParsed=p;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
   const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
   const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
@@ -3876,7 +3904,10 @@ function importPreview(pre){
   const skipH=p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">Skipped ${p.skipped.length} non-wheel row${p.skipped.length>1?'s':''} (share trades, dividends, transfers…)</div>`:'';
   box.innerHTML=`<div class="imp-broker">Detected: <b>${esc(p.broker)}</b> · ${p.rows.length} trade${p.rows.length===1?'':'s'} found</div>`+
     (p.rows.length?`<div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+badH+skipH;
-  btn.disabled=!p.rows.length;btn.textContent=p.rows.length?`Import ${p.rows.length}`:'Import';
+  const of=p.optionFills||[];
+  if(of.length)box.innerHTML+=`<div class="imp-sub" style="color:#5eead4">+ ${of.length} long-option fill${of.length>1?'s':''} (buy-to-open and their closes) → Options tab, not the wheel:</div><ul class="imp-bad" style="color:var(--text2)">${of.map(f=>`<li>${esc(f.date)} ${f.effect==='open'?'Buy to open':f.expired?'Expired':'Sell to close'} ${f.qty}× ${esc(f.ticker)} ${f.strike}${f.type} ${esc(f.expiry)}${f.expired?'':' @ '+(+f.price).toFixed(2)}</li>`).join('')}</ul>`;
+  const n=p.rows.length+of.length;
+  btn.disabled=!n;btn.textContent=n?`Import ${n}`:'Import';
 }
 function importLoadFile(file){
   if(!file)return;
@@ -3910,7 +3941,12 @@ function initImportDrop(){
 }
 function doImport(){
   if(!_importParsed)importPreview();
-  const p=_importParsed;if(!p||!p.rows.length)return;
+  const p=_importParsed;if(!p||!(p.rows.length||(p.optionFills||[]).length))return;
+  if((p.optionFills||[]).length){
+    const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
+    db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));
+    if(r.unmatched.length)console.warn('Option closes with no open long leg:',r.unmatched);
+  }
   let imported=0,dupes=0;
   const newWheelTickers=new Set();
   const newWheels=[],newTrades=[];

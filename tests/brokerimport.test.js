@@ -141,7 +141,7 @@ const gen = L.parseBrokerCSV(`Trade Date,Underlying,Activity,Qty,Price,Commissio
 2025-02-21,KO,Mystery,1,0.80,0.65,79.35,2025-02-21,62,P`);
 check('generic: detected', gen.broker === 'Generic', gen.broker);
 check('generic: explicit option columns', acts(gen) === 'CSP' && gen.rows[0].ticker === 'KO' && gen.rows[0].strike === 62, gen.rows);
-check('generic: BTO skipped, unknown listed', gen.skipped.length === 1 && gen.unrecognised.length === 1);
+check('generic: BTO → options fill, unknown listed', gen.optionFills.length === 1 && gen.optionFills[0].side === 'long' && gen.optionFills[0].type === 'P' && gen.optionFills[0].price === 0.8 && gen.unrecognised.length === 1, gen.optionFills);
 check('no header → error', !!L.parseBrokerCSV('hello\nworld').error);
 
 // ── full-field checks + messy CSV layouts ──

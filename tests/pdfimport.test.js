@@ -211,10 +211,15 @@ expect('IBKR UK real statement (anonymised)', S(require('fs').readFileSync(requi
   ["2025-10-23", "TSLA", "BTC", 380.0, "2025-10-24", 100, 24.73, 0.78, 2473.78],
   ["2025-10-13", "TSLA", "STOC", 485.0, "2025-10-24", 100, 2.26, 0.8, 225.2],
   ["2025-10-24", "TSLA", "EXP", 485.0, "2025-10-24", 100, 0, 0, 0],
-  ["2025-11-11", "TSLA", "STC", 435.0, "2025-11-14", 100, 2.69, 0.78, 268.22],
   ["2025-10-23", "TSLA", "STOC", 400.0, "2025-11-21", 100, 24.79, 0.81, 2478.19],
   ["2025-10-14", "TSLA", "STOC", 485.0, "2026-09-18", 100, 59.12, 0.87, 5911.13]
 ], { broker: 'Interactive Brokers', unsure: 0 });
+{ const r = S(require('fs').readFileSync(require('path').join(__dirname,'fixtures','ibkr-uk-activity-statement.txt'),'utf8'));
+  const f = r.optionFills || [];
+  check('IBKR fixture: buy-to-open + its STC routed to Options fills, not the wheel', f.length === 2 && f[0].effect === 'open' && f[0].side === 'long' && f[0].strike === 435 && f[0].type === 'C' && f[1].effect === 'close' && f[1].price === 2.69 && f[1].date === '2025-11-11', f); }
+{ const r = S('11/05/2025  Buy to Open  TSLA 11/14/2025 450.00 C  1  15.00  1,501.05');
+  const f = (r.optionFills || [])[0] || {};
+  check('single buy-to-open line → long call fill (Options paste)', r.rows.length === 0 && f.side === 'long' && f.effect === 'open' && f.type === 'C' && f.strike === 450 && f.expiry === '2025-11-14' && f.qty === 1 && f.price === 15 && f.date === '2025-11-05', r); }
 // rotated (landscape) page: pdf.js matrix [0,7,-7,0,row,col]
 check('pdfItemsToLines: rotated page rows/cols', L.pdfItemsToLines([
   { str: 'B', transform: [0,7,-7,0,128,244], page: 1 }, { str: 'A', transform: [0,7,-7,0,128,38], page: 1 },
