@@ -103,12 +103,34 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);let quotes={AAPL:{price:205}};let view='options';let _optsLoadError='';let optDemo=false;const DEMO_SPOTS={};
   let db={wheels:[{id:'w1',ticker:'AAPL',label:'Rotation 1',status:'open'}],trades:[],opts:[]};`;
   const R = new Function(stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-    ['setOptFilter','_optSpots','_legLine','renderOptions'].map(extractFn).join('\n') +
-    `\nlet optFilter={status:'open',tenor:'all',side:'all'};let _optMarkStatus='';\nreturn {render:renderOptions,setDb:d=>{db.opts=d;}};`)();
-  check('render: empty state', /No option positions yet/.test(R.render()));
-  R.setDb([L({ id: 'a', groupId: 'g', mark: 4, wheelId: 'w1' }), L({ id: 'b', groupId: 'g', side: 'short', strike: 210, entryPrice: 1.5, mark: 2 })]);
+    ['setOptFilter','_optSpots','_legLine','renderOptions','renderOptionsLegacy','splitLeapLegs','leapStats','_fdShort','renderLeapCard','leapFormLeg'].map(extractFn).join('\n') +
+    `\nlet optFilter={status:'open',tenor:'all',side:'all'};let _optMarkStatus='';let leapStatus='open';\nreturn {render:renderOptions,legacy:renderOptionsLegacy,split:splitLeapLegs,stats:leapStats,form:leapFormLeg,setDb:d=>{db.opts=d;},setStatus:v=>{leapStatus=v;}};`)();
+  check('render: LEAPs empty state', /No open LEAPs/.test(R.render()) && !/Other options/.test(R.render()));
+  const LC = (o) => L({ type: 'C', side: 'long', strike: 180, expiry: '2028-01-21', entryDate: '2026-01-02', entryPrice: 30, mark: 40, iv: 0.3, qty: 2, fees: 1.3, ...o });
+  R.setDb([LC({ id: 'lc1' }), L({ id: 'a', groupId: 'g', mark: 4, wheelId: 'w1' }), L({ id: 'b', groupId: 'g', side: 'short', strike: 210, entryPrice: 1.5, mark: 2 }), L({ id: 'sp', groupId: 'sp', type: 'P', side: 'short', strike: 190, mark: 1 })]);
   const h = R.render();
-  check('render: vertical row, attached rotation, summary cards', /Call vertical/.test(h) && /↳ AAPL/.test(h) && /Unrealised P&amp;L|Unrealised P&L/.test(h) && /never added to wheel P&L/.test(h), h.slice(0, 300));
+  check('render: one LEAP card for the long call only', (h.match(/class="leap-card/g) || []).length === 1 && /data-leap="lc1"/.test(h), h.slice(0, 300));
+  check('render: summary strip (value/cost, P&L, share equiv, time value)', /Market value/.test(h) && /Open P&amp;L/.test(h) && /Share equivalent/.test(h) && /Time value/.test(h) && /decay ≈/.test(h));
+  check('render: non-long-call legs listed under Other options (2 groups), not dropped', /Other options \(2\)/.test(h) && /Call vertical/.test(h));
+  check('render: no multi-leg builder / tenor / side filter chips', !/Any expiry|Long &amp; short|Long & short|\+ Position/.test(h) && /\+ LEAP/.test(h));
+  check('render: ITM badge, intrinsic/time split, breakeven, days-left bar, Roll/Close', /leap-badge itm/.test(h) && /Intrinsic \$25\.00/.test(h) && /Time \$15\.00/.test(h) && /\$210\.00<\/b><span>Breakeven/.test(h) && /days left/.test(h) && /'roll'/.test(h) && /'close'/.test(h));
+  const S1 = R.stats(LC({}), 205, TODAY);
+  check('stats: value, cost incl fees, P&L, BE %, delta-as-shares>0, theta<0', S1.value === 8000 && S1.cost === 6001.3 && Math.abs(S1.pl - 1998.7) < 0.01 && Math.abs(S1.beDist - (210 / 205 * 100 - 100)) < 1e-9 && S1.dsh > 0 && S1.dsh < 200 && S1.thd < 0, S1);
+  R.setDb([LC({ id: 'w', expiry: '2027-03-19', reviewDate: '2026-11-01' })]);
+  const hw = R.render();
+  check('under 270 days → yellow border + review note; review date shown', /leap-card warn/.test(hw) && /Under 9 months left/.test(hw) && /Review 1 Nov 26/.test(hw), hw.slice(0, 200));
+  R.setDb([LC({ id: 'c', status: 'closed', closePrice: 45, closeDate: '2026-09-01' })]); R.setStatus('closed');
+  const hc = R.render();
+  check('closed toggle shows closed LEAP with realised P&L', /data-leap="c"/.test(hc) && /Realised/.test(hc) && !/leap-sum/.test(hc));
+  R.setStatus('open');
+  check('split: mixed group with a long call goes to Other', R.split([L({ id: 'x', groupId: 'g', type: 'C', side: 'long' }), L({ id: 'y', groupId: 'g', type: 'C', side: 'short' })]).leaps.length === 0);
+  const f = R.form({ und: ' tsla ', strike: '400', expiry: '2028-01-21', qty: '2', price: '78', date: '2026-10-01', fees: '1.3', review: '', notes: 'x', mark: '', newId: 'n1' }, null);
+  check('+ LEAP form → single long call leg', f.leg && f.leg.underlying === 'TSLA' && f.leg.side === 'long' && f.leg.type === 'C' && f.leg.qty === 2 && f.leg.groupId === 'n1' && f.leg.wheelId === null && f.leg.reviewDate === null, f);
+  check('+ LEAP form validation', /strike/.test(R.form({ und: 'T', strike: '', expiry: 'x', qty: '1', price: '1' }).err) && /price/.test(R.form({ und: 'T', strike: '1', expiry: 'x', qty: '1', price: '' }).err));
+  const e = R.form({ und: 'TSLA', strike: '400', expiry: '2028-01-21', qty: '2', price: '78', mark: '90' }, { id: 'old', groupId: 'g9', mark: 84, markSrc: 'cboe', status: 'open', wheelId: null });
+  check('edit keeps id/group, manual mark flagged', e.leg.id === 'old' && e.leg.groupId === 'g9' && e.leg.mark === 90 && e.leg.markSrc === 'manual');
+  R.setDb([L({ id: 'a', groupId: 'g', mark: 4, wheelId: 'w1' }), L({ id: 'b', groupId: 'g', side: 'short', strike: 210, entryPrice: 1.5, mark: 2 })]);
+  check('legacy table view still renders (kept in code)', /Call vertical/.test(R.legacy()) && /↳ AAPL/.test(R.legacy()));
 }
 // ── optchain proxy: contract picking from a Cboe-shaped payload ──
 {
