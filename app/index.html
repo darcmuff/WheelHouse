@@ -2101,8 +2101,11 @@ function leapFillFrom(i){
   const v=(k,x)=>document.getElementById(k).value=x??'';
   v('lf-und',c.ticker);v('lf-strike',c.strike);v('lf-expiry',c.expiry);v('lf-qty',c.qty||1);v('lf-price',c.price);v('lf-date',c.date||new Date().toISOString().slice(0,10));v('lf-fees',c.fees||0);
   const miss=[c.price==null&&'price',!c.date&&'date'].filter(Boolean);
+  const low=(c.low||[]).filter(k=>!miss.includes(k)),FID={price:'lf-price',date:'lf-date',contracts:'lf-qty',fees:'lf-fees',expiry:'lf-expiry'};
+  Object.values(FID).forEach(id=>document.getElementById(id).style.borderColor='');
+  [...miss,...low].forEach(k=>{const el=FID[k]&&document.getElementById(FID[k]);if(el)el.style.borderColor='var(--yellow)';});
   const f=document.getElementById('lf-filled');f.style.display='block';
-  f.innerHTML=`✦ Filled from SmartScan — check every field, then Save.${miss.length?` <b style="color:var(--yellow)">Couldn't read: ${miss.join(', ')}.</b>`:''}`;
+  f.innerHTML=`✦ Filled from SmartScan — check every field, then Save.${miss.length?` <b style="color:var(--yellow)">Couldn't read: ${miss.join(', ')}.</b>`:''}${low.length?` <b style="color:var(--yellow)">Low confidence: ${low.join(', ')} — double-check ${low.length>1?'these':'this'}.</b>`:''}`;
   switchLeapTab('manual');
 }
 function leapLoadFile(file){
@@ -2130,9 +2133,102 @@ function deleteLeap(){
 }
 // ── LEAP SmartScan: paste/drop a broker fill → one or more long-call candidates (never saves) ──
 // Reuses BCSV.findOption / pickDate / parseStatementText / parseBrokerCSV; only the long-call decision lives here.
+// ── LEAP SmartScan clean-up: unicode, table cells, OCR slips, typo'd labels → plain text the extractors understand ──
+const _LEAP_LABELS=['quantity','contracts','contract','filled','submitted','executed','commission','commissions','regulatory','average','price','position','effect','account','limit','bought','amount'];
+function _lev(a,b){if(Math.abs(a.length-b.length)>2)return 9;const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t;}}return d[b.length];}
+function leapNormalize(text){
+  let s=String(text||'').replace(/\r\n?/g,'\n').replace(/[\u00a0\u2007\u2009\u202f]/g,' ').replace(/[\u2018\u2019\u2032]/g,"'").replace(/[\u201c\u201d]/g,'"')
+    .replace(/[\u2013\u2014]/g,'-').replace(/[•▪●◦∙►▶]/g,' ').replace(/[|\t]/g,'  ').replace(/[＄]/g,'$');
+  // OCR: S310 → $310, Ca11/CaII → Call, Pu7 → Put, 6O.35 → 60.35, 2O27 → 2027, 1l0 → 110
+  s=s.replace(/(^|[\s(:])S(?=\d)/g,'$1$').replace(/\b[Cc][Aa4@][Ll1I|][Ll1I|](s?)\b/g,(m,x)=>(m[0]==='C'&&m[1]==='A'?'CALL':'Call')+x).replace(/\b[Pp][Uu][Tt7](s?)\b/g,(m,x)=>(m===m.toUpperCase()?'PUT':'Put')+x);
+  for(let k=0;k<3;k++)s=s.replace(/(\d[\d,]*\.?)[Oo](?=[\d.,]|\b)/g,'$10').replace(/(^|[\s$])[Oo](?=\d)/g,'$10').replace(/(\d)[lI](?=\d)/g,'$11');
+  // typo'd labels (Quantlty, Fi1led, Comission…) → canonical
+  s=s.replace(/\b[A-Za-z][A-Za-z0-9]{3,11}\b/g,w=>{if(/^\d+$/.test(w)||w===w.toUpperCase()&&w.length<=5)return w;const lw=w.toLowerCase();if(_LEAP_LABELS.includes(lw))return w;
+    for(const L of _LEAP_LABELS){const d=_lev(lw,L);if(d===1&&L.length>=5||d===2&&L.length>=9)return w[0]===w[0].toUpperCase()?L[0].toUpperCase()+L.slice(1):L;}return w;});
+  s=s.replace(/(\d)([CcPp])\b/g,'$1 $2'); // 310c → 310 c
+  return s;
+}
+// Layout-agnostic extractor: finds each field independently anywhere in the text, scores contract candidates,
+// cross-checks price × qty × 100 against cost/amount lines. Returns fields + list of low-confidence ones.
+function leapFuzzy(s,B,today){
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12},pad=n=>String(n).padStart(2,'0');
+  const yr=y=>y.length===2?'20'+y:y,MON='(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\\.?';
+  const valid=(y,m,d)=>m>=1&&m<=12&&d>=1&&d<=31&&+y>=1990&&+y<=2100;
+  const infer=(m,d)=>{let y=+today.slice(0,4);if(`${y}-${pad(m)}-${pad(d)}`>today)y--;return`${y}-${pad(m)}-${pad(d)}`;};
+  // every date in the text, with position
+  const dates=[];const add=(re,fn)=>{for(const m of s.matchAll(re)){const r=fn(m);if(r&&!dates.some(x=>m.index<x.end&&x.i<m.index+m[0].length))dates.push({i:m.index,end:m.index+m[0].length,...r});}};
+  add(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g,m=>valid(m[1],+m[2],+m[3])&&{iso:`${m[1]}-${pad(m[2])}-${pad(m[3])}`,y:1});
+  add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,\\s*|\\s+)\'?(\\d{4}|\\d{2})\\b(?![:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()],y=yr(m[3]);return valid(y,mo,+m[2])&&{iso:`${y}-${pad(mo)}-${pad(m[2])}`,y:1};});
+  add(new RegExp('\\b(\\d{1,2})[\\s-]?'+MON+'[\\s-]?\'?(\\d{4}|\\d{2})\\b(?![:\\d])','gi'),m=>{const mo=MONS[m[2].toLowerCase()],y=yr(m[3]);return valid(y,mo,+m[1])&&{iso:`${y}-${pad(mo)}-${pad(m[1])}`,y:1};});
+  add(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4}|\d{2})\b/g,m=>{let a=+m[1],b=+m[2];if(a>12){const t=a;a=b;b=t;}const y=yr(m[3]);return valid(y,a,b)&&{iso:`${y}-${pad(a)}-${pad(b)}`,y:1};});
+  add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})\\b(?!\\s*[:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()];return valid(2000,mo,+m[2])&&{iso:infer(mo,+m[2]),y:0};});
+  const low=[];const num=x=>parseFloat(String(x).replace(/[$,\s]/g,''));
+  const inDate=(a,b)=>dates.some(d=>a<d.end&&d.i<b);
+  let mask=s;dates.forEach(d=>{mask=mask.slice(0,d.i)+' '.repeat(d.end-d.i)+mask.slice(d.end);});
+  // ── contract ──
+  let best=null;
+  const occ=/\b([A-Za-z]{1,6})\s?(\d{2})(\d{2})(\d{2})([CP])(\d{8})\b/.exec(s);
+  if(occ)best={ticker:occ[1].toUpperCase(),expiry:`20${occ[2]}-${occ[3]}-${occ[4]}`,strike:+occ[6]/1000,type:occ[5],score:9,eI:occ.index};
+  const STOP=new Set('BUY SELL SOLD BOUGHT BOT SLD CALL PUT CALLS PUTS OPEN CLOSE TO OF AT THE LIMIT MARKET FILLED ORDER QTY PRICE FEE FEES USD GBP EUR ET EST EDT EDT CST PST GMT BST UTC PM AM AND YOU DAY FOR GOOD TYPE CONTRACT OPTION LONG SHORT BTO STO BTC STC ACCOUNT STATUS TOTAL NET COST DATE TRADE TIME SHS CORP INC CO ON AN A I IN IS WAS YOUR MY NEW ID NO OR VIA BY ROTH IRA ACT DESC SYMBOL CODE COMM C P'.split(' '));
+  const MONW=/^(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*$/i;
+  if(!best)for(const m of s.matchAll(/\b(calls?|puts?)\b|(?<=\d\s?)\b([CP])\b/gi)){
+    const k=m.index,type=(m[1]||m[2])[0].toUpperCase();
+    // strike: number nearest to the call/put word, not part of a date, not a qty
+    let st=null;for(const n of s.matchAll(/(?<![\w.,\/-])(\$?)(\d{1,5}(?:,\d{3})*(?:\.\d{1,3})?)(?![\w\/-]|[.,]\d)/g)){
+      const a=n.index,b=a+n[0].length;if(Math.abs((a<k?k-b:a-(k+m[0].length)))>40||inDate(a,b))continue;
+      const v=num(n[2]);if(!(v>=0.5&&v<=20000))continue;if(!n[1]&&!/\./.test(n[2])&&/^\s*(?:contracts?|x\b|shares?|shs|of\b)/i.test(s.slice(b,b+12))||/(?:price|amount|cost|total|fees?|commission|comm|proceeds|paid|debit|credit)\W{0,4}$/i.test(s.slice(Math.max(0,a-14),a))||/(?:[*#]|\bof\s|\bpage\s|\bref\W*)$/i.test(s.slice(Math.max(0,a-8),a))||/(?:qty|quantity|contracts?|bought|buy|sold|sell|@|at)\W{0,3}$/i.test(s.slice(Math.max(0,a-14),a)))continue;
+      const dist=Math.abs(a<k?k-b:a-(k+m[0].length))-(n[1]?6:0)-(/\./.test(n[2])?4:0);if(!st||dist<st.dist)st={v,dist,a,b};}
+    if(!st)continue;
+    let ex=null;dates.filter(d=>d.y).forEach(d=>{const dist=Math.min(Math.abs(d.i-k),Math.abs(d.end-k),Math.abs(d.i-st.b),Math.abs(d.end-st.a));if(dist<=45&&(!ex||dist<ex.dist))ex={...d,dist};});
+    let tk=null;const lo=Math.min(k,st.a);
+    for(const t of s.matchAll(/\(?\b([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b\)?/g)){
+      const w=t[1],W=w.toUpperCase(),a=t.index;if(STOP.has(W)||MONW.test(w)||inDate(a,a+t[0].length))continue;
+      const dist=a<lo?lo-a:a-Math.max(k,st.b);if(dist>45)continue;
+      const gap=((a<lo?mask.slice(a+t[0].length,lo):mask.slice(Math.max(k+m[0].length,st.b),a)).match(/\S+/g)||[]).length; // words between, dates don't count
+      const sc=gap*10+(w===W?0:3)+(a>lo?6:0)-(t[0].startsWith('(')?10:0);if(!tk||sc<tk.sc)tk={W,sc};}
+    if(!tk)continue;
+    const score=(ex?3:0)+3-st.dist/20-tk.sc/60-(ex?ex.dist/40:0);
+    if(!best||score>best.score)best={ticker:tk.W,strike:st.v,expiry:ex?ex.iso:'',type,score,eI:ex?ex.i:-1};
+  }
+  if(!best)return null;
+  if(!best.expiry)low.push('expiry');
+  // ── trade date: labelled > account line (·) > any non-expiry date not after today ──
+  let date='';
+  for(const L of ['filled','trade\\s*date','executed','submitted','date','·','\\bon']){
+    const re=new RegExp(L+'(?:\\s*time)?\\W{0,4}','gi');for(const m of s.matchAll(re)){if(/settle(?:ment)?\W*$|expir\w*\W*$/i.test(s.slice(Math.max(0,m.index-12),m.index)))continue;const e=m.index+m[0].length;const d=dates.find(d=>d.i>=e&&d.i-e<=4&&d.iso!==best.expiry&&d.iso<=today);if(d){date=d.iso;break;}}
+    if(date)break;}
+  if(!date){const d=dates.filter(d=>d.iso!==best.expiry&&d.iso<=today&&!/settle/i.test(s.slice(Math.max(0,d.i-16),d.i))).sort((a,b)=>a.i-b.i)[0];if(d){date=d.iso;low.push('date');}else low.push('date');}
+  // ── contracts ──
+  let qty=null,qsrc='';const ca=[...s.matchAll(/\b(\d{1,4})\s+(?:contracts?\s+)?(?:at|@)\s*\$?(\d[\d,]*(?:\.\d{1,4})?)(?![:\d])/gi)].pop();
+  if(ca){qty=+ca[1];qsrc='at';}
+  else{const m=/\b(?:quantity|qty|contracts?|filled\s+qty)\W{0,4}(-?\d{1,4})(?![\d.,\/])/i.exec(s)||/\b(?:buy|bought|bot|sell|sold|sld)\s+(?:to\s+open\s+)?(-?\d{1,4})\b(?![\d.,\/])/i.exec(s)||/\b(\d{1,4})\s+contracts?\b/i.exec(s);if(m){qty=Math.abs(+m[1]);qsrc='label';}}
+  if(!qty){qty=1;low.push('contracts');}
+  // ── fees: every fee/commission line ──
+  // each fee/commission label: value right after it, else the next small $ amount within 40 chars (label and value split by a stray line)
+  let fees=0,feeN=0,feeFar=false,feeMiss=false;for(const m of s.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+|contract\s+|clearing\s+|sec\s+|taf\s+|orf\s+)?fees?)\b(?!\s*(?:total|incl))/gi)){
+    const after=s.slice(m.index+m[0].length,m.index+m[0].length+44);const v0=/^\W{0,4}-?\(?\$?(\d+(?:\.\d+)?)/.exec(after),v=v0||/^[^$]{0,40}?\$(\d{1,2}\.\d{2})\b/.exec(after);if(v){fees+=+v[1];feeN++;if(!v0)feeFar=true;}else feeMiss=true;}
+  fees=Math.round(fees*100)/100;
+  if(feeFar||feeMiss||fees>qty*10+10)low.push('fees');
+  // ── price: filled/at/avg > plain price (not limit/est) > @ ──
+  let price=null,psrc='';
+  if(ca){price=num(ca[2]);psrc='at';}
+  else{const m=/(?:avg\.?|average|fill(?:ed)?)\s*(?:fill\s*)?price(?:\s+of)?\W{0,4}\$?([\d,]*\.?\d+)/i.exec(s)||/(?<!(?:limit|stop|est\.?|estimated|mark)\s{0,3})\bprice(?:\s+of)?\W{0,4}\$?([\d,]*\.?\d+)/i.exec(s)||/@\s*\$?([\d,]*\.?\d+)/.exec(s)||/\bat\s+\$([\d,]*\.?\d+)/i.exec(s);if(m){price=num(m[1]);psrc='label';}}
+  // cross-check with cost / amount lines
+  const amts=[...s.matchAll(/\b(?:est\.?\s+cost|cost|net\s+amount|amount|total|principal|proceeds|debit)\W{0,4}-?\(?\$?([\d,]+\.\d{2})/gi)].map(m=>num(m[1]))
+    .concat([...s.matchAll(/(?:^|\s)\$([\d]{1,3}(?:,\d{3})+\.\d{2}|\d{4,}\.\d{2})(?=\s|$)/g)].map(m=>num(m[1])));
+  const fits=p=>amts.some(A=>Math.abs(p*qty*100-A)<=0.02||Math.abs(p*qty*100+fees-A)<=Math.max(0.05,fees*0.05+0.02)||Math.abs(p*qty*100-fees-A)<=0.05);
+  if(price!=null&&!fits(price)&&psrc!=='at'&&amts.length){
+    // a different number in the text might be the real fill — pick one that reconciles
+    const alt=[...s.matchAll(/\$?(\d{1,5}\.\d{2,4})\b/g)].map(m=>num(m[1])).find(p=>p!==price&&fits(p));
+    if(alt!=null){price=alt;}else low.push('price');
+  }else if(price==null){
+    const A=amts.find(A=>A>0);if(A){price=Math.round((A-fees)/(qty*100)*100)/100;low.push('price');}else low.push('price');
+  }else if(!amts.length&&psrc!=='at'&&psrc!=='label')low.push('price');
+  return{ticker:best.ticker,strike:best.strike,expiry:best.expiry,type:best.type,qty,qsrc,price,fees,feeN,date,low};
+}
 function leapScan(text,B,today){
   today=today||new Date().toISOString().slice(0,10);
-  text=String(text||'').replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ');
+  text=leapNormalize(text);
   if(text.replace(/\s/g,'').length<8)return{calls:[],rejected:[],error:'Paste a trade confirmation or statement line first.'};
   const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12},pad=n=>String(n).padStart(2,'0');
   const num=s=>parseFloat(String(s).replace(/[,$]/g,''));
@@ -2184,19 +2280,33 @@ function leapScan(text,B,today){
         const clean=rest.replace(/\d{4}-\d{2}-\d{2}(?:,?\s+\d{1,2}:\d{2}(?::\d{2})?)?|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ');
         const q=/(?:^|\s)(-?\d{1,4})(?=\s|$)/.exec(clean);const code=/(?:^|\s)([OC])(?:;[A-Za-z]+)*\s*$/.exec(rest);
         out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest)||(q?(+q[1]<0?'sell':'buy'):''),
-          effect:effOf(rest)||(code?(code[1]==='O'?'open':'close'):'open'),qty:p.qty||(q?Math.abs(+q[1]):1),price:p.price??null,fees:Math.abs(p.fees||0),date:p.date||anyDate(rest),src:P.broker||'Statement'});});
+          effect:effOf(rest)||(code?(code[1]==='O'?'open':'close'):'open'),qty:p.qty||(q?Math.abs(+q[1]):1),price:p.price??null,fees:Math.abs(p.fees||0)||(()=>{let x=0;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?|fees?)\W{0,3}-?\$?(\d+(?:\.\d+)?)/gi))x+=+m[1];return Math.round(x*100)/100;})(),date:p.date||anyDate(rest),src:P.broker||'Statement'});});
     }else{
       // single confirmation — fields may be spread over several lines
       const flat=lines.join(' '),f=findOpt(flat);
+      let fz=null;try{fz=leapFuzzy(flat,B,today);}catch(e){fz=null;}
+      if(!f&&fz&&fz.ticker&&fz.strike&&fz.expiry){
+        out.push({ticker:fz.ticker,strike:fz.strike,expiry:fz.expiry,type:fz.type,side:sideOf(flat),effect:effOf(flat)||'open',qty:fz.qty,price:fz.price,fees:fz.fees,date:fz.date,src:'SmartScan (fuzzy)',low:fz.low.slice()});
+      }
       if(f){const o=f.opt,rest=flat.slice(0,f.start)+' '+flat.slice(f.end);
         const ca=[...rest.matchAll(/\b(\d{1,4})\s+contracts?\s+at\s+\$?([\d,]*\.?\d+)/gi)].pop(); // Robinhood "3 contracts at $60.35" (filled, last wins)
         const qm=ca?[0,ca[1]]:/(?:quantity|qty|contracts?)\s*:?\s*(\d{1,4})\b/i.exec(rest)||/\b(?:buy|bought|bot)\s+(\d{1,4})\b/i.exec(rest)||/\b(\d{1,4})\s+contracts?\b/i.exec(rest);
         const pm=ca?[0,ca[2]]:/(?:avg\.?|average)\s*(?:fill\s*)?price(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/(?<!limit\s)\bprice(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/@\s*\$?([\d,]*\.?\d+)/.exec(rest);
-        let fees=0;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+)?fees?)\s*:?\s*\(?-?\$?(\d+(?:\.\d+)?)/gi))fees+=+m[1];
-        const dl=/(?:trade\s*date|filled(?:\s*time)?|executed(?:\s+at[^\d]*?)?|date)\s*:?\s*(?:on\s+)?((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i.exec(rest);
+        let fees=0,feeN=0,feeOdd=false;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+)?fees?)\s*:?\s*\(?-?\$?(\d+(?:\.\d+)?)/gi)){fees+=+m[1];feeN++;if(!/\./.test(m[1]))feeOdd=true;}
+        const dl=/(?:trade\s*date|filled(?:\s*time)?|executed(?:\s+at[^\d]*?)?|(?<!settle(?:ment)?\s)date)\s*:?\s*(?:on\s+)?((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i.exec(rest);
         const onD=/\bon\s+((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/i.exec(rest);
         out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest),effect:effOf(rest)||'open',qty:qm?+qm[1]:1,price:pm?num(pm[1]):null,
-          fees:Math.round(fees*100)/100,date:anyDate(dl?dl[1]:onD?onD[1]:rest)||yearless(rest),src:'Confirmation'});}
+          fees:Math.round(fees*100)/100,date:anyDate(dl?dl[1]:onD?onD[1]:rest)||yearless(rest),src:'Confirmation',low:[]});
+        // fill gaps from the layout-agnostic pass (same contract only)
+        const c=out[out.length-1];
+        if(fz&&fz.ticker===c.ticker&&+fz.strike===+c.strike){
+          if(c.price==null&&fz.price!=null){c.price=fz.price;}if(!c.date&&fz.date)c.date=fz.date;if(!qm&&fz.qsrc)c.qty=fz.qty;if(fz.fees&&fz.feeN>feeN)c.fees=fz.fees;
+          if(c.price!=null&&fz.price!=null&&c.price!==fz.price&&!fz.low.includes('price')&&!ca)c.price=fz.price; // reconciled with the cost/amount line
+          fz.low.forEach(k=>{if(k==='price'&&(pm||ca)||k==='contracts'&&qm||k==='date'&&(dl||onD))return;c.low.push(k);});
+        }
+        if(feeOdd||c.fees>c.qty*10+10)c.low.push('fees');
+        if(!qm&&!(fz&&fz.qsrc))c.low.push('contracts');if(c.price==null)c.low.push('price');if(!c.date)c.low.push('date');
+        c.low=[...new Set(c.low)];}
     }
   }
   const calls=[],rejected=[];

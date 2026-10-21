@@ -2,8 +2,8 @@
 // Every accepted fill checks ALL fields: ticker, strike, expiry, type, qty, price, fees, date.
 // Run: node tests/leapscan.test.js
 const { extractFn, extractConst } = require('./extract');
-const code = ['MON_PAT','MON_MAP','CREDITS','ACTION_MAP','VALID_ACTIONS'].map(extractConst)
-  .concat(['isCredit','computeTotal','parseCSVLine','normDate','parseSmartText','brokerCSVLib','leapScan'].map(extractFn)).join('\n');
+const code = ['MON_PAT','_LEAP_LABELS','MON_MAP','CREDITS','ACTION_MAP','VALID_ACTIONS'].map(extractConst)
+  .concat(['isCredit','computeTotal','parseCSVLine','normDate','parseSmartText','brokerCSVLib','_lev','leapNormalize','leapFuzzy','leapScan'].map(extractFn)).join('\n');
 const L = new Function(code + '\nconst B=brokerCSVLib();return {scan:(t,d)=>leapScan(t,B,d||\'2026-10-21\'),B};')();
 const scan = L.scan;
 let pass = 0, fail = 0;
@@ -89,6 +89,70 @@ one('Webull month-name expiry', `Buy to Open AMZN $230 Call Dec 17, 2027\nFilled
 one('E*Trade style "Jan 21 \'28 $160 Call"', `Bought to Open 1 NVDA Jan 21 '28 $160 Call @ $41.25\nTrade date: 03/02/2026\nCommission: $0.65`, ['NVDA', 160, '2028-01-21', 'C', 1, 41.25, 0.65, '2026-03-02']);
 check('shared findOption: "TSLA $310 Call Mar 19, 2027"', JSON.stringify(L.B.findOption('Buy TSLA $310 Call Mar 19, 2027').opt) === JSON.stringify({ ticker: 'TSLA', expiry: '2027-03-19', strike: 310, pc: 'C' }));
 check('shared findOption: time after day is not a year', !L.B.findOption('TSLA $310 Call Jul 23, 16:49'));
+
+// ══ Garble / fuzz corpus — every variant asserts all fields ══
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const NOISE = ['Robinhood Financial LLC · Member SIPC', 'Page 1 of 2', 'Ref# 8F3K2Q', 'Account ****1234', 'See important disclosures', 'Questions? Visit help center', '▶ Share', 'Done'];
+const withNoise = t => { const L = t.split('\n'); NOISE.forEach((n, i) => L.splice(Math.floor(rnd() * L.length), 0, n)); return L.join('\n'); };
+// RH layout = header lines + label/value pairs: shuffle as blocks (label next to its value), like a re-ordered copy
+const rhBlocks = t => { const L = t.split('\n'), b = L.slice(0, 4).map(x => [x]); for (let i = 4; i < L.length; i += 2) b.push([L[i], L[i + 1]]); return b; };
+const GARBLE = {
+  'merged single line': t => t.split('\n').join(' '),
+  'merged, no spaces kept tidy': t => t.split('\n').join('   ').replace(/ /g, '  '),
+  'shuffled lines': t => shuffle(t.split('\n')).join('\n'),
+  'extra noise lines': t => withNoise(t),
+  'lower case': t => t.toLowerCase(),
+  'UPPER CASE': t => t.toUpperCase(),
+  'table cells': t => t.split('\n').map(l => '| ' + l.replace(/:\s*/, ' | ') + ' |').join('\n'),
+  'tabs + bullets': t => t.split('\n').map(l => '•\t' + l.replace(/:\s+/, ':\t')).join('\n'),
+  'OCR ($→S, Call→Ca11, 0→O)': t => t.replace(/\$(\d)/g, 'S$1').replace(/Call/g, 'Ca11').replace(/CALL/g, 'CA11').replace(/(\d)0/, '$1O'),
+  'combo: noise + lower + merged': t => withNoise(t).toLowerCase().split('\n').join(' '),
+  'combo: OCR + typos + table': t => GARBLE['table cells'](GARBLE['OCR ($→S, Call→Ca11, 0→O)'](GARBLE['typo labels'](t))),
+  'combo: UPPER + noise + tabs': t => GARBLE['tabs + bullets'](withNoise(t.toUpperCase())),
+  'typo labels': t => t.replace(/Quantity/g, 'Quantlty').replace(/Filled/g, 'Fi1led').replace(/Commission/g, 'Comission').replace(/regulatory/g, 'regulatroy').replace(/Trade [Dd]ate/g, 'Trade Dtae').replace(/Price/g, 'Prlce'),
+};
+const BASES = {
+  'Robinhood app': [RH, ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23'], true],
+  'Schwab': [`Trade Confirmation - Charles Schwab\nTrade Date: 04/15/2026\nAction: Buy to Open\nQuantity: 3\nDescription: CALL AAPL 06/16/2028 250.00\nPrice: $38.10\nCommission: $1.95\nNet Amount: $11,431.95`, ['AAPL', 250, '2028-06-16', 'C', 3, 38.1, 1.95, '2026-04-15']],
+  'Tastytrade': [`Order Filled\nBought 1 NVDA 01/21/28 Call 160.00 @ 41.25\nBuy to Open · Filled Mar 2, 2026\nCommissions: $1.00  Fees: $0.14`, ['NVDA', 160, '2028-01-21', 'C', 1, 41.25, 1.14, '2026-03-02']],
+  'Webull': [`Webull Order Filled\nBuy to Open AMZN 2027-12-17 230.00 Call\nFilled Qty: 2  Avg Price: 35.80\nFilled Time: 06/12/2026 10:22:41 EDT\nFees: $0.10`, ['AMZN', 230, '2027-12-17', 'C', 2, 35.8, 0.1, '2026-06-12']],
+  'IBKR confirmation': [`Interactive Brokers Trade Confirmation\nTrade Date: 2026-03-10  Settle Date: 2026-03-11\nSymbol: TSLA 15JAN27 450 C\nAction: BUY  Quantity: 1  Price: 98.50  Proceeds: -9850.00  Comm/Fee: -1.05  Code: O`, ['TSLA', 450, '2027-01-15', 'C', 1, 98.5, 1.05, '2026-03-10']],
+  'Fidelity': [`Fidelity Investments - Order Confirmation\nYOU BOUGHT OPENING TRANSACTION\nCALL (MSFT) MICROSOFT CORP JAN 21 28 $520 (100 SHS)\nTrade date: 05/01/2026\nQuantity: 1  Price: $71.30\nCommission: $0.65\nAmount: $7,130.65`, ['MSFT', 520, '2028-01-21', 'C', 1, 71.3, 0.65, '2026-05-01']],
+};
+const garbleRes = { ok: 0, all: 0, fails: [] };
+const RUNS = []; for (const [bn, b] of Object.entries(BASES)) for (const [gn, g] of Object.entries(GARBLE)) for (const sd of (/shuffled|noise/.test(gn) ? [3, 11, 29] : [7])) RUNS.push([bn, b, gn + (sd !== 7 ? ` #${sd}` : ''), g, sd]);
+for (const [bn, [txt, want, blocks], gn, g, sd] of RUNS) {
+  seed = sd;
+  const t = gn.startsWith('shuffled lines') && blocks ? shuffle(rhBlocks(txt)).map(b => b.join('\n')).join('\n') : g(txt);
+  const r = scan(t), c = r.calls[0] || {};
+  const bad = F.filter((f, i) => !(typeof want[i] === 'number' ? Math.abs(c[f] - want[i]) < 0.006 : c[f] === want[i]));
+  garbleRes.all++; if (!bad.length && r.calls.length === 1) garbleRes.ok++; else garbleRes.fails.push(`${bn} / ${gn}: ${r.error || bad.map(f => f + '=' + c[f]).join(' ')}`);
+  check(`garble ${bn} / ${gn}: all fields`, !bad.length && r.calls.length === 1, r.error || bad.map(f => `${f}: ${c[f]} want ${want[F.indexOf(f)]}`).join('; '));
+}
+// missing labels: values still found; derived ones flagged low-confidence
+{ const t = RH.replace(/^Quantity\n3\n/m, '').replace(/^Filled quantity\n/m, '').replace(/^Filled\n/m, '').replace(/^Submitted\n/m, '');
+  one('missing labels (RH: no Quantity/Filled/Submitted labels)', t, ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']); }
+{ const r = scan(`Trade Date: 04/15/2026\nAction: Buy to Open\nQuantity: 3\nDescription: CALL AAPL 06/16/2028 250.00\nCommission: $1.95\nNet Amount: $11,431.95`), c = r.calls[0] || {};
+  check('no price label → price derived from net amount, flagged low-confidence', Math.abs(c.price - 38.1) < 0.006 && (c.low || []).includes('price'), c); }
+{ const r = scan(`Bought TSLA 450 Call Jan 15 2027\nFilled 2 at 98.50\nTotal $19,700.00`), c = r.calls[0] || {};
+  check('bare "Filled 2 at 98.50" + total reconciles', c.qty === 2 && c.price === 98.5 && c.ticker === 'TSLA' && c.expiry === '2027-01-15', c); }
+{ const r = scan(`tsla  310c  19 mar 27   bought 3 @ 58.50   fees 1.71   filled jul 23`), c = r.calls[0] || {};
+  check('scrappy note "tsla 310c 19 mar 27 bought 3 @ 58.50"', JSON.stringify(F.map(f => c[f])) === JSON.stringify(['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']), F.map(f => c[f])); }
+{ const r = scan(`TSLA270319C00310000 BUY 3 58.50 open 2026-07-23 comm 1.71`), c = r.calls[0] || {};
+  check('OCC symbol line', JSON.stringify(F.map(f => c[f])) === JSON.stringify(['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']), F.map(f => c[f])); }
+{ const c = scan(RH).calls[0] || {}; check('clean RH paste → no low-confidence fields', !(c.low || []).length, c.low); }
+// refusals survive garbling
+reject('garbled sold call (lower case, merged)', rhv({ head: 'Sell TSLA $400 Call Mar 19, 2027', type: 'Limit sell' }).toLowerCase().split('\n').join(' '), /sold call/);
+reject('garbled put (OCR S, shuffled)', shuffle(rhv({ head: 'Buy TSLA $250 Put Mar 19, 2027' }).split('\n')).join('\n').replace(/\$(\d)/g, 'S$1'), /put/);
+reject('garbled close (UPPER, table)', rhv({ eff: 'Close' }).toUpperCase().split('\n').join(' | '), /buy-to-close/);
+
+// fully shuffled RH lines (labels torn from values): contract/qty/price/date must still be right; fees either right or flagged
+{ let ok = 0; for (let sd = 1; sd <= 40; sd++) { seed = sd * 13; const r = scan(shuffle(RH.split('\n')).join('\n')), c = r.calls[0] || {};
+    const core = c.ticker === 'TSLA' && c.strike === 310 && c.expiry === '2027-03-19' && c.qty === 3 && c.price === 58.5 && c.date === '2026-07-23';
+    if (core && (Math.abs(c.fees - 1.71) < 0.006 || (c.low || []).includes('fees'))) ok++; }
+  check('fully shuffled RH ×40: core fields right, fees right or flagged low-confidence', ok === 40, ok); }
+console.log(`\ngarble corpus: ${garbleRes.ok}/${garbleRes.all} variants fully correct`); garbleRes.fails.forEach(f => console.log('   ✗ ' + f));
 
 // ── not long calls → clear message, nothing filled ──
 reject('sold call (Tastytrade STO)', `Sold 1 TSLA 01/15/27 Call 450.00 @ 12.00\nSell to Open · Filled Mar 2, 2026`, /sold call/);
