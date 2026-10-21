@@ -1104,7 +1104,7 @@ function _deleteOptDoc(id){
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'optlegs',id)).catch(e=>console.error('Option delete failed:',e));
 }
-function toastOptErr(e){if(/permission/i.test(e&&e.message||''))alert('Could not save option position: Firestore rules do not allow the optlegs collection yet. See Settings → Options setup.');}
+function toastOptErr(e){if(/permission/i.test(e&&e.message||''))alert('Could not save option position: Firestore rules do not allow the optlegs collection yet. Ask for the optlegs Firestore rule (docs/OPTIONS.md).');}
 function _deleteWheelDoc(wheelId){
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheelId))
@@ -1805,7 +1805,7 @@ function renderOptions(){
   // linked-to-rotation summary (display only; wheel P&L untouched)
   const byW={};legs.filter(l=>l.wheelId).forEach(l=>{const p=OPTS.legPnL(l);const o=byW[l.wheelId]=byW[l.wheelId]||{r:0,u:0};o.r+=p.realized;if(p.unrealized!=null)o.u+=p.unrealized;});
   const linkH=Object.keys(byW).length?`<div style="margin-top:14px;font-size:12px;color:var(--text3)">Attached to rotations (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
-  const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:10px">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see the setup note in Settings.</div>`:'';
+  const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:10px">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
   return`${err}
   <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0;flex-wrap:wrap">
     <span style="font-size:13px;font-weight:300;color:var(--silver)">Options</span>

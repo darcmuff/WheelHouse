@@ -110,5 +110,17 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   const h = R.render();
   check('render: vertical row, attached rotation, summary cards', /Call vertical/.test(h) && /↳ AAPL/.test(h) && /Unrealised P&amp;L|Unrealised P&L/.test(h) && /never added to wheel P&L/.test(h), h.slice(0, 300));
 }
+// ── optchain proxy: contract picking from a Cboe-shaped payload ──
+{
+  const { pick } = require('../netlify/functions/optchain.js');
+  const raw = { timestamp: '2026-10-21 12:00:20', data: { current_price: 378.5, options: [
+    { option: 'TSLA261120C00400000', bid: 10, ask: 10.4, last_trade_price: 10.2, iv: 0.55, delta: 0.41, gamma: 0.01, theta: -0.35, vega: 0.4, open_interest: 900, volume: 50 },
+    { option: 'TSLA261120P00400000', bid: 30, ask: 31, iv: 0.56, delta: -0.59, theta: -0.3 },
+    { option: 'SPXW261120C05000000', bid: 1, ask: 2, delta: 0.1, theta: -0.5 } ] } };
+  const r = pick(raw, ['TSLA261120C00400000', 'TSLA261120C00999000']);
+  check('optchain pick: only requested contracts, spot, UTC asOf', Object.keys(r.contracts).length === 1 && r.contracts.TSLA261120C00400000.delta === 0.41 && r.spot === 378.5 && r.asOf === '2026-10-21T12:00:20Z', r);
+  const ix = pick(raw, ['SPX261120C05000000']);
+  check('optchain pick: SPX matches SPXW root', ix.contracts.SPX261120C05000000 && ix.contracts.SPX261120C05000000.bid === 1, ix);
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
