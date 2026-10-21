@@ -2130,7 +2130,8 @@ function deleteLeap(){
 }
 // ── LEAP SmartScan: paste/drop a broker fill → one or more long-call candidates (never saves) ──
 // Reuses BCSV.findOption / pickDate / parseStatementText / parseBrokerCSV; only the long-call decision lives here.
-function leapScan(text,B){
+function leapScan(text,B,today){
+  today=today||new Date().toISOString().slice(0,10);
   text=String(text||'').replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ');
   if(text.replace(/\s/g,'').length<8)return{calls:[],rejected:[],error:'Paste a trade confirmation or statement line first.'};
   const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12},pad=n=>String(n).padStart(2,'0');
@@ -2148,8 +2149,12 @@ function leapScan(text,B){
     m=/\b([A-Z][A-Z0-9.]{0,5})\s+(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$?(\d+(?:\.\d+)?)\s+(Call|CALL|Put|PUT|C|P)\b/.exec(line);
     if(m)return{opt:{ticker:m[1],expiry:B.pickDate(m[2]),strike:+m[3],pc:m[4][0].toUpperCase()},start:m.index,end:m.index+m[0].length};
     return null;};
+  // "Filled Jul 23, 4:49 PM" (no year) → latest Jul 23 that isn't after today
+  const yearless=s=>{const m=/\b(?:filled|executed|submitted)\s*:?\s*(?:on\s+)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})\b(?!,?\s*\d{4}\b)/i.exec(s)||/·\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})\b(?!,?\s*\d{4}\b)/i.exec(s);
+    if(!m)return'';let y=+today.slice(0,4);const md=`${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`;if(`${y}-${md}`>today)y--;return`${y}-${md}`;};
   const sideOf=s=>/\b(?:sell|sold|sld|sto|stc|write|wrote|short)\b/i.test(s)?'sell':/\b(?:buy|bought|bot|bto|btc|purchased?|long)\b/i.test(s)?'buy':'';
-  const effOf=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
+  const effOf=s=>{const pe=/position\s+effect\s*:?\s*(open|close)/i.exec(s);if(pe)return pe[1].toLowerCase()==='open'?'open':'close';return effOf0(s);};
+  const effOf0=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
   const verdict=c=>{
     if(c.type!=='C')return'This is a put, not a call — LEAPs here are bought calls only.';
     if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close on the LEAP card instead.':'This is a sold call (sell to open) — that belongs to the wheel, not LEAPs.';
@@ -2184,13 +2189,14 @@ function leapScan(text,B){
       // single confirmation — fields may be spread over several lines
       const flat=lines.join(' '),f=findOpt(flat);
       if(f){const o=f.opt,rest=flat.slice(0,f.start)+' '+flat.slice(f.end);
-        const qm=/(?:quantity|qty|contracts?)\s*:?\s*(\d{1,4})\b/i.exec(rest)||/\b(?:buy|bought|bot)\s+(\d{1,4})\b/i.exec(rest)||/\b(\d{1,4})\s+contracts?\b/i.exec(rest);
-        const pm=/(?:avg\.?|average)\s*(?:fill\s*)?price(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/(?<!limit\s)\bprice(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/@\s*\$?([\d,]*\.?\d+)/.exec(rest);
+        const ca=[...rest.matchAll(/\b(\d{1,4})\s+contracts?\s+at\s+\$?([\d,]*\.?\d+)/gi)].pop(); // Robinhood "3 contracts at $60.35" (filled, last wins)
+        const qm=ca?[0,ca[1]]:/(?:quantity|qty|contracts?)\s*:?\s*(\d{1,4})\b/i.exec(rest)||/\b(?:buy|bought|bot)\s+(\d{1,4})\b/i.exec(rest)||/\b(\d{1,4})\s+contracts?\b/i.exec(rest);
+        const pm=ca?[0,ca[2]]:/(?:avg\.?|average)\s*(?:fill\s*)?price(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/(?<!limit\s)\bprice(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/@\s*\$?([\d,]*\.?\d+)/.exec(rest);
         let fees=0;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+)?fees?)\s*:?\s*\(?-?\$?(\d+(?:\.\d+)?)/gi))fees+=+m[1];
         const dl=/(?:trade\s*date|filled(?:\s*time)?|executed(?:\s+at[^\d]*?)?|date)\s*:?\s*(?:on\s+)?((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i.exec(rest);
         const onD=/\bon\s+((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/i.exec(rest);
         out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest),effect:effOf(rest)||'open',qty:qm?+qm[1]:1,price:pm?num(pm[1]):null,
-          fees:Math.round(fees*100)/100,date:anyDate(dl?dl[1]:onD?onD[1]:rest),src:'Confirmation'});}
+          fees:Math.round(fees*100)/100,date:anyDate(dl?dl[1]:onD?onD[1]:rest)||yearless(rest),src:'Confirmation'});}
     }
   }
   const calls=[],rejected=[];
@@ -3939,6 +3945,9 @@ function brokerCSVLib(){
     // E*Trade "AAPL Jan 17 '25 $150 Put"
     m=new RegExp('^'+T+"\\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\\w*\\s+(\\d{1,2}),?\\s+'?(\\d{2,4})\\s+\\$?([\\d.]+)\\s+"+PC+'\\b').exec(U);
     if(m)return fin(m[1],m[4],MONS[m[2].toLowerCase()],m[3],m[5],m[6]);
+    // Robinhood app "TSLA $310 Call Mar 19, 2027" / "TSLA 152.5 Put Jan 15 2027" / "TSLA $310 Call Mar 19 '27"
+    m=new RegExp('^'+T+"\\s+\\$?([\\d.,]+)\\s+(PUT|CALL)\\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\\.?\\s+(\\d{1,2})(?:,\\s*|\\s+)'?(\\d{4}|\\d{2})\\b(?![:\\d])").exec(U);
+    if(m)return fin(m[1],m[6],MONS[m[4].toLowerCase()],m[5],m[2],m[3]);
     // Fidelity "... PUT (AAPL) APPLE INC JAN 17 25 $150 (100 SHS)"
     m=/\b(PUT|CALL)\s+\(([A-Z][A-Z0-9.]{0,9})\).*?\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{1,2})\s+(\d{2,4})\s+\$([\d.,]+)/.exec(U);
     if(m)return fin(m[2],m[5],MONS[m[3].toLowerCase()],m[4],m[6],m[1]);

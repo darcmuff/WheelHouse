@@ -4,7 +4,8 @@
 const { extractFn, extractConst } = require('./extract');
 const code = ['MON_PAT','MON_MAP','CREDITS','ACTION_MAP','VALID_ACTIONS'].map(extractConst)
   .concat(['isCredit','computeTotal','parseCSVLine','normDate','parseSmartText','brokerCSVLib','leapScan'].map(extractFn)).join('\n');
-const scan = new Function(code + '\nconst B=brokerCSVLib();return t=>leapScan(t,B);')();
+const L = new Function(code + '\nconst B=brokerCSVLib();return {scan:(t,d)=>leapScan(t,B,d||\'2026-10-21\'),B};')();
+const scan = L.scan;
 let pass = 0, fail = 0;
 const check = (n, ok, x) => { ok ? pass++ : fail++; console.log((ok ? '  ✓ ' : '  ✗ ') + n + (ok || x === undefined ? '' : '  → ' + JSON.stringify(x))); };
 const F = ['ticker', 'strike', 'expiry', 'type', 'qty', 'price', 'fees', 'date'];
@@ -62,6 +63,32 @@ Filled Time: 06/12/2026 10:22:41 EDT
 Fees: $0.10`, ['AMZN', 230, '2027-12-17', 'C', 2, 35.8, 0.1, '2026-06-12']);
 one('Generic broker CSV', `Trade Date,Underlying,Activity,Qty,Price,Commission,Net Amount,Expiry,Strike,Put/Call
 2026-02-21,TSLA,Buy to Open,1,80.00,0.65,8000.65,2028-01-21,400,C`, ['TSLA', 400, '2028-01-21', 'C', 1, 80, 0.65, '2026-02-21']);
+
+// ── Robinhood app confirmation (layout identical to Marc's real paste; dollar figures faked) ──
+const RH = require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'robinhood-app-leap-buy.txt'), 'utf8');
+one('Robinhood app (fixture)', RH, ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']);
+{ const c = scan(RH).calls[0] || {}; check('Robinhood app: long/open, filled price not limit', c.side === 'buy' && c.effect === 'open' && c.price !== 58.55, c); }
+check('yearless date → latest past (today 2026-07-01 → 2025-07-23)', (scan(RH, '2026-07-01').calls[0] || {}).date === '2025-07-23');
+check('yearless date on the day itself stays this year', (scan(RH, '2026-07-23').calls[0] || {}).date === '2026-07-23');
+const rhv = (o) => RH.replace('Buy TSLA $310 Call Mar 19, 2027', o.head || 'Buy TSLA $310 Call Mar 19, 2027').replace('Limit buy', o.type || 'Limit buy')
+  .replace('Position effect\nOpen', 'Position effect\n' + (o.eff || 'Open')).replace(/3 contracts at/g, o.qty || '3 contracts at').replace(/^Quantity\n3$/m, 'Quantity\n' + (o.q || '3'))
+  .replace(/^Filled\nJul 23, 4:49 PM GMT\+1$/m, 'Filled\n' + (o.filled || 'Jul 23, 4:49 PM GMT+1'));
+reject('Robinhood app: Sell … Call (sold)', rhv({ head: 'Sell TSLA $400 Call Mar 19, 2027', type: 'Limit sell' }), /sold call/);
+reject('Robinhood app: Position effect Close (buy)', rhv({ eff: 'Close' }), /buy-to-close/);
+reject('Robinhood app: sell + Close', rhv({ head: 'Sell TSLA $310 Call Mar 19, 2027', type: 'Market sell', eff: 'Close' }), /sell-to-close/);
+reject('Robinhood app: put', rhv({ head: 'Buy TSLA $250 Put Mar 19, 2027' }), /put/);
+one('Robinhood app: Market buy, decimal strike, Jan 15, 2027', rhv({ head: 'Buy TSLA $312.5 Call Jan 15, 2027', type: 'Market buy' }), ['TSLA', 312.5, '2027-01-15', 'C', 3, 58.5, 1.71, '2026-07-23']);
+one('Robinhood app: expiry without comma', rhv({ head: 'Buy TSLA $310 Call Mar 19 2027' }), ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']);
+one('Robinhood app: filled date with year, ET', rhv({ filled: 'Jul 23, 2025, 11:49 AM ET' }), ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2025-07-23']);
+one('Robinhood app: 1 contract at', rhv({ qty: '1 contract at', q: '1' }), ['TSLA', 310, '2027-03-19', 'C', 1, 58.5, 1.71, '2026-07-23']);
+one('Robinhood app: no $ on strike, EDT', rhv({ head: 'Buy NVDA 160 Call Jan 21, 2028', filled: 'Jul 23, 4:49 PM EDT' }), ['NVDA', 160, '2028-01-21', 'C', 3, 58.5, 1.71, '2026-07-23']);
+// ── same weakness elsewhere: month-name expiry with comma, $ strike ──
+one('Tastytrade month-name expiry', `Bought 2 AAPL $250 Call Jun 16, 2028 @ 38.10\nBuy to Open · Filled Apr 15, 2026\nCommissions: $2.00  Fees: $0.28`, ['AAPL', 250, '2028-06-16', 'C', 2, 38.1, 2.28, '2026-04-15']);
+one('Schwab month-name expiry', `Trade Date: 04/15/2026\nAction: Buy to Open\nQuantity: 1\nDescription: AAPL $250 Call Jun 16, 2028\nPrice: $38.10\nCommission: $0.65`, ['AAPL', 250, '2028-06-16', 'C', 1, 38.1, 0.65, '2026-04-15']);
+one('Webull month-name expiry', `Buy to Open AMZN $230 Call Dec 17, 2027\nFilled Qty: 2  Avg Price: 35.80\nFilled Time: 06/12/2026 10:22:41 EDT\nFees: $0.10`, ['AMZN', 230, '2027-12-17', 'C', 2, 35.8, 0.1, '2026-06-12']);
+one('E*Trade style "Jan 21 \'28 $160 Call"', `Bought to Open 1 NVDA Jan 21 '28 $160 Call @ $41.25\nTrade date: 03/02/2026\nCommission: $0.65`, ['NVDA', 160, '2028-01-21', 'C', 1, 41.25, 0.65, '2026-03-02']);
+check('shared findOption: "TSLA $310 Call Mar 19, 2027"', JSON.stringify(L.B.findOption('Buy TSLA $310 Call Mar 19, 2027').opt) === JSON.stringify({ ticker: 'TSLA', expiry: '2027-03-19', strike: 310, pc: 'C' }));
+check('shared findOption: time after day is not a year', !L.B.findOption('TSLA $310 Call Jul 23, 16:49'));
 
 // ── not long calls → clear message, nothing filled ──
 reject('sold call (Tastytrade STO)', `Sold 1 TSLA 01/15/27 Call 450.00 @ 12.00\nSell to Open · Filled Mar 2, 2026`, /sold call/);
