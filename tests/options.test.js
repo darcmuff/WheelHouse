@@ -122,5 +122,39 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   const ix = pick(raw, ['SPX261120C05000000']);
   check('optchain pick: SPX matches SPXW root', ix.contracts.SPX261120C05000000 && ix.contracts.SPX261120C05000000.bid === 1, ix);
 }
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+// ── marks fallback order: Cboe → Finnhub → none (manual + BS) ──
+const _mk = async () => {
+  const { getMarks } = require('../netlify/functions/optchain.js');
+  const A = 'AAPL261120C00200000', B = 'AAPL261120P00180000';
+  const cboe = { timestamp: '2026-10-21 12:00:00', data: { current_price: 201, options: [{ option: A, bid: 5, ask: 5.2, iv: 0.3, delta: 0.5, theta: -0.1 }] } };
+  const fh = { data: [{ expirationDate: '2026-11-20', options: { CALL: [{ contractName: A, bid: 9, ask: 9 }], PUT: [{ contractName: B, bid: 2, ask: 2.2, impliedVolatility: 31.5, delta: -0.3, theta: -0.05 }] } }] };
+  const calls = [];
+  const fake = map => async url => { calls.push(url.includes('cboe') ? 'cboe' : 'finnhub'); const v = map(url); if (v instanceof Error) throw v; return v == null ? { ok: false, status: 401, json: async () => ({}) } : { ok: true, json: async () => v }; };
+  let r = await getMarks('AAPL', [A, B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : fh), finnhubKey: 'k' });
+  check('marks: Cboe first, Finnhub fills the gap', r.contracts[A].src === 'cboe' && r.contracts[A].bid === 5 && r.contracts[B].src === 'finnhub' && Math.abs(r.contracts[B].iv - 0.315) < 1e-9 && calls.join() === 'cboe,finnhub', { r, calls });
+  calls.length = 0; r = await getMarks('AAPL', [A], { fetchImpl: fake(u => u.includes('cboe') ? cboe : fh), finnhubKey: 'k' });
+  check('marks: Finnhub skipped when Cboe covers all', calls.join() === 'cboe' && r.sources.join() === 'cboe');
+  calls.length = 0; r = await getMarks('AAPL', [A, B], { fetchImpl: fake(u => u.includes('cboe') ? new Error('net') : null), finnhubKey: 'bad' });
+  check('marks: Cboe down + Finnhub 401 → empty, no throw (manual/BS fallback)', Object.keys(r.contracts).length === 0 && r.sources.length === 0 && calls.join() === 'cboe,finnhub', r);
+  calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : { error: "You don't have access to this resource." }), finnhubKey: 'k' });
+  check('marks: Finnhub {error} payload ignored', !r.contracts[B]);
+  calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : fh) });
+  check('marks: no key → Finnhub not called', calls.join() === 'cboe' && !r.contracts[B]);
+  const gl = O.legGreeks(L({ mark: 4, markSrc: 'manual' }), 200, TODAY);
+  check('fallback: manual mark → local Black-Scholes greeks', gl && gl.src === 'bs');
+};
+// ── health: wheel trade duplicating an Options leg → informational only ──
+{
+  const leg = L({ id: 'd1', underlying: 'TSLA', strike: 450, expiry: '2025-11-14', entryDate: '2025-11-05', closeDate: '2025-11-11', status: 'closed', closePrice: 3.32 });
+  const trades = [{ id: 't1', ticker: 'TSLA', action: 'STC', entered: '2025-11-11', strike: 450, expiry: '2025-11-14' },
+                  { id: 't2', ticker: 'TSLA', action: 'STOC', entered: '2025-11-03', strike: 450, expiry: '2025-11-14' }];
+  const hh = O.health([leg], [], '2025-11-20', trades);
+  const dup = hh.filter(i => /matches an Options leg/.test(i.text));
+  check('health: wheel trade same contract+day as options leg → grey info, no tradeId', dup.length === 1 && dup[0].sev === 'grey' && dup[0].info === true && !dup[0].tradeId && dup[0].legId === 'd1', hh);
+}
+// ── options-only CSV export ──
+{
+  const csv = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + extractFn('optsToCSV') + '\nreturn optsToCSV;')()([L({ id: 'e1', groupId: 'g', mark: 4, notes: 'a, "b"' })]);
+  check('options export CSV: header, quoting, unrealized', /^groupId,underlying/.test(csv) && csv.includes('"a, ""b"""') && csv.includes(',98.7,'), csv);
+}
+_mk().then(() => { console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0); });

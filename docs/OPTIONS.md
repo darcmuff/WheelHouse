@@ -42,5 +42,5 @@ Until the rule exists, the Options tab shows a warning and the wheel app keeps w
 
 ## Live marks
 
-`netlify/functions/optchain.js` proxies Cboe's public delayed quotes (no key, ~15 min delay, bid/ask/IV/greeks).
+`netlify/functions/optchain.js` tries Cboe public delayed quotes first, then the Finnhub option chain with the existing `FINNHUB_KEY` (skipped silently if unauthorised or failing).
 The browser can't call Cboe directly (no CORS header). If the proxy fails, manual marks are used and greeks are computed locally.
