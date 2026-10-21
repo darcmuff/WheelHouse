@@ -915,6 +915,19 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   <div class="mbox" style="width:520px;padding:14px">
     <div class="mtitle" style="margin-bottom:8px;font-size:15px"><span id="mLeapTitle">Add LEAP (long call)</span><span class="mx" onclick="closeModal('mLeap')">✕</span></div>
     <input type="hidden" id="lf-id">
+    <div id="lf-tabs" style="display:flex;gap:0;border:1px solid var(--border2);border-radius:7px;overflow:hidden;margin-bottom:12px">
+      <button id="lf-tab-smartscan" onclick="switchLeapTab('smartscan')" style="flex:1;padding:7px;background:var(--orange);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.3px">✦ SmartScan</button>
+      <button id="lf-tab-manual" onclick="switchLeapTab('manual')" style="flex:1;padding:7px;background:var(--bg3);color:var(--text2);border:none;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.3px">✎ Manual Entry</button>
+    </div>
+    <div id="lf-panel-smartscan">
+      <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Paste the buy-to-open confirmation for your call — IBKR, Robinhood, Tastytrade, Schwab, Fidelity, Webull or a statement line. Or drop a PDF / CSV / text file on the box. Nothing is saved until you check the details and press Save.</p>
+      <textarea id="lf-paste" style="width:100%;height:150px;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:11px;border-radius:7px;font-size:12px;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here… (or drop a PDF / CSV)"></textarea>
+      <div id="lf-scan-msg" style="font-size:12px;margin-top:8px;display:none"></div>
+      <div id="lf-pick" style="margin-top:8px"></div>
+      <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mLeap')">Cancel</button><button class="btn btn-primary" onclick="leapRunScan()">SmartScan →</button></div>
+    </div>
+    <div id="lf-panel-manual">
+    <div id="lf-filled" style="display:none;background:rgba(13,148,136,.12);border:1px solid rgba(13,148,136,.4);color:var(--orangeL);font-size:12px;padding:7px 10px;border-radius:7px;margin-bottom:8px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">
       <div class="fld"><label>Ticker</label><input id="lf-und" type="text" placeholder="TSLA" style="text-transform:uppercase"></div>
       <div class="fld"><label>Strike ($)</label><input id="lf-strike" type="number" step="0.5"></div>
@@ -931,6 +944,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
       <button class="btn btn-danger" id="lf-del" style="display:none;margin-right:auto" onclick="deleteLeap()">✕ Delete</button>
       <button class="btn btn-ghost" onclick="closeModal('mLeap')">Cancel</button>
       <button class="btn btn-primary" onclick="saveLeap()">Save</button>
+    </div>
     </div>
   </div>
 </div>
@@ -2030,7 +2044,9 @@ function openLeapAdd(){
   document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('mLeapTitle').textContent='Add LEAP (long call)';
   document.getElementById('lf-mark-wrap').style.display='none';document.getElementById('lf-del').style.display='none';
-  openModal('mLeap');
+  document.getElementById('lf-paste').value='';document.getElementById('lf-pick').innerHTML='';document.getElementById('lf-scan-msg').style.display='none';
+  document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='flex';
+  switchLeapTab('smartscan');initLeapDrop();openModal('mLeap');
 }
 function openLeapEdit(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
@@ -2039,6 +2055,7 @@ function openLeapEdit(id){
   v('lf-date',l.entryDate);v('lf-fees',l.fees??0);v('lf-review',l.reviewDate);v('lf-notes',l.notes);v('lf-mark',l.mark);
   document.getElementById('mLeapTitle').textContent='Edit LEAP';
   document.getElementById('lf-mark-wrap').style.display=l.status==='open'?'':'none';document.getElementById('lf-del').style.display='';
+  document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='none';switchLeapTab('manual');
   openModal('mLeap');
 }
 function leapFormLeg(f,old){
@@ -2060,9 +2077,127 @@ function saveLeap(){
   db.opts=db.opts||[];const i=db.opts.findIndex(l=>l.id===r.leg.id);if(i>-1)db.opts[i]=r.leg;else db.opts.push(r.leg);
   _saveOpt(r.leg);closeModal('mLeap');render();
 }
+function switchLeapTab(tab){
+  const ss=tab==='smartscan';
+  document.getElementById('lf-panel-smartscan').style.display=ss?'block':'none';
+  document.getElementById('lf-panel-manual').style.display=ss?'none':'block';
+  const a=document.getElementById('lf-tab-smartscan'),b=document.getElementById('lf-tab-manual');
+  a.style.background=ss?'var(--orange)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';
+  b.style.background=ss?'var(--bg3)':'var(--orange)';b.style.color=ss?'var(--text2)':'#fff';
+}
+let _leapScan=null;
+function leapRunScan(){
+  const msg=document.getElementById('lf-scan-msg'),pick=document.getElementById('lf-pick');pick.innerHTML='';
+  let r;try{r=leapScan(document.getElementById('lf-paste').value,BCSV);}catch(e){r={calls:[],rejected:[],error:'Parse error: '+e.message};}
+  _leapScan=r;
+  if(!r.calls.length){msg.style.color='var(--red)';msg.textContent=r.error;msg.style.display='block';return;}
+  if(r.calls.length===1&&!r.rejected.length){msg.style.display='none';return leapFillFrom(0);}
+  msg.style.color='var(--text3)';msg.style.display='block';
+  msg.textContent=`Found ${r.calls.length} bought call${r.calls.length>1?'s':''}${r.rejected.length?` (skipped ${r.rejected.length} sold/put/closing trade${r.rejected.length>1?'s':''})`:''} — pick one:`;
+  pick.innerHTML=r.calls.map((c,i)=>`<button class="btn btn-ghost" style="display:flex;width:100%;justify-content:space-between;gap:8px;margin-bottom:4px;font-size:12px;padding:6px 10px" onclick="leapFillFrom(${i})"><span><b style="color:var(--orange2)">${esc(c.ticker)}</b> ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} Call · ${esc(_fdShort(c.expiry))}</span><span style="color:var(--text3)">@ ${c.price!=null?fmt2(c.price):'—'} · ${esc(c.date||'no date')}</span></button>`).join('');
+}
+function leapFillFrom(i){
+  const c=_leapScan&&_leapScan.calls[i];if(!c)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('lf-und',c.ticker);v('lf-strike',c.strike);v('lf-expiry',c.expiry);v('lf-qty',c.qty||1);v('lf-price',c.price);v('lf-date',c.date||new Date().toISOString().slice(0,10));v('lf-fees',c.fees||0);
+  const miss=[c.price==null&&'price',!c.date&&'date'].filter(Boolean);
+  const f=document.getElementById('lf-filled');f.style.display='block';
+  f.innerHTML=`✦ Filled from SmartScan — check every field, then Save.${miss.length?` <b style="color:var(--yellow)">Couldn't read: ${miss.join(', ')}.</b>`:''}`;
+  switchLeapTab('manual');
+}
+function leapLoadFile(file){
+  if(!file)return;const ta=document.getElementById('lf-paste'),msg=document.getElementById('lf-scan-msg');
+  msg.style.color='var(--text3)';msg.textContent='Reading '+file.name+'…';msg.style.display='block';
+  if(/\.pdf$/i.test(file.name)||file.type==='application/pdf'){
+    (async()=>{try{
+      if(!_pdfjs){const V='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';_pdfjs=await import(V+'pdf.min.mjs');_pdfjs.GlobalWorkerOptions.workerSrc=V+'pdf.worker.min.mjs';}
+      const doc=await _pdfjs.getDocument({data:await file.arrayBuffer()}).promise;const items=[];
+      for(let n=1;n<=doc.numPages;n++){const tc=await(await doc.getPage(n)).getTextContent();tc.items.forEach(it=>items.push({str:it.str,transform:it.transform,page:n}));}
+      ta.value=BCSV.pdfItemsToLines(items);leapRunScan();
+    }catch(e){msg.style.color='var(--red)';msg.textContent="Couldn't open this PDF ("+(e&&e.message||e)+").";}})();return;}
+  if(/^image\//.test(file.type)){msg.style.color='var(--red)';msg.textContent="Screenshots can't be read — copy the text of the confirmation and paste it instead.";return;}
+  const r=new FileReader();r.onload=()=>{ta.value=r.result;leapRunScan();};r.readAsText(file);
+}
+function initLeapDrop(){
+  const ta=document.getElementById('lf-paste');if(!ta||ta._wired)return;ta._wired=true;
+  ta.addEventListener('dragover',e=>{e.preventDefault();ta.style.borderColor='var(--orange)';});
+  ta.addEventListener('dragleave',()=>{ta.style.borderColor='var(--border2)';});
+  ta.addEventListener('drop',e=>{e.preventDefault();ta.style.borderColor='var(--border2)';const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)leapLoadFile(f);});
+}
 function deleteLeap(){
   const id=document.getElementById('lf-id').value;if(!id||!confirm('Delete this LEAP?'))return;
   _deleteOptDoc(id);db.opts=(db.opts||[]).filter(l=>l.id!==id);closeModal('mLeap');render();
+}
+// ── LEAP SmartScan: paste/drop a broker fill → one or more long-call candidates (never saves) ──
+// Reuses BCSV.findOption / pickDate / parseStatementText / parseBrokerCSV; only the long-call decision lives here.
+function leapScan(text,B){
+  text=String(text||'').replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ');
+  if(text.replace(/\s/g,'').length<8)return{calls:[],rejected:[],error:'Paste a trade confirmation or statement line first.'};
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12},pad=n=>String(n).padStart(2,'0');
+  const num=s=>parseFloat(String(s).replace(/[,$]/g,''));
+  const anyDate=s=>{s=String(s||'');let m=/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i.exec(s);
+    const a=m?m.index:1e9;const m2=/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})\b/i.exec(s);
+    const n=/(\d{4}-\d{2}-\d{2})|\b\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}\b/.exec(s);
+    const c=[[a,m&&`${m[3]}-${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`],[m2?m2.index:1e9,m2&&`${m2[3]}-${pad(MONS[m2[2].slice(0,3).toLowerCase()])}-${pad(m2[1])}`],[n?n.index:1e9,n&&B.pickDate(n[0])]].filter(x=>x[1]).sort((x,y)=>x[0]-y[0]);
+    return c.length?c[0][1]:'';};
+  // contract: shared parser first, then two layouts it doesn't cover ("CALL AAPL 06/16/2028 250.00", "AMZN 2027-12-17 230.00 Call")
+  const findOpt=line=>{
+    const f=B.findOption(line);if(f)return f;
+    let m=/\b(CALL|PUT|Call|Put)\s+([A-Z][A-Z0-9.]{0,5})\s+(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$?(\d+(?:\.\d+)?)/.exec(line);
+    if(m)return{opt:{ticker:m[2],expiry:B.pickDate(m[3]),strike:+m[4],pc:m[1][0].toUpperCase()},start:m.index,end:m.index+m[0].length};
+    m=/\b([A-Z][A-Z0-9.]{0,5})\s+(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$?(\d+(?:\.\d+)?)\s+(Call|CALL|Put|PUT|C|P)\b/.exec(line);
+    if(m)return{opt:{ticker:m[1],expiry:B.pickDate(m[2]),strike:+m[3],pc:m[4][0].toUpperCase()},start:m.index,end:m.index+m[0].length};
+    return null;};
+  const sideOf=s=>/\b(?:sell|sold|sld|sto|stc|write|wrote|short)\b/i.test(s)?'sell':/\b(?:buy|bought|bot|bto|btc|purchased?|long)\b/i.test(s)?'buy':'';
+  const effOf=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
+  const verdict=c=>{
+    if(c.type!=='C')return'This is a put, not a call — LEAPs here are bought calls only.';
+    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close on the LEAP card instead.':'This is a sold call (sell to open) — that belongs to the wheel, not LEAPs.';
+    if(c.effect==='close')return'This is a buy-to-close (closing a short call) — not a new LEAP.';
+    if(!c.side)return'Couldn\'t tell whether this was bought or sold.';
+    return'';};
+  const out=[];
+  // CSV export (header row + rows)
+  const first=text.trim().split('\n')[0]||'';
+  if((first.match(/,/g)||[]).length>=3&&text.trim().split('\n').length>=2&&/date/i.test(first)){
+    const r=B.parseBrokerCSV(text);
+    if(!r.error){
+      (r.optionFills||[]).forEach(f=>out.push({ticker:f.ticker,strike:f.strike,expiry:f.expiry,type:f.type,side:'buy',effect:f.effect,qty:f.qty,price:f.price,fees:f.fees,date:f.date,src:r.broker}));
+      (r.rows||[]).forEach(x=>out.push({ticker:x.ticker,strike:x.strike,expiry:x.expiry,type:x.action==='CSP'?'P':'C',side:/^(CSP|STOC|STC)$/.test(x.action)?'sell':'buy',effect:/^(BTC|STC|EXP)$/.test(x.action)?'close':'open',qty:Math.round((x.shares||100)/100),price:x.premium,fees:x.fees,date:x.entered,src:r.broker}));
+    }
+  }else{
+    const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+    const isTab=l=>{const f=findOpt(l);if(!f)return false;const rest=l.slice(0,f.start)+' '+l.slice(f.end);
+      return(rest.match(/(?:^|\s)[-(]?[$£€]?\d[\d,]*(?:\.\d+)?\)?(?=\s|$)/g)||[]).length>=3&&(rest.match(/\b[A-Za-z]{3,}\b/g)||[]).length<=3;};
+    const tab=lines.filter(isTab);
+    if(tab.length){
+      // statement lines (IBKR activity/Trades section style) — numbers from the shared statement parser, direction from the line
+      const P=B.parseStatementText(text),pool=[...(P.rows||[]).map(x=>({ticker:x.ticker,strike:x.strike,expiry:x.expiry,qty:Math.round((x.shares||100)/100),price:x.premium,fees:x.fees,date:x.entered})),
+        ...(P.optionFills||[]).map(f=>({ticker:f.ticker,strike:f.strike,expiry:f.expiry,qty:f.qty,price:f.price,fees:f.fees,date:f.date}))];
+      tab.forEach(l=>{const f=findOpt(l),o=f.opt,rest=l.slice(0,f.start)+' '+l.slice(f.end);
+        const i=pool.findIndex(p=>p.ticker===o.ticker&&+p.strike===+o.strike&&p.expiry===o.expiry);const p=i>-1?pool.splice(i,1)[0]:{};
+        const clean=rest.replace(/\d{4}-\d{2}-\d{2}(?:,?\s+\d{1,2}:\d{2}(?::\d{2})?)?|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ');
+        const q=/(?:^|\s)(-?\d{1,4})(?=\s|$)/.exec(clean);const code=/(?:^|\s)([OC])(?:;[A-Za-z]+)*\s*$/.exec(rest);
+        out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest)||(q?(+q[1]<0?'sell':'buy'):''),
+          effect:effOf(rest)||(code?(code[1]==='O'?'open':'close'):'open'),qty:p.qty||(q?Math.abs(+q[1]):1),price:p.price??null,fees:Math.abs(p.fees||0),date:p.date||anyDate(rest),src:P.broker||'Statement'});});
+    }else{
+      // single confirmation — fields may be spread over several lines
+      const flat=lines.join(' '),f=findOpt(flat);
+      if(f){const o=f.opt,rest=flat.slice(0,f.start)+' '+flat.slice(f.end);
+        const qm=/(?:quantity|qty|contracts?)\s*:?\s*(\d{1,4})\b/i.exec(rest)||/\b(?:buy|bought|bot)\s+(\d{1,4})\b/i.exec(rest)||/\b(\d{1,4})\s+contracts?\b/i.exec(rest);
+        const pm=/(?:avg\.?|average)\s*(?:fill\s*)?price(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/(?<!limit\s)\bprice(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/@\s*\$?([\d,]*\.?\d+)/.exec(rest);
+        let fees=0;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+)?fees?)\s*:?\s*\(?-?\$?(\d+(?:\.\d+)?)/gi))fees+=+m[1];
+        const dl=/(?:trade\s*date|filled(?:\s*time)?|executed(?:\s+at[^\d]*?)?|date)\s*:?\s*(?:on\s+)?((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i.exec(rest);
+        const onD=/\bon\s+((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/i.exec(rest);
+        out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest),effect:effOf(rest)||'open',qty:qm?+qm[1]:1,price:pm?num(pm[1]):null,
+          fees:Math.round(fees*100)/100,date:anyDate(dl?dl[1]:onD?onD[1]:rest),src:'Confirmation'});}
+    }
+  }
+  const calls=[],rejected=[];
+  out.forEach(c=>{c.why=verdict(c);(c.why?rejected:calls).push(c);});
+  const error=calls.length?'':rejected.length?(rejected.length===1?rejected[0].why:`No bought calls found — ${rejected.length} other option trade${rejected.length>1?'s':''} (sold, puts or closes) were skipped.`)
+    :'Couldn\'t find an option contract (ticker, expiry, strike and Call) in that text.';
+  return{calls,rejected,error};
 }
 // ── Add / edit modal (multi-leg — used for "Other options" edits; builder kept in code) ──
 function _optLegRow(l={}){
@@ -5532,7 +5667,7 @@ window.setOptDemo = setOptDemo;
 window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;
 window.openOptAdd = openOptAdd;
-window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;
+window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
 window.openOptEdit = openOptEdit;
 window.optAddLeg = optAddLeg;
 window.optParsePaste = optParsePaste;
