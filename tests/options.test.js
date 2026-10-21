@@ -100,7 +100,7 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
 // ── render smoke test (Options view) ──
 {
   const stubs = `const localStorage={getItem:()=>null,setItem(){}};const esc=s=>String(s??'');const fmt2=n=>Number(n).toFixed(2);
-  const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);let quotes={AAPL:{price:205}};let view='options';let _optsLoadError='';
+  const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);let quotes={AAPL:{price:205}};let view='options';let _optsLoadError='';let optDemo=false;const DEMO_SPOTS={};
   let db={wheels:[{id:'w1',ticker:'AAPL',label:'Rotation 1',status:'open'}],trades:[],opts:[]};`;
   const R = new Function(stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
     ['setOptFilter','_optSpots','_legLine','renderOptions'].map(extractFn).join('\n') +

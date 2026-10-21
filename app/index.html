@@ -1067,8 +1067,8 @@ async function loadDBFromFirestore(userId){
   db.wheels=wheelsSnap.docs.map(d=>d.data());
   db.trades=tradesSnap.docs.map(d=>d.data());
   // Options legs live in their own collection; a failure here (e.g. rules not yet updated) must not block the wheel app
-  try{const oSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'optlegs'));db.opts=oSnap.docs.map(d=>d.data());}
-  catch(e){console.warn('Options legs load failed (check Firestore rules for optlegs):',e.message);db.opts=[];_optsLoadError=e.message;}
+  try{const oSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'optlegs'));const real=oSnap.docs.map(d=>d.data());if(optDemo){_realOpts=real;db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}else db.opts=real;}
+  catch(e){console.warn('Options legs load failed (check Firestore rules for optlegs):',e.message);db.opts=[];_optsLoadError=e.message;if(optDemo){_realOpts=[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}}
   render();
   // Show onboarding only after a confirmed-successful load with genuinely no rotations
   const ob=document.getElementById('onboard-overlay');
@@ -1096,11 +1096,13 @@ function _saveTrade(trade){
 }
 let _optsLoadError='';
 function _saveOpt(leg){
+  if(optDemo||(leg&&leg.demo)){_demoNotSaved();return;}
   const uid=_currentUid();if(!uid||!leg||!leg.id)return;
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(leg))
     .catch(e=>{console.error('Option save failed:',e);toastOptErr(e);});
 }
 function _deleteOptDoc(id){
+  if(optDemo||String(id).startsWith('demo-')){_demoNotSaved();return;}
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'optlegs',id)).catch(e=>console.error('Option delete failed:',e));
 }
@@ -1121,7 +1123,7 @@ function saveDB(){
   const uid=_currentUid();if(!uid)return;
   db.wheels.forEach(w=>_saveWheel(w));
   db.trades.forEach(t=>_saveTrade(t));
-  (db.opts||[]).forEach(l=>_saveOpt(l));
+  if(!optDemo)(db.opts||[]).forEach(l=>_saveOpt(l));
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
@@ -1768,10 +1770,54 @@ function render(){
 // ════════════════════════════════════════════════════════
 // OPTIONS VIEW — non-wheel positions (data in db.opts / optlegs)
 // ════════════════════════════════════════════════════════
+// ── DEMO MODE (Options tab only) — in-memory sample legs, never written to Firestore, never touches wheel data ──
+let optDemo=/[?&]demo=options\b/.test(location.search)||localStorage.getItem('wh-optDemo')==='1';
+let _realOpts=null; // real legs parked while demo is on
+const DEMO_SPOTS={TSLA:380,NVDA:185,AAPL:245,SPY:670};
+function optDemoLegs(todayISO,wheels){
+  const T=new Date(todayISO+'T12:00:00Z'),iso=d=>d.toISOString().slice(0,10);
+  const add=n=>{const d=new Date(T);d.setUTCDate(d.getUTCDate()+n);return iso(d);};
+  const fri=minDays=>{const d=new Date(T);d.setUTCDate(d.getUTCDate()+minDays);while(d.getUTCDay()!==5)d.setUTCDate(d.getUTCDate()+1);return iso(d);};
+  const third=months=>{const d=new Date(Date.UTC(T.getUTCFullYear(),T.getUTCMonth()+months,1,12));let c=0;while(true){if(d.getUTCDay()===5&&++c===3)break;d.setUTCDate(d.getUTCDate()+1);}return iso(d);};
+  const wk=fri(3),mo=third(T.getUTCDate()>10?1:0)<=add(20)?third(T.getUTCDate()>10?2:1):third(T.getUTCDate()>10?1:0),mo2=third(3),leap=third(14),past=n=>add(-n);
+  let n=0;const L=(g,o)=>({id:'demo-'+(++n),groupId:'demo-g'+g,status:'open',closePrice:null,closeDate:null,closeFees:0,qty:1,fees:0.65,markSrc:'demo',markAt:new Date().toISOString(),delta:null,theta:null,wheelId:null,notes:'',demo:true,...o});
+  const legs=[
+    L(1,{underlying:'TSLA',type:'P',side:'short',strike:360,expiry:wk,entryPrice:3.10,entryDate:past(4),mark:1.40,iv:0.52,notes:'Weekly short put'}),
+    L(2,{underlying:'TSLA',type:'C',side:'long',strike:380,expiry:mo,entryPrice:12.50,entryDate:past(12),mark:19.80,iv:0.55}),
+    L(3,{underlying:'TSLA',type:'C',side:'long',strike:400,expiry:leap,entryPrice:78.00,entryDate:past(30),mark:84.20,iv:0.58,notes:'LEAP'}),
+    L(4,{underlying:'NVDA',type:'C',side:'long',strike:180,expiry:mo,entryPrice:9.20,entryDate:past(9),mark:11.40,iv:0.42,qty:2,fees:1.30}),
+    L(4,{underlying:'NVDA',type:'C',side:'short',strike:195,expiry:mo,entryPrice:3.60,entryDate:past(9),mark:4.50,iv:0.40,qty:2,fees:1.30}),
+    L(5,{underlying:'SPY',type:'P',side:'long',strike:620,expiry:mo,entryPrice:1.90,entryDate:past(14),mark:1.20,iv:0.19}),
+    L(5,{underlying:'SPY',type:'P',side:'short',strike:640,expiry:mo,entryPrice:4.10,entryDate:past(14),mark:2.80,iv:0.17}),
+    L(5,{underlying:'SPY',type:'C',side:'short',strike:700,expiry:mo,entryPrice:3.20,entryDate:past(14),mark:2.10,iv:0.13}),
+    L(5,{underlying:'SPY',type:'C',side:'long',strike:720,expiry:mo,entryPrice:1.00,entryDate:past(14),mark:0.60,iv:0.12}),
+    L(6,{underlying:'AAPL',type:'P',side:'short',strike:225,expiry:mo,entryPrice:2.60,entryDate:past(10),mark:1.90,iv:0.27}),
+    L(6,{underlying:'AAPL',type:'C',side:'short',strike:265,expiry:mo,entryPrice:2.30,entryDate:past(10),mark:1.70,iv:0.24}),
+    L(7,{underlying:'AAPL',type:'C',side:'short',strike:250,expiry:wk,entryPrice:2.10,entryDate:past(5),mark:1.60,iv:0.26}),
+    L(7,{underlying:'AAPL',type:'C',side:'long',strike:250,expiry:mo2,entryPrice:6.80,entryDate:past(5),mark:7.30,iv:0.27}),
+    L(8,{underlying:'NVDA',type:'P',side:'long',strike:170,expiry:mo,entryPrice:5.40,entryDate:past(16),mark:2.20,iv:0.44,notes:'Hedge — losing'}),
+    L(9,{underlying:'TSLA',type:'P',side:'short',strike:350,expiry:past(15),entryPrice:4.20,entryDate:past(40),status:'closed',closePrice:0.35,closeDate:past(20),closeFees:0.65,mark:null,notes:'Closed winner'}),
+    L(10,{underlying:'NVDA',type:'C',side:'long',strike:200,expiry:past(5),entryPrice:6.00,entryDate:past(35),status:'closed',closePrice:1.10,closeDate:past(12),closeFees:0.65,mark:null,notes:'Closed loser'}),
+    L(11,{underlying:'AAPL',type:'P',side:'short',strike:230,expiry:past(10),entryPrice:1.15,entryDate:past(24),status:'expired',closePrice:0,closeDate:past(10),mark:null}),
+    L(12,{underlying:'SPY',type:'P',side:'short',strike:655,expiry:past(3),entryPrice:3.40,entryDate:past(17),status:'assigned',closePrice:0,closeDate:past(3),mark:null,notes:`Assigned/exercised ${past(3)}`}),
+    L(13,{underlying:'NVDA',type:'P',side:'short',strike:160,expiry:mo,entryPrice:2.40,entryDate:past(11),mark:1.85,markSrc:'manual',markAt:new Date(Date.parse(past(9))).toISOString(),iv:null,notes:'Stale manual mark'}),
+  ];
+  const w=(wheels||[]).find(w=>w.status==='open'&&w.ticker);
+  if(w){const px=+w.lastPrice||50,k=Math.max(1,Math.round(px*0.9));legs.push(L(14,{underlying:w.ticker,type:'P',side:'long',strike:k,expiry:mo,entryPrice:Math.round(px*0.02*100)/100,entryDate:past(6),mark:Math.round(px*0.015*100)/100,iv:0.45,wheelId:w.id,notes:'Protective put attached to rotation (demo)'}));}
+  return legs;
+}
+function setOptDemo(on){
+  if(on===optDemo&&(on?_realOpts!==null:true))return render();
+  optDemo=!!on;localStorage.setItem('wh-optDemo',optDemo?'1':'0');
+  if(optDemo){_realOpts=db.opts||[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}
+  else{db.opts=_realOpts||[];_realOpts=null;}
+  _optMarksAt=0;render();
+}
+function _demoNotSaved(){_optMarkStatus='Demo — not saved';}
 let optFilter=JSON.parse(localStorage.getItem('wh-optFilter')||'{"status":"open","tenor":"all","side":"all"}');
 let _optMarkStatus='';
 function setOptFilter(k,v){optFilter[k]=v;localStorage.setItem('wh-optFilter',JSON.stringify(optFilter));render();}
-function _optSpots(){const s={};Object.keys(quotes).forEach(k=>s[k]=quotes[k].price);return s;}
+function _optSpots(){const s=optDemo?{...DEMO_SPOTS}:{};Object.keys(quotes).forEach(k=>s[k]=quotes[k].price);return s;}
 function _legLine(l){
   const side=l.side==='long'?'<span style="color:var(--blue)">L</span>':'<span style="color:var(--yellow)">S</span>';
   const mk=l.status==='open'?(l.mark!=null&&l.mark!==''?`${(+l.mark).toFixed(2)}<small style="color:var(--text3)">${l.markSrc==='cboe'||l.markSrc==='finnhub'?' ⓓ':l.markSrc==='manual'?' ✎':''}</small>`:'<span style="color:var(--text3)">—</span>'):(l.status==='expired'?'exp':(+l.closePrice||0).toFixed(2));
@@ -1812,12 +1858,14 @@ function renderOptions(){
   const byW={};legs.filter(l=>l.wheelId).forEach(l=>{const p=OPTS.legPnL(l);const o=byW[l.wheelId]=byW[l.wheelId]||{r:0,u:0};o.r+=p.realized;if(p.unrealized!=null)o.u+=p.unrealized;});
   const linkH=Object.keys(byW).length?`<div style="margin-top:14px;font-size:12px;color:var(--text3)">Attached to rotations (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
   const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:10px">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
-  return`${err}
+  const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:8px 12px;border-radius:8px;margin-bottom:10px;font-size:12px"><b style="letter-spacing:1px">DEMO</b> — sample positions shown <b>instead of</b> your real ones. Nothing here is saved; edits, closes and rolls stay in memory only. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
+  return`${err}${demoH}
   <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0;flex-wrap:wrap">
     <span style="font-size:13px;font-weight:300;color:var(--silver)">Options</span>
     <span class="toolbar-spacer"></span>
     <span style="font-size:11px;color:var(--text3)">${esc(_optMarkStatus)}</span>
     <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="fetchOptionMarks(true)">↻ Marks</button>
+    <button class="btn ${optDemo?'btn-primary':'btn-ghost'}" style="padding:5px 10px;font-size:11px" onclick="setOptDemo(${!optDemo})">${optDemo?'Hide demo positions':'Show demo positions'}</button>
     <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="exportOptsCSV()">Export</button>
     <button class="btn btn-primary" style="padding:5px 10px;font-size:11px" onclick="openOptAdd()">+ Position</button>
   </div>
@@ -2654,7 +2702,7 @@ function renderLog(){
 // One lifecycle walk per rotation: tracks open option legs + a running share ledger.
 // wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
 function allDataHealth(){
-  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:'Options · '+esc(i.text)}));}catch(e){console.warn('options health',e);}
+  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+esc(i.text)}));}catch(e){console.warn('options health',e);}
   return runDataHealth().concat(o);
 }
 function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
@@ -3965,7 +4013,8 @@ function initImportDrop(){
 function doImport(){
   if(!_importParsed)importPreview();
   const p=_importParsed;if(!p||!(p.rows.length||(p.optionFills||[]).length))return;
-  if((p.optionFills||[]).length){
+  if((p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
+  else if((p.optionFills||[]).length){
     const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
     db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));
     if(r.unmatched.length)console.warn('Option closes with no open long leg:',r.unmatched);
@@ -5310,6 +5359,7 @@ window.authForgot = authForgot;
 window.onboardSubmit = onboardSubmit;
 window.switchView = switchView;
 window.goToOpt = goToOpt;
+window.setOptDemo = setOptDemo;
 window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;
 window.openOptAdd = openOptAdd;
