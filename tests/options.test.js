@@ -113,7 +113,8 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   check('render: summary strip (value/cost, P&L, share equiv, time value)', /Market value/.test(h) && /Open P&amp;L/.test(h) && /Share equivalent/.test(h) && /Time value/.test(h) && /decay ≈/.test(h));
   check('render: non-long-call legs listed under Other options (2 groups), not dropped', /Other options \(2\)/.test(h) && /Call vertical/.test(h));
   check('render: no multi-leg builder / tenor / side filter chips', !/Any expiry|Long &amp; short|Long & short|\+ Position/.test(h) && /\+ LEAP/.test(h));
-  check('render: ITM badge, intrinsic/time split, breakeven, days-left bar, Roll/Close', /leap-badge itm/.test(h) && /Intrinsic \$25\.00/.test(h) && /Time \$15\.00/.test(h) && /\$210\.00<\/b><span>Breakeven/.test(h) && /days left/.test(h) && /'roll'/.test(h) && /'close'/.test(h));
+  check('render: ITM badge, intrinsic/time split, breakeven, days-left bar, Roll/Close', /leap-badge itm/.test(h) && /Intrinsic \$25\.00/.test(h) && /Time \$15\.00/.test(h) && /Breakeven<\/div><div class="rmb-val">\$210\.00/.test(h) && /days left/.test(h) && /'roll'/.test(h) && /'close'/.test(h));
+  check('full-width layout: header holds Roll/Close/••• before the metrics row; 3 stat columns', /class="leap-ch">[\s\S]*leap-btns[\s\S]*'roll'[\s\S]*<\/div>\s*<div class="leap-row">/.test(h) && (h.match(/class="rmb-col"/g) || []).length === 3);
   const S1 = R.stats(LC({}), 205, TODAY);
   check('stats: value, cost incl fees, P&L, BE %, delta-as-shares>0, theta<0', S1.value === 8000 && S1.cost === 6001.3 && Math.abs(S1.pl - 1998.7) < 0.01 && Math.abs(S1.beDist - (210 / 205 * 100 - 100)) < 1e-9 && S1.dsh > 0 && S1.dsh < 200 && S1.thd < 0, S1);
   R.setDb([LC({ id: 'w', expiry: '2027-03-19', reviewDate: '2026-11-01' })]);

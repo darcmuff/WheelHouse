@@ -516,16 +516,21 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .leap-sc{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:11px 13px}
 .leap-sc .l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
 .leap-sc .v{font-size:20px;font-weight:600;margin-top:3px;white-space:nowrap}.leap-sc .s{font-size:11px;color:var(--text3);margin-top:2px}
-.leap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(310px,100%),1fr));gap:10px}
+.leap-grid{display:flex;flex-direction:column;gap:10px}
 .leap-card{background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--orange);border-radius:8px;overflow:hidden;transition:border-color .2s}
 .leap-card:hover{border-color:var(--border2)}.leap-card.warn{border-left-color:var(--yellow)}.leap-card.cn{border-left-color:var(--border2)}
-.leap-ch{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)}
-.leap-ct{font-size:12px;color:var(--silver);font-weight:300;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leap-ch{display:flex;align-items:center;gap:8px;padding:8px 12px}
+.leap-ct{font-size:12px;color:var(--silver);font-weight:300;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .leap-badge{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
 .leap-badge.itm{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}
 .leap-badge.otm{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}
 .leap-badge.cl{background:var(--bg3);color:var(--text3);border:1px solid var(--border2)}
-.leap-cb{padding:11px 12px}
+.leap-row{display:grid;grid-template-columns:minmax(230px,1.5fr) minmax(220px,2fr) repeat(3,minmax(95px,1fr));border-top:1px solid var(--border);background:var(--bg3)}
+.leap-row .rmb-col{padding:8px 12px;display:flex;flex-direction:column;justify-content:center}
+.leap-row .leap-c1{flex-direction:row;justify-content:flex-start;gap:22px;align-items:flex-end}.leap-c1 .lab{font-size:10px;color:var(--text3)}.leap-c1 .val{font-size:22px;font-weight:600}.leap-c1 .pl{font-size:14px;font-weight:600;white-space:nowrap}
+.leap-c2 .leap-bar{margin:4px 0 0}.leap-row .leap-kv{margin-top:0}
+.leap-note{font-size:10px;color:var(--yellow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.leap-btns{display:flex;gap:6px;margin-left:auto;flex-shrink:0}.leap-btns .btn{padding:4px 10px;font-size:11px}
 .leap-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
 .leap-hero .lab{font-size:10px;color:var(--text3)}.leap-hero .val{font-size:22px;font-weight:600}.leap-hero .pl{font-size:14px;font-weight:600;text-align:right;white-space:nowrap}
 .leap-bar{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin:10px 0 4px}.leap-bar>i{display:block;height:100%;background:var(--orange)}
@@ -542,6 +547,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .leap-other{margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:8px 12px}
 .leap-other summary{font-size:12px;color:var(--text3);cursor:pointer}
 .leap-empty{grid-column:1/-1;text-align:center;color:var(--text3);padding:40px 10px;font-size:13px;background:var(--bg2);border:1px dashed var(--border2);border-radius:9px}
+@media(max-width:900px){.leap-row{grid-template-columns:1fr 1fr 1fr}.leap-row .leap-c1,.leap-row .leap-c2{grid-column:1/-1;border-right:none;border-bottom:1px solid var(--border)}.leap-ch{flex-wrap:wrap}.leap-note{order:9;flex-basis:100%}}
 @media(max-width:640px){.leap-sum{grid-template-columns:1fr 1fr}.leap-sc .v{font-size:17px}.leap-grid{grid-template-columns:1fr}.leap-hero .val{font-size:19px}}
 </style>
 </head>
@@ -1979,24 +1985,24 @@ function renderLeapCard(l,spot,today){
   const note=warn?`● Under 9 months left — review/roll window${rev?' · '+rev:''}`:rev?`◷ ${rev}`:'';
   const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:S.intr==null?'':`<span class="leap-badge ${S.intr>0?'itm':'otm'}">${S.intr>0?'ITM':'OTM'}</span>`;
   const gid=l.groupId||l.id;
-  let body;
+  const btns=`${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
+  let row;
   if(open){
     const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
-    body=`<div class="leap-hero"><div><div class="lab">Value</div><div class="val">${S.value!=null?fmtMoney(S.value).replace(/\.\d\d$/,''):'—'}</div></div><div><div class="lab" style="text-align:right">P&amp;L</div><div class="pl">${plH}</div></div></div>
-    <div class="leap-bar"><i style="width:${S.prog!=null?(S.prog*100).toFixed(0):0}%"></i></div>
-    <div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>${S.left!=null?`<b>${S.left}</b> days left`:'—'}</span></div>
-    ${S.tv!=null?`<div class="leap-split">${inW>0?`<div class="in" style="width:${Math.max(inW,12)}%">Intrinsic $${S.intr.toFixed(2)}</div>`:''}<div class="tv">Time $${S.tv.toFixed(2)}</div></div>`:''}
-    <div class="leap-kv"><div><b>$${S.be.toFixed(2)}</b><span>Breakeven${S.beDist!=null?` · ${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:''}</span></div>
-    <div><b>${S.dsh!=null?Math.round(S.dsh)+' sh':'—'}</b><span>${S.dsh!=null&&S.q?`Δ ${(S.dsh/100/S.q).toFixed(2)} share-equiv.`:'Share-equiv.'}</span></div>
-    <div><b>${S.thd!=null?fmtMoney(S.thd).replace(/\.\d\d$/,''):'—'}</b><span>Theta / day</span></div></div>`;
+    row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Value</div><div class="val">${S.value!=null?fmtMoney(S.value).replace(/\.\d\d$/,''):'—'}</div></div><div><div class="rmb-lbl">P&amp;L</div><div class="pl">${plH}</div></div></div>
+    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>${S.left!=null?`<b>${S.left}</b> days left`:'—'}</span></div>
+      <div class="leap-bar"><i style="width:${S.prog!=null?(S.prog*100).toFixed(0):0}%"></i></div>
+      ${S.tv!=null?`<div class="leap-split">${inW>0?`<div class="in" style="width:${Math.max(inW,12)}%">Intrinsic $${S.intr.toFixed(2)}</div>`:''}<div class="tv">Time $${S.tv.toFixed(2)}</div></div>`:''}</div>
+    <div class="rmb-col"><div class="rmb-lbl">Breakeven</div><div class="rmb-val">$${S.be.toFixed(2)}</div><div class="rmb-sub">${S.beDist!=null?`${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:'no spot'}</div></div>
+    <div class="rmb-col"><div class="rmb-lbl">Share equiv.</div><div class="rmb-val">${S.dsh!=null?Math.round(S.dsh)+' sh':'—'}</div><div class="rmb-sub">${S.dsh!=null&&S.q?`Δ ${(S.dsh/100/S.q).toFixed(2)}`:'no greeks'}</div></div>
+    <div class="rmb-col"><div class="rmb-lbl">Theta / day</div><div class="rmb-val ${S.thd<0?'r':''}">${S.thd!=null?fmtMoney(S.thd).replace(/\.\d\d$/,''):'—'}</div><div class="rmb-sub">time decay</div></div>`;
   }else{
-    body=`<div class="leap-hero"><div><div class="lab">Paid → closed</div><div class="val" style="font-size:16px">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div><div><div class="lab" style="text-align:right">Realised</div><div class="pl">${plH}</div></div></div>
-    <div class="leap-barl" style="margin-top:8px"><span>Opened ${_fdShort(l.entryDate)}</span><span>Closed ${_fdShort(l.closeDate)}</span></div>`;
+    row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Paid → closed</div><div class="val" style="font-size:16px">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div><div><div class="rmb-lbl">Realised</div><div class="pl">${plH}</div></div></div>
+    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>Closed ${_fdShort(l.closeDate)}</span></div></div><div class="rmb-col"></div><div class="rmb-col"></div><div class="rmb-col"></div>`;
   }
   return`<div class="leap-card ${!open?'cn':warn?'warn':''}" data-leap="${esc(l.id)}">
-  <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}</div>
-  <div class="leap-cb">${body}</div>
-  <div class="leap-cf">${note?`<span class="note">${esc(note)}</span>`:'<span style="flex:1"></span>'}${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button></div></div>`;
+  <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
+  <div class="leap-row">${row}</div></div>`;
 }
 function renderOptions(){
   const legs=db.opts||[];
