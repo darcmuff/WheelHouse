@@ -722,6 +722,9 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
       <div class="nav-item active" data-view="positions" onclick="switchView('positions')">
         <span class="nav-icon">⊞</span>Rotations
       </div>
+      <div class="nav-item" data-view="options" onclick="switchView('options')">
+        <span class="nav-icon">◇</span>Options
+      </div>
       <div class="nav-item" data-view="analytics" onclick="switchView('analytics')">
         <span class="nav-icon">▦</span>Analytics
       </div>
@@ -874,6 +877,43 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   </div>
 </div>
 
+<!-- MODAL: Option position -->
+<div class="mb" id="mOpt">
+  <div class="mbox" style="width:640px;padding:14px">
+    <div class="mtitle" style="margin-bottom:8px;font-size:15px"><span id="mOptTitle">Add option position</span><span class="mx" onclick="closeModal('mOpt')">✕</span></div>
+    <details style="margin-bottom:8px"><summary style="font-size:12px;color:var(--text3);cursor:pointer">✦ Paste a fill / confirmation (SmartScan)</summary>
+      <textarea id="of-paste" rows="3" style="width:100%;margin-top:6px;background:#141414;border:1px solid var(--border2);color:var(--text);padding:8px;border-radius:7px;font-size:12px;font-family:monospace" placeholder="e.g. 11/05/2025 Buy to Open TSLA 11/14/2025 450.00 C 1 15.00 1,501.05"></textarea>
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;margin-top:4px" onclick="optParsePaste()">Fill from text</button></details>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+      <div class="fld"><label>Underlying</label><input id="of-und" type="text" placeholder="AAPL" style="text-transform:uppercase"></div>
+      <div class="fld"><label>Entry date</label><input id="of-date" type="date"></div>
+      <div class="fld"><label>Fees total ($)</label><input id="of-fees" type="number" step="0.01" value="0"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Legs — side · type · strike · expiry · contracts · price per share</div>
+    <div id="of-legs"></div>
+    <button class="btn btn-ghost" id="of-addleg" style="padding:3px 10px;font-size:11px" onclick="optAddLeg()">+ Leg</button>
+    <div id="of-mark-wrap" style="margin-top:10px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+      <div class="fld"><label>Attach to rotation <small style="color:#555">optional — display only</small></label><select id="of-wheel"></select></div>
+      <div class="fld"><label>Notes</label><input id="of-notes" type="text"></div>
+    </div>
+    <input type="hidden" id="of-group">
+    <div class="mfoot" style="margin-top:8px;padding-top:8px">
+      <button class="btn btn-danger" id="of-del" style="display:none;margin-right:auto" onclick="deleteOptGroup()">✕ Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('mOpt')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveOpt()">Save</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Option close / roll -->
+<div class="mb" id="mOptClose">
+  <div class="mbox" style="width:600px;padding:14px">
+    <div class="mtitle" style="margin-bottom:8px;font-size:15px"><span id="mOptCloseTitle">Close position</span><span class="mx" onclick="closeModal('mOptClose')">✕</span></div>
+    <div id="oc-legs"></div>
+    <input type="hidden" id="oc-group"><input type="hidden" id="oc-mode">
+    <div class="mfoot" style="margin-top:8px;padding-top:8px"><button class="btn btn-ghost" onclick="closeModal('mOptClose')">Cancel</button><button class="btn btn-primary" onclick="saveOptClose()">Save</button></div>
+  </div>
+</div>
 <!-- MODAL: Import -->
 <div class="mb" id="mImport">
   <div class="mbox">
@@ -1601,7 +1641,8 @@ async function fetchAllQuotes(){
   fetching=true;
   try{
     const wheelSyms=db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
-    const allSyms=[...new Set(wheelSyms)];
+    const optSyms=(db.opts||[]).filter(l=>l.status==='open').map(l=>l.underlying).filter(Boolean);
+    const allSyms=[...new Set([...wheelSyms,...optSyms])];
     // Fetch logos in parallel (fire-and-forget, don't block quotes)
     const logoPromises=allSyms.map(sym=>fetchLogo(sym));
     for(const sym of allSyms){
@@ -1715,6 +1756,222 @@ function render(){
   if(view==='log')c.innerHTML=renderLog();
   if(view==='dash'){c.innerHTML=renderDash();requestAnimationFrame(renderDashChart);}
   if(view==='analytics')c.innerHTML=renderAnalytics();
+  if(view==='options'){c.innerHTML=renderOptions();fetchOptionMarks(false);}
+}
+
+// ════════════════════════════════════════════════════════
+// OPTIONS VIEW — non-wheel positions (data in db.opts / optlegs)
+// ════════════════════════════════════════════════════════
+let optFilter=JSON.parse(localStorage.getItem('wh-optFilter')||'{"status":"open","tenor":"all","side":"all"}');
+let _optMarkStatus='';
+function setOptFilter(k,v){optFilter[k]=v;localStorage.setItem('wh-optFilter',JSON.stringify(optFilter));render();}
+function _optSpots(){const s={};Object.keys(quotes).forEach(k=>s[k]=quotes[k].price);return s;}
+function _legLine(l){
+  const side=l.side==='long'?'<span style="color:var(--blue)">L</span>':'<span style="color:var(--yellow)">S</span>';
+  const mk=l.status==='open'?(l.mark!=null&&l.mark!==''?`${(+l.mark).toFixed(2)}<small style="color:var(--text3)">${l.markSrc==='cboe'?' ⓓ':l.markSrc==='manual'?' ✎':''}</small>`:'<span style="color:var(--text3)">—</span>'):(l.status==='expired'?'exp':(+l.closePrice||0).toFixed(2));
+  return`<div style="display:flex;gap:10px;font-size:12px;white-space:nowrap">${side} ${l.qty}× ${esc(l.underlying)} ${fmt2(l.strike)}${l.type} <span style="color:var(--text3)">${esc(l.expiry||'')}</span> @ ${(+l.entryPrice||0).toFixed(2)} → ${mk}</div>`;
+}
+function renderOptions(){
+  const legs=db.opts||[];
+  const today=new Date().toISOString().slice(0,10),spots=_optSpots();
+  const pf=OPTS.portfolio(legs,spots,today);
+  const f=optFilter;
+  let groups=OPTS.groups(legs).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
+  groups=groups.filter(g=>{
+    if(f.status!=='all'&&g.status!==f.status)return false;
+    if(f.side!=='all'&&!g.legs.some(l=>l.side===f.side))return false;
+    if(f.tenor!=='all'&&!g.legs.some(l=>OPTS.tenor(l,today)===f.tenor))return false;
+    return true;
+  }).sort((a,b)=>(a.dte??99999)-(b.dte??99999));
+  const money=n=>n==null?'—':`<span class="${n>=0?'g':'r'}">${fmtMoney(n)}</span>`;
+  const card=(lbl,val,sub='')=>`<div class="dcard"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${lbl}</div><div style="font-size:20px;font-weight:600;margin-top:4px">${val}</div>${sub?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>`;
+  const chip=(k,v,lbl)=>`<button class="btn ${f[k]===v?'btn-primary':'btn-ghost'}" style="padding:4px 9px;font-size:11px" onclick="setOptFilter('${k}','${v}')">${lbl}</button>`;
+  const wname=id=>{const w=db.wheels.find(w=>w.id===id);return w?`${esc(w.ticker)} · ${esc(w.label||'')}`:'(missing rotation)';};
+  const rows=groups.map(g=>{
+    const open=g.legs.filter(l=>l.status==='open');
+    let th=0,thOk=false;open.forEach(l=>{const gk=OPTS.legGreeks(l,spots[l.underlying],today);if(gk){th+=gk.theta;thOk=true;}});
+    const linked=g.legs.find(l=>l.wheelId);
+    const acts=g.status==='open'?`<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" onclick="openOptClose('${g.id}','close')">Close</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" onclick="openOptClose('${g.id}','roll')">Roll</button>`:'';
+    return`<tr>
+      <td><b>${esc(g.legs[0].underlying)}</b><div style="font-size:11px;color:var(--text3)">${esc(g.strategy)}${linked?` · ↳ ${wname(linked.wheelId)}`:''}</div></td>
+      <td>${g.legs.map(_legLine).join('')}</td>
+      <td>${g.dte==null?'—':g.dte<0?'<span class="r">past</span>':g.dte}</td>
+      <td>${g.status==='open'?money(g.unrealized):money(g.realized)}${g.status==='open'&&g.realized?`<div style="font-size:11px;color:var(--text3)">realised ${fmtMoney(g.realized)}</div>`:''}</td>
+      <td>${thOk?money(th)+'<small style="color:var(--text3)">/d</small>':'—'}</td>
+      <td style="white-space:nowrap">${acts}<button class="btn btn-ghost btn-icon" onclick="openOptEdit('${g.id}')">•••</button></td>
+    </tr>`;}).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:40px">${legs.length?'No positions match these filters':'No option positions yet — add one, or import a broker file with buy-to-open fills.'}</td></tr>`;
+  const issues=OPTS.health(legs,db.wheels,today);
+  const healthH=issues.length?`<div style="margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:10px 12px"><div style="font-size:12px;color:var(--text3);margin-bottom:6px">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(i=>`<div style="font-size:12px;padding:2px 0;color:${i.sev==='red'?'var(--red)':i.sev==='amber'?'var(--yellow)':'var(--text3)'}">● ${esc(i.text)}</div>`).join('')}</div>`:'';
+  // linked-to-rotation summary (display only; wheel P&L untouched)
+  const byW={};legs.filter(l=>l.wheelId).forEach(l=>{const p=OPTS.legPnL(l);const o=byW[l.wheelId]=byW[l.wheelId]||{r:0,u:0};o.r+=p.realized;if(p.unrealized!=null)o.u+=p.unrealized;});
+  const linkH=Object.keys(byW).length?`<div style="margin-top:14px;font-size:12px;color:var(--text3)">Attached to rotations (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
+  const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:10px">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see the setup note in Settings.</div>`:'';
+  return`${err}
+  <div class="toolbar" style="display:flex;align-items:center;gap:8px;padding:8px 0;flex-wrap:wrap">
+    <span style="font-size:13px;font-weight:300;color:var(--silver)">Options</span>
+    <span class="toolbar-spacer"></span>
+    <span style="font-size:11px;color:var(--text3)">${esc(_optMarkStatus)}</span>
+    <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="fetchOptionMarks(true)">↻ Marks</button>
+    <button class="btn btn-primary" style="padding:5px 10px;font-size:11px" onclick="openOptAdd()">+ Position</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
+    ${card('Open positions',pf.open,`${pf.closed} closed`)}
+    ${card('Unrealised P&L',money(pf.unrealized),pf.unmarked?`${pf.unmarked} leg${pf.unmarked>1?'s':''} unmarked`:'')}
+    ${card('Realised P&L',money(pf.realized),'options only — not wheel income')}
+    ${card('Net delta',(pf.delta>=0?'+':'')+pf.delta.toFixed(0),'share-equivalent')}
+    ${card('Theta / day',money(pf.theta),pf.greeksMissing?`${pf.greeksMissing} leg${pf.greeksMissing>1?'s':''} w/o greeks`:'')}
+    ${card('Premium at risk',fmtMoney(pf.longPremium),`short credit ${fmtMoney(pf.shortPremium)}`)}
+  </div>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
+    ${chip('status','open','Open')}${chip('status','closed','Closed')}${chip('status','all','All')}
+    <span style="width:10px"></span>${chip('tenor','all','Any expiry')}${chip('tenor','weekly','Weekly')}${chip('tenor','monthly','Monthly')}${chip('tenor','longer','2–9 mo')}${chip('tenor','leap','LEAP')}
+    <span style="width:10px"></span>${chip('side','all','Long & short')}${chip('side','long','Long')}${chip('side','short','Short')}
+  </div>
+  <div class="log-wrap"><table class="lt" style="min-width:760px"><thead><tr><th>Underlying</th><th>Legs</th><th>DTE</th><th>P&amp;L</th><th>Theta</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+  ${linkH}${healthH}`;
+}
+// ── Add / edit modal ──
+function _optLegRow(l={}){
+  return`<div class="opt-leg" style="display:grid;grid-template-columns:80px 70px 1fr 1.3fr 60px 1fr 26px;gap:5px;margin-bottom:5px">
+    <select class="ol-side"><option value="long"${l.side!=='short'?' selected':''}>Long</option><option value="short"${l.side==='short'?' selected':''}>Short</option></select>
+    <select class="ol-type"><option value="C"${l.type!=='P'?' selected':''}>Call</option><option value="P"${l.type==='P'?' selected':''}>Put</option></select>
+    <input class="ol-strike" type="number" step="0.01" placeholder="Strike" value="${l.strike??''}">
+    <input class="ol-expiry" type="date" value="${l.expiry||''}">
+    <input class="ol-qty" type="number" step="1" min="1" placeholder="Qty" value="${l.qty??1}">
+    <input class="ol-price" type="number" step="0.0001" placeholder="Price/sh" value="${l.entryPrice??''}">
+    <button class="btn btn-ghost btn-icon" onclick="this.parentNode.remove()" title="Remove leg">✕</button></div>`;
+}
+function _optWheelOptions(sel){return`<option value="">— not attached —</option>`+db.wheels.map(w=>`<option value="${w.id}"${w.id===sel?' selected':''}>${esc(w.ticker)} · ${esc(w.label||'')}${w.status!=='open'?' (closed)':''}</option>`).join('');}
+function openOptAdd(){
+  document.getElementById('mOptTitle').textContent='Add option position';
+  document.getElementById('of-group').value='';
+  document.getElementById('of-und').value='';document.getElementById('of-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('of-fees').value='0';document.getElementById('of-notes').value='';document.getElementById('of-paste').value='';
+  document.getElementById('of-wheel').innerHTML=_optWheelOptions('');
+  document.getElementById('of-legs').innerHTML=_optLegRow();
+  document.getElementById('of-mark-wrap').style.display='none';document.getElementById('of-del').style.display='none';
+  document.getElementById('of-addleg').style.display='';
+  openModal('mOpt');
+}
+function openOptEdit(gid){
+  const legs=(db.opts||[]).filter(l=>(l.groupId||l.id)===gid);if(!legs.length)return;
+  document.getElementById('mOptTitle').textContent='Edit position';
+  document.getElementById('of-group').value=gid;
+  document.getElementById('of-und').value=legs[0].underlying;document.getElementById('of-date').value=legs[0].entryDate||'';
+  document.getElementById('of-fees').value=legs.reduce((s,l)=>s+(+l.fees||0),0).toFixed(2);document.getElementById('of-notes').value=legs[0].notes||'';
+  document.getElementById('of-wheel').innerHTML=_optWheelOptions(legs[0].wheelId||'');
+  document.getElementById('of-legs').innerHTML=legs.map(l=>_optLegRow(l).replace('class="opt-leg"',`class="opt-leg" data-id="${l.id}"`)).join('');
+  const mw=document.getElementById('of-mark-wrap');mw.style.display='';
+  mw.innerHTML=legs.filter(l=>l.status==='open').map(l=>`<div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:5px;margin-bottom:4px;align-items:center" data-mark="${l.id}"><span style="font-size:12px">${l.side} ${fmt2(l.strike)}${l.type} ${esc(l.expiry)}</span><input class="om-mark" type="number" step="0.01" placeholder="Mark/sh" value="${l.mark??''}"><input class="om-iv" type="number" step="0.01" placeholder="IV % (opt.)" value="${l.iv?(l.iv*100).toFixed(1):''}"></div>`).join('')||'<span style="font-size:12px;color:var(--text3)">Position closed</span>';
+  document.getElementById('of-del').style.display='';document.getElementById('of-addleg').style.display='';
+  openModal('mOpt');
+}
+function optAddLeg(){document.getElementById('of-legs').insertAdjacentHTML('beforeend',_optLegRow());}
+function optParsePaste(){
+  const txt=document.getElementById('of-paste').value;if(!txt.trim())return;
+  const p=BCSV.parseStatementText(txt);
+  const fills=(p.optionFills||[]).filter(f=>f.effect==='open');
+  const wheelOpens=(p.rows||[]).filter(r=>r.action==='CSP'||r.action==='STOC').map(r=>({ticker:r.ticker,side:'short',type:r.action==='CSP'?'P':'C',strike:r.strike,expiry:r.expiry,qty:r.shares/100,price:r.premium,fees:r.fees,date:r.entered}));
+  const all=[...fills,...wheelOpens];
+  if(!all.length){alert('Couldn\'t find an opening option fill in that text.');return;}
+  document.getElementById('of-und').value=all[0].ticker;document.getElementById('of-date').value=all[0].date||'';
+  document.getElementById('of-fees').value=all.reduce((s,f)=>s+(+f.fees||0),0).toFixed(2);
+  document.getElementById('of-legs').innerHTML=all.map(f=>_optLegRow({side:f.side,type:f.type,strike:f.strike,expiry:f.expiry,qty:f.qty,entryPrice:f.price})).join('');
+}
+function saveOpt(){
+  const und=document.getElementById('of-und').value.trim().toUpperCase();if(!und){alert('Enter the underlying ticker');return;}
+  const date=document.getElementById('of-date').value,fees=parseFloat(document.getElementById('of-fees').value)||0;
+  const notes=document.getElementById('of-notes').value.trim(),wheelId=document.getElementById('of-wheel').value||null;
+  const rows=[...document.querySelectorAll('#of-legs .opt-leg')];if(!rows.length){alert('Add at least one leg');return;}
+  const gid=document.getElementById('of-group').value||uid();
+  const keep=new Set();
+  rows.forEach((r,i)=>{
+    const id=r.dataset.id||uid();keep.add(id);
+    const old=(db.opts||[]).find(l=>l.id===id)||{status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null};
+    const leg={...old,id,groupId:gid,underlying:und,side:r.querySelector('.ol-side').value,type:r.querySelector('.ol-type').value,strike:parseFloat(r.querySelector('.ol-strike').value)||null,expiry:r.querySelector('.ol-expiry').value||null,qty:parseInt(r.querySelector('.ol-qty').value)||1,entryPrice:parseFloat(r.querySelector('.ol-price').value)||0,entryDate:date,fees:Math.round(fees/rows.length*100)/100,wheelId,notes};
+    const mr=document.querySelector(`[data-mark="${id}"]`);
+    if(mr){const mv=mr.querySelector('.om-mark').value,iv=mr.querySelector('.om-iv').value;
+      if(mv!==''&&+mv!==+old.mark){leg.mark=+mv;leg.markSrc='manual';leg.markAt=new Date().toISOString();leg.delta=null;leg.theta=null;}
+      leg.iv=iv!==''?(+iv)/100:(leg.markSrc==='manual'?null:leg.iv??null);}
+    const i0=(db.opts=db.opts||[]).findIndex(l=>l.id===id);if(i0>-1)db.opts[i0]=leg;else db.opts.push(leg);
+    _saveOpt(leg);
+  });
+  // legs removed from an existing group
+  (db.opts||[]).filter(l=>(l.groupId||l.id)===gid&&!keep.has(l.id)).forEach(l=>_deleteOptDoc(l.id));
+  db.opts=db.opts.filter(l=>(l.groupId||l.id)!==gid||keep.has(l.id));
+  closeModal('mOpt');render();
+}
+function deleteOptGroup(){
+  const gid=document.getElementById('of-group').value;if(!gid||!confirm('Delete this position and all its legs?'))return;
+  db.opts.filter(l=>(l.groupId||l.id)===gid).forEach(l=>_deleteOptDoc(l.id));
+  db.opts=db.opts.filter(l=>(l.groupId||l.id)!==gid);closeModal('mOpt');render();
+}
+// ── Close / roll / expire ──
+function openOptClose(gid,mode){
+  const legs=(db.opts||[]).filter(l=>(l.groupId||l.id)===gid&&l.status==='open');if(!legs.length)return;
+  document.getElementById('oc-group').value=gid;document.getElementById('oc-mode').value=mode;
+  document.getElementById('mOptCloseTitle').textContent=mode==='roll'?'Roll position':'Close position';
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('oc-legs').innerHTML=legs.map(l=>`<div class="oc-leg" data-id="${l.id}" style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px">
+    <div style="font-size:12px;margin-bottom:4px">${l.side==='long'?'Long':'Short'} ${l.qty}× ${esc(l.underlying)} ${fmt2(l.strike)}${l.type} ${esc(l.expiry)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px">
+      <div class="fld"><label>Close price/sh</label><input class="oc-price" type="number" step="0.0001" value="${l.mark??''}"></div>
+      <div class="fld"><label>Date</label><input class="oc-date" type="date" value="${today}"></div>
+      <div class="fld"><label>Fees</label><input class="oc-fees" type="number" step="0.01" value="0"></div>
+      <div class="fld"><label>Outcome</label><select class="oc-how"><option value="closed">Closed</option><option value="expired">Expired worthless</option><option value="assigned">Assigned/exercised</option></select></div>
+    </div>
+    ${mode==='roll'?`<div style="display:grid;grid-template-columns:1fr 1.3fr 1fr 1fr;gap:5px;margin-top:5px">
+      <div class="fld"><label>New strike</label><input class="or-strike" type="number" step="0.01" value="${l.strike}"></div>
+      <div class="fld"><label>New expiry</label><input class="or-expiry" type="date" value="${l.expiry}"></div>
+      <div class="fld"><label>New price/sh</label><input class="or-price" type="number" step="0.0001"></div>
+      <div class="fld"><label>New fees</label><input class="or-fees" type="number" step="0.01" value="0"></div></div>`:''}
+  </div>`).join('');
+  openModal('mOptClose');
+}
+function saveOptClose(){
+  const mode=document.getElementById('oc-mode').value;
+  for(const r of document.querySelectorAll('#oc-legs .oc-leg')){
+    const i=db.opts.findIndex(l=>l.id===r.dataset.id);if(i<0)continue;const l=db.opts[i];
+    const how=r.querySelector('.oc-how').value,price=r.querySelector('.oc-price').value,date=r.querySelector('.oc-date').value,fees=r.querySelector('.oc-fees').value;
+    if(how==='closed'&&price===''){alert('Enter a close price (or choose Expired)');return;}
+    let closed=how==='expired'?{...OPTS.expireLeg(l),closeDate:date||l.expiry}:OPTS.closeLeg(l,how==='assigned'?0:price,date,fees);
+    if(how==='assigned')closed.status='assigned';
+    if(mode==='roll'){
+      const np=r.querySelector('.or-price').value;if(np===''){alert('Enter the new leg price');return;}
+      const[c,nl]=OPTS.rollLeg(l,{price:how==='closed'?price:0,date,fees},{strike:r.querySelector('.or-strike').value,expiry:r.querySelector('.or-expiry').value,price:np,fees:r.querySelector('.or-fees').value},uid());
+      closed={...c,status:closed.status};db.opts.push(nl);_saveOpt(nl);
+    }
+    db.opts[i]=closed;_saveOpt(closed);
+  }
+  closeModal('mOptClose');render();
+}
+// ── Live marks: CBOE delayed chain via Netlify proxy; graceful fallback to manual marks + local BS greeks ──
+let _optMarksAt=0;
+async function fetchOptionMarks(force){
+  const open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
+  if(!open.length){_optMarkStatus='';return;}
+  if(!force&&Date.now()-_optMarksAt<5*60e3)return;_optMarksAt=Date.now();
+  const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
+  let ok=0,miss=0,failU=[];
+  for(const[u,ls]of Object.entries(byU)){
+    try{
+      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${ls.map(OPTS.occ).join(',')}`,{signal:AbortSignal.timeout(15000)});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const j=await r.json();
+      if(j.spot>0)quotes[u]=quotes[u]||{price:j.spot,prev:j.spot,change:0,pct:0,state:'DELAYED'};
+      ls.forEach(l=>{
+        const c=j.contracts&&j.contracts[OPTS.occ(l)];
+        if(!c){miss++;return;}
+        const mid=c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last||null);
+        if(mid==null){miss++;return;}
+        if(l.markSrc==='manual'&&!force)return; // a manual mark wins until the user refreshes explicitly
+        Object.assign(l,{mark:Math.round(mid*100)/100,markSrc:'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
+        _saveOpt(l);ok++;
+      });
+    }catch(e){failU.push(u);console.warn('Option marks:',u,e.message);}
+  }
+  _optMarkStatus=failU.length&&!ok?'Live marks unavailable — using manual marks':`Marks: ${ok} updated (15-min delayed)${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
+  if(view==='options')render();
 }
 
 function renderSidebar(){
@@ -4993,6 +5250,17 @@ window.authGoogle = authGoogle;
 window.authForgot = authForgot;
 window.onboardSubmit = onboardSubmit;
 window.switchView = switchView;
+window.setOptFilter = setOptFilter;
+window.openOptAdd = openOptAdd;
+window.openOptEdit = openOptEdit;
+window.optAddLeg = optAddLeg;
+window.optParsePaste = optParsePaste;
+window.saveOpt = saveOpt;
+window.deleteOptGroup = deleteOptGroup;
+window.openOptClose = openOptClose;
+window.saveOptClose = saveOptClose;
+window.fetchOptionMarks = fetchOptionMarks;
+
 window.openNewPos = openNewPos;
 window.quickAddRotation = quickAddRotation;
 window.closeModal = closeModal;

@@ -97,5 +97,18 @@ check('health: closed before open', has('h6', /closed before/));
 check('health: opened after expiry', has('h7', /after its expiry/));
 check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).length === 0);
 
+// ── render smoke test (Options view) ──
+{
+  const stubs = `const localStorage={getItem:()=>null,setItem(){}};const esc=s=>String(s??'');const fmt2=n=>Number(n).toFixed(2);
+  const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);let quotes={AAPL:{price:205}};let view='options';let _optsLoadError='';
+  let db={wheels:[{id:'w1',ticker:'AAPL',label:'Rotation 1',status:'open'}],trades:[],opts:[]};`;
+  const R = new Function(stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+    ['setOptFilter','_optSpots','_legLine','renderOptions'].map(extractFn).join('\n') +
+    `\nlet optFilter={status:'open',tenor:'all',side:'all'};let _optMarkStatus='';\nreturn {render:renderOptions,setDb:d=>{db.opts=d;}};`)();
+  check('render: empty state', /No option positions yet/.test(R.render()));
+  R.setDb([L({ id: 'a', groupId: 'g', mark: 4, wheelId: 'w1' }), L({ id: 'b', groupId: 'g', side: 'short', strike: 210, entryPrice: 1.5, mark: 2 })]);
+  const h = R.render();
+  check('render: vertical row, attached rotation, summary cards', /Call vertical/.test(h) && /↳ AAPL/.test(h) && /Unrealised P&amp;L|Unrealised P&L/.test(h) && /never added to wheel P&L/.test(h), h.slice(0, 300));
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
