@@ -1,5 +1,5 @@
 // pmcc.test.js — poor man's covered calls: short calls sold against a LEAP (fake figures only).
-// Covers linking, premium/adjusted cost maths, warnings, SmartScan for sold calls, and that nothing touches wheel data.
+// Covers linking, premium/adjusted cost maths, no risk warnings, SmartScan for sold calls, and that nothing touches wheel data.
 // Run: node tests/pmcc.test.js
 const { extractFn, extractConst } = require('./extract');
 let pass = 0, fail = 0;
@@ -9,8 +9,8 @@ const scanCode = ['MON_PAT','_LEAP_LABELS','MON_MAP','CREDITS','ACTION_MAP','VAL
 const stubs = `const fmt2=n=>(+n).toFixed(2);const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);const esc=s=>String(s??'');
 let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);`;
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccWarnings','pmccStats','pmccFormLeg','_fdShort','renderPmcc','optsToCSV'].map(extractFn).join('\n') +
-  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccWarnings,pmccStats,pmccFormLeg,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','renderPmcc','optsToCSV'].map(extractFn).join('\n') +
+  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2028-06-16', qty: 2, entryPrice: 72, fees: 1.30, entryDate: '2026-06-01', status: 'open' };
@@ -39,19 +39,16 @@ check('adjusted cost = cost − net premium', Math.abs(P.adj - (14401.30 - 2984.
 check('adjusted per share', Math.abs(P.adjPerSh - (14401.30 - 2984.80) / 200) < 0.001, P.adjPerSh);
 check('current open short = c, with DTE and live P&L', P.cur && P.cur.id === 'c' && P.curDte === 30 && Math.abs(P.curPnl - (1278.70 - 610)) < 0.01, [P.curDte, P.curPnl]);
 check('history newest first', P.past.map(l => l.id).join() === 'b,a');
-check('no warnings for a safe strike', P.warnings.length === 0, P.warnings);
 
-// ── warnings ──
-const floor = 150 + P.adjPerSh;
-let w = S.pmccWarnings(leap, P.adjPerSh, [], { strike: 190, expiry: '2026-12-18', qty: 2 });
-check('strike below LEAP strike + net debit → warning with $ loss', w.length === 1 && /below LEAP strike/.test(w[0]) && w[0].includes(floor.toFixed(2)), w);
-w = S.pmccWarnings(leap, P.adjPerSh, [], { strike: 300, expiry: '2028-12-15', qty: 2 });
-check('short expiry after LEAP expiry → warning', w.length === 1 && /expires after the LEAP/.test(w[0]), w);
-w = S.pmccWarnings(leap, P.adjPerSh, [c], { strike: 300, expiry: '2026-12-18', qty: 1 });
-check('contracts exceed LEAP contracts (counting open shorts) → warning', w.length === 1 && /3 short contracts against 2/.test(w[0]), w);
-check('card warning shows for an open risky short', S.pmccStats(leap, [leap, sh({ id: 'r', strike: 160, expiry: '2026-11-20', entryPrice: 9, qty: 1 })], today).warnings.length === 1);
-check('closed LEAP shows no live warnings', S.pmccStats({ ...leap, status: 'closed' }, [leap, sh({ id: 'r', strike: 160, expiry: '2026-11-20', entryPrice: 9 })], today).warnings.length === 0);
-
+// ── no risk warnings (Marc: "I made the trade myself, I know the risks") ──
+const risky = [leap, sh({ id: 'r', strike: 120, expiry: '2029-01-19', entryPrice: 9, qty: 5 })];
+S.setOpts(risky);
+const rh0 = S.renderPmcc(leap, today);
+check('risky short (below breakeven, past LEAP expiry, over-sold) renders with no warning text', !/⚠|warn|naked|risk|lock in a loss|uncovered|expires after/i.test(rh0) && /5× \$120C/.test(rh0), rh0);
+check('stats carry no warnings field', !('warnings' in S.pmccStats(leap, risky, today)));
+check('risky short still saves (no blocking)', !!S.pmccFormLeg({ strike: '120', expiry: '2029-01-19', qty: '5', price: '9', newId: 'z' }, leap).leg);
+const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+check('no PMCC risk copy anywhere in the app', !/pmccWarnings|pmcc-warn|pcc-warn|would be naked|risk a loss if called away|lock in a loss/.test(html));
 // ── form leg ──
 const f = S.pmccFormLeg({ strike: '245', expiry: '2026-11-20', qty: '2', price: '6.40', date: '2026-10-09', fees: '1.30', notes: '', newId: 'n1' }, leap);
 check('form → short call leg linked to LEAP, own group, no wheel link', f.leg && f.leg.side === 'short' && f.leg.type === 'C' && f.leg.parentLeapId === 'L1' && f.leg.groupId === 'n1' && f.leg.underlying === 'SPCX' && f.leg.wheelId === null && f.leg.status === 'open');

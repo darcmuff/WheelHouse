@@ -52,5 +52,5 @@ The browser can't call Cboe directly (no CORS header). If the proxy fails, manua
 - Never touches wheel trades or rotations; not in the Trade Log or wheel export. Included in the Options CSV export (`parentLeapId`, `rolledFrom` columns).
 - Card strip: current short (strike, expiry, DTE, P&L from the live mark), premium collected (sum of realised on closed shorts + net credit on open ones, i.e. net of buybacks and fees), adjusted LEAP cost = LEAP cost − premium collected, collapsible history.
 - Actions: Buy back (close), Roll (close + open new in one step, via the existing close/roll modal), Expired (worthless).
-- Warnings: short strike < LEAP strike + net debit per share; short expiry after LEAP expiry; open short contracts > LEAP contracts.
+- No risk warnings, by design (Marc's call: he places the trades himself). Nothing about strike, expiry or contract count blocks a save. SmartScan still highlights low-confidence fields and flags wrong side/ticker/put pastes — those are data checks, not risk advice.
 - An orphaned short (its LEAP deleted) falls back to "Other options" and raises a data-health warning.
