@@ -625,6 +625,25 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .hc-links{display:flex;flex-direction:column;gap:0.375rem;margin-top:0.875rem;padding-top:0.625rem;border-top:1px solid var(--bg3)}.hc-links a{color:var(--orange);font-size:0.65rem;cursor:pointer}
 .ms-head{display:flex;align-items:baseline;gap:1rem;margin:0.25rem 0 0.5rem 1rem}.ms-head a{color:var(--orange);cursor:pointer;font-size:0.65rem}.ms-head h1{font-size:1.25rem;font-weight:600}
 @media(max-width:900px){.hk-grid{grid-template-columns:1fr 1fr}.hk.big{grid-column:1/-1}.home-grid{grid-template-columns:1fr}}
+
+/* ── Wheel cards ── */
+.rotation-window{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;box-shadow:var(--shadow);margin-bottom:0.75rem;overflow:hidden;border-left:1px solid var(--border)!important}
+.rot-header{background:transparent!important;border-bottom:0!important;padding:0.875rem 1.125rem 0.25rem!important}
+.rot-ticker{font-size:0.9375rem!important;font-weight:600!important;color:var(--text)!important;background:none!important;border:0!important;padding:0!important}
+.rot-badge{font-size:0.575rem!important;border-radius:1rem!important;background:var(--orangeL)!important;color:var(--orange)!important;border:0!important}
+.wl-body{padding:0.25rem 1.125rem 0.875rem}
+.wl-top{display:flex;justify-content:space-between;align-items:center}.wl-stage{color:var(--text2);font-size:0.7rem}
+.wl-prem{font-size:0.65rem;font-weight:600;background:var(--orangeL);padding:0.15rem 0.6rem;border-radius:1rem}
+.wl-steps{display:flex;margin:0.75rem 0 0.625rem}.wl-st{flex:1;display:flex;flex-direction:column;align-items:center;font-size:0.575rem;color:var(--text3);position:relative}
+.wl-st:before{content:'';position:absolute;top:0.25rem;left:-50%;width:100%;height:2px;background:var(--border)}.wl-st:first-child:before{display:none}
+.wl-st b{width:0.625rem;height:0.625rem;border-radius:50%;background:var(--border);z-index:1;margin-bottom:0.25rem}
+.wl-st.d b,.wl-st.d:before,.wl-st.n:before{background:var(--orange)}.wl-st.n{color:var(--text);font-weight:600}.wl-st.n b{background:var(--orange);box-shadow:0 0 0 0.25rem var(--orangeL)}
+.wl-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem}.wl-f span{display:block;color:var(--text3);font-size:0.575rem}.wl-f b{font-weight:600;font-size:0.75rem}
+.wl-how{color:var(--text3);font-size:0.55rem;margin-top:0.5rem}
+.wl-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.75rem}
+.wl-more{padding:0 1.125rem 0.75rem}.wl-more summary{color:var(--text3);font-size:0.6rem;cursor:pointer}
+.wl-more .rot-metrics-bar{margin-top:0.5rem;border-radius:0.75rem;background:var(--bg3)}
+@media(max-width:700px){.wl-facts{grid-template-columns:1fr 1fr}.rot-header .rot-label,.rot-header .rot-shares{display:none}}
 </style>
 </head>
 <body>
@@ -3118,6 +3137,12 @@ function buildOpenPosition(trades){
   return{action:t.action,strike:t.strike,expiry:t.expiry,shares:t.shares,dte:dteDays(t.expiry)};
 }
 
+// Pure: wheel step 0 Put · 1 Assigned · 2 Call · 3 Called away.
+function wheelStage(sharesHeld,openAction,hasOut){
+  if(sharesHeld>0)return openAction==='STOC'?2:1;
+  if(openAction==='CSP')return 0;
+  return hasOut?3:0;
+}
 function renderRotationWindow(wheel){
   const m=calcWheel(wheel);
   const exp=expanded.has(wheel.id);
@@ -3202,6 +3227,28 @@ function renderRotationWindow(wheel){
   const rotCapDeployed=m.sharesHeld>0?Math.max(0,rotStockIN-rotStockOUT):0;
 
   const _rss=rotationShareStats(wheel,db.trades,_priceOf);
+  const _stage=wheelStage(m.sharesHeld,openPos?openPos.action:null,m.trades.some(t=>t.action==='OUT'));
+  const _stepNames=['Put','Assigned','Call','Called away'];
+  const _steps=`<div class="wl-steps">${_stepNames.map((n,i)=>`<div class="wl-st${i<_stage?' d':i===_stage?' n':''}"><b></b>${n}</div>`).join('')}</div>`;
+  const _fact=(l,v,c='')=>`<div class="wl-f"><span>${l}</span><b class="${c}">${v}</b></div>`;
+  const _f2=m.sharesHeld>0
+    ?_fact('Cost per share',_rss.openShares>0?'$'+fmt2(_rss.openCost/_rss.openShares):'—')
+    :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
+  const _f3=m.sharesHeld>0
+    ?_fact('Unrealised',_rss.unrealised==null?'no price':fmtMoney(_rss.unrealised),_rss.unrealised==null?'m':colorN(_rss.unrealised))
+    :_fact('Open leg',openPos?`${openPos.action==='CSP'?'Put':'Call'} $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d`:'none');
+  const wheelCardBody=`<div class="wl-body">
+    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span></div>
+    ${_steps}
+    <div class="wl-facts">${_f2}${_f3}${m.sharesHeld>0?_fact('Open leg',openPos?`Call $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d`:'none'):_fact('Last action',lastAct)}</div>
+    <div class="wl-how">Premium = option credits minus buybacks. Shares P&amp;L and Unrealised use each share's actual cost (first in, first out).</div>
+    <div class="wl-acts" onclick="event.stopPropagation()">
+      <button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">+ Paste fill</button>
+      <button class="btn btn-ghost btn-sm" onclick="openAddTrade('${wheel.id}')">Add trade</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleExpand('${wheel.id}')">${exp?'Hide trades':'Trades ('+m.trades.length+')'}</button>
+      <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button>
+    </div>
+  </div>`;
   const metricsBar=`<div class="rot-metrics-bar">
     <div class="rmb-col">
       <div class="rmb-lbl">Last Action</div>
@@ -3268,7 +3315,7 @@ function renderRotationWindow(wheel){
       <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>
       <button class="rot-header-btn" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>
     </div>
-    ${metricsBar}
+    ${wheelCardBody}<details class="wl-more" onclick="event.stopPropagation()"><summary>More numbers</summary>${metricsBar}</details>
     ${expandedHtml}
   </div>`;
 }
