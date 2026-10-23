@@ -34,3 +34,6 @@ days from now"), so the suite keeps passing regardless of when it's run.
   which can steal the `entered` slot (strict `d>today` in the classifier).
 - Date-before-type phrasing ("Jul 10 Put"): rx2b's lookahead blocks the
   singular put/call word. Robinhood formats type-before-date, so unaffected.
+
+## Options positions
+- `options.test.js` — options maths (P&L, DTE/tenor, Black-Scholes/IV, greeks, strategies, close/roll, import fills, health), Options view render smoke test, and the `optchain` proxy's contract picking.
