@@ -713,6 +713,9 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
       <div class="nav-item" data-view="analytics" onclick="switchView('analytics')">
         <span class="nav-icon">▦</span>Analytics
       </div>
+      <div class="nav-item" data-view="log" onclick="switchView('log')">
+        <span class="nav-icon">≡</span>Trade Log
+      </div>
     </div>
 
     <div class="sb-section" id="sb-stats" style="flex-shrink:0"></div>
@@ -1569,7 +1572,7 @@ function renderSidebar(){
     <div class="si"><span class="si-lbl">${openWheels} open · ${totalWheels} total</span><span class="si-val o">${openWheels}/${totalWheels}</span></div>
     <div class="si"><span class="si-lbl">W/L</span><span class="si-val"><span style="color:var(--green)">${wl.wins}</span> / <span style="color:var(--red)">${wl.losses}</span> &nbsp;<span style="color:${wl.wr&&parseFloat(wl.wr)>=50?'var(--green)':'var(--red)'}">${wl.wr?wl.wr+'%':'—'}</span></span></div>
     <div class="sb-sec-ttl" style="margin-top:14px">Total P&amp;L</div>
-    <div class="si"><span class="si-lbl">Option Income</span><span class="si-val ${colorN(s.pNet)}">${fmtMoney(s.pNet)}</span></div>
+    <div class="si"><span class="si-lbl">Option Income (all-time)</span><span class="si-val ${colorN(s.pNet)}">${fmtMoney(s.pNet)}</span></div>
     ${s.stockRealised!==0?`<div class="si"><span class="si-lbl">Stock Realised</span><span class="si-val ${colorN(s.stockRealised)}">${fmtMoney(s.stockRealised)}</span></div>`:''}
     ${s.divs>0?`<div class="si"><span class="si-lbl">Dividends</span><span class="si-val g">${fmtMoney(s.divs)}</span></div>`:''}
     ${s.capDeployed>0?`<div class="si"><span class="si-lbl">Deployed</span><span class="si-val" style="color:var(--orange)">${fmtMoney(s.capDeployed)}</span></div>`:''}
@@ -1579,12 +1582,12 @@ function renderSidebar(){
       <span class="si-val ${colorN(s.totalRealised)}" style="font-weight:500">${fmtMoney(s.totalRealised)}</span>
     </div>
     <div class="sb-sec-ttl" style="margin-top:14px">YTD P&amp;L</div>
-    <div class="si"><span class="si-lbl">Option Income</span><span class="si-val ${colorN(ytd.optNet)}">${fmtMoney(ytd.optNet)}</span></div>
+    <div class="si"><span class="si-lbl">Option Income (YTD)</span><span class="si-val ${colorN(ytd.optNet)}">${fmtMoney(ytd.optNet)}</span></div>
     ${ytd.stockIncome>0?`<div class="si"><span class="si-lbl">Stock Sales</span><span class="si-val g">${fmtMoney(ytd.stockIncome)}</span></div>`:''}
     ${ytd.divs>0?`<div class="si"><span class="si-lbl">Dividends</span><span class="si-val g">${fmtMoney(ytd.divs)}</span></div>`:''}
     ${ytd.capDeployedYTD>0?`<div class="si"><span class="si-lbl">Deployed YTD</span><span class="si-val" style="color:var(--orange)">${fmtMoney(ytd.capDeployedYTD)}</span></div>`:''}
     <div class="si" style="margin-top:7px;padding-top:6px;border-top:1px solid var(--border)">
-      <span class="si-lbl" style="font-weight:500;color:var(--text2)">YTD Total</span>
+      <span class="si-lbl" style="font-weight:500;color:var(--text2)">YTD Income</span>
       <span class="si-val ${colorN(ytd.net)}" style="font-weight:500">${fmtMoney(ytd.net)}</span>
     </div>
     <div class="sb-sec-ttl" style="margin-top:14px">Rate</div>
@@ -2483,8 +2486,13 @@ function renderDash(){
   const utilCol=utilPct<70?'#22c55e':utilPct<85?'#fbbf24':'#ef4444';
 
   // Last month comparison
-  const lastMo=monthly.length>=2?monthly[monthly.length-2]:null;
-  const thisMo=monthly.length>=1?monthly[monthly.length-1]:null;
+  // Use the real calendar month (and the one before it), not just the last months that happen to have trades
+  const _now=new Date();
+  const _ymOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  const _thisYm=_ymOf(_now), _lastYm=_ymOf(new Date(_now.getFullYear(),_now.getMonth()-1,1));
+  const _zeroMo=ym=>({ym,credits:0,debits:0,net:0,pNet:0,pCr:0,pDb:0});
+  const thisMo=monthly.length?(monthly.find(m=>m.ym===_thisYm)||_zeroMo(_thisYm)):null;
+  const lastMo=monthly.length?(monthly.find(m=>m.ym===_lastYm)||_zeroMo(_lastYm)):null;
   const moCompare=lastMo&&thisMo?(thisMo.pNet-lastMo.pNet):null;
 
   // Action count
@@ -3397,7 +3405,6 @@ function renderAnalytics(){
 
   const taxSection=`<div class="a-stat-grid">
     ${stat(fmtMoney(totalOptIncome),'Net Option Income','short-term capital gains','var(--text)','All option premium from expired or closed positions. Classified as short-term capital gains regardless of holding period.')}
-    ${stat(fmtMoney(cap.totalFees),'Deductible Fees','commissions & reg fees','var(--text2)','Trading commissions and regulatory fees — may be deductible against trading income.')}
     ${stat(washSaleCount>0?washSaleCount+' potential':'None detected','Wash Sales','BTC loss + reopen within 30d',washSaleCount>0?'#fbbf24':'#22c55e','Wash sale rule: a loss is disallowed if you reopen a substantially identical position within 30 days. The disallowed loss gets added to the new position cost basis.')}
     ${stat(fmtMoney(s.divs),'Dividend Income','qualified/ordinary TBD','var(--text2)','Dividends received on assigned shares. Tax treatment depends on holding period and dividend type.')}
   </div>`;
