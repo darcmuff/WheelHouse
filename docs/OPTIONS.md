@@ -44,3 +44,13 @@ Until the rule exists, the Options tab shows a warning and the wheel app keeps w
 
 `netlify/functions/optchain.js` tries Cboe public delayed quotes first, then the Finnhub option chain with the existing `FINNHUB_KEY` (skipped silently if unauthorised or failing).
 The browser can't call Cboe directly (no CORS header). If the proxy fails, manual marks are used and greeks are computed locally.
+
+## Poor man's covered calls (short calls against a LEAP)
+
+- **Sell call** on any open LEAP card opens a form (SmartScan paste or manual) for a sell-to-open call. SmartScan reuses `leapScan` via `pmccScan`, which accepts sold calls and refuses bought calls, closes and puts with a clear message.
+- Stored in `optlegs` like any leg: `side:'short'`, `type:'C'`, own `groupId`, and `parentLeapId` = the LEAP's id. Rolls keep `parentLeapId` and set `rolledFrom`. If the LEAP itself is rolled, its shorts follow via the LEAP's `rolledFrom` chain.
+- Never touches wheel trades or rotations; not in the Trade Log or wheel export. Included in the Options CSV export (`parentLeapId`, `rolledFrom` columns).
+- Card strip: current short (strike, expiry, DTE, P&L from the live mark), premium collected (sum of realised on closed shorts + net credit on open ones, i.e. net of buybacks and fees), adjusted LEAP cost = LEAP cost − premium collected, collapsible history.
+- Actions: Buy back (close), Roll (close + open new in one step, via the existing close/roll modal), Expired (worthless).
+- Warnings: short strike < LEAP strike + net debit per share; short expiry after LEAP expiry; open short contracts > LEAP contracts.
+- An orphaned short (its LEAP deleted) falls back to "Other options" and raises a data-health warning.

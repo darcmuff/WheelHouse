@@ -544,6 +544,16 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .leap-cf .note{font-size:10px;color:var(--yellow);flex:1}.leap-cf .btn{padding:4px 10px;font-size:11px}
 .leap-seg{display:inline-flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden}
 .leap-seg button{background:none;border:0;padding:5px 11px;font-size:11px;color:var(--text3);cursor:pointer}.leap-seg button.on{background:var(--orangeD);color:var(--orange2)}
+.pmcc{border-top:1px solid var(--border);padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.pmcc-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12px}
+.pmcc-tag{font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.35);padding:2px 7px;border-radius:20px;white-space:nowrap}
+.pmcc-kv{display:flex;flex-direction:column;min-width:0}.pmcc-kv .rmb-val{font-size:13px}
+.pmcc-btns{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}.pmcc-btns .btn{padding:4px 10px;font-size:11px}
+.pmcc-warn{font-size:11px;color:var(--yellow);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:6px;padding:4px 8px}
+.pmcc-hist summary{font-size:11px;color:var(--text3);cursor:pointer}
+.pmcc-hist table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}.pmcc-hist td,.pmcc-hist th{padding:3px 6px;text-align:left;border-top:1px solid var(--border);white-space:nowrap}.pmcc-hist th{color:var(--text3);font-weight:500}
+.pmcc-hist .tw{overflow-x:auto}
+@media(max-width:640px){.pmcc-top{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}.pmcc-top .pmcc-tag{grid-column:1/-1;justify-self:start}.pmcc-kv .rmb-val{white-space:normal}.pmcc-btns{grid-column:1/-1;margin-left:0;width:100%}.pmcc-btns .btn{flex:1}}
 .leap-other{margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:8px 12px}
 .leap-other summary{font-size:12px;color:var(--text3);cursor:pointer}
 .leap-empty{grid-column:1/-1;text-align:center;color:var(--text3);padding:40px 10px;font-size:13px;background:var(--bg2);border:1px dashed var(--border2);border-radius:9px}
@@ -954,6 +964,39 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
     </div>
   </div>
 </div>
+<div class="mb" id="mPmcc">
+  <div class="mbox" style="width:520px;padding:14px">
+    <div class="mtitle" style="margin-bottom:8px;font-size:15px"><span id="mPmccTitle">Sell call against LEAP</span><span class="mx" onclick="closeModal('mPmcc')">✕</span></div>
+    <input type="hidden" id="pcc-leap">
+    <div id="pcc-ctx" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
+    <div style="display:flex;gap:0;border:1px solid var(--border2);border-radius:7px;overflow:hidden;margin-bottom:12px">
+      <button id="pcc-tab-smartscan" onclick="pmccTab('smartscan')" style="flex:1;padding:7px;border:none;cursor:pointer;font-size:12px;font-weight:700">✦ SmartScan</button>
+      <button id="pcc-tab-manual" onclick="pmccTab('manual')" style="flex:1;padding:7px;border:none;cursor:pointer;font-size:12px;font-weight:600">✎ Manual Entry</button>
+    </div>
+    <div id="pcc-panel-smartscan">
+      <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Paste the sell-to-open confirmation for the call you sold — any broker, any layout. Nothing is saved until you check the details and press Save.</p>
+      <textarea id="pcc-paste" style="width:100%;height:140px;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:11px;border-radius:7px;font-size:12px;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
+      <div id="pcc-scan-msg" style="font-size:12px;margin-top:8px;display:none"></div>
+      <div id="pcc-pick" style="margin-top:8px"></div>
+      <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="pmccRunScan()">SmartScan →</button></div>
+    </div>
+    <div id="pcc-panel-manual">
+    <div id="pcc-filled" style="display:none;background:rgba(13,148,136,.12);border:1px solid rgba(13,148,136,.4);color:var(--orangeL);font-size:12px;padding:7px 10px;border-radius:7px;margin-bottom:8px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px" oninput="pmccCheck()">
+      <div class="fld"><label>Ticker</label><input id="pcc-und" type="text" readonly style="opacity:.7"></div>
+      <div class="fld"><label>Strike ($)</label><input id="pcc-strike" type="number" step="0.5"></div>
+      <div class="fld"><label>Expiry</label><input id="pcc-expiry" type="date"></div>
+      <div class="fld"><label>Contracts</label><input id="pcc-qty" type="number" step="1" min="1" value="1"></div>
+      <div class="fld"><label>Premium / share</label><input id="pcc-price" type="number" step="0.01"></div>
+      <div class="fld"><label>Date sold</label><input id="pcc-date" type="date"></div>
+      <div class="fld"><label>Fees total ($)</label><input id="pcc-fees" type="number" step="0.01" value="0"></div>
+      <div class="fld" style="grid-column:span 2"><label>Notes</label><input id="pcc-notes" type="text"></div>
+    </div>
+    <div id="pcc-warn"></div>
+    <div class="mfoot" style="margin-top:8px;padding-top:8px"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="savePmcc()">Save</button></div>
+    </div>
+  </div>
+</div>
 <div class="mb" id="mOpt">
   <div class="mbox" style="width:640px;padding:14px">
     <div class="mtitle" style="margin-bottom:8px;font-size:15px"><span id="mOptTitle">Add option position</span><span class="mx" onclick="closeModal('mOpt')">✕</span></div>
@@ -1349,6 +1392,7 @@ function optionsLib(){
       if(l.status==='closed'&&(l.closePrice==null||!l.closeDate))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is closed but has no close price/date`});
       if(l.closeDate&&l.entryDate&&l.closeDate<l.entryDate)out.push({sev:'red',legId:l.id,text:`${nm(l)} closed before it was opened`});
       if(l.entryDate&&l.expiry&&l.entryDate>l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} opened after its expiry`});
+      if(l.parentLeapId&&!legs.some(x=>x.id===l.parentLeapId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} was sold against a LEAP that no longer exists — shown under Other options`});
       if(l.wheelId&&!wheels.some(w=>w.id===l.wheelId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is attached to a rotation that no longer exists`});
       if(l.wheelId){const w=wheels.find(w=>w.id===l.wheelId);if(w&&w.ticker&&w.ticker!==l.underlying)out.push({sev:'grey',legId:l.id,text:`${nm(l)} is attached to the ${w.ticker} rotation — different underlying`});}
       if(l.status==='open'&&l.markAt&&(Date.parse(today)-Date.parse(l.markAt.slice(0,10)))/DAY>5)out.push({sev:'grey',legId:l.id,text:`${nm(l)} mark is stale (${l.markAt.slice(0,10)})`});
@@ -1849,7 +1893,7 @@ function render(){
 // ── DEMO MODE (Options tab only) — in-memory sample legs, never written to Firestore, never touches wheel data ──
 let optDemo=/[?&]demo=options\b/.test(location.search)||localStorage.getItem('wh-optDemo')==='1';
 let _realOpts=null; // real legs parked while demo is on
-const DEMO_SPOTS={TSLA:380,NVDA:185,AAPL:245,SPY:670};
+const DEMO_SPOTS={TSLA:380,NVDA:185,AAPL:245,SPY:670,SPCX:205};
 function optDemoLegs(todayISO,wheels){
   const T=new Date(todayISO+'T12:00:00Z'),iso=d=>d.toISOString().slice(0,10);
   const add=n=>{const d=new Date(T);d.setUTCDate(d.getUTCDate()+n);return iso(d);};
@@ -1863,7 +1907,16 @@ function optDemoLegs(todayISO,wheels){
     L(2,{underlying:'TSLA',strike:300,expiry:third(14),entryPrice:118.50,entryDate:past(385),mark:131.40,iv:0.55}),
     L(3,{underlying:'NVDA',strike:160,expiry:third(15),entryPrice:52.10,entryDate:past(233),mark:47.60,iv:0.44,qty:3,fees:1.95}),
     L(4,{underlying:'AAPL',strike:250,expiry:third(8),entryPrice:31.20,entryDate:past(401),mark:28.10,iv:0.27,reviewDate:add(30)}),
+    // SpaceX-style LEAP (fake ticker SPCX, fake numbers) with poor man's covered calls sold against it
+    L(5,{underlying:'SPCX',strike:150,expiry:third(18),entryPrice:72.00,entryDate:past(120),mark:81.50,iv:0.62,qty:2,fees:1.30,notes:'PMCC base'}),
   ];
+  const S=(o)=>L(o.g,{underlying:'SPCX',side:'short',parentLeapId:'demo-5',fees:1.30,qty:2,...o});
+  const s1=S({g:6,strike:240,expiry:past(64),entryPrice:5.10,entryDate:past(100),status:'closed',closePrice:1.15,closeDate:past(70),closeFees:1.30,mark:null});
+  const s2=S({g:6,strike:250,expiry:past(29),entryPrice:4.60,entryDate:past(70),status:'expired',closePrice:0,closeDate:past(29),mark:null,rolledFrom:s1.id});
+  const s3=S({g:7,strike:245,expiry:mo,entryPrice:6.40,entryDate:past(12),mark:3.05,iv:0.66});
+  // a deliberately risky one on the TSLA 300 LEAP: strike below strike + net debit → warning shows
+  const s4=L(8,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:390,expiry:wk,entryPrice:4.20,entryDate:past(4),mark:6.80,iv:0.6});
+  legs.push(s1,s2,s3,s4);
   return legs;
 }
 function setOptDemo(on){
@@ -1947,7 +2000,7 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
 }
 // Options-only export (separate from the wheel CSV export)
 function optsToCSV(legs){
-  const F=['groupId','underlying','type','side','strike','expiry','qty','entryPrice','entryDate','fees','status','closePrice','closeDate','closeFees','mark','markSrc','realized','unrealized','wheelId','notes'];
+  const F=['groupId','underlying','type','side','strike','expiry','qty','entryPrice','entryDate','fees','status','closePrice','closeDate','closeFees','mark','markSrc','realized','unrealized','wheelId','parentLeapId','rolledFrom','notes'];
   const q=v=>{v=v==null?'':String(v);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
   return[F.join(',')].concat(legs.map(l=>{const p=OPTS.legPnL(l);return F.map(f=>q(f==='realized'?p.realized:f==='unrealized'?p.unrealized:l[f])).join(',');})).join('\n');
 }
@@ -1961,9 +2014,15 @@ function setLeapStatus(v){leapStatus=v;localStorage.setItem('wh-leapStatus',v);r
 // A group is a LEAP card only if every leg in it is a long call; mixed/short groups go to "Other options".
 function splitLeapLegs(legs){
   const byG={};(legs||[]).forEach(l=>(byG[l.groupId||l.id]=byG[l.groupId||l.id]||[]).push(l));
-  const leaps=[],other=[];
-  Object.values(byG).forEach(g=>{(g.every(l=>l.side==='long'&&l.type==='C')?leaps:other).push(...g);});
-  return{leaps,other};
+  const leaps=[],other=[],shorts=[];
+  const isLeapG=g=>g.every(l=>l.side==='long'&&l.type==='C');
+  const leapIds=new Set();Object.values(byG).forEach(g=>{if(isLeapG(g))g.forEach(l=>leapIds.add(l.id));});
+  Object.values(byG).forEach(g=>{
+    if(isLeapG(g))return leaps.push(...g);
+    // short calls sold against a LEAP (poor man's covered calls) hang off the LEAP card
+    if(g.every(l=>l.side==='short'&&l.type==='C'&&l.parentLeapId&&leapIds.has(l.parentLeapId)))return shorts.push(...g);
+    other.push(...g);});
+  return{leaps,other,shorts};
 }
 function leapStats(l,spot,today){
   const q=+l.qty||0,mark=l.mark!=null&&l.mark!==''?+l.mark:null,paid=+l.entryPrice||0;
@@ -1976,6 +2035,54 @@ function leapStats(l,spot,today){
     value:mark!=null?mark*100*q:null,cost,pl:l.status==='open'?p.unrealized:p.realized,
     be:(+l.strike)+paid,beDist:spot>0?((+l.strike)+paid)/spot*100-100:null,dsh:g?g.delta:null,thd:g?g.theta:null};
 }
+// ── Poor man's covered calls: short calls sold against a LEAP (Options data only — never wheel trades) ──
+// A LEAP's shorts are those whose parentLeapId is the LEAP or any LEAP it was rolled from.
+function pmccShortsFor(leap,legs){
+  const ids=new Set([leap.id]);let cur=leap,n=0;const all=legs||[];
+  while(cur&&cur.rolledFrom&&n++<50){ids.add(cur.rolledFrom);cur=all.find(x=>x.id===cur.rolledFrom);}
+  return all.filter(l=>l.side==='short'&&l.type==='C'&&l.parentLeapId&&ids.has(l.parentLeapId));
+}
+function pmccWarnings(leap,adjPerSh,openShorts,cand){
+  const w=[],strk=+leap.strike,floor=strk+adjPerSh,lq=+leap.qty||0;
+  const list=cand?[cand]:openShorts;
+  list.forEach(c=>{
+    if(+c.strike>0&&+c.strike<floor)w.push(`$${fmt2(c.strike).replace(/\.00$/,'')} strike is below LEAP strike + net debit ($${floor.toFixed(2)}) — if called away you lock in a loss of about $${Math.round((floor-c.strike)*100*(+c.qty||0)).toLocaleString()}`);
+    if(c.expiry&&leap.expiry&&c.expiry>leap.expiry)w.push(`Short call expires after the LEAP (${_fdShort(leap.expiry)}) — it would be uncovered`);
+  });
+  const q=openShorts.reduce((a,l)=>a+(+l.qty||0),0)+(cand?(+cand.qty||0):0);
+  if(q>lq)w.push(`${q} short contracts against ${lq} LEAP contract${lq>1?'s':''} — ${q-lq} would be naked`);
+  return w;
+}
+function pmccStats(leap,legs,today){
+  const sh=pmccShortsFor(leap,legs),q=+leap.qty||0;
+  let net=0;sh.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?p.openCash:p.realized;});net=Math.round(net*100)/100;
+  const cost=(+leap.entryPrice||0)*100*q+(+leap.fees||0),adj=cost-net,adjPerSh=q?adj/(100*q):0;
+  const open=sh.filter(l=>l.status==='open').sort((a,b)=>(a.expiry||'').localeCompare(b.expiry||''));
+  const past=sh.filter(l=>l.status!=='open').sort((a,b)=>(b.closeDate||b.expiry||'').localeCompare(a.closeDate||a.expiry||''));
+  const cur=open[0]||null;
+  const curPnl=cur?OPTS.legPnL(cur).unrealized:null;
+  return{shorts:sh,open,past,cur,curPnl,curDte:cur?OPTS.dte(cur.expiry,today):null,net,cost,adj,adjPerSh,
+    warnings:leap.status==='open'?pmccWarnings(leap,cost/(100*(q||1))-(net/(100*(q||1))),open,null):[]};
+}
+function renderPmcc(leap,today){
+  const P=pmccStats(leap,db.opts||[],today),open=leap.status==='open';
+  if(!P.shorts.length)return''; // nothing sold yet: just the 'Sell call' button in the card header
+  const m0=n=>fmtMoney(n).replace(/\.\d\d$/,''),k=(l,v,sub='')=>`<div class="pmcc-kv"><div class="rmb-lbl">${l}</div><div class="rmb-val">${v}</div>${sub?`<div class="rmb-sub">${sub}</div>`:''}</div>`;
+  const sk=l=>`${l.qty}× $${fmt2(l.strike).replace(/\.00$/,'')}C · ${_fdShort(l.expiry)}`;
+  let curH;
+  if(P.cur){const c=P.cur,pl=P.curPnl;
+    curH=`${k('Short call',sk(c),`sold @ $${(+c.entryPrice||0).toFixed(2)}${P.open.length>1?` · +${P.open.length-1} more open`:''}`)}
+    ${k('Days left',P.curDte==null?'—':P.curDte<0?'<span class="r">expired</span>':`<b>${P.curDte}</b>`,c.mark!=null&&c.mark!==''?`mark $${(+c.mark).toFixed(2)}`:'no mark')}
+    ${k('Short P&amp;L',pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${pl>=0?'g':'r'}">${pl>=0?'+':''}${m0(pl)}</span>`,pl!=null&&c.entryPrice>0?`${Math.round(pl/((+c.entryPrice)*100*(+c.qty||1))*100)}% of premium`:'')}`;
+  }else curH=k('Short call','<span style="color:var(--text3)">none open</span>',open?'use Sell call to write the next one':'');
+  const btns=open?(P.cur?`<button class="btn btn-ghost" onclick="pmccClose('${esc(P.cur.id)}','close')">Buy back</button><button class="btn btn-ghost" onclick="pmccClose('${esc(P.cur.id)}','roll')">Roll</button><button class="btn btn-ghost" onclick="pmccExpire('${esc(P.cur.id)}')">Expired</button>`:''):'';
+  const hist=P.past.length?`<details class="pmcc-hist"><summary>Past short calls (${P.past.length})</summary><div class="tw"><table><tr><th>Call</th><th>Sold</th><th>Closed</th><th>Outcome</th><th>Net</th></tr>${P.past.map(l=>{const r=OPTS.legPnL(l).realized;return`<tr><td>${sk(l)}</td><td>${_fdShort(l.entryDate)} @ $${(+l.entryPrice||0).toFixed(2)}</td><td>${_fdShort(l.closeDate)}${l.status==='closed'?` @ $${(+l.closePrice||0).toFixed(2)}`:''}</td><td>${l.status==='expired'?'expired':l.status==='assigned'?'assigned':P.shorts.some(x=>x.rolledFrom===l.id)?'rolled':'bought back'}</td><td class="${r>=0?'g':'r'}">${r>=0?'+':''}${fmtMoney(r)}</td></tr>`;}).join('')}</table></div></details>`:'';
+  return`<div class="pmcc"><div class="pmcc-top"><span class="pmcc-tag">PMCC</span>${curH}
+    ${k('Premium collected',`<span class="${P.net>=0?'g':'r'}">${P.net>=0?'+':''}${m0(P.net)}</span>`,`${P.shorts.length} call${P.shorts.length!==1?'s':''} · net of buybacks &amp; fees`)}
+    ${k('Adj. LEAP cost',m0(P.adj),`$${P.adjPerSh.toFixed(2)}/sh (was $${(P.cost/(100*(+leap.qty||1))).toFixed(2)})`)}
+    <span class="pmcc-btns">${btns}</span></div>
+    ${P.warnings.map(w=>`<div class="pmcc-warn">⚠ ${esc(w)}</div>`).join('')}${hist}</div>`;
+}
 function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
 function renderLeapCard(l,spot,today){
   const S=leapStats(l,spot,today),open=l.status==='open';
@@ -1985,7 +2092,7 @@ function renderLeapCard(l,spot,today){
   const note=warn?`● Under 9 months left — review/roll window${rev?' · '+rev:''}`:rev?`◷ ${rev}`:'';
   const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:S.intr==null?'':`<span class="leap-badge ${S.intr>0?'itm':'otm'}">${S.intr>0?'ITM':'OTM'}</span>`;
   const gid=l.groupId||l.id;
-  const btns=`${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
+  const btns=`${open?`<button class="btn btn-ghost" title="Sell a covered call against this LEAP (poor man's covered call)" onclick="openPmccSell('${esc(l.id)}')">Sell call</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
   let row;
   if(open){
     const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
@@ -2002,7 +2109,7 @@ function renderLeapCard(l,spot,today){
   }
   return`<div class="leap-card ${!open?'cn':warn?'warn':''}" data-leap="${esc(l.id)}">
   <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
-  <div class="leap-row">${row}</div></div>`;
+  <div class="leap-row">${row}</div>${renderPmcc(l,today)}</div>`;
 }
 function renderOptions(){
   const legs=db.opts||[];
@@ -2137,6 +2244,98 @@ function deleteLeap(){
   const id=document.getElementById('lf-id').value;if(!id||!confirm('Delete this LEAP?'))return;
   _deleteOptDoc(id);db.opts=(db.opts||[]).filter(l=>l.id!==id);closeModal('mLeap');render();
 }
+// ── Sell call against a LEAP (PMCC) ──
+let _pmccScan=null;
+function openPmccSell(leapId){
+  const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
+  const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste'].forEach(k=>v(k,''));
+  v('pcc-qty',Math.max(1,(+L.qty||1)-P.open.reduce((a,l)=>a+(+l.qty||0),0)));v('pcc-fees','0');v('pcc-date',new Date().toISOString().slice(0,10));
+  document.getElementById('mPmccTitle').textContent=`Sell call against ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
+  document.getElementById('pcc-ctx').innerHTML=`LEAP: ${L.qty}× · net debit now <b>$${P.adjPerSh.toFixed(2)}/sh</b> → strikes below <b>$${(+L.strike+P.adjPerSh).toFixed(2)}</b> risk a loss if called away.`;
+  ['pcc-scan-msg','pcc-filled'].forEach(k=>document.getElementById(k).style.display='none');document.getElementById('pcc-pick').innerHTML='';
+  ['pcc-price','pcc-date','pcc-qty','pcc-fees','pcc-expiry'].forEach(k=>document.getElementById(k).style.borderColor='');
+  pmccTab('smartscan');pmccCheck();initPmccDrop();openModal('mPmcc');
+}
+function pmccTab(tab){
+  const ss=tab==='smartscan';
+  document.getElementById('pcc-panel-smartscan').style.display=ss?'block':'none';document.getElementById('pcc-panel-manual').style.display=ss?'none':'block';
+  const a=document.getElementById('pcc-tab-smartscan'),b=document.getElementById('pcc-tab-manual');
+  a.style.background=ss?'var(--orange)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';b.style.background=ss?'var(--bg3)':'var(--orange)';b.style.color=ss?'var(--text2)':'#fff';
+}
+// SmartScan for a SOLD call (sell to open). Reuses leapScan, which already reads every layout and labels the side/effect.
+function pmccScan(text,B,today){
+  const r=leapScan(text,B,today),all=[...r.calls,...r.rejected];
+  const calls=all.filter(c=>c.type==='C'&&c.side!=='buy'&&c.effect!=='close').map(c=>({...c,low:[...new Set([...(c.low||[]),...(c.side?[]:['side'])])]}));
+  if(calls.length)return{calls,error:''};
+  if(!all.length)return{calls:[],error:r.error};
+  const c=all[0];
+  const error=all.length>1?`No sold calls found — ${all.length} other trades (bought, puts or closes) were skipped.`:c.type!=='C'?'This is a put — only calls can be sold against a LEAP.':c.effect==='close'?'This is a closing trade — use Buy back on the short call instead.':'This is a bought call (buy to open) — add it with + LEAP instead.';
+  return{calls:[],error};
+}
+function pmccRunScan(){
+  const msg=document.getElementById('pcc-scan-msg'),pick=document.getElementById('pcc-pick');pick.innerHTML='';
+  let r;try{r=pmccScan(document.getElementById('pcc-paste').value,BCSV);}catch(e){r={calls:[],error:'Parse error: '+e.message};}
+  _pmccScan=r;
+  if(!r.calls.length){msg.style.color='var(--red)';msg.textContent=r.error;msg.style.display='block';return;}
+  if(r.calls.length===1){msg.style.display='none';return pmccFillFrom(0);}
+  msg.style.color='var(--text3)';msg.style.display='block';msg.textContent=`Found ${r.calls.length} sold calls — pick one:`;
+  pick.innerHTML=r.calls.map((c,i)=>`<button class="btn btn-ghost" style="display:flex;width:100%;justify-content:space-between;gap:8px;margin-bottom:4px;font-size:12px;padding:6px 10px" onclick="pmccFillFrom(${i})"><span><b style="color:var(--orange2)">${esc(c.ticker)}</b> ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} Call · ${esc(_fdShort(c.expiry))}</span><span style="color:var(--text3)">@ ${c.price!=null?fmt2(c.price):'—'} · ${esc(c.date||'no date')}</span></button>`).join('');
+}
+function pmccFillFrom(i){
+  const c=_pmccScan&&_pmccScan.calls[i];if(!c)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'',und=document.getElementById('pcc-und').value;
+  v('pcc-strike',c.strike);v('pcc-expiry',c.expiry);v('pcc-qty',c.qty||1);v('pcc-price',c.price);v('pcc-date',c.date||new Date().toISOString().slice(0,10));v('pcc-fees',c.fees||0);
+  const miss=[c.price==null&&'price',!c.date&&'date'].filter(Boolean),low=(c.low||[]).filter(k=>!miss.includes(k));
+  const FID={price:'pcc-price',date:'pcc-date',contracts:'pcc-qty',fees:'pcc-fees',expiry:'pcc-expiry'};
+  Object.values(FID).forEach(id=>document.getElementById(id).style.borderColor='');
+  [...miss,...low].forEach(k=>{const el=FID[k]&&document.getElementById(FID[k]);if(el)el.style.borderColor='var(--yellow)';});
+  const f=document.getElementById('pcc-filled');f.style.display='block';
+  f.innerHTML=`✦ Filled from SmartScan — check every field, then Save.${c.ticker&&c.ticker!==und?` <b style="color:var(--red)">The paste is for ${esc(c.ticker)}, but this LEAP is ${esc(und)}.</b>`:''}${miss.length?` <b style="color:var(--yellow)">Couldn't read: ${miss.join(', ')}.</b>`:''}${low.length?` <b style="color:var(--yellow)">Low confidence: ${low.join(', ')} — double-check.</b>`:''}`;
+  pmccTab('manual');pmccCheck();
+}
+function pmccFormLeg(f,leap){
+  const strike=parseFloat(f.strike),qty=parseInt(f.qty),price=parseFloat(f.price);
+  if(!leap)return{err:'LEAP not found'};if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};
+  if(!(qty>0))return{err:'Contracts must be at least 1'};if(!(price>=0)||f.price===''||f.price==null)return{err:'Enter the premium received per share'};
+  return{leg:{id:f.newId,groupId:f.newId,parentLeapId:leap.id,underlying:leap.underlying,type:'C',side:'short',strike,expiry:f.expiry,qty,entryPrice:price,entryDate:f.date||null,
+    fees:parseFloat(f.fees)||0,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,markSrc:null,markAt:null,delta:null,theta:null,iv:null,wheelId:null,reviewDate:null,notes:String(f.notes||'').trim()}};
+}
+function pmccCheck(){
+  const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const box=document.getElementById('pcc-warn');if(!L||!box)return;
+  const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10)),g=k=>document.getElementById(k).value;
+  const prem=(parseFloat(g('pcc-price'))||0)*100*(parseInt(g('pcc-qty'))||0)-(parseFloat(g('pcc-fees'))||0);
+  const adj=(P.adj-prem)/(100*(+L.qty||1));
+  const w=g('pcc-strike')?pmccWarnings(L,adj,P.open,{strike:+g('pcc-strike'),expiry:g('pcc-expiry'),qty:+g('pcc-qty')||0}):[];
+  box.innerHTML=w.map(x=>`<div class="pmcc-warn" style="margin-top:6px">⚠ ${esc(x)}</div>`).join('');
+}
+function savePmcc(){
+  const g=k=>document.getElementById(k).value,L=(db.opts||[]).find(x=>x.id===g('pcc-leap'));
+  const r=pmccFormLeg({strike:g('pcc-strike'),expiry:g('pcc-expiry'),qty:g('pcc-qty'),price:g('pcc-price'),date:g('pcc-date'),fees:g('pcc-fees'),notes:g('pcc-notes'),newId:uid()},L);
+  if(r.err){alert(r.err);return;}
+  db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
+}
+function pmccClose(id,mode){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  openOptClose(l.groupId||l.id,mode);
+  document.getElementById('mOptCloseTitle').textContent=mode==='roll'?'Roll short call (buy back + sell new)':'Buy to close short call';
+  // only this leg — not other open shorts that share a roll chain
+  document.querySelectorAll('#oc-legs .oc-leg').forEach(r=>{if(r.dataset.id!==id)r.remove();});
+}
+function pmccExpire(id){
+  const i=(db.opts||[]).findIndex(x=>x.id===id);if(i<0)return;const l=db.opts[i];
+  const today=new Date().toISOString().slice(0,10);
+  if(!confirm(`Mark ${l.underlying} $${fmt2(l.strike)}C ${l.expiry} as expired worthless?${l.expiry>today?' (It hasn\'t reached expiry yet.)':''}`))return;
+  db.opts[i]=OPTS.expireLeg(l);_saveOpt(db.opts[i]);render();
+}
+function initPmccDrop(){
+  const ta=document.getElementById('pcc-paste');if(!ta||ta._wired)return;ta._wired=true;
+  ta.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;
+    if(/^image\//.test(f.type)){const m=document.getElementById('pcc-scan-msg');m.style.color='var(--red)';m.textContent="Screenshots can't be read — copy the text of the confirmation and paste it instead.";m.style.display='block';return;}
+    const r=new FileReader();r.onload=()=>{ta.value=r.result;pmccRunScan();};r.readAsText(f);});
+  ta.addEventListener('dragover',e=>e.preventDefault());
+}
 // ── LEAP SmartScan: paste/drop a broker fill → one or more long-call candidates (never saves) ──
 // Reuses BCSV.findOption / pickDate / parseStatementText / parseBrokerCSV; only the long-call decision lives here.
 // ── LEAP SmartScan clean-up: unicode, table cells, OCR slips, typo'd labels → plain text the extractors understand ──
@@ -2205,7 +2404,7 @@ function leapFuzzy(s,B,today){
     if(date)break;}
   if(!date){const d=dates.filter(d=>d.iso!==best.expiry&&d.iso<=today&&!/settle/i.test(s.slice(Math.max(0,d.i-16),d.i))).sort((a,b)=>a.i-b.i)[0];if(d){date=d.iso;low.push('date');}else low.push('date');}
   // ── contracts ──
-  let qty=null,qsrc='';const ca=[...s.matchAll(/\b(\d{1,4})\s+(?:contracts?\s+)?(?:at|@)\s*\$?(\d[\d,]*(?:\.\d{1,4})?)(?![:\d])/gi)].pop();
+  let qty=null,qsrc='';const ca=[...s.matchAll(/\b(\d{1,4})\s+(?:contracts?\s+)?(?:at|@)\s*\$?(\d[\d,]*(?:\.\d{1,4})?)(?![:\d])/gi)].filter(m=>!inDate(m.index,m.index+m[1].length)).pop(); // not the year of a date
   if(ca){qty=+ca[1];qsrc='at';}
   else{const m=/\b(?:quantity|qty|contracts?|filled\s+qty)\W{0,4}(-?\d{1,4})(?![\d.,\/])/i.exec(s)||/\b(?:buy|bought|bot|sell|sold|sld)\s+(?:to\s+open\s+)?(-?\d{1,4})\b(?![\d.,\/])/i.exec(s)||/\b(\d{1,4})\s+contracts?\b/i.exec(s);if(m){qty=Math.abs(+m[1]);qsrc='label';}}
   if(!qty){qty=1;low.push('contracts');}
@@ -5792,6 +5991,7 @@ window.setOptDemo = setOptDemo;
 window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;
 window.openOptAdd = openOptAdd;
+window.openPmccSell=openPmccSell;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.pmccCheck=pmccCheck;window.savePmcc=savePmcc;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;
 window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
 window.openOptEdit = openOptEdit;
 window.optAddLeg = optAddLeg;

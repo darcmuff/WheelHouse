@@ -25,15 +25,19 @@ check('URL ?demo=options turns demo on at boot', S.optDemo === true);
 S.setOptDemo(true);
 const legs = S.db.opts, today = new Date().toISOString().slice(0, 10);
 check('real legs parked, demo legs shown instead', S.real.length === 1 && S.real[0].id === 'real1' && legs.every(l => l.demo));
-check('exactly four demo legs, all open long calls', legs.length === 4 && legs.every(l => l.side === 'long' && l.type === 'C' && l.status === 'open'));
-check('TSLA ×2, NVDA, AAPL', legs.filter(l => l.underlying === 'TSLA').length === 2 && legs.some(l => l.underlying === 'NVDA') && legs.some(l => l.underlying === 'AAPL'));
-const dtes = legs.map(l => S.OPTS.dte(l.expiry, today));
-check('three ≥ 270 DTE LEAPs, AAPL inside the 270-day review window', legs.filter((l, i) => dtes[i] >= 270).length === 3 && S.OPTS.dte(legs.find(l => l.underlying === 'AAPL').expiry, today) < 270, dtes);
-const pl = legs.map(l => S.OPTS.legPnL(l).unrealized);
+const longs = legs.filter(l => l.side === 'long'), shorts = legs.filter(l => l.side === 'short');
+check('five demo LEAPs, all open long calls', longs.length === 5 && longs.every(l => l.type === 'C' && l.status === 'open'));
+check('demo PMCC short calls: all calls, each linked to a demo LEAP', shorts.length === 4 && shorts.every(l => l.type === 'C' && longs.some(x => x.id === l.parentLeapId && x.underlying === l.underlying)));
+check('demo legs raise no red data-health issues', !S.OPTS.health(legs, [], today, []).some(i => i.sev === 'red'), S.OPTS.health(legs, [], today, []).filter(i => i.sev === 'red'));
+check('SPCX LEAP has open + past (rolled, expired) short calls', shorts.filter(l => l.parentLeapId === 'demo-5' && l.status === 'open').length === 1 && shorts.some(l => l.status === 'expired' && l.rolledFrom));
+check('TSLA ×2, NVDA, AAPL, SPCX', longs.filter(l => l.underlying === 'TSLA').length === 2 && legs.some(l => l.underlying === 'NVDA') && legs.some(l => l.underlying === 'AAPL'));
+const dtes = longs.map(l => S.OPTS.dte(l.expiry, today));
+check('three ≥ 270 DTE LEAPs, AAPL inside the 270-day review window', longs.filter((l, i) => dtes[i] >= 270).length === 4 && S.OPTS.dte(legs.find(l => l.underlying === 'AAPL').expiry, today) < 270, dtes);
+const pl = longs.map(l => S.OPTS.legPnL(l).unrealized);
 check('mix of winners and losers', pl.some(x => x > 0) && pl.some(x => x < 0), pl);
 check('entry dates in the past, before expiry', legs.every(l => l.entryDate < today && l.entryDate < l.expiry));
 check('never attached to a rotation', legs.every(l => !l.wheelId) && !S.optDemoLegs(today, S.db.wheels).some(l => l.wheelId));
-check('greeks computable at demo spots (delta-as-shares)', legs.every(l => { const g = S.OPTS.legGreeks(l, { TSLA: 380, NVDA: 185, AAPL: 245 }[l.underlying], today); return g && g.delta > 0; }));
+check('greeks computable at demo spots (delta-as-shares)', longs.every(l => { const g = S.OPTS.legGreeks(l, { TSLA: 380, NVDA: 185, AAPL: 245, SPCX: 205 }[l.underlying], today); return g && g.delta > 0; }));
 check('AAPL has an optional review date', !!legs.find(l => l.underlying === 'AAPL').reviewDate);
 
 // ── nothing persists ──
