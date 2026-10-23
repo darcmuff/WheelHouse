@@ -607,7 +607,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 /* ── Home ── */
 .home{display:flex;flex-direction:column;gap:1rem}
 .home-head h1{font-size:1.375rem;font-weight:600;margin:0.25rem 0 0.125rem}.home-head p{color:var(--text3);font-size:0.75rem}
-.hk-grid{display:grid;grid-template-columns:1.4fr repeat(4,1fr);gap:0.75rem}
+.hk-grid{display:grid;grid-template-columns:1.4fr repeat(5,1fr);gap:0.75rem}
+@media(max-width:1280px){.hk-grid{grid-template-columns:1.4fr 1fr 1fr}}
 .hk{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
 .hk-l{color:var(--text3);font-size:0.6875rem}.hk-v{font-size:1.375rem;font-weight:600;margin-top:0.25rem;letter-spacing:-0.01em}.hk.big .hk-v{font-size:2.125rem}
 .hk-s{color:var(--text2);font-size:0.65rem;margin-top:0.125rem}.hk-how{color:var(--text3);font-size:0.575rem;margin-top:0.5rem;line-height:1.4}
@@ -4078,6 +4079,7 @@ function renderHome(){
   const mName=new Date().toLocaleDateString('en-GB',{month:'long'});
   const _sr=shareRealisations(db.trades);
   const _openShareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((_sr.open[w.id]||{}).cost||0),0);
+  const wl=calcWinLoss();
   const caw=capitalAtWork(calcCapitalStats().atRisk,_openShareCost,legs,null);
   const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
@@ -4097,6 +4099,7 @@ function renderHome(){
     <div class="hk"><div class="hk-l">This year ${ii(`Realised only, since 1 January. Open options are in Unrealised.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · LEAPs ${sgn(F.year.leaps)}</div></div>
     <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price minus cost, plus premium on open wheel puts &amp; calls (at the credit received — no live option price)${un.unpriced?` · ${un.unpriced} without a price`:''}.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Open premium ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}</div></div>
     <div class="hk"><div class="hk-l">Capital at work ${ii(`Wheel money tied up now: open put collateral (strike × shares) + what your open shares cost. LEAPs at what you paid, shown separately.`)}</div><div class="hk-v">${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Puts ${fmtMoney(caw.puts).replace(/\.\d\d$/,'')} · Shares ${fmtMoney(caw.shares).replace(/\.\d\d$/,'')}${caw.leaps?` · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')} separate`:''}</div></div>
+    <div class="hk"><div class="hk-l">Win rate ${ii(`Closed option trades only. A win is a put or call that expired worthless, was assigned or called away (premium kept), or was bought back for less than you sold it. A loss is one bought back for more. Open options don't count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="home-grid">
