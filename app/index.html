@@ -1589,12 +1589,40 @@ function calledAwayProfit(strike,shares,shareCost,premiumNet,realisedShares){
 function tickerPnL(trades,wheels,legs,year){
   const tk={};wheels.forEach(w=>tk[w.id]=w.ticker);
   const out={};const add=(t,d,v)=>{if(!t||!v)return;t=String(t).toUpperCase();const o=out[t]=out[t]||{ticker:t,year:0,all:0,wheel:0,leaps:0};o.all+=v;if(d&&d.startsWith(year))o.year+=v;return o;};
-  trades.forEach(t=>{const v=t.total||0,k=t.ticker||tk[t.wheelId];let x=0;
-    if(t.action==='CSP'||t.action==='STOC'||t.action==='STC'||t.action==='DIV')x=v;else if(t.action==='BTC')x=-v;
-    const o=add(k,t.entered||'',x);if(o)o.wheel+=x;});
+  trades.forEach(t=>{if(t.action!=='DIV')return;const v=t.total||0,k=t.ticker||tk[t.wheelId];const o=add(k,t.entered||'',v);if(o)o.wheel+=v;});
+  realisedPremium(trades).events.forEach(e=>{const k=e.ticker||tk[e.key]||String(e.key).replace(/^tk:/,'');const o=add(k,e.date,e.amount);if(o)o.wheel+=e.amount;});
   shareRealisations(trades).events.forEach(e=>{const k=tk[e.wheelId]||String(e.wheelId).replace(/^tk:/,'');const o=add(k,e.date,e.pnl);if(o)o.wheel+=e.pnl;});
   (legs||[]).forEach(l=>{if(l.status==='open')return;const p=OPTS.legPnL(l).realized;const o=add(l.underlying,l.closeDate||l.expiry||'',p);if(o)o.leaps+=p;});
   return Object.values(out).map(o=>({...o,year:Math.round(o.year*100)/100,all:Math.round(o.all*100)/100})).sort((a,b)=>b.all-a.all);
+}
+// Realised option premium events (wheel puts & calls). READ-ONLY.
+// An opener's credit is banked only when the leg resolves: bought back / sold to close (closer date),
+// assigned or called away (IN/OUT date), or expired (expiry date, once past). Closer debits/credits are
+// banked on their own date (so a roll realises the old leg in the roll month; the new leg stays open).
+// Partial closes split the credit pro rata by shares. Returns {events:[{key,ticker,date,amount}], open:[{key,ticker,credit}]}.
+function realisedPremium(trades,today){
+  today=today||new Date().toISOString().slice(0,10);
+  const groups={};(trades||[]).forEach(t=>{const k=t.wheelId||('tk:'+(t.ticker||''));(groups[k]=groups[k]||[]).push(t);});
+  const events=[],open=[];
+  Object.entries(groups).forEach(([k,list])=>{
+    list=list.map((t,i)=>({...t,id:'r'+i})); // private ids: pairing must not depend on stored ids
+    const tkr=(list.find(t=>t.ticker)||{}).ticker||'';
+    const {open:rest,pairs}=walkLegPairs(list);
+    const byId={};list.forEach(t=>byId[t.id]=t);
+    const used={};
+    Object.entries(pairs).forEach(([cid,ps])=>{const c=byId[cid];if(!c)return;ps.forEach(p=>{
+      const o=byId[p.legId];if(!o)return;const S=Number(o.shares)||0,f=S>0?Math.min(1,(p.shares||0)/S):1-(used[o.id]||0);
+      if(f<=0)return;used[o.id]=(used[o.id]||0)+f;events.push({key:k,ticker:o.ticker||tkr,date:c.entered||'',amount:(o.total||0)*f});});});
+    list.forEach(t=>{const v=t.total||0;
+      if(t.action==='BTC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:-v});
+      else if(t.action==='STC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:v});
+      else if(t.action==='DIV')return;});
+    rest.forEach(o=>{const f=1-(used[o.id]||0);if(f<=1e-9)return;const amt=(o.total||0)*f;
+      if(o.expiry&&(o.expiry<today||o.expiredWorthless&&o.expiry<=today))events.push({key:k,ticker:o.ticker||tkr,date:o.expiry,amount:amt});
+      else if(o.expiredWorthless&&!o.expiry)events.push({key:k,ticker:o.ticker||tkr,date:o.entered||'',amount:amt});
+      else open.push({key:k,ticker:o.ticker||tkr,credit:amt});});
+  });
+  return{events,open};
 }
 // Money tied up now: open put collateral + open share cost (wheel), and open long LEAP cost (separate).
 function capitalAtWork(putCollateral,shareCost,legs,accountSize){
@@ -3376,7 +3404,7 @@ function renderRotationWindow(wheel){
   const _cap=(m.sharesHeld>0&&openPos&&openPos.action==='STOC'&&_rss.openShares>0)?calledAwayProfit(openPos.strike,_rss.openShares,_rss.openCost,m.premiumNet,_rss.realised):null;
   const _fCall=_cap!=null?_fact('Profit if called',(_cap>=0?'+':'')+fmtMoney(_cap).replace(/\.00$/,''),colorN(_cap)):'';
   const wheelCardBody=`<div class="wl-body">
-    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span>${ii(`Premium = option credits minus buybacks. Shares P&amp;L and Unrealised use each share's actual cost (first in, first out). Cycle return = premium + share P&amp;L + dividends${_cr&&_cr.incUnrealised?' + unrealised':''}, ÷ capital tied up (biggest put collateral, or share cost), annualised over ${_cr?_cr.days:0} day${_cr&&_cr.days===1?'':'s'}${_cr&&_cr.ann==null?' (under 7 days: not annualised)':''}.${_cap!=null?' If called = (strike − share cost) × shares + premium.':''}`)}</div>
+    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span>${ii(`Realised only. Premium = credit of options that closed, expired or were assigned/called away, minus buybacks, in the month they ended (open options excluded). Shares P&amp;L and Unrealised use each share's actual cost (first in, first out). Cycle return = premium + share P&amp;L + dividends${_cr&&_cr.incUnrealised?' + unrealised':''}, ÷ capital tied up (biggest put collateral, or share cost), annualised over ${_cr?_cr.days:0} day${_cr&&_cr.days===1?'':'s'}${_cr&&_cr.ann==null?' (under 7 days: not annualised)':''}.${_cap!=null?' If called = (strike − share cost) × shares + premium.':''}`)}</div>
     ${_steps}
     <div class="wl-facts">${_f2}${_f3}${m.sharesHeld>0?_fact('Open leg',openPos?`Call $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d`:'none'):_fact('Last action',lastAct)}${_fRet}${_fCall}</div>
     <div class="wl-acts" onclick="event.stopPropagation()">
@@ -4064,10 +4092,10 @@ function renderHome(){
   return`<div class="home">
   <div class="home-head"><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div>
   <div class="hk-grid">
-    <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Realised P&amp;L: wheel premium + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, in ${mName}.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
+    <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Realised only: premium from options closed, expired or assigned + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, in ${mName}.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · LEAPs &amp; calls ${sgn(F.month.leaps)}</div></div>
-    <div class="hk"><div class="hk-l">This year ${ii(`Realised P&amp;L since 1 January.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · LEAPs ${sgn(F.year.leaps)}</div></div>
-    <div class="hk"><div class="hk-l">Unrealised ${ii(`Open shares and LEAPs at today's price, minus what they cost${un.unpriced?` · ${un.unpriced} without a price`:''}.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · LEAPs ${sgn(un.leaps)}</div></div>
+    <div class="hk"><div class="hk-l">This year ${ii(`Realised only, since 1 January. Open options are in Unrealised.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · LEAPs ${sgn(F.year.leaps)}</div></div>
+    <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price minus cost, plus premium on open wheel puts &amp; calls (at the credit received — no live option price)${un.unpriced?` · ${un.unpriced} without a price`:''}.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Open premium ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}</div></div>
     <div class="hk"><div class="hk-l">Capital at work ${ii(`Wheel money tied up now: open put collateral (strike × shares) + what your open shares cost. LEAPs at what you paid, shown separately.`)}</div><div class="hk-v">${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Puts ${fmtMoney(caw.puts).replace(/\.\d\d$/,'')} · Shares ${fmtMoney(caw.shares).replace(/\.\d\d$/,'')}${caw.leaps?` · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')} separate`:''}</div></div>
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
@@ -4079,7 +4107,7 @@ function renderHome(){
       <div class="hc-links"><a onclick="switchView('analytics')">More stats →</a><a onclick="switchView('analytics')">Data health${health.length?` (${health.length})`:''} &amp; fees →</a></div></div>
   </div>
   ${renderMonthlyRealised()}
-  ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Premium + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
+  ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
     <div class="tk-row tk-hd"><span>Ticker</span><span>${today.slice(0,4)}</span><span>All time</span></div>
     ${tpl.map(t=>`<div class="tk-row"><span>${esc(t.ticker)}</span><span class="${cls(t.year)}">${sgn(t.year)}</span><span class="${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}</div>`:''}
 </div>`;
@@ -4096,20 +4124,21 @@ function monthlyExtraSources(legs){
 function calcAllUnrealised(wheels,trades,priceOf,legs){
   const sh=calcUnrealised(wheels,trades,priceOf);
   const o=optsMonthly(legs||[]);
-  return{value:Math.round((sh.value+o.openPl)*100)/100,shares:sh.value,leaps:o.openPl,unpriced:sh.unpriced+o.unmarked};
+  const ow=new Set((wheels||[]).filter(w=>w.status==='open').map(w=>w.id));
+  const prem=Math.round(realisedPremium(trades).open.filter(x=>ow.has(x.key)||String(x.key).startsWith('tk:')).reduce((a,x)=>a+x.credit,0)*100)/100;
+  return{value:Math.round((sh.value+o.openPl+prem)*100)/100,shares:sh.value,leaps:o.openPl,premium:prem,unpriced:sh.unpriced+o.unmarked};
 }
 
 // Monthly Realised P&L: Premium + Shares Realised P&L (FIFO) + Dividends (+ any extra sources), by month. Read-only.
-function calcMonthlyRealised(trades,extras){
+function calcMonthlyRealised(trades,extras,today){
   extras=extras||[];
   const mo={};
   const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{}});
   trades.forEach(t=>{
     if(!t.entered)return;const ym=t.entered.slice(0,7),v=t.total||0;
-    if(t.action==='CSP'||t.action==='STOC'||t.action==='STC')row(ym).premium+=v;
-    else if(t.action==='BTC')row(ym).premium-=v;
-    else if(t.action==='DIV')row(ym).divs+=v;
+    if(t.action==='DIV')row(ym).divs+=v;
   });
+  realisedPremium(trades,today).events.forEach(e=>{if(e.date)row(e.date.slice(0,7)).premium+=e.amount;});
   shareRealisations(trades).events.forEach(e=>{if(e.date)row(e.date.slice(0,7)).shares+=e.pnl;});
   extras.forEach(x=>Object.entries(x.byMonth||{}).forEach(([ym,v])=>{const r=row(ym);r.extra[x.key]=(r.extra[x.key]||0)+v;}));
   return Object.values(mo).sort((a,b)=>b.ym.localeCompare(a.ym)).map(r=>({...r,
@@ -4127,7 +4156,7 @@ function renderMonthlyRealised(){
   const line=(label,r,cls)=>`<tr class="${cls||''}"><td>${label}</td>${cell(r.premium)}${cell(r.shares)}${showDiv?cell(r.divs):''}${extras.map(x=>cell(r.extra[x.key]||0)).join('')}${cell(r.total)}</tr>`;
   const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
   return`<div class="d-panel">
-      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L ${ii(`Premium = option credits minus buybacks. Shares P&amp;L = each share sale against its rotation's cost (first in, first out). LEAPs &amp; calls = closed and expired legs, by the month they closed. Unrealised moves are not included.`)}</span><span class="d-panel-count">Realised</span></div>
+      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L ${ii(`Realised only. Premium = credit of options that closed, expired or were assigned/called away, minus buybacks, in the month they ended (open options excluded). Shares P&amp;L = each share sale against its rotation's cost (first in, first out). LEAPs &amp; calls = closed and expired legs, by the month they closed. Unrealised moves are not included.`)}</span><span class="d-panel-count">Realised</span></div>
       <div class="d-panel-body">
         <table class="a-table mpl-table"><thead><tr><th>Month</th><th class="num">Premium</th><th class="num">Shares P&amp;L</th>${showDiv?'<th class="num">Dividends</th>':''}${extras.map(x=>`<th class="num">${x.label}</th>`).join('')}<th class="num">Realised P&amp;L</th></tr></thead>
         <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}

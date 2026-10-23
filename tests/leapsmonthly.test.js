@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn } = require('./extract');
 const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['optsMonthly', 'shareRealisations', 'calcMonthlyRealised', 'monthlyExtraSources', 'rotationShareStats', 'calcUnrealised', 'calcAllUnrealised'].map(extractFn).join('\n') +
+  ['optsMonthly', 'walkLegPairs', 'realisedPremium', 'shareRealisations', 'calcMonthlyRealised', 'monthlyExtraSources', 'rotationShareStats', 'calcUnrealised', 'calcAllUnrealised'].map(extractFn).join('\n') +
   '\nreturn {optsMonthly,calcMonthlyRealised,monthlyExtraSources,calcAllUnrealised};')();
 const legs = [
   { id: 'L', side: 'long', type: 'C', qty: 1, entryPrice: 40, fees: 0, status: 'closed', closePrice: 55, closeDate: '2026-10-05', closeFees: 0 },
@@ -10,7 +10,7 @@ const legs = [
   { id: 's3', side: 'short', type: 'C', qty: 1, entryPrice: 6, fees: 0, status: 'open', mark: 2 },
 ];
 test('LEAP realised P&L lands in the Monthly P&L table and total', () => {
-  const rows = S.calcMonthlyRealised([{ wheelId: 'w', action: 'CSP', entered: '2026-10-01', total: 100 }], S.monthlyExtraSources(legs));
+  const rows = S.calcMonthlyRealised([{ wheelId: 'w', action: 'CSP', entered: '2026-10-01', expiry: '2026-10-10', total: 100 }], S.monthlyExtraSources(legs));
   const oct = rows.find(r => r.ym === '2026-10'), sep = rows.find(r => r.ym === '2026-09');
   assert.strictEqual(oct.extra.leaps, 1500); assert.strictEqual(oct.total, 1600);
   assert.strictEqual(sep.extra.leaps, 500);

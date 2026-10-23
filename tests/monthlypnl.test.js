@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { load } = require('./extract');
-const f = load([{ kind: 'fn', name: 'shareRealisations' }, { kind: 'fn', name: 'calcMonthlyRealised' }]);
+const f = load([{ kind: 'fn', name: 'walkLegPairs' }, { kind: 'fn', name: 'realisedPremium' }, { kind: 'fn', name: 'shareRealisations' }, { kind: 'fn', name: 'calcMonthlyRealised' }]);
 const T = (action, entered, total, shares = 0, wheelId = 'w1') => ({ wheelId, action, entered, total, shares });
 
 test('monthly realised P&L: premium, shares FIFO, dividends, total', () => {
@@ -17,7 +17,7 @@ test('monthly realised P&L: premium, shares FIFO, dividends, total', () => {
 });
 
 test('extra sources (e.g. LEAPs later) add into the total', () => {
-  const rows = f.calcMonthlyRealised([T('CSP', '2026-03-01', 100, 100)], [{ key: 'leaps', label: 'LEAPs', byMonth: { '2026-03': 400, '2026-04': -50 } }]);
+  const rows = f.calcMonthlyRealised([{ ...T('CSP', '2026-03-01', 100, 100), expiry: '2026-03-20' }], [{ key: 'leaps', label: 'LEAPs', byMonth: { '2026-03': 400, '2026-04': -50 } }]);
   assert.strictEqual(rows.find(r => r.ym === '2026-03').total, 500);
   assert.strictEqual(rows.find(r => r.ym === '2026-04').total, -50);
 });
