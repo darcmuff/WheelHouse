@@ -27,7 +27,7 @@ const legs = S.db.opts, today = new Date().toISOString().slice(0, 10);
 check('real legs parked, demo legs shown instead', S.real.length === 1 && S.real[0].id === 'real1' && legs.every(l => l.demo));
 const longs = legs.filter(l => l.side === 'long'), shorts = legs.filter(l => l.side === 'short');
 check('five demo LEAPs, all open long calls', longs.length === 5 && longs.every(l => l.type === 'C' && l.status === 'open'));
-check('demo PMCC short calls: all calls, each linked to a demo LEAP', shorts.length === 4 && shorts.every(l => l.type === 'C' && longs.some(x => x.id === l.parentLeapId && x.underlying === l.underlying)));
+check('demo PMCC short calls: all calls, each linked to a demo LEAP', shorts.length === 5 && shorts.every(l => l.type === 'C' && longs.some(x => x.id === l.parentLeapId && x.underlying === l.underlying)));
 check('demo legs raise no red data-health issues', !S.OPTS.health(legs, [], today, []).some(i => i.sev === 'red'), S.OPTS.health(legs, [], today, []).filter(i => i.sev === 'red'));
 check('SPCX LEAP has open + past (rolled, expired) short calls', shorts.filter(l => l.parentLeapId === 'demo-5' && l.status === 'open').length === 1 && shorts.some(l => l.status === 'expired' && l.rolledFrom));
 check('TSLA ×2, NVDA, AAPL, SPCX', longs.filter(l => l.underlying === 'TSLA').length === 2 && legs.some(l => l.underlying === 'NVDA') && legs.some(l => l.underlying === 'AAPL'));

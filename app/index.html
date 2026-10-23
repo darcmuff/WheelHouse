@@ -549,6 +549,8 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .pmcc-tag{font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.35);padding:2px 7px;border-radius:20px;white-space:nowrap}
 .pmcc-kv{display:flex;flex-direction:column;min-width:0}.pmcc-kv .rmb-val{font-size:13px}
 .pmcc-btns{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}.pmcc-btns .btn{padding:4px 10px;font-size:11px}
+.pmcc-lbs{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}.pmcc-lb{padding:1px 7px;border-radius:20px;font-size:9px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap}
+.pmcc-lb.g{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}.pmcc-lb.a{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}.pmcc-lb.r{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.4)}
 .pmcc-hist summary{font-size:11px;color:var(--text3);cursor:pointer}
 .pmcc-hist table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}.pmcc-hist td,.pmcc-hist th{padding:3px 6px;text-align:left;border-top:1px solid var(--border);white-space:nowrap}.pmcc-hist th{color:var(--text3);font-weight:500}
 .pmcc-hist .tw{overflow-x:auto}
@@ -1914,7 +1916,9 @@ function optDemoLegs(todayISO,wheels){
   const s3=S({g:7,strike:245,expiry:mo,entryPrice:6.40,entryDate:past(12),mark:3.05,iv:0.66});
   // a short weekly call on the TSLA 300 LEAP
   const s4=L(8,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:390,expiry:wk,entryPrice:4.20,entryDate:past(4),mark:6.80,iv:0.6});
-  legs.push(s1,s2,s3,s4);
+  // expiry-day, in-the-money short on the TSLA 400 LEAP (spot 380 > 360)
+  const s5=L(9,{underlying:'TSLA',side:'short',parentLeapId:'demo-1',strike:360,expiry:add(0),entryPrice:3.10,entryDate:past(6),mark:20.40,iv:0.6,qty:2,fees:1.30});
+  legs.push(s1,s2,s3,s4,s5);
   return legs;
 }
 function setOptDemo(on){
@@ -2050,14 +2054,24 @@ function pmccStats(leap,legs,today){
   const curPnl=cur?OPTS.legPnL(cur).unrealized:null;
   return{shorts:sh,open,past,cur,curPnl,curDte:cur?OPTS.dte(cur.expiry,today):null,net,cost,adj,adjPerSh};
 }
-function renderPmcc(leap,today){
+// Status labels for an OPEN short call (card only; informational, never block anything). No price → no price-based labels.
+function pmccLabels(c,spot,today){
+  if(!c||c.status!=='open')return[];
+  const out=[],d=OPTS.dte(c.expiry,today),K=+c.strike,sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
+  if(d!=null&&d<=0)out.push({t:'Expires today',c:'r'});else if(d!=null&&d<=7)out.push({t:'Expiring soon',c:'a'});
+  if(spot>0&&K>0){if(spot>K)out.push({t:'In the money',c:'r'});else if(spot>=K*0.95)out.push({t:'Near the money',c:'a'});}
+  if(mark!=null&&sold>0){const cap=(sold-mark)/sold;if(cap>=0.4)out.push({t:`Take profit · ${Math.round(cap*100)}%`,c:'g'});}
+  return out;
+}
+function renderPmcc(leap,today,spot){
   const P=pmccStats(leap,db.opts||[],today),open=leap.status==='open';
   if(!P.shorts.length)return''; // nothing sold yet: just the 'Sell call' button in the card header
   const m0=n=>fmtMoney(n).replace(/\.\d\d$/,''),k=(l,v,sub='')=>`<div class="pmcc-kv"><div class="rmb-lbl">${l}</div><div class="rmb-val">${v}</div>${sub?`<div class="rmb-sub">${sub}</div>`:''}</div>`;
   const sk=l=>`${l.qty}× $${fmt2(l.strike).replace(/\.00$/,'')}C · ${_fdShort(l.expiry)}`;
   let curH;
   if(P.cur){const c=P.cur,pl=P.curPnl;
-    curH=`${k('Short call',sk(c),`sold @ $${(+c.entryPrice||0).toFixed(2)}${P.open.length>1?` · +${P.open.length-1} more open`:''}`)}
+    const lb=pmccLabels(c,spot,today);
+    curH=`${k('Short call',sk(c)+(lb.length?`<div class="pmcc-lbs">${lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('')}</div>`:''),`sold @ $${(+c.entryPrice||0).toFixed(2)}${P.open.length>1?` · +${P.open.length-1} more open`:''}`)}
     ${k('Days left',P.curDte==null?'—':P.curDte<0?'<span class="r">expired</span>':`<b>${P.curDte}</b>`,c.mark!=null&&c.mark!==''?`mark $${(+c.mark).toFixed(2)}`:'no mark')}
     ${k('Short P&amp;L',pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${pl>=0?'g':'r'}">${pl>=0?'+':''}${m0(pl)}</span>`,pl!=null&&c.entryPrice>0?`${Math.round(pl/((+c.entryPrice)*100*(+c.qty||1))*100)}% of premium`:'')}`;
   }else curH=k('Short call','<span style="color:var(--text3)">none open</span>',open?'use Sell call to write the next one':'');
@@ -2095,7 +2109,7 @@ function renderLeapCard(l,spot,today){
   }
   return`<div class="leap-card ${!open?'cn':warn?'warn':''}" data-leap="${esc(l.id)}">
   <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
-  <div class="leap-row">${row}</div>${renderPmcc(l,today)}</div>`;
+  <div class="leap-row">${row}</div>${renderPmcc(l,today,spot)}</div>`;
 }
 function renderOptions(){
   const legs=db.opts||[];

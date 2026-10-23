@@ -9,8 +9,8 @@ const scanCode = ['MON_PAT','_LEAP_LABELS','MON_MAP','CREDITS','ACTION_MAP','VAL
 const stubs = `const fmt2=n=>(+n).toFixed(2);const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);const esc=s=>String(s??'');
 let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);`;
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','renderPmcc','optsToCSV'].map(extractFn).join('\n') +
-  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','renderPmcc','optsToCSV'].map(extractFn).join('\n') +
+  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccLabels,pmccFormLeg,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2028-06-16', qty: 2, entryPrice: 72, fees: 1.30, entryDate: '2026-06-01', status: 'open' };
@@ -49,6 +49,23 @@ check('stats carry no warnings field', !('warnings' in S.pmccStats(leap, risky, 
 check('risky short still saves (no blocking)', !!S.pmccFormLeg({ strike: '120', expiry: '2029-01-19', qty: '5', price: '9', newId: 'z' }, leap).leg);
 const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
 check('no PMCC risk copy anywhere in the app', !/pmccWarnings|pmcc-warn|pcc-warn|would be naked|risk a loss if called away|lock in a loss/.test(html));
+// ── status labels (open short only) ──
+const T = s => S.pmccLabels(s.c, s.spot, today).map(l => l.t + '/' + l.c).join('|');
+const o = (x) => ({ status: 'open', strike: 245, expiry: '2026-11-20', entryPrice: 6.40, mark: 5, ...x });
+check('no labels when nothing applies', T({ c: o({}), spot: 200 }) === '');
+check('Expiring soon amber at 7 DTE', T({ c: o({ expiry: '2026-10-28' }), spot: 200 }) === 'Expiring soon/a');
+check('8 DTE → no expiry label', T({ c: o({ expiry: '2026-10-29' }), spot: 200 }) === '');
+check('Expires today red at DTE 0', T({ c: o({ expiry: today }), spot: 200 }) === 'Expires today/r');
+check('Near the money amber within 5% below strike', T({ c: o({}), spot: 233 }) === 'Near the money/a' && T({ c: o({}), spot: 232 }) === '');
+check('At the strike = near, not ITM', T({ c: o({}), spot: 245 }) === 'Near the money/a');
+check('In the money red above strike', T({ c: o({}), spot: 246 }) === 'In the money/r');
+check('Take profit green ≥40% captured with %', T({ c: o({ mark: 3.84 }), spot: 200 }) === 'Take profit · 40%/g' && T({ c: o({ mark: 3.45 }), spot: 200 }) === 'Take profit · 46%/g' && T({ c: o({ mark: 3.90 }), spot: 200 }) === '');
+check('no price → no price-based labels (expiry still shown)', T({ c: o({ mark: null, expiry: '2026-10-25' }), spot: undefined }) === 'Expiring soon/a');
+check('closed short → no labels', T({ c: o({ status: 'closed', mark: 0.1 }), spot: 300 }) === '');
+S.setOpts(legs);
+check('labels render on the card strip', /pmcc-lb g">Take profit · 52%/.test(S.renderPmcc(leap, today, 205)));
+check('no spot → no money-ness labels on the strip', !/the money/.test(S.renderPmcc(leap, today, undefined)) && /In the money/.test(S.renderPmcc(leap, today, 300)));
+
 // ── form leg ──
 const f = S.pmccFormLeg({ strike: '245', expiry: '2026-11-20', qty: '2', price: '6.40', date: '2026-10-09', fees: '1.30', notes: '', newId: 'n1' }, leap);
 check('form → short call leg linked to LEAP, own group, no wheel link', f.leg && f.leg.side === 'short' && f.leg.type === 'C' && f.leg.parentLeapId === 'L1' && f.leg.groupId === 'n1' && f.leg.underlying === 'SPCX' && f.leg.wheelId === null && f.leg.status === 'open');
