@@ -6254,10 +6254,12 @@ window.hideXpop = hideXpop;
 </script>
 
 <script>
-// Service worker disabled during development — unregister any existing one
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(regs=>{
-    regs.forEach(r=>r.unregister());
+// Register the offline service worker. When a new version takes over, reload once so the fresh app shows.
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  window.addEventListener('load',()=>{
+    const hadCtrl=!!navigator.serviceWorker.controller;let reloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtrl&&!reloaded){reloaded=true;location.reload();}});
+    navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(e=>console.warn('SW register failed',e));
   });
 }
 </script>
