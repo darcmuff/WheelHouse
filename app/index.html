@@ -503,6 +503,79 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .empty{text-align:center;padding:4.375rem 1.25rem;color:var(--text3)}
 .empty h3{font-size:1.25rem;margin-bottom:0.5625rem;color:var(--text2)}
 .hint{font-size:0.875rem;color:var(--text3);margin-bottom:0.9375rem;line-height:1.7}
+.empty{text-align:center;padding:4.375rem 1.25rem;color:var(--text3)}
+.empty h3{font-size:1.25rem;margin-bottom:0.5625rem;color:var(--text2)}
+.imp-drop{border:2px dashed #0d9488;border-radius:0.5625rem;padding:1rem;text-align:center;color:#99f6e4;background:#0f2e2a;cursor:pointer;margin-bottom:0.625rem;font-size:0.875rem;transition:background .15s}
+.imp-drop.drag{background:#134e48;border-color:#5eead4}
+#import-preview{margin-top:0.625rem;font-size:0.8125rem}
+.imp-broker{color:#5eead4;margin-bottom:0.5rem}
+.imp-tbl-wrap{max-height:15rem;overflow:auto;border:1px solid var(--border2);border-radius:0.4375rem}
+.imp-tbl{width:100%;border-collapse:collapse;font-size:0.75rem}
+.imp-tbl th{position:sticky;top:0;background:#141414;color:var(--text3);text-align:left;padding:0.3125rem 0.375rem;font-weight:600}
+.imp-tbl td{padding:0.25rem 0.375rem;border-top:1px solid var(--border2);white-space:nowrap}
+.imp-sub{margin-top:0.5rem;color:#fca5a5}
+.imp-bad{margin:0.25rem 0 0 1.125rem;color:var(--text3);font-size:0.75rem;max-height:7.5rem;overflow:auto}
+.imp-err{background:#3b1a1a;border:1px solid #7f1d1d;color:#fca5a5;padding:0.5rem 0.625rem;border-radius:0.4375rem}
+.btn:disabled{opacity:.45;cursor:default}
+.hint{font-size:0.875rem;color:var(--text3);margin-bottom:0.9375rem;line-height:1.7}
+/* ── LEAPs view (long calls) ── */
+.leap-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-bottom:0.75rem}
+.leap-sc{background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.6875rem 0.8125rem}
+.leap-sc .l{font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
+.leap-sc .v{font-size:1.25rem;font-weight:550;margin-top:0.1875rem;white-space:nowrap}.leap-sc .s{font-size:0.6875rem;color:var(--text3);margin-top:2px}
+.leap-grid{display:flex;flex-direction:column;gap:0.625rem}
+.leap-card{background:var(--bg2);border:1px solid var(--border);border-left:0.25rem solid var(--orange);border-radius:0.5rem;overflow:hidden;transition:border-color .2s}
+.leap-card:hover{border-color:var(--border2)}.leap-card.warn{border-left-color:var(--yellow)}.leap-card.cn{border-left-color:var(--border2)}
+.leap-ch{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem}
+.leap-ct{font-size:0.75rem;color:var(--silver);font-weight:300;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leap-badge{padding:2px 0.5rem;border-radius:1.25rem;font-size:0.5625rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.leap-badge.itm{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}
+.leap-badge.otm{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}
+.leap-badge.cl{background:var(--bg3);color:var(--text3);border:1px solid var(--border2)}
+.leap-row{display:grid;grid-template-columns:minmax(14.375rem,1.5fr) minmax(13.75rem,2fr) repeat(3,minmax(5.9375rem,1fr));border-top:1px solid var(--border);background:var(--bg3)}
+.leap-row .rmb-col{padding:0.5rem 0.75rem;display:flex;flex-direction:column;justify-content:center}
+.leap-row .leap-c1{flex-direction:row;justify-content:flex-start;gap:1.375rem;align-items:flex-end}.leap-c1 .lab{font-size:0.625rem;color:var(--text3)}.leap-c1 .val{font-size:1.375rem;font-weight:550}.leap-c1 .pl{font-size:0.875rem;font-weight:550;white-space:nowrap}
+.leap-c2 .leap-bar{margin:0.25rem 0 0}.leap-row .leap-kv{margin-top:0}
+.leap-note{font-size:0.625rem;color:var(--yellow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.leap-btns{display:flex;gap:0.375rem;margin-left:auto;flex-shrink:0}.leap-btns .btn{padding:0.25rem 0.625rem;font-size:0.6875rem}
+.leap-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:0.5rem}
+.leap-hero .lab{font-size:0.625rem;color:var(--text3)}.leap-hero .val{font-size:1.375rem;font-weight:550}.leap-hero .pl{font-size:0.875rem;font-weight:550;text-align:right;white-space:nowrap}
+.leap-bar{height:0.3125rem;background:var(--bg4);border-radius:0.1875rem;overflow:hidden;margin:0.625rem 0 0.25rem}.leap-bar>i{display:block;height:100%;background:var(--orange)}
+.leap-barl{display:flex;justify-content:space-between;font-size:0.625rem;color:var(--text3)}.leap-barl b{color:var(--text)}
+.leap-split{display:flex;height:1rem;border-radius:0.25rem;overflow:hidden;margin-top:0.625rem;font-size:0.5625rem;font-weight:700;white-space:nowrap}
+.leap-split .in{background:rgba(13,148,136,.35);color:var(--orangeL);display:flex;align-items:center;padding-left:0.375rem;overflow:hidden}
+.leap-split .tv{background:rgba(251,191,36,.18);color:var(--yellow);display:flex;align-items:center;padding-left:0.375rem;flex:1;overflow:hidden}
+.leap-kv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-top:0.625rem}
+.leap-kv div{background:var(--bg3);border-radius:0.375rem;padding:0.375rem 0.5rem;min-width:0}.leap-kv b{display:block;font-size:0.8125rem;font-weight:600}.leap-kv span{font-size:0.625rem;color:var(--text3)}
+.leap-cf{display:flex;gap:0.375rem;padding:0.5rem 0.75rem;border-top:1px solid var(--border);align-items:center}
+.leap-cf .note{font-size:0.625rem;color:var(--yellow);flex:1}.leap-cf .btn{padding:0.25rem 0.625rem;font-size:0.6875rem}
+.leap-seg{display:inline-flex;border:1px solid var(--border2);border-radius:0.375rem;overflow:hidden}
+.leap-seg button{background:none;border:0;padding:0.3125rem 0.6875rem;font-size:0.6875rem;color:var(--text3);cursor:pointer}.leap-seg button.on{background:var(--orangeD);color:var(--orange2)}
+.pmcc{border-top:1px solid var(--border);background:var(--bg3)}
+.pmcc-row{display:grid;grid-template-columns:minmax(14.375rem,1.5fr) minmax(13.75rem,2fr) repeat(3,minmax(5.9375rem,1fr))}
+.pmcc-row .rmb-col{padding:0.5rem 0.75rem;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.pmcc-h{display:flex;align-items:center;gap:0.5rem;padding:0.4375rem 0.75rem;border-bottom:1px solid var(--border);background:var(--bg2)}.pmcc-h .pmcc-t{min-width:0}
+.pmcc-row .pmcc-c1{flex-direction:row;justify-content:flex-start;gap:1.375rem;align-items:flex-start}
+.pmcc-row .rmb-col{overflow:hidden}
+.pmcc-tag{font-size:0.5rem;font-weight:800;letter-spacing:.6px;color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.35);padding:0 0.3125rem;border-radius:1.25rem;margin-right:0.3125rem;vertical-align:1px}
+.pmcc-t{display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap;font-size:0.8125rem;font-weight:550;line-height:1.3}
+.pmcc-btns{display:flex;gap:0.375rem;margin-left:auto;flex-shrink:0}.pmcc-btns .btn{padding:0.25rem 0.625rem;font-size:0.6875rem}
+.pmcc-lb{padding:1px 0.375rem;border-radius:1.25rem;font-size:0.5312rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;line-height:1.5}
+.pmcc-lb.g{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}.pmcc-lb.a{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}.pmcc-lb.r{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.4)}
+.pmcc-row .rmb-val{font-weight:550}
+.mo-pnl .d-table-row,.mo-pnl .d-table-hdr{white-space:nowrap}.mo-pnl .ls{display:none}.mo-pnl .d-table-row>span{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:640px){.mo-pnl .d-table-row,.mo-pnl .d-table-hdr{padding-left:0.625rem;padding-right:0.625rem;gap:0.375rem}.mo-pnl .d-table-row{font-size:0.6875rem}.mo-pnl .d-panel-count{display:none}.mo-pnl .lf{display:none}.mo-pnl .ls{display:inline}}
+.pmcc-hist{border-top:1px solid var(--border);padding:0.375rem 0.75rem}
+.pmcc-hist summary{font-size:0.6875rem;color:var(--text3);cursor:pointer}
+.pmcc-hist table{width:100%;border-collapse:collapse;font-size:0.6875rem;margin-top:0.25rem}.pmcc-hist td,.pmcc-hist th{padding:0.1875rem 0.375rem;text-align:left;border-top:1px solid var(--border);white-space:nowrap}.pmcc-hist th{color:var(--text3);font-weight:500}
+.pmcc-hist .tw{overflow-x:auto}
+@media(max-width:1100px){.pmcc-row{grid-template-columns:1fr 1fr 1fr}.pmcc-row .pmcc-c1,.pmcc-row .pmcc-c2{grid-column:1/-1;border-right:none;border-bottom:1px solid var(--border)}.pmcc-row .rmb-lbl{white-space:normal}.pmcc-h{flex-wrap:wrap}}
+@media(max-width:640px){.pmcc-btns{margin-left:0;width:100%}.pmcc-btns .btn{flex:1}}
+.leap-other{margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.5rem 0.75rem}
+.leap-other summary{font-size:0.75rem;color:var(--text3);cursor:pointer}
+.leap-empty{grid-column:1/-1;text-align:center;color:var(--text3);padding:2.5rem 0.625rem;font-size:0.8125rem;background:var(--bg2);border:1px dashed var(--border2);border-radius:0.5625rem}
+@media(max-width:1100px){.leap-row{grid-template-columns:1fr 1fr 1fr}.leap-row .leap-c1,.leap-row .leap-c2{grid-column:1/-1;border-right:none;border-bottom:1px solid var(--border)}.leap-ch{flex-wrap:wrap}.leap-note{order:9;flex-basis:100%}}
+@media(max-width:640px){.leap-sum{grid-template-columns:1fr 1fr}.leap-sc .v{font-size:1.0625rem}.leap-grid{grid-template-columns:1fr}.leap-hero .val{font-size:1.1875rem}}
 </style>
 </head>
 <body>
@@ -714,6 +787,9 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
       <div class="nav-item active" data-view="positions" onclick="switchView('positions')">
         <span class="nav-icon">⊞</span>Rotations
       </div>
+      <div class="nav-item" data-view="options" onclick="switchView('options')">
+        <span class="nav-icon">◇</span>LEAPs
+      </div>
       <div class="nav-item" data-view="analytics" onclick="switchView('analytics')">
         <span class="nav-icon">▦</span>Analytics
       </div>
@@ -869,13 +945,123 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   </div>
 </div>
 
+<!-- MODAL: Option position -->
+<!-- MODAL: LEAP (single long call) -->
+<div class="mb" id="mLeap">
+  <div class="mbox" style="width:32.5rem;padding:0.875rem">
+    <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mLeapTitle">Add LEAP (long call)</span><span class="mx" onclick="closeModal('mLeap')">✕</span></div>
+    <input type="hidden" id="lf-id">
+    <div id="lf-tabs" style="display:flex;gap:0;border:1px solid var(--border2);border-radius:0.4375rem;overflow:hidden;margin-bottom:0.75rem">
+      <button id="lf-tab-smartscan" onclick="switchLeapTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:700;letter-spacing:.3px">✦ SmartScan</button>
+      <button id="lf-tab-manual" onclick="switchLeapTab('manual')" style="flex:1;padding:0.4375rem;background:var(--bg3);color:var(--text2);border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✎ Manual Entry</button>
+    </div>
+    <div id="lf-panel-smartscan">
+      <p style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.625rem">Paste the buy-to-open confirmation for your call — IBKR, Robinhood, Tastytrade, Schwab, Fidelity, Webull or a statement line. Or drop a PDF / CSV / text file on the box. Nothing is saved until you check the details and press Save.</p>
+      <textarea id="lf-paste" style="width:100%;height:9.375rem;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here… (or drop a PDF / CSV)"></textarea>
+      <div id="lf-scan-msg" style="font-size:0.75rem;margin-top:0.5rem;display:none"></div>
+      <div id="lf-pick" style="margin-top:0.5rem"></div>
+      <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mLeap')">Cancel</button><button class="btn btn-primary" onclick="leapRunScan()">SmartScan →</button></div>
+    </div>
+    <div id="lf-panel-manual">
+    <div id="lf-filled" style="display:none;background:rgba(13,148,136,.12);border:1px solid rgba(13,148,136,.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
+      <div class="fld"><label>Ticker</label><input id="lf-und" type="text" placeholder="TSLA" style="text-transform:uppercase"></div>
+      <div class="fld"><label>Strike ($)</label><input id="lf-strike" type="number" step="0.5"></div>
+      <div class="fld"><label>Expiry</label><input id="lf-expiry" type="date"></div>
+      <div class="fld"><label>Contracts</label><input id="lf-qty" type="number" step="1" min="1" value="1"></div>
+      <div class="fld"><label>Price paid / share</label><input id="lf-price" type="number" step="0.01"></div>
+      <div class="fld"><label>Date bought</label><input id="lf-date" type="date"></div>
+      <div class="fld"><label>Fees total ($)</label><input id="lf-fees" type="number" step="0.01" value="0"></div>
+      <div class="fld"><label>Review date <small style="color:#555">optional</small></label><input id="lf-review" type="date"></div>
+      <div class="fld" id="lf-mark-wrap"><label>Manual mark / share</label><input id="lf-mark" type="number" step="0.01"></div>
+    </div>
+    <div class="fld"><label>Notes / thesis</label><input id="lf-notes" type="text"></div>
+    <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem">
+      <button class="btn btn-danger" id="lf-del" style="display:none;margin-right:auto" onclick="deleteLeap()">✕ Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('mLeap')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLeap()">Save</button>
+    </div>
+    </div>
+  </div>
+</div>
+<div class="mb" id="mPmcc">
+  <div class="mbox" style="width:32.5rem;padding:0.875rem">
+    <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mPmccTitle">Sell call against LEAP</span><span class="mx" onclick="closeModal('mPmcc')">✕</span></div>
+    <input type="hidden" id="pcc-leap">
+    <div id="pcc-ctx" style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.5rem"></div>
+    <div style="display:flex;gap:0;border:1px solid var(--border2);border-radius:0.4375rem;overflow:hidden;margin-bottom:0.75rem">
+      <button id="pcc-tab-smartscan" onclick="pmccTab('smartscan')" style="flex:1;padding:0.4375rem;border:none;cursor:pointer;font-size:0.75rem;font-weight:700">✦ SmartScan</button>
+      <button id="pcc-tab-manual" onclick="pmccTab('manual')" style="flex:1;padding:0.4375rem;border:none;cursor:pointer;font-size:0.75rem;font-weight:600">✎ Manual Entry</button>
+    </div>
+    <div id="pcc-panel-smartscan">
+      <p style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.625rem">Paste the sell-to-open confirmation for the call you sold — any broker, any layout. Nothing is saved until you check the details and press Save.</p>
+      <textarea id="pcc-paste" style="width:100%;height:8.75rem;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
+      <div id="pcc-scan-msg" style="font-size:0.75rem;margin-top:0.5rem;display:none"></div>
+      <div id="pcc-pick" style="margin-top:0.5rem"></div>
+      <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="pmccRunScan()">SmartScan →</button></div>
+    </div>
+    <div id="pcc-panel-manual">
+    <div id="pcc-filled" style="display:none;background:rgba(13,148,136,.12);border:1px solid rgba(13,148,136,.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
+      <div class="fld"><label>Ticker</label><input id="pcc-und" type="text" readonly style="opacity:.7"></div>
+      <div class="fld"><label>Strike ($)</label><input id="pcc-strike" type="number" step="0.5"></div>
+      <div class="fld"><label>Expiry</label><input id="pcc-expiry" type="date"></div>
+      <div class="fld"><label>Contracts</label><input id="pcc-qty" type="number" step="1" min="1" value="1"></div>
+      <div class="fld"><label>Premium / share</label><input id="pcc-price" type="number" step="0.01"></div>
+      <div class="fld"><label>Date sold</label><input id="pcc-date" type="date"></div>
+      <div class="fld"><label>Fees total ($)</label><input id="pcc-fees" type="number" step="0.01" value="0"></div>
+      <div class="fld" style="grid-column:span 2"><label>Notes</label><input id="pcc-notes" type="text"></div>
+    </div>
+    <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="savePmcc()">Save</button></div>
+    </div>
+  </div>
+</div>
+<div class="mb" id="mOpt">
+  <div class="mbox" style="width:40rem;padding:0.875rem">
+    <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mOptTitle">Add option position</span><span class="mx" onclick="closeModal('mOpt')">✕</span></div>
+    <details style="margin-bottom:0.5rem"><summary style="font-size:0.75rem;color:var(--text3);cursor:pointer">✦ Paste a fill / confirmation (SmartScan)</summary>
+      <textarea id="of-paste" rows="3" style="width:100%;margin-top:0.375rem;background:#141414;border:1px solid var(--border2);color:var(--text);padding:0.5rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace" placeholder="e.g. 11/05/2025 Buy to Open TSLA 11/14/2025 450.00 C 1 15.00 1,501.05"></textarea>
+      <button class="btn btn-ghost" style="padding:0.25rem 0.625rem;font-size:0.6875rem;margin-top:0.25rem" onclick="optParsePaste()">Fill from text</button></details>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.5rem">
+      <div class="fld"><label>Underlying</label><input id="of-und" type="text" placeholder="AAPL" style="text-transform:uppercase"></div>
+      <div class="fld"><label>Entry date</label><input id="of-date" type="date"></div>
+      <div class="fld"><label>Fees total ($)</label><input id="of-fees" type="number" step="0.01" value="0"></div>
+    </div>
+    <div style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.25rem">Legs — side · type · strike · expiry · contracts · price per share</div>
+    <div id="of-legs"></div>
+    <button class="btn btn-ghost" id="of-addleg" style="padding:0.1875rem 0.625rem;font-size:0.6875rem" onclick="optAddLeg()">+ Leg</button>
+    <div id="of-mark-wrap" style="margin-top:0.625rem"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.375rem;margin-top:0.5rem">
+      <div class="fld"><label>Attach to rotation <small style="color:#555">optional — display only</small></label><select id="of-wheel"></select></div>
+      <div class="fld"><label>Notes</label><input id="of-notes" type="text"></div>
+    </div>
+    <input type="hidden" id="of-group">
+    <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem">
+      <button class="btn btn-danger" id="of-del" style="display:none;margin-right:auto" onclick="deleteOptGroup()">✕ Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('mOpt')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveOpt()">Save</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Option close / roll -->
+<div class="mb" id="mOptClose">
+  <div class="mbox" style="width:37.5rem;padding:0.875rem">
+    <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mOptCloseTitle">Close position</span><span class="mx" onclick="closeModal('mOptClose')">✕</span></div>
+    <div id="oc-legs"></div>
+    <input type="hidden" id="oc-group"><input type="hidden" id="oc-mode">
+    <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem"><button class="btn btn-ghost" onclick="closeModal('mOptClose')">Cancel</button><button class="btn btn-primary" onclick="saveOptClose()">Save</button></div>
+  </div>
+</div>
 <!-- MODAL: Import -->
 <div class="mb" id="mImport">
   <div class="mbox">
     <div class="mtitle"><span>Import CSV</span><span class="mx" onclick="closeModal('mImport')">✕</span></div>
-    <p class="hint">Paste your CoveredWheel CSV export. Trades matched to open rotations by ticker; new rotations created automatically.</p>
-    <textarea id="import-csv" style="width:100%;height:11.5625rem;background:#141414;border:1px solid var(--border2);color:var(--text);padding:0.625rem;border-radius:0.4375rem;font-size:0.8125rem;font-family:monospace;resize:vertical" placeholder="Paste CSV here…"></textarea>
-    <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" onclick="doImport()">Import</button></div>
+    <p class="hint">Drop a trade-log CSV or PDF statement from any broker (Robinhood, Tastytrade, IBKR, Schwab, Fidelity, E*Trade, Webull…) or your CoveredWheel export. Check the preview, then tap Import.</p>
+    <div id="import-drop" class="imp-drop"><div style="font-size:1.375rem">⬇</div><div><b>Drop CSV or PDF here</b> or tap to choose a file</div><div id="import-fname" style="color:var(--text3);font-size:0.75rem;margin-top:0.25rem"></div></div>
+    <input type="file" id="import-file" accept=".csv,.pdf,text/csv,text/plain,application/pdf" style="display:none">
+    <textarea id="import-csv" style="width:100%;height:6.875rem;background:#141414;border:1px solid var(--border2);color:var(--text);padding:0.625rem;border-radius:0.4375rem;font-size:0.8125rem;font-family:monospace;resize:vertical" placeholder="…or paste CSV here"></textarea>
+    <div id="import-preview"></div>
+    <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" id="import-go" disabled onclick="doImport()">Import</button></div>
   </div>
 </div>
 <!-- MODAL: Settings -->
@@ -959,12 +1145,13 @@ let _confirmedUid = null;
 // DATA
 // ════════════════════════════════════════════════════════
 const DB_KEY = 'wheel_tracker_v7';
-let db = { wheels:[], trades:[] };
+let db = { wheels:[], trades:[], opts:[] };
 window._db=db;
 
 const SEED_DATA = {
   wheels:[],
-  trades:[]
+  trades:[],
+  opts:[]
 };
 
 function autoMarkExpiredTrades(){
@@ -1017,6 +1204,9 @@ async function loadDBFromFirestore(userId){
   const tradesSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'trades'));
   db.wheels=wheelsSnap.docs.map(d=>d.data());
   db.trades=tradesSnap.docs.map(d=>d.data());
+  // Options legs live in their own collection; a failure here (e.g. rules not yet updated) must not block the wheel app
+  try{const oSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'optlegs'));const real=oSnap.docs.map(d=>d.data());if(optDemo){_realOpts=real;db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}else db.opts=real;}
+  catch(e){console.warn('Options legs load failed (check Firestore rules for optlegs):',e.message);db.opts=[];_optsLoadError=e.message;if(optDemo){_realOpts=[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}}
   render();
   // Show onboarding only after a confirmed-successful load with genuinely no rotations
   const ob=document.getElementById('onboard-overlay');
@@ -1042,6 +1232,19 @@ function _saveTrade(trade){
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),_stripUndefined(trade))
     .catch(e=>console.error('Trade save failed:',e));
 }
+let _optsLoadError='';
+function _saveOpt(leg){
+  if(optDemo||(leg&&leg.demo)){_demoNotSaved();return;}
+  const uid=_currentUid();if(!uid||!leg||!leg.id)return;
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(leg))
+    .catch(e=>{console.error('Option save failed:',e);toastOptErr(e);});
+}
+function _deleteOptDoc(id){
+  if(optDemo||String(id).startsWith('demo-')){_demoNotSaved();return;}
+  const uid=_currentUid();if(!uid)return;
+  _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'optlegs',id)).catch(e=>console.error('Option delete failed:',e));
+}
+function toastOptErr(e){if(/permission/i.test(e&&e.message||''))alert('Could not save option position: Firestore rules do not allow the optlegs collection yet. Ask for the optlegs Firestore rule (docs/OPTIONS.md).');}
 function _deleteWheelDoc(wheelId){
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheelId))
@@ -1058,6 +1261,7 @@ function saveDB(){
   const uid=_currentUid();if(!uid)return;
   db.wheels.forEach(w=>_saveWheel(w));
   db.trades.forEach(t=>_saveTrade(t));
+  if(!optDemo)(db.opts||[]).forEach(l=>_saveOpt(l));
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
@@ -1074,6 +1278,158 @@ function computeTotal(action,premium,shares,fees){
 // ════════════════════════════════════════════════════════
 // CALCULATIONS
 // ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// OPTIONS POSITIONS (non-wheel legs) — pure maths, tested from node (tests/options.test.js)
+// Stored in users/{uid}/optlegs — separate from trades so wheel maths never sees them.
+// ════════════════════════════════════════════════════════
+function optionsLib(){
+  const MULT=100,DAY=864e5,RATE=0.04;
+  const r2=n=>Math.round(n*100)/100;
+  const dte=(expiry,today)=>{if(!expiry)return null;const t=today?Date.parse(today):Date.parse(new Date().toISOString().slice(0,10));return Math.round((Date.parse(expiry)-t)/DAY);};
+  const sign=l=>l.side==='long'?1:-1;
+  // cash at open: long pays (negative), short receives (positive); fees always cost
+  const openCash=l=>r2(-sign(l)*(+l.entryPrice||0)*MULT*(+l.qty||0)-(+l.fees||0));
+  const closeCash=l=>{if(l.status==='open')return 0;const p=(l.status==='expired'?0:(+l.closePrice||0));return r2(sign(l)*p*MULT*(+l.qty||0)-(+l.closeFees||0));};
+  const costBasis=l=>r2(Math.abs((+l.entryPrice||0)*MULT*(+l.qty||0))+(l.side==='long'?(+l.fees||0):-(+l.fees||0)));
+  function legPnL(l){
+    const realized=l.status==='open'?0:r2(openCash(l)+closeCash(l));
+    let unrealized=null;
+    if(l.status==='open'&&l.mark!=null&&l.mark!=='')unrealized=r2(openCash(l)+sign(l)*(+l.mark)*MULT*(+l.qty||0));
+    return{realized,unrealized,openCash:openCash(l),costBasis:costBasis(l)};
+  }
+  function tenor(l,today){const d=dte(l.expiry,today);if(d==null)return'';if(d<=9)return'weekly';if(d<=60)return'monthly';if(d>=270)return'leap';return'longer';}
+  // ── Black-Scholes (no dividends) ──
+  const ncdf=x=>{const t=1/(1+0.2316419*Math.abs(x));const d=0.3989423*Math.exp(-x*x/2);const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p;};
+  const npdf=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+  function bs(type,S,K,T,vol,r=RATE){
+    if(!(S>0&&K>0))return null;
+    if(T<=0||vol<=0){const iv=type==='C'?Math.max(0,S-K):Math.max(0,K-S);return{price:iv,delta:type==='C'?(S>K?1:0):(S<K?-1:0),gamma:0,theta:0,vega:0};}
+    const sq=Math.sqrt(T),d1=(Math.log(S/K)+(r+vol*vol/2)*T)/(vol*sq),d2=d1-vol*sq,disc=Math.exp(-r*T);
+    const price=type==='C'?S*ncdf(d1)-K*disc*ncdf(d2):K*disc*ncdf(-d2)-S*ncdf(-d1);
+    const delta=type==='C'?ncdf(d1):ncdf(d1)-1;
+    const theta=(-S*npdf(d1)*vol/(2*sq)-(type==='C'?1:-1)*r*K*disc*ncdf(type==='C'?d2:-d2))/365; // per day, per share
+    return{price,delta,gamma:npdf(d1)/(S*vol*sq),theta,vega:S*npdf(d1)*sq/100};
+  }
+  function impliedVol(type,price,S,K,T,r=RATE){
+    if(!(price>0&&S>0&&K>0&&T>0))return null;
+    let lo=0.01,hi=5;
+    const intrinsic=type==='C'?Math.max(0,S-K*Math.exp(-r*T)):Math.max(0,K*Math.exp(-r*T)-S);
+    if(price<intrinsic-1e-6)return null;
+    for(let i=0;i<100;i++){const m=(lo+hi)/2;const p=bs(type,S,K,T,m,r).price;if(p>price)hi=m;else lo=m;if(hi-lo<1e-5)break;}
+    return(lo+hi)/2;
+  }
+  // Greeks for a position (per contract × qty × side). Uses live greeks if present, else BS from iv (given or implied from mark).
+  function legGreeks(l,spot,today){
+    const d=dte(l.expiry,today);if(d==null||!(spot>0))return null;
+    const T=Math.max(d,0)/365;let iv=l.iv>0?+l.iv:null,src='live';
+    if(l.delta==null||l.theta==null||l.markSrc==='manual'||!l.markSrc){
+      if(!iv&&l.mark>0)iv=impliedVol(l.type,+l.mark,spot,+l.strike,Math.max(T,1/365));
+      if(!iv)return null;
+      const g=bs(l.type,spot,+l.strike,T,iv);if(!g)return null;src='bs';
+      return{delta:r2(g.delta*sign(l)*(+l.qty)*MULT),theta:r2(g.theta*sign(l)*(+l.qty)*MULT),iv,src};
+    }
+    return{delta:r2(+l.delta*sign(l)*(+l.qty)*MULT),theta:r2(+l.theta*sign(l)*(+l.qty)*MULT),iv,src};
+  }
+  function occ(l){const e=String(l.expiry||'').replace(/-/g,'').slice(2);return`${String(l.underlying||'').toUpperCase()}${e}${l.type}${String(Math.round((+l.strike)*1000)).padStart(8,'0')}`;}
+  function strategyName(legs){
+    const open=legs;if(open.length===1){const l=open[0];return`${l.side==='long'?'Long':'Short'} ${l.type==='C'?'call':'put'}`;}
+    const types=new Set(open.map(l=>l.type)),exps=new Set(open.map(l=>l.expiry)),sides=new Set(open.map(l=>l.side));
+    if(open.length===2){
+      if(types.size===1&&exps.size===1&&sides.size===2)return`${open[0].type==='C'?'Call':'Put'} vertical`;
+      if(types.size===1&&exps.size===2)return open[0].strike===open[1].strike?'Calendar':'Diagonal';
+      if(types.size===2&&exps.size===1&&sides.size===1)return`${open[0].strike===open[1].strike?'Straddle':'Strangle'} (${open[0].side})`;
+    }
+    if(open.length===4&&types.size===2&&exps.size===1&&sides.size===2)return'Iron condor';
+    return`${open.length}-leg`;
+  }
+  function groupSummary(legs,today){
+    const g={legs,realized:0,unrealized:0,hasMark:true,openCash:0,status:legs.some(l=>l.status==='open')?'open':'closed'};
+    legs.forEach(l=>{const p=legPnL(l);g.realized+=p.realized;g.openCash+=p.openCash;if(l.status==='open'){if(p.unrealized==null)g.hasMark=false;else g.unrealized+=p.unrealized;}});
+    g.realized=r2(g.realized);g.unrealized=g.hasMark?r2(g.unrealized):null;g.strategy=strategyName(legs);
+    const ds=legs.filter(l=>l.status==='open').map(l=>dte(l.expiry,today)).filter(x=>x!=null);g.dte=ds.length?Math.min(...ds):null;
+    return g;
+  }
+  function groups(legs){const m=new Map();legs.forEach(l=>{const k=l.groupId||l.id;if(!m.has(k))m.set(k,[]);m.get(k).push(l);});return[...m.entries()].map(([id,ls])=>({id,legs:ls}));}
+  // portfolio summary — kept separate from wheel income
+  function portfolio(legs,spots,today){
+    const s={open:0,closed:0,realized:0,unrealized:0,unmarked:0,longPremium:0,shortPremium:0,delta:0,theta:0,greeksMissing:0,byUnderlying:{}};
+    legs.forEach(l=>{
+      const p=legPnL(l);
+      if(l.status==='open'){
+        s.open++;if(p.unrealized==null)s.unmarked++;else s.unrealized+=p.unrealized;
+        if(l.side==='long')s.longPremium+=p.costBasis;else s.shortPremium+=p.costBasis;
+        const g=legGreeks(l,spots&&spots[l.underlying],today);
+        if(g){s.delta+=g.delta;s.theta+=g.theta;}else s.greeksMissing++;
+        const u=s.byUnderlying[l.underlying]=s.byUnderlying[l.underlying]||{legs:0,delta:0,unrealized:0};u.legs++;if(g)u.delta+=g.delta;if(p.unrealized!=null)u.unrealized+=p.unrealized;
+      }else{s.closed++;s.realized+=p.realized;}
+    });
+    ['realized','unrealized','longPremium','shortPremium','theta'].forEach(k=>s[k]=r2(s[k]));s.delta=r2(s.delta);
+    return s;
+  }
+  // Close/roll: returns new leg objects (caller saves). Roll = close old + open new in same group.
+  function closeLeg(l,price,date,fees){return{...l,status:'closed',closePrice:+price||0,closeDate:date,closeFees:+fees||0};}
+  function expireLeg(l){return{...l,status:'expired',closePrice:0,closeDate:l.expiry,closeFees:0};}
+  function rollLeg(l,close,open,newId){
+    const closed=closeLeg(l,close.price,close.date,close.fees);
+    const nl={...l,id:newId,strike:+open.strike,expiry:open.expiry,entryPrice:+open.price,entryDate:close.date,fees:+open.fees||0,qty:+(open.qty||l.qty),status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,markAt:null,markSrc:null,delta:null,theta:null,iv:null,rolledFrom:l.id,groupId:l.groupId||l.id};
+    closed.groupId=l.groupId||l.id;
+    return[closed,nl];
+  }
+  // Import fills → legs. fills: {ticker,side:'long'|'short',effect:'open'|'close',type,strike,expiry,qty,price,fees,date}
+  function applyFills(existing,fills,mkId){
+    const legs=existing.map(l=>({...l})),created=[],changed=new Set(),unmatched=[];
+    const key=f=>`${f.ticker}|${f.type}|${+f.strike}|${f.expiry}`;
+    [...fills].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.effect==='open'?-1:1)).forEach(f=>{
+      if(f.effect==='open'){
+        const l={id:mkId(),groupId:null,underlying:f.ticker,type:f.type,side:f.side,strike:+f.strike,expiry:f.expiry,qty:+f.qty,entryPrice:+f.price,entryDate:f.date,fees:+f.fees||0,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:f.comment||''};
+        l.groupId=l.id;legs.push(l);created.push(l);
+      }else{
+        const l=legs.find(x=>x.status==='open'&&key({ticker:x.underlying,type:x.type,strike:x.strike,expiry:x.expiry})===key(f)&&x.side===f.side);
+        if(!l){unmatched.push(f);return;}
+        if(+f.qty<+l.qty){ // partial close: split leg
+          const rest={...l,id:mkId(),qty:+l.qty-(+f.qty),fees:0};legs.push(rest);created.push(rest);l.qty=+f.qty;
+        }
+        Object.assign(l,f.expired?{status:'expired',closePrice:0,closeDate:f.date,closeFees:0}:{status:'closed',closePrice:+f.price,closeDate:f.date,closeFees:+f.fees||0});
+        if(!created.includes(l))changed.add(l.id);
+      }
+    });
+    return{legs,created,changed:[...changed],unmatched};
+  }
+  function health(legs,wheels,today,trades){
+    today=today||new Date().toISOString().slice(0,10);
+    const out=[];const nm=l=>`${l.underlying} ${l.expiry||'?'} ${l.strike||'?'}${l.type||'?'}`;
+    const seen={};
+    legs.forEach(l=>{
+      if(!l.underlying)out.push({sev:'red',legId:l.id,text:`Option leg ${l.id} has no underlying`});
+      if(!(l.strike>0))out.push({sev:'red',legId:l.id,text:`${nm(l)} has no strike`});
+      if(!l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} has no expiry`});
+      if(!(l.qty>0))out.push({sev:'red',legId:l.id,text:`${nm(l)} has no contract quantity`});
+      if(l.type!=='C'&&l.type!=='P')out.push({sev:'red',legId:l.id,text:`${nm(l)} is neither call nor put`});
+      if(l.side!=='long'&&l.side!=='short')out.push({sev:'red',legId:l.id,text:`${nm(l)} has no long/short side`});
+      if(l.entryPrice==null||l.entryPrice==='')out.push({sev:'amber',legId:l.id,text:`${nm(l)} has no entry premium`});
+      if(l.status==='open'&&l.expiry&&l.expiry<today)out.push({sev:'amber',legId:l.id,text:`${nm(l)} expired ${l.expiry} but is still open — close, expire or record assignment`});
+      if(l.status==='closed'&&(l.closePrice==null||!l.closeDate))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is closed but has no close price/date`});
+      if(l.closeDate&&l.entryDate&&l.closeDate<l.entryDate)out.push({sev:'red',legId:l.id,text:`${nm(l)} closed before it was opened`});
+      if(l.entryDate&&l.expiry&&l.entryDate>l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} opened after its expiry`});
+      if(l.parentLeapId&&!legs.some(x=>x.id===l.parentLeapId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} was sold against a LEAP that no longer exists — shown under Other options`});
+      if(l.wheelId&&!wheels.some(w=>w.id===l.wheelId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is attached to a rotation that no longer exists`});
+      if(l.wheelId){const w=wheels.find(w=>w.id===l.wheelId);if(w&&w.ticker&&w.ticker!==l.underlying)out.push({sev:'grey',legId:l.id,text:`${nm(l)} is attached to the ${w.ticker} rotation — different underlying`});}
+      if(l.status==='open'&&l.markAt&&(Date.parse(today)-Date.parse(l.markAt.slice(0,10)))/DAY>5)out.push({sev:'grey',legId:l.id,text:`${nm(l)} mark is stale (${l.markAt.slice(0,10)})`});
+      const fp=`${l.underlying}|${l.type}|${l.strike}|${l.expiry}|${l.side}|${l.entryDate}|${l.qty}|${l.entryPrice}`;(seen[fp]=seen[fp]||[]).push(l);
+    });
+    Object.values(seen).forEach(a=>{if(a.length>1)out.push({sev:'grey',legId:a[0].id,text:`${nm(a[0])} appears ${a.length}× with identical details — duplicates?`});});
+    // informational only: a wheel trade on the same contract & date as an options leg may be the same fill recorded twice
+    (trades||[]).forEach(t=>{
+      if(!t||!t.ticker||!t.strike||!t.expiry||!t.entered)return;
+      const l=legs.find(l=>l.underlying===t.ticker&&+l.strike===+t.strike&&l.expiry===t.expiry&&(l.entryDate===t.entered||l.closeDate===t.entered));
+      if(l)out.push({sev:'grey',legId:l.id,info:true,text:`Wheel trade ${t.ticker} ${t.action} ${t.entered} (${t.strike} exp ${t.expiry}) matches an Options leg on the same day — possibly the same fill recorded twice. Review manually; nothing is changed automatically.`});
+    });
+    return out;
+  }
+  return{dte,legPnL,tenor,bs,impliedVol,legGreeks,occ,strategyName,groupSummary,groups,portfolio,closeLeg,expireLeg,rollLeg,applyFills,health,costBasis};
+}
+const OPTS=optionsLib();
+
 function calcWheel(wheel){
   const trades=db.trades.filter(t=>t.wheelId===wheel.id).sort((a,b)=>a.entered.localeCompare(b.entered));
   let credits=0,debits=0,sharesHeld=0,premiumCredits=0,premiumDebits=0;
@@ -1185,6 +1541,44 @@ function calcUnrealised(wheels,trades,priceOf){
   return{value,unpriced};
 }
 function _priceOf(w){return (typeof quotes!=='undefined'&&quotes[w.ticker]?.price)||(w.lastPrice!=null?w.lastPrice:null);}
+
+// ── All options, by month (READ-ONLY: reads db.trades via calcMonthlyPnL and db.opts; writes nothing) ──
+// Options realised P&L by close date (expired → expiry if no close date). Open legs only feed the "open, not yet banked" line.
+function optsMonthly(legs){
+  const mo={};let openPl=0,unmarked=0,openN=0;
+  (legs||[]).forEach(l=>{
+    const p=OPTS.legPnL(l);
+    if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;return;}
+    const d=l.closeDate||l.expiry;if(!d)return;const ym=d.slice(0,7);mo[ym]=(mo[ym]||0)+p.realized;
+  });
+  Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);
+  return{byMonth:mo,openPl:Math.round(openPl*100)/100,unmarked,openN};
+}
+function allOptionsByMonth(wheelMonthly,legs,today){
+  const W={};(wheelMonthly||[]).forEach(m=>W[m.ym]=m.pNet);
+  const O=optsMonthly(legs),yr=(today||new Date().toISOString()).slice(0,4);
+  const yms=[...new Set([...Object.keys(W),...Object.keys(O.byMonth)])].sort().reverse();
+  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.byMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
+  const sum=(f,yr0)=>Math.round(rows.filter(r=>!yr0||r.ym.startsWith(yr0)).reduce((a,r)=>a+r[f],0)*100)/100;
+  return{rows,ytd:{wheel:sum('wheel',yr),opts:sum('opts',yr),total:sum('total',yr),year:yr},all:{wheel:sum('wheel'),opts:sum('opts'),total:sum('total')},open:{pl:O.openPl,unmarked:O.unmarked,n:O.openN}};
+}
+function renderAllOptionsByMonth(monthly){
+  const A=allOptionsByMonth(monthly,db.opts||[],new Date().toISOString().slice(0,10));
+  if(!A.rows.length&&!A.open.n)return'';
+  const kf=n=>{const a=Math.abs(n);return(n<0?'-':'')+'$'+(a>=1e4?Math.round(a/1e3)+'k':a>=1e3?(a/1e3).toFixed(1)+'k':Math.round(a));};
+  const m=n=>`<span class="${n>0?'g':n<0?'r':''}" style="${n?'':'color:var(--text3)'}">${n?`<span class="lf">${(n>0?'+':'')+fmtMoney(n).replace(/\.\d\d$/,'')}</span><span class="ls">${(n>0?'+':'')+kf(n)}</span>`:'—'}</span>`;
+  const two=(f,sh)=>`<span class="lf">${f}</span><span class="ls">${sh}</span>`;
+  const cols='minmax(0,1.2fr) repeat(3,minmax(0,1fr))';
+  const row=(a,b,c,d,st='')=>`<div class="d-table-row" style="grid-template-columns:${cols};${st}"><span>${a}</span><span style="text-align:right">${b}</span><span style="text-align:right">${c}</span><span style="text-align:right;font-weight:600">${d}</span></div>`;
+  const body=A.rows.map(r=>row(two(r.label,new Date(r.ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'2-digit'})),m(r.wheel),m(r.opts),m(r.total))).join('');
+  const tot=row(`<b>${two('Year to date '+A.ytd.year,'YTD')}</b>`,m(A.ytd.wheel),m(A.ytd.opts),m(A.ytd.total),'background:var(--bg3)')+row('<b>All time</b>',m(A.all.wheel),m(A.all.opts),m(A.all.total),'background:var(--bg3)');
+  const openH=`<div style="padding:0.5625rem 1.25rem;font-size:0.6875rem;color:var(--text3);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center"><span><b style="color:var(--text2)">Open, not yet banked:</b> ${A.open.n?m(A.open.pl):'—'}</span><span>${A.open.n} open LEAP${A.open.n!==1?'s':''} &amp; short calls${A.open.unmarked?` · ${A.open.unmarked} without a mark`:''} · moves with prices, not in the months above${optDemo?' · <b style="color:#fcd34d">options figures are DEMO</b>':''}</span></div>`;
+  return`<div class="d-panel mo-pnl">
+      <div class="d-panel-hdr"><span class="d-panel-title">All options, by month</span><span class="d-panel-count">wheel premium + realised LEAPs &amp; covered calls</span></div>
+      <div class="d-panel-body"><div class="d-table-hdr" style="grid-template-columns:${cols}"><span>Month</span><span style="text-align:right">Wheel</span><span style="text-align:right">${two('LEAPs &amp; CCs','LEAPs+CC')}</span><span style="text-align:right">Total</span></div>
+      <div style="max-height:26.25rem;overflow-y:auto">${body}</div>${tot}${openH}</div>
+    </div>`;
+}
 
 function calcOverall(){
   let pc=0,pd=0,wins=0,losses=0,open=0,closed=0,sh=0;
@@ -1463,7 +1857,8 @@ async function fetchAllQuotes(){
   fetching=true;
   try{
     const wheelSyms=db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
-    const allSyms=[...new Set(wheelSyms)];
+    const optSyms=(db.opts||[]).filter(l=>l.status==='open').map(l=>l.underlying).filter(Boolean);
+    const allSyms=[...new Set([...wheelSyms,...optSyms])];
     // Fetch logos in parallel (fire-and-forget, don't block quotes)
     const logoPromises=allSyms.map(sym=>fetchLogo(sym));
     for(const sym of allSyms){
@@ -1577,6 +1972,792 @@ function render(){
   if(view==='log')c.innerHTML=renderLog();
   if(view==='dash'){c.innerHTML=renderDash();requestAnimationFrame(renderDashChart);}
   if(view==='analytics')c.innerHTML=renderAnalytics();
+  if(view==='options'){c.innerHTML=renderOptions();fetchOptionMarks(false);}
+}
+
+// ════════════════════════════════════════════════════════
+// OPTIONS VIEW — non-wheel positions (data in db.opts / optlegs)
+// ════════════════════════════════════════════════════════
+// ── DEMO MODE (Options tab only) — in-memory sample legs, never written to Firestore, never touches wheel data ──
+let optDemo=/[?&]demo=options\b/.test(location.search)||localStorage.getItem('wh-optDemo')==='1';
+let _realOpts=null; // real legs parked while demo is on
+const DEMO_SPOTS={TSLA:380,NVDA:185,AAPL:245,SPY:670,SPCX:205};
+function optDemoLegs(todayISO,wheels){
+  const T=new Date(todayISO+'T12:00:00Z'),iso=d=>d.toISOString().slice(0,10);
+  const add=n=>{const d=new Date(T);d.setUTCDate(d.getUTCDate()+n);return iso(d);};
+  const fri=minDays=>{const d=new Date(T);d.setUTCDate(d.getUTCDate()+minDays);while(d.getUTCDay()!==5)d.setUTCDate(d.getUTCDate()+1);return iso(d);};
+  const third=months=>{const d=new Date(Date.UTC(T.getUTCFullYear(),T.getUTCMonth()+months,1,12));let c=0;while(true){if(d.getUTCDay()===5&&++c===3)break;d.setUTCDate(d.getUTCDate()+1);}return iso(d);};
+  const wk=fri(3),mo=third(T.getUTCDate()>10?1:0)<=add(20)?third(T.getUTCDate()>10?2:1):third(T.getUTCDate()>10?1:0),mo2=third(3),leap=third(14),past=n=>add(-n);
+  let n=0;const L=(g,o)=>({id:'demo-'+(++n),groupId:'demo-g'+g,status:'open',closePrice:null,closeDate:null,closeFees:0,qty:1,fees:0.65,markSrc:'demo',markAt:new Date().toISOString(),delta:null,theta:null,wheelId:null,notes:'',reviewDate:null,demo:true,type:'C',side:'long',...o});
+  // Four long-dated calls (LEAPs) — Marc's only non-wheel options. AAPL deliberately inside the 270-day review window.
+  const legs=[
+    L(1,{underlying:'TSLA',strike:400,expiry:third(15),entryPrice:78.00,entryDate:past(345),mark:84.20,iv:0.58,qty:2,fees:1.30,notes:'Core TSLA LEAP'}),
+    L(2,{underlying:'TSLA',strike:300,expiry:third(14),entryPrice:118.50,entryDate:past(385),mark:131.40,iv:0.55}),
+    L(3,{underlying:'NVDA',strike:160,expiry:third(15),entryPrice:52.10,entryDate:past(233),mark:47.60,iv:0.44,qty:3,fees:1.95}),
+    L(4,{underlying:'AAPL',strike:250,expiry:third(8),entryPrice:31.20,entryDate:past(401),mark:28.10,iv:0.27,reviewDate:add(30)}),
+    // SpaceX-style LEAP (fake ticker SPCX, fake numbers) with poor man's covered calls sold against it
+    L(5,{underlying:'SPCX',strike:150,expiry:third(18),entryPrice:72.00,entryDate:past(120),mark:81.50,iv:0.62,qty:2,fees:1.30,notes:'PMCC base'}),
+  ];
+  const S=(o)=>L(o.g,{underlying:'SPCX',side:'short',parentLeapId:'demo-5',fees:1.30,qty:2,...o});
+  const s1=S({g:6,strike:240,expiry:past(64),entryPrice:5.10,entryDate:past(100),status:'closed',closePrice:1.15,closeDate:past(70),closeFees:1.30,mark:null});
+  const s2=S({g:6,strike:250,expiry:past(29),entryPrice:4.60,entryDate:past(70),status:'expired',closePrice:0,closeDate:past(29),mark:null,rolledFrom:s1.id});
+  const s3=S({g:7,strike:245,expiry:mo,entryPrice:6.40,entryDate:past(12),mark:3.05,iv:0.66});
+  // a short weekly call on the TSLA 300 LEAP
+  const s4=L(8,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:390,expiry:wk,entryPrice:4.20,entryDate:past(4),mark:6.80,iv:0.6});
+  // expiry-day, in-the-money short on the TSLA 400 LEAP (spot 380 > 360)
+  const s5=L(9,{underlying:'TSLA',side:'short',parentLeapId:'demo-1',strike:360,expiry:add(0),entryPrice:3.10,entryDate:past(6),mark:20.40,iv:0.6,qty:2,fees:1.30});
+  // closed history for the Dashboard's month table: a LEAP sold at a profit, and a short call bought back on the TSLA 300 LEAP
+  const c1=L(10,{underlying:'AAPL',strike:200,expiry:past(-200),entryPrice:38.00,entryDate:past(420),status:'closed',closePrice:52.40,closeDate:past(40),closeFees:0.65,mark:null});
+  const c2=L(11,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:420,expiry:past(18),entryPrice:6.10,entryDate:past(45),status:'closed',closePrice:1.20,closeDate:past(25),closeFees:0.65,mark:null});
+  legs.push(s1,s2,s3,s4,s5,c1,c2);
+  return legs;
+}
+function setOptDemo(on){
+  if(on===optDemo&&(on?_realOpts!==null:true))return render();
+  optDemo=!!on;localStorage.setItem('wh-optDemo',optDemo?'1':'0');
+  if(optDemo){_realOpts=db.opts||[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}
+  else{db.opts=_realOpts||[];_realOpts=null;}
+  _optMarksAt=0;render();
+}
+function _demoNotSaved(){_optMarkStatus='Demo — not saved';}
+let optFilter=JSON.parse(localStorage.getItem('wh-optFilter')||'{"status":"open","tenor":"all","side":"all"}');
+let _optMarkStatus='';
+function setOptFilter(k,v){optFilter[k]=v;localStorage.setItem('wh-optFilter',JSON.stringify(optFilter));render();}
+function _optSpots(){const s=optDemo?{...DEMO_SPOTS}:{};Object.keys(quotes).forEach(k=>s[k]=quotes[k].price);return s;}
+function _legLine(l){
+  const side=l.side==='long'?'<span style="color:var(--blue)">L</span>':'<span style="color:var(--yellow)">S</span>';
+  const mk=l.status==='open'?(l.mark!=null&&l.mark!==''?`${(+l.mark).toFixed(2)}<small style="color:var(--text3)">${l.markSrc==='cboe'||l.markSrc==='finnhub'?' ⓓ':l.markSrc==='manual'?' ✎':''}</small>`:'<span style="color:var(--text3)">—</span>'):(l.status==='expired'?'exp':(+l.closePrice||0).toFixed(2));
+  return`<div style="display:flex;gap:0.625rem;font-size:0.75rem;white-space:nowrap">${side} ${l.qty}× ${esc(l.underlying)} ${fmt2(l.strike)}${l.type} <span style="color:var(--text3)">${esc(l.expiry||'')}</span> @ ${(+l.entryPrice||0).toFixed(2)} → ${mk}</div>`;
+}
+function renderOptionsLegacy(){ // multi-leg table view — kept in code, no longer shown (LEAPs view replaced it)
+  const legs=db.opts||[];
+  const today=new Date().toISOString().slice(0,10),spots=_optSpots();
+  const pf=OPTS.portfolio(legs,spots,today);
+  const f=optFilter;
+  let groups=OPTS.groups(legs).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
+  groups=groups.filter(g=>{
+    if(f.status!=='all'&&g.status!==f.status)return false;
+    if(f.side!=='all'&&!g.legs.some(l=>l.side===f.side))return false;
+    if(f.tenor!=='all'&&!g.legs.some(l=>OPTS.tenor(l,today)===f.tenor))return false;
+    return true;
+  }).sort((a,b)=>(a.dte??99999)-(b.dte??99999));
+  const money=n=>n==null?'—':`<span class="${n>=0?'g':'r'}">${fmtMoney(n)}</span>`;
+  const card=(lbl,val,sub='')=>`<div class="dcard"><div style="font-size:0.6875rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${lbl}</div><div style="font-size:1.25rem;font-weight:600;margin-top:0.25rem">${val}</div>${sub?`<div style="font-size:0.6875rem;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>`;
+  const chip=(k,v,lbl)=>`<button class="btn ${f[k]===v?'btn-primary':'btn-ghost'}" style="padding:0.25rem 0.5625rem;font-size:0.6875rem" onclick="setOptFilter('${k}','${v}')">${lbl}</button>`;
+  const wname=id=>{const w=db.wheels.find(w=>w.id===id);return w?`${esc(w.ticker)} · ${esc(w.label||'')}`:'(missing rotation)';};
+  const rows=groups.map(g=>{
+    const open=g.legs.filter(l=>l.status==='open');
+    let th=0,thOk=false;open.forEach(l=>{const gk=OPTS.legGreeks(l,spots[l.underlying],today);if(gk){th+=gk.theta;thOk=true;}});
+    const linked=g.legs.find(l=>l.wheelId);
+    const acts=g.status==='open'?`<button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.6875rem" onclick="openOptClose('${g.id}','close')">Close</button><button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.6875rem" onclick="openOptClose('${g.id}','roll')">Roll</button>`:'';
+    return`<tr>
+      <td><b>${esc(g.legs[0].underlying)}</b><div style="font-size:0.6875rem;color:var(--text3)">${esc(g.strategy)}${linked?` · ↳ ${wname(linked.wheelId)}`:''}</div></td>
+      <td>${g.legs.map(_legLine).join('')}</td>
+      <td>${g.dte==null?'—':g.dte<0?'<span class="r">past</span>':g.dte}</td>
+      <td>${g.status==='open'?money(g.unrealized):money(g.realized)}${g.status==='open'&&g.realized?`<div style="font-size:0.6875rem;color:var(--text3)">realised ${fmtMoney(g.realized)}</div>`:''}</td>
+      <td>${thOk?money(th)+'<small style="color:var(--text3)">/d</small>':'—'}</td>
+      <td style="white-space:nowrap">${acts}<button class="btn btn-ghost btn-icon" onclick="openOptEdit('${g.id}')">•••</button></td>
+    </tr>`;}).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:2.5rem">${legs.length?'No positions match these filters':'No option positions yet — add one, or import a broker file with buy-to-open fills.'}</td></tr>`;
+  const issues=OPTS.health(legs,db.wheels,today,db.trades);
+  const healthH=issues.length?`<div style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.625rem 0.75rem"><div style="font-size:0.75rem;color:var(--text3);margin-bottom:0.375rem">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(i=>`<div style="font-size:0.75rem;padding:2px 0;color:${i.sev==='red'?'var(--red)':i.sev==='amber'?'var(--yellow)':'var(--text3)'}">● ${esc(i.text)}</div>`).join('')}</div>`:'';
+  // linked-to-rotation summary (display only; wheel P&L untouched)
+  const byW={};legs.filter(l=>l.wheelId).forEach(l=>{const p=OPTS.legPnL(l);const o=byW[l.wheelId]=byW[l.wheelId]||{r:0,u:0};o.r+=p.realized;if(p.unrealized!=null)o.u+=p.unrealized;});
+  const linkH=Object.keys(byW).length?`<div style="margin-top:0.875rem;font-size:0.75rem;color:var(--text3)">Attached to rotations (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
+  const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
+  const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample positions shown <b>instead of</b> your real ones. Nothing here is saved; edits, closes and rolls stay in memory only. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
+  return`${err}${demoH}
+  <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;flex-wrap:wrap">
+    <span style="font-size:0.8125rem;font-weight:300;color:var(--silver)">Options</span>
+    <span class="toolbar-spacer"></span>
+    <span style="font-size:0.6875rem;color:var(--text3)">${esc(_optMarkStatus)}</span>
+    <button class="btn btn-ghost" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="fetchOptionMarks(true)">↻ Marks</button>
+    <button class="btn ${optDemo?'btn-primary':'btn-ghost'}" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="setOptDemo(${!optDemo})">${optDemo?'Hide demo positions':'Show demo positions'}</button>
+    <button class="btn btn-ghost" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="exportOptsCSV()">Export</button>
+    <button class="btn btn-primary" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="openOptAdd()">+ Position</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(8.75rem,1fr));gap:0.5rem;margin-bottom:0.625rem">
+    ${card('Open positions',pf.open,`${pf.closed} closed`)}
+    ${card('Unrealised P&L',money(pf.unrealized),pf.unmarked?`${pf.unmarked} leg${pf.unmarked>1?'s':''} unmarked`:'')}
+    ${card('Realised P&L',money(pf.realized),'options only — not wheel income')}
+    ${card('Net delta',(pf.delta>=0?'+':'')+pf.delta.toFixed(0),'share-equivalent')}
+    ${card('Theta / day',money(pf.theta),pf.greeksMissing?`${pf.greeksMissing} leg${pf.greeksMissing>1?'s':''} w/o greeks`:'')}
+    ${card('Premium at risk',fmtMoney(pf.longPremium),`short credit ${fmtMoney(pf.shortPremium)}`)}
+  </div>
+  <div style="display:flex;gap:0.3125rem;flex-wrap:wrap;margin-bottom:0.5rem">
+    ${chip('status','open','Open')}${chip('status','closed','Closed')}${chip('status','all','All')}
+    <span style="width:0.625rem"></span>${chip('tenor','all','Any expiry')}${chip('tenor','weekly','Weekly')}${chip('tenor','monthly','Monthly')}${chip('tenor','longer','2–9 mo')}${chip('tenor','leap','LEAP')}
+    <span style="width:0.625rem"></span>${chip('side','all','Long & short')}${chip('side','long','Long')}${chip('side','short','Short')}
+  </div>
+  <div class="log-wrap"><table class="lt" style="min-width:47.5rem"><thead><tr><th>Underlying</th><th>Legs</th><th>DTE</th><th>P&amp;L</th><th>Theta</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+  ${linkH}${healthH}`;
+}
+// Options-only export (separate from the wheel CSV export)
+function optsToCSV(legs){
+  const F=['groupId','underlying','type','side','strike','expiry','qty','entryPrice','entryDate','fees','status','closePrice','closeDate','closeFees','mark','markSrc','realized','unrealized','wheelId','parentLeapId','rolledFrom','notes'];
+  const q=v=>{v=v==null?'':String(v);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  return[F.join(',')].concat(legs.map(l=>{const p=OPTS.legPnL(l);return F.map(f=>q(f==='realized'?p.realized:f==='unrealized'?p.unrealized:l[f])).join(',');})).join('\n');
+}
+function exportOptsCSV(){
+  const blob=new Blob([optsToCSV(db.opts||[])],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=`wheelhouse-options-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+// ── LEAPs view: one card per long call; everything else listed under "Other options" ──
+let leapStatus=localStorage.getItem('wh-leapStatus')||'open';
+function setLeapStatus(v){leapStatus=v;localStorage.setItem('wh-leapStatus',v);render();}
+// A group is a LEAP card only if every leg in it is a long call; mixed/short groups go to "Other options".
+function splitLeapLegs(legs){
+  const byG={};(legs||[]).forEach(l=>(byG[l.groupId||l.id]=byG[l.groupId||l.id]||[]).push(l));
+  const leaps=[],other=[],shorts=[];
+  const isLeapG=g=>g.every(l=>l.side==='long'&&l.type==='C');
+  const leapIds=new Set();Object.values(byG).forEach(g=>{if(isLeapG(g))g.forEach(l=>leapIds.add(l.id));});
+  Object.values(byG).forEach(g=>{
+    if(isLeapG(g))return leaps.push(...g);
+    // short calls sold against a LEAP (poor man's covered calls) hang off the LEAP card
+    if(g.every(l=>l.side==='short'&&l.type==='C'&&l.parentLeapId&&leapIds.has(l.parentLeapId)))return shorts.push(...g);
+    other.push(...g);});
+  return{leaps,other,shorts};
+}
+function leapStats(l,spot,today){
+  const q=+l.qty||0,mark=l.mark!=null&&l.mark!==''?+l.mark:null,paid=+l.entryPrice||0;
+  const left=OPTS.dte(l.expiry,today),total=l.entryDate?OPTS.dte(l.expiry,l.entryDate):null;
+  const intr=spot>0?Math.max(0,spot-(+l.strike)):null;
+  const tv=mark!=null&&intr!=null?Math.max(0,mark-intr):null;
+  const p=OPTS.legPnL(l),cost=paid*100*q+(+l.fees||0);
+  const g=l.status==='open'?OPTS.legGreeks(l,spot,today):null;
+  return{q,mark,paid,left,total,prog:left!=null&&total>0?Math.min(1,Math.max(0,1-left/total)):null,spot,intr,tv,
+    value:mark!=null?mark*100*q:null,cost,pl:l.status==='open'?p.unrealized:p.realized,
+    be:(+l.strike)+paid,beDist:spot>0?((+l.strike)+paid)/spot*100-100:null,dsh:g?g.delta:null,thd:g?g.theta:null};
+}
+// ── Poor man's covered calls: short calls sold against a LEAP (Options data only — never wheel trades) ──
+// A LEAP's shorts are those whose parentLeapId is the LEAP or any LEAP it was rolled from.
+function pmccShortsFor(leap,legs){
+  const ids=new Set([leap.id]);let cur=leap,n=0;const all=legs||[];
+  while(cur&&cur.rolledFrom&&n++<50){ids.add(cur.rolledFrom);cur=all.find(x=>x.id===cur.rolledFrom);}
+  return all.filter(l=>l.side==='short'&&l.type==='C'&&l.parentLeapId&&ids.has(l.parentLeapId));
+}
+function pmccStats(leap,legs,today){
+  const sh=pmccShortsFor(leap,legs),q=+leap.qty||0;
+  let net=0;sh.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?p.openCash:p.realized;});net=Math.round(net*100)/100;
+  const cost=(+leap.entryPrice||0)*100*q+(+leap.fees||0),adj=cost-net,adjPerSh=q?adj/(100*q):0;
+  const open=sh.filter(l=>l.status==='open').sort((a,b)=>(a.expiry||'').localeCompare(b.expiry||''));
+  const past=sh.filter(l=>l.status!=='open').sort((a,b)=>(b.closeDate||b.expiry||'').localeCompare(a.closeDate||a.expiry||''));
+  const cur=open[0]||null;
+  const curPnl=cur?OPTS.legPnL(cur).unrealized:null;
+  return{shorts:sh,open,past,cur,curPnl,curDte:cur?OPTS.dte(cur.expiry,today):null,net,cost,adj,adjPerSh};
+}
+// Status labels for an OPEN short call (card only; informational, never block anything). No price → no price-based labels.
+function pmccLabels(c,spot,today){
+  if(!c||c.status!=='open')return[];
+  const out=[],d=OPTS.dte(c.expiry,today),K=+c.strike,sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
+  if(d!=null&&d<=0)out.push({t:'Expires today',c:'r'});else if(d!=null&&d<=7)out.push({t:'Expiring soon',c:'a'});
+  if(spot>0&&K>0){if(spot>K)out.push({t:'In the money',c:'r'});else if(spot>=K*0.95)out.push({t:'Near the money',c:'a'});}
+  if(mark!=null&&sold>0){const cap=(sold-mark)/sold;if(cap>=0.4)out.push({t:`Take profit · ${Math.round(cap*100)}%`,c:'g'});}
+  return out;
+}
+function renderPmcc(leap,today,spot){
+  const P=pmccStats(leap,db.opts||[],today),open=leap.status==='open';
+  if(!P.shorts.length)return''; // nothing sold yet: just the 'Sell call' button in the card header
+  const m0=n=>fmtMoney(n).replace(/\.\d\d$/,''),k=(l,v,sub='')=>`<div class="pmcc-kv"><div class="rmb-lbl">${l}</div><div class="rmb-val">${v}</div>${sub?`<div class="rmb-sub">${sub}</div>`:''}</div>`;
+  const sk=l=>`${l.qty}× $${fmt2(l.strike).replace(/\.00$/,'')}C · ${_fdShort(l.expiry)}`;
+  const col=(cls,l,v,sub='')=>`<div class="rmb-col ${cls}"><div class="rmb-lbl">${l}</div><div class="rmb-val">${v}</div>${sub?`<div class="rmb-sub">${sub}</div>`:''}</div>`;
+  const kv=(l,v,sub='')=>`<div><div class="rmb-lbl">${l}</div><div class="rmb-val">${v}</div>${sub?`<div class="rmb-sub">${sub}</div>`:''}</div>`;
+  const tag='<span class="pmcc-tag">PMCC</span>';
+  let head,c1,c2,c5;
+  if(P.cur){const c=P.cur,pl=P.curPnl,lb=pmccLabels(c,spot,today),tot=c.entryDate?OPTS.dte(c.expiry,c.entryDate):null;
+    const prog=P.curDte!=null&&tot>0?Math.min(1,Math.max(0,1-P.curDte/tot)):null;
+    head=`<div class="pmcc-t">${tag}<span>Short call · ${sk(c)}</span>${lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('')}</div>`;
+    c1=`<div class="rmb-col pmcc-c1">${kv('Credit',m0((+c.entryPrice||0)*100*(+c.qty||0)-(+c.fees||0)),`${c.qty}× $${(+c.entryPrice||0).toFixed(2)}`)}${kv('Short P&amp;L',pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${pl>=0?'g':'r'}">${pl>=0?'+':''}${m0(pl)}</span>`,pl!=null&&c.entryPrice>0?`${Math.round(pl/((+c.entryPrice)*100*(+c.qty||1))*100)}% of premium`:'')}</div>`;
+    c2=`<div class="rmb-col pmcc-c2"><div class="leap-barl"><span>Sold ${_fdShort(c.entryDate)} @ $${(+c.entryPrice||0).toFixed(2)}</span><span>${P.curDte!=null&&P.curDte>=0?`<b>${P.curDte}</b> days left`:'—'}</span></div><div class="leap-bar"><i style="width:${prog!=null?(prog*100).toFixed(0):0}%"></i></div>${P.open.length>1?`<div class="rmb-sub">+${P.open.length-1} more open</div>`:''}</div>`;
+    c5=col('','Mark',c.mark!=null&&c.mark!==''?`$${(+c.mark).toFixed(2)}`:'—',`sold $${(+c.entryPrice||0).toFixed(2)}`);
+  }else{head=`<div class="pmcc-t">${tag}<span style="color:var(--text3)">No short call open</span></div>`;c1=`<div class="rmb-col pmcc-c1">${kv('Short call','—',open?'use Sell call to write the next one':'')}</div>`;c2='<div class="rmb-col pmcc-c2"></div>';c5='<div class="rmb-col"></div>';}
+  const btns=open&&P.cur?`<span class="pmcc-btns"><button class="btn btn-ghost" onclick="pmccClose('${esc(P.cur.id)}','close')">Buy back</button><button class="btn btn-ghost" onclick="pmccClose('${esc(P.cur.id)}','roll')">Roll</button><button class="btn btn-ghost" onclick="pmccExpire('${esc(P.cur.id)}')">Expired</button></span>`:'';
+  const hist=P.past.length?`<details class="pmcc-hist"><summary>Past short calls (${P.past.length})</summary><div class="tw"><table><tr><th>Call</th><th>Sold</th><th>Closed</th><th>Outcome</th><th>Net</th></tr>${P.past.map(l=>{const r=OPTS.legPnL(l).realized;return`<tr><td>${sk(l)}</td><td>${_fdShort(l.entryDate)} @ $${(+l.entryPrice||0).toFixed(2)}</td><td>${_fdShort(l.closeDate)}${l.status==='closed'?` @ $${(+l.closePrice||0).toFixed(2)}`:''}</td><td>${l.status==='expired'?'expired':l.status==='assigned'?'assigned':P.shorts.some(x=>x.rolledFrom===l.id)?'rolled':'bought back'}</td><td class="${r>=0?'g':'r'}">${r>=0?'+':''}${fmtMoney(r)}</td></tr>`;}).join('')}</table></div></details>`:'';
+  return`<div class="pmcc"><div class="pmcc-h">${head}${btns}</div><div class="pmcc-row">${c1}${c2}
+    ${col('','Premium collected',`<span class="${P.net>=0?'g':'r'}">${P.net>=0?'+':''}${m0(P.net)}</span>`,`${P.shorts.length} call${P.shorts.length!==1?'s':''} · net of fees`)}
+    ${col('','Adj. LEAP cost',m0(P.adj),`$${P.adjPerSh.toFixed(2)}/sh (was $${(P.cost/(100*(+leap.qty||1))).toFixed(2)})`)}
+    ${c5}</div>
+    ${hist}</div>`;
+}
+function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
+function renderLeapCard(l,spot,today){
+  const S=leapStats(l,spot,today),open=l.status==='open';
+  const plH=S.pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${S.pl>=0?'g':'r'}">${S.pl>=0?'+':''}${fmtMoney(S.pl).replace(/\.\d\d$/,'')}${S.cost>0?` <small>(${S.pl>=0?'+':''}${(S.pl/S.cost*100).toFixed(1)}%)</small>`:''}</span>`;
+  const warn=open&&S.left!=null&&S.left<270;
+  const rev=open&&l.reviewDate?(l.reviewDate<=today?`Review date ${_fdShort(l.reviewDate)} reached`:`Review ${_fdShort(l.reviewDate)}`):'';
+  const note=warn?`● Under 9 months left — review/roll window${rev?' · '+rev:''}`:rev?`◷ ${rev}`:'';
+  const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:S.intr==null?'':`<span class="leap-badge ${S.intr>0?'itm':'otm'}">${S.intr>0?'ITM':'OTM'}</span>`;
+  const gid=l.groupId||l.id;
+  const btns=`${open?`<button class="btn btn-ghost" title="Sell a covered call against this LEAP (poor man's covered call)" onclick="openPmccSell('${esc(l.id)}')">Sell call</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
+  let row;
+  if(open){
+    const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
+    row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Value</div><div class="val">${S.value!=null?fmtMoney(S.value).replace(/\.\d\d$/,''):'—'}</div></div><div><div class="rmb-lbl">P&amp;L</div><div class="pl">${plH}</div></div></div>
+    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>${S.left!=null?`<b>${S.left}</b> days left`:'—'}</span></div>
+      <div class="leap-bar"><i style="width:${S.prog!=null?(S.prog*100).toFixed(0):0}%"></i></div>
+      ${S.tv!=null?`<div class="leap-split">${inW>0?`<div class="in" style="width:${Math.max(inW,12)}%">Intrinsic $${S.intr.toFixed(2)}</div>`:''}<div class="tv">Time $${S.tv.toFixed(2)}</div></div>`:''}</div>
+    <div class="rmb-col"><div class="rmb-lbl">Breakeven</div><div class="rmb-val">$${S.be.toFixed(2)}</div><div class="rmb-sub">${S.beDist!=null?`${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:'no spot'}</div></div>
+    <div class="rmb-col"><div class="rmb-lbl">Share equiv.</div><div class="rmb-val">${S.dsh!=null?Math.round(S.dsh)+' sh':'—'}</div><div class="rmb-sub">${S.dsh!=null&&S.q?`Δ ${(S.dsh/100/S.q).toFixed(2)}`:'no greeks'}</div></div>
+    <div class="rmb-col"><div class="rmb-lbl">Theta / day</div><div class="rmb-val ${S.thd<0?'r':''}">${S.thd!=null?fmtMoney(S.thd).replace(/\.\d\d$/,''):'—'}</div><div class="rmb-sub">time decay</div></div>`;
+  }else{
+    row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Paid → closed</div><div class="val" style="font-size:1rem">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div><div><div class="rmb-lbl">Realised</div><div class="pl">${plH}</div></div></div>
+    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>Closed ${_fdShort(l.closeDate)}</span></div></div><div class="rmb-col"></div><div class="rmb-col"></div><div class="rmb-col"></div>`;
+  }
+  return`<div class="leap-card ${!open?'cn':warn?'warn':''}" data-leap="${esc(l.id)}">
+  <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
+  <div class="leap-row">${row}</div>${renderPmcc(l,today,spot)}</div>`;
+}
+function renderOptions(){
+  const legs=db.opts||[];
+  const today=new Date().toISOString().slice(0,10),spots=_optSpots();
+  const{leaps,other}=splitLeapLegs(legs);
+  const openL=leaps.filter(l=>l.status==='open');
+  const shown=(leapStatus==='open'?openL:leaps.filter(l=>l.status!=='open'))
+    .sort((a,b)=>leapStatus==='open'?(a.expiry||'').localeCompare(b.expiry||''):(b.closeDate||'').localeCompare(a.closeDate||''));
+  // summary (open LEAPs)
+  let val=0,cost=0,pl=0,dsh=0,thd=0,tv=0,unmarked=0,noG=0;
+  openL.forEach(l=>{const S=leapStats(l,spots[l.underlying],today);cost+=S.cost;
+    if(S.value==null)unmarked++;else{val+=S.value;pl+=S.pl||0;}
+    if(S.tv!=null)tv+=S.tv*100*S.q;if(S.dsh==null)noG++;else{dsh+=S.dsh;thd+=S.thd;}});
+  const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
+  const sc=(l,v,sub,cls='')=>`<div class="leap-sc"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="s ${cls}">${sub}</div></div>`;
+  const sumH=openL.length?`<div class="leap-sum">
+    ${sc('Market value',m0(val),`cost ${m0(cost)}${unmarked?` · ${unmarked} unmarked`:''}`)}
+    ${sc('Open P&amp;L',(pl>=0?'+':'')+m0(pl),cost>0?`${pl>=0?'+':''}${(pl/cost*100).toFixed(1)}%`:'',pl>=0?'g':'r')}
+    ${sc('Share equivalent',`${Math.round(dsh)} sh`,noG?`combined delta · ${noG} w/o greeks`:'combined delta')}
+    ${sc('Time value',m0(tv),`decay ≈ ${m0(thd)}/day`)}</div>`:'';
+  const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${leapStatus==='open'?'No open LEAPs. Add one with <b>+ LEAP</b>, or import a broker file with buy-to-open call fills.':'No closed LEAPs yet.'}</div>`;
+  // non-long-call legs never vanish silently
+  const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
+  const otherH=og.length?`<details class="leap-other"><summary>Other options (${og.length}) — spreads, puts and short legs, kept as recorded</summary>${og.map(g=>`<div style="display:flex;gap:0.625rem;align-items:center;border-top:1px solid var(--border);padding:0.375rem 0;margin-top:0.375rem"><div style="flex:1;min-width:0;overflow-x:auto"><div style="font-size:0.6875rem;color:var(--text3)">${esc(g.strategy)} · ${esc(g.status)}</div>${g.legs.map(_legLine).join('')}</div><button class="btn btn-ghost btn-icon" onclick="openOptEdit('${esc(g.id)}')">•••</button></div>`).join('')}</details>`:'';
+  const issues=OPTS.health(legs,db.wheels,today,db.trades);
+  const healthH=issues.length?`<div style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.625rem 0.75rem"><div style="font-size:0.75rem;color:var(--text3);margin-bottom:0.375rem">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(i=>`<div style="font-size:0.75rem;padding:2px 0;color:${i.sev==='red'?'var(--red)':i.sev==='amber'?'var(--yellow)':'var(--text3)'}">● ${esc(i.text)}</div>`).join('')}</div>`:'';
+  const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
+  const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample LEAPs shown <b>instead of</b> your real ones. Nothing here is saved. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
+  return`${err}${demoH}
+  <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;flex-wrap:wrap">
+    <span style="font-size:0.8125rem;font-weight:300;color:var(--silver)">◇ LEAPs <span style="font-size:0.6875rem;color:var(--text3)">long-dated calls held outside the wheel</span></span>
+    <span class="toolbar-spacer" style="flex:1"></span>
+    ${_optMarkStatus?`<span style="font-size:0.625rem;color:var(--text3);max-width:11.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(_optMarkStatus)}">${esc(_optMarkStatus)}</span>`:''}
+    <span class="leap-seg"><button class="${leapStatus==='open'?'on':''}" onclick="setLeapStatus('open')">Open</button><button class="${leapStatus!=='open'?'on':''}" onclick="setLeapStatus('closed')">Closed</button></span>
+    <button class="btn btn-ghost" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="fetchOptionMarks(true)" title="Cboe delayed → Finnhub → manual${_optMarkStatus?' · '+esc(_optMarkStatus):''}">↻ Marks</button>
+    <button class="btn btn-primary" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="openLeapAdd()">+ LEAP</button>
+  </div>
+  ${sumH}<div class="leap-grid">${cards}</div>${otherH}${healthH}
+  <div style="margin-top:0.875rem;font-size:0.6875rem;color:var(--text3);display:flex;gap:0.875rem"><a href="#" style="color:var(--text3)" onclick="setOptDemo(${!optDemo});return false">${optDemo?'Hide demo positions':'Show demo positions'}</a><a href="#" style="color:var(--text3)" onclick="exportOptsCSV();return false">Export options CSV</a></div>`;
+}
+// ── + LEAP / edit: single long call ──
+function openLeapAdd(){
+  ['lf-id','lf-und','lf-strike','lf-expiry','lf-price','lf-review','lf-notes','lf-mark'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lf-qty').value='1';document.getElementById('lf-fees').value='0';
+  document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('mLeapTitle').textContent='Add LEAP (long call)';
+  document.getElementById('lf-mark-wrap').style.display='none';document.getElementById('lf-del').style.display='none';
+  document.getElementById('lf-paste').value='';document.getElementById('lf-pick').innerHTML='';document.getElementById('lf-scan-msg').style.display='none';
+  document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='flex';
+  switchLeapTab('smartscan');initLeapDrop();openModal('mLeap');
+}
+function openLeapEdit(id){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('lf-id',l.id);v('lf-und',l.underlying);v('lf-strike',l.strike);v('lf-expiry',l.expiry);v('lf-qty',l.qty);v('lf-price',l.entryPrice);
+  v('lf-date',l.entryDate);v('lf-fees',l.fees??0);v('lf-review',l.reviewDate);v('lf-notes',l.notes);v('lf-mark',l.mark);
+  document.getElementById('mLeapTitle').textContent='Edit LEAP';
+  document.getElementById('lf-mark-wrap').style.display=l.status==='open'?'':'none';document.getElementById('lf-del').style.display='';
+  document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='none';switchLeapTab('manual');
+  openModal('mLeap');
+}
+function leapFormLeg(f,old){
+  const und=String(f.und||'').trim().toUpperCase(),strike=parseFloat(f.strike),qty=parseInt(f.qty),price=parseFloat(f.price);
+  if(!und)return{err:'Enter the ticker'};if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};
+  if(!(qty>0))return{err:'Contracts must be at least 1'};if(!(price>=0)||f.price==='')return{err:'Enter the price paid per share'};
+  const id=old?old.id:f.newId;
+  const leg={...(old||{status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,markSrc:null,delta:null,theta:null,iv:null,wheelId:null}),
+    id,groupId:old?(old.groupId||old.id):id,underlying:und,type:'C',side:'long',strike,expiry:f.expiry,qty,entryPrice:price,
+    entryDate:f.date||null,fees:parseFloat(f.fees)||0,reviewDate:f.review||null,notes:String(f.notes||'').trim()};
+  if(f.mark!==''&&f.mark!=null&&(!old||+f.mark!==+old.mark)){leg.mark=+f.mark;leg.markSrc='manual';leg.markAt=new Date().toISOString();leg.delta=null;leg.theta=null;leg.iv=null;}
+  return{leg};
+}
+function saveLeap(){
+  const g=k=>document.getElementById(k).value;const id=g('lf-id');
+  const old=id?(db.opts||[]).find(l=>l.id===id):null;
+  const r=leapFormLeg({und:g('lf-und'),strike:g('lf-strike'),expiry:g('lf-expiry'),qty:g('lf-qty'),price:g('lf-price'),date:g('lf-date'),fees:g('lf-fees'),review:g('lf-review'),notes:g('lf-notes'),mark:g('lf-mark'),newId:uid()},old);
+  if(r.err){alert(r.err);return;}
+  db.opts=db.opts||[];const i=db.opts.findIndex(l=>l.id===r.leg.id);if(i>-1)db.opts[i]=r.leg;else db.opts.push(r.leg);
+  _saveOpt(r.leg);closeModal('mLeap');render();
+}
+function switchLeapTab(tab){
+  const ss=tab==='smartscan';
+  document.getElementById('lf-panel-smartscan').style.display=ss?'block':'none';
+  document.getElementById('lf-panel-manual').style.display=ss?'none':'block';
+  const a=document.getElementById('lf-tab-smartscan'),b=document.getElementById('lf-tab-manual');
+  a.style.background=ss?'var(--orange)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';
+  b.style.background=ss?'var(--bg3)':'var(--orange)';b.style.color=ss?'var(--text2)':'#fff';
+}
+let _leapScan=null;
+function leapRunScan(){
+  const msg=document.getElementById('lf-scan-msg'),pick=document.getElementById('lf-pick');pick.innerHTML='';
+  let r;try{r=leapScan(document.getElementById('lf-paste').value,BCSV);}catch(e){r={calls:[],rejected:[],error:'Parse error: '+e.message};}
+  _leapScan=r;
+  if(!r.calls.length){msg.style.color='var(--red)';msg.textContent=r.error;msg.style.display='block';return;}
+  if(r.calls.length===1&&!r.rejected.length){msg.style.display='none';return leapFillFrom(0);}
+  msg.style.color='var(--text3)';msg.style.display='block';
+  msg.textContent=`Found ${r.calls.length} bought call${r.calls.length>1?'s':''}${r.rejected.length?` (skipped ${r.rejected.length} sold/put/closing trade${r.rejected.length>1?'s':''})`:''} — pick one:`;
+  pick.innerHTML=r.calls.map((c,i)=>`<button class="btn btn-ghost" style="display:flex;width:100%;justify-content:space-between;gap:0.5rem;margin-bottom:0.25rem;font-size:0.75rem;padding:0.375rem 0.625rem" onclick="leapFillFrom(${i})"><span><b style="color:var(--orange2)">${esc(c.ticker)}</b> ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} Call · ${esc(_fdShort(c.expiry))}</span><span style="color:var(--text3)">@ ${c.price!=null?fmt2(c.price):'—'} · ${esc(c.date||'no date')}</span></button>`).join('');
+}
+function leapFillFrom(i){
+  const c=_leapScan&&_leapScan.calls[i];if(!c)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('lf-und',c.ticker);v('lf-strike',c.strike);v('lf-expiry',c.expiry);v('lf-qty',c.qty||1);v('lf-price',c.price);v('lf-date',c.date||new Date().toISOString().slice(0,10));v('lf-fees',c.fees||0);
+  const miss=[c.price==null&&'price',!c.date&&'date'].filter(Boolean);
+  const low=(c.low||[]).filter(k=>!miss.includes(k)),FID={price:'lf-price',date:'lf-date',contracts:'lf-qty',fees:'lf-fees',expiry:'lf-expiry'};
+  Object.values(FID).forEach(id=>document.getElementById(id).style.borderColor='');
+  [...miss,...low].forEach(k=>{const el=FID[k]&&document.getElementById(FID[k]);if(el)el.style.borderColor='var(--yellow)';});
+  const f=document.getElementById('lf-filled');f.style.display='block';
+  f.innerHTML=`✦ Filled from SmartScan — check every field, then Save.${miss.length?` <b style="color:var(--yellow)">Couldn't read: ${miss.join(', ')}.</b>`:''}${low.length?` <b style="color:var(--yellow)">Low confidence: ${low.join(', ')} — double-check ${low.length>1?'these':'this'}.</b>`:''}`;
+  switchLeapTab('manual');
+}
+function leapLoadFile(file){
+  if(!file)return;const ta=document.getElementById('lf-paste'),msg=document.getElementById('lf-scan-msg');
+  msg.style.color='var(--text3)';msg.textContent='Reading '+file.name+'…';msg.style.display='block';
+  if(/\.pdf$/i.test(file.name)||file.type==='application/pdf'){
+    (async()=>{try{
+      if(!_pdfjs){const V='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';_pdfjs=await import(V+'pdf.min.mjs');_pdfjs.GlobalWorkerOptions.workerSrc=V+'pdf.worker.min.mjs';}
+      const doc=await _pdfjs.getDocument({data:await file.arrayBuffer()}).promise;const items=[];
+      for(let n=1;n<=doc.numPages;n++){const tc=await(await doc.getPage(n)).getTextContent();tc.items.forEach(it=>items.push({str:it.str,transform:it.transform,page:n}));}
+      ta.value=BCSV.pdfItemsToLines(items);leapRunScan();
+    }catch(e){msg.style.color='var(--red)';msg.textContent="Couldn't open this PDF ("+(e&&e.message||e)+").";}})();return;}
+  if(/^image\//.test(file.type)){msg.style.color='var(--red)';msg.textContent="Screenshots can't be read — copy the text of the confirmation and paste it instead.";return;}
+  const r=new FileReader();r.onload=()=>{ta.value=r.result;leapRunScan();};r.readAsText(file);
+}
+function initLeapDrop(){
+  const ta=document.getElementById('lf-paste');if(!ta||ta._wired)return;ta._wired=true;
+  ta.addEventListener('dragover',e=>{e.preventDefault();ta.style.borderColor='var(--orange)';});
+  ta.addEventListener('dragleave',()=>{ta.style.borderColor='var(--border2)';});
+  ta.addEventListener('drop',e=>{e.preventDefault();ta.style.borderColor='var(--border2)';const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)leapLoadFile(f);});
+}
+function deleteLeap(){
+  const id=document.getElementById('lf-id').value;if(!id||!confirm('Delete this LEAP?'))return;
+  _deleteOptDoc(id);db.opts=(db.opts||[]).filter(l=>l.id!==id);closeModal('mLeap');render();
+}
+// ── Sell call against a LEAP (PMCC) ──
+let _pmccScan=null;
+function openPmccSell(leapId){
+  const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
+  const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste'].forEach(k=>v(k,''));
+  v('pcc-qty',Math.max(1,(+L.qty||1)-P.open.reduce((a,l)=>a+(+l.qty||0),0)));v('pcc-fees','0');v('pcc-date',new Date().toISOString().slice(0,10));
+  document.getElementById('mPmccTitle').textContent=`Sell call against ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
+  document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
+  ['pcc-scan-msg','pcc-filled'].forEach(k=>document.getElementById(k).style.display='none');document.getElementById('pcc-pick').innerHTML='';
+  ['pcc-price','pcc-date','pcc-qty','pcc-fees','pcc-expiry'].forEach(k=>document.getElementById(k).style.borderColor='');
+  pmccTab('smartscan');initPmccDrop();openModal('mPmcc');
+}
+function pmccTab(tab){
+  const ss=tab==='smartscan';
+  document.getElementById('pcc-panel-smartscan').style.display=ss?'block':'none';document.getElementById('pcc-panel-manual').style.display=ss?'none':'block';
+  const a=document.getElementById('pcc-tab-smartscan'),b=document.getElementById('pcc-tab-manual');
+  a.style.background=ss?'var(--orange)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';b.style.background=ss?'var(--bg3)':'var(--orange)';b.style.color=ss?'var(--text2)':'#fff';
+}
+// SmartScan for a SOLD call (sell to open). Reuses leapScan, which already reads every layout and labels the side/effect.
+function pmccScan(text,B,today){
+  const r=leapScan(text,B,today),all=[...r.calls,...r.rejected];
+  const calls=all.filter(c=>c.type==='C'&&c.side!=='buy'&&c.effect!=='close').map(c=>({...c,low:[...new Set([...(c.low||[]),...(c.side?[]:['side'])])]}));
+  if(calls.length)return{calls,error:''};
+  if(!all.length)return{calls:[],error:r.error};
+  const c=all[0];
+  const error=all.length>1?`No sold calls found — ${all.length} other trades (bought, puts or closes) were skipped.`:c.type!=='C'?'This is a put — only calls can be sold against a LEAP.':c.effect==='close'?'This is a closing trade — use Buy back on the short call instead.':'This is a bought call (buy to open) — add it with + LEAP instead.';
+  return{calls:[],error};
+}
+function pmccRunScan(){
+  const msg=document.getElementById('pcc-scan-msg'),pick=document.getElementById('pcc-pick');pick.innerHTML='';
+  let r;try{r=pmccScan(document.getElementById('pcc-paste').value,BCSV);}catch(e){r={calls:[],error:'Parse error: '+e.message};}
+  _pmccScan=r;
+  if(!r.calls.length){msg.style.color='var(--red)';msg.textContent=r.error;msg.style.display='block';return;}
+  if(r.calls.length===1){msg.style.display='none';return pmccFillFrom(0);}
+  msg.style.color='var(--text3)';msg.style.display='block';msg.textContent=`Found ${r.calls.length} sold calls — pick one:`;
+  pick.innerHTML=r.calls.map((c,i)=>`<button class="btn btn-ghost" style="display:flex;width:100%;justify-content:space-between;gap:0.5rem;margin-bottom:0.25rem;font-size:0.75rem;padding:0.375rem 0.625rem" onclick="pmccFillFrom(${i})"><span><b style="color:var(--orange2)">${esc(c.ticker)}</b> ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} Call · ${esc(_fdShort(c.expiry))}</span><span style="color:var(--text3)">@ ${c.price!=null?fmt2(c.price):'—'} · ${esc(c.date||'no date')}</span></button>`).join('');
+}
+function pmccFillFrom(i){
+  const c=_pmccScan&&_pmccScan.calls[i];if(!c)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'',und=document.getElementById('pcc-und').value;
+  v('pcc-strike',c.strike);v('pcc-expiry',c.expiry);v('pcc-qty',c.qty||1);v('pcc-price',c.price);v('pcc-date',c.date||new Date().toISOString().slice(0,10));v('pcc-fees',c.fees||0);
+  const miss=[c.price==null&&'price',!c.date&&'date'].filter(Boolean),low=(c.low||[]).filter(k=>!miss.includes(k));
+  const FID={price:'pcc-price',date:'pcc-date',contracts:'pcc-qty',fees:'pcc-fees',expiry:'pcc-expiry'};
+  Object.values(FID).forEach(id=>document.getElementById(id).style.borderColor='');
+  [...miss,...low].forEach(k=>{const el=FID[k]&&document.getElementById(FID[k]);if(el)el.style.borderColor='var(--yellow)';});
+  const f=document.getElementById('pcc-filled');f.style.display='block';
+  f.innerHTML=`✦ Filled from SmartScan — check every field, then Save.${c.ticker&&c.ticker!==und?` <b style="color:var(--red)">The paste is for ${esc(c.ticker)}, but this LEAP is ${esc(und)}.</b>`:''}${miss.length?` <b style="color:var(--yellow)">Couldn't read: ${miss.join(', ')}.</b>`:''}${low.length?` <b style="color:var(--yellow)">Low confidence: ${low.join(', ')} — double-check.</b>`:''}`;
+  pmccTab('manual');
+}
+function pmccFormLeg(f,leap){
+  const strike=parseFloat(f.strike),qty=parseInt(f.qty),price=parseFloat(f.price);
+  if(!leap)return{err:'LEAP not found'};if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};
+  if(!(qty>0))return{err:'Contracts must be at least 1'};if(!(price>=0)||f.price===''||f.price==null)return{err:'Enter the premium received per share'};
+  return{leg:{id:f.newId,groupId:f.newId,parentLeapId:leap.id,underlying:leap.underlying,type:'C',side:'short',strike,expiry:f.expiry,qty,entryPrice:price,entryDate:f.date||null,
+    fees:parseFloat(f.fees)||0,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,markSrc:null,markAt:null,delta:null,theta:null,iv:null,wheelId:null,reviewDate:null,notes:String(f.notes||'').trim()}};
+}
+function savePmcc(){
+  const g=k=>document.getElementById(k).value,L=(db.opts||[]).find(x=>x.id===g('pcc-leap'));
+  const r=pmccFormLeg({strike:g('pcc-strike'),expiry:g('pcc-expiry'),qty:g('pcc-qty'),price:g('pcc-price'),date:g('pcc-date'),fees:g('pcc-fees'),notes:g('pcc-notes'),newId:uid()},L);
+  if(r.err){alert(r.err);return;}
+  db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
+}
+function pmccClose(id,mode){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  openOptClose(l.groupId||l.id,mode);
+  document.getElementById('mOptCloseTitle').textContent=mode==='roll'?'Roll short call (buy back + sell new)':'Buy to close short call';
+  // only this leg — not other open shorts that share a roll chain
+  document.querySelectorAll('#oc-legs .oc-leg').forEach(r=>{if(r.dataset.id!==id)r.remove();});
+}
+function pmccExpire(id){
+  const i=(db.opts||[]).findIndex(x=>x.id===id);if(i<0)return;const l=db.opts[i];
+  const today=new Date().toISOString().slice(0,10);
+  if(!confirm(`Mark ${l.underlying} $${fmt2(l.strike)}C ${l.expiry} as expired worthless?${l.expiry>today?' (It hasn\'t reached expiry yet.)':''}`))return;
+  db.opts[i]=OPTS.expireLeg(l);_saveOpt(db.opts[i]);render();
+}
+function initPmccDrop(){
+  const ta=document.getElementById('pcc-paste');if(!ta||ta._wired)return;ta._wired=true;
+  ta.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;
+    if(/^image\//.test(f.type)){const m=document.getElementById('pcc-scan-msg');m.style.color='var(--red)';m.textContent="Screenshots can't be read — copy the text of the confirmation and paste it instead.";m.style.display='block';return;}
+    const r=new FileReader();r.onload=()=>{ta.value=r.result;pmccRunScan();};r.readAsText(f);});
+  ta.addEventListener('dragover',e=>e.preventDefault());
+}
+// ── LEAP SmartScan: paste/drop a broker fill → one or more long-call candidates (never saves) ──
+// Reuses BCSV.findOption / pickDate / parseStatementText / parseBrokerCSV; only the long-call decision lives here.
+// ── LEAP SmartScan clean-up: unicode, table cells, OCR slips, typo'd labels → plain text the extractors understand ──
+const _LEAP_LABELS=['quantity','contracts','contract','filled','submitted','executed','commission','commissions','regulatory','average','price','position','effect','account','limit','bought','amount'];
+function _lev(a,b){if(Math.abs(a.length-b.length)>2)return 9;const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t;}}return d[b.length];}
+function leapNormalize(text){
+  let s=String(text||'').replace(/\r\n?/g,'\n').replace(/[\u00a0\u2007\u2009\u202f]/g,' ').replace(/[\u2018\u2019\u2032]/g,"'").replace(/[\u201c\u201d]/g,'"')
+    .replace(/[\u2013\u2014]/g,'-').replace(/[•▪●◦∙►▶]/g,' ').replace(/[|\t]/g,'  ').replace(/[＄]/g,'$');
+  // OCR: S310 → $310, Ca11/CaII → Call, Pu7 → Put, 6O.35 → 60.35, 2O27 → 2027, 1l0 → 110
+  s=s.replace(/(^|[\s(:])S(?=\d)/g,'$1$').replace(/\b[Cc][Aa4@][Ll1I|][Ll1I|](s?)\b/g,(m,x)=>(m[0]==='C'&&m[1]==='A'?'CALL':'Call')+x).replace(/\b[Pp][Uu][Tt7](s?)\b/g,(m,x)=>(m===m.toUpperCase()?'PUT':'Put')+x);
+  for(let k=0;k<3;k++)s=s.replace(/(\d[\d,]*\.?)[Oo](?=[\d.,]|\b)/g,'$10').replace(/(^|[\s$])[Oo](?=\d)/g,'$10').replace(/(\d)[lI](?=\d)/g,'$11');
+  // typo'd labels (Quantlty, Fi1led, Comission…) → canonical
+  s=s.replace(/\b[A-Za-z][A-Za-z0-9]{3,11}\b/g,w=>{if(/^\d+$/.test(w)||w===w.toUpperCase()&&w.length<=5)return w;const lw=w.toLowerCase();if(_LEAP_LABELS.includes(lw))return w;
+    for(const L of _LEAP_LABELS){const d=_lev(lw,L);if(d===1&&L.length>=5||d===2&&L.length>=9)return w[0]===w[0].toUpperCase()?L[0].toUpperCase()+L.slice(1):L;}return w;});
+  s=s.replace(/(\d)([CcPp])\b/g,'$1 $2'); // 310c → 310 c
+  return s;
+}
+// Layout-agnostic extractor: finds each field independently anywhere in the text, scores contract candidates,
+// cross-checks price × qty × 100 against cost/amount lines. Returns fields + list of low-confidence ones.
+function leapFuzzy(s,B,today){
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12},pad=n=>String(n).padStart(2,'0');
+  const yr=y=>y.length===2?'20'+y:y,MON='(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\\.?';
+  const valid=(y,m,d)=>m>=1&&m<=12&&d>=1&&d<=31&&+y>=1990&&+y<=2100;
+  const infer=(m,d)=>{let y=+today.slice(0,4);if(`${y}-${pad(m)}-${pad(d)}`>today)y--;return`${y}-${pad(m)}-${pad(d)}`;};
+  // every date in the text, with position
+  const dates=[];const add=(re,fn)=>{for(const m of s.matchAll(re)){const r=fn(m);if(r&&!dates.some(x=>m.index<x.end&&x.i<m.index+m[0].length))dates.push({i:m.index,end:m.index+m[0].length,...r});}};
+  add(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g,m=>valid(m[1],+m[2],+m[3])&&{iso:`${m[1]}-${pad(m[2])}-${pad(m[3])}`,y:1});
+  add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,\\s*|\\s+)\'?(\\d{4}|\\d{2})\\b(?![:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()],y=yr(m[3]);return valid(y,mo,+m[2])&&{iso:`${y}-${pad(mo)}-${pad(m[2])}`,y:1};});
+  add(new RegExp('\\b(\\d{1,2})[\\s-]?'+MON+'[\\s-]?\'?(\\d{4}|\\d{2})\\b(?![:\\d])','gi'),m=>{const mo=MONS[m[2].toLowerCase()],y=yr(m[3]);return valid(y,mo,+m[1])&&{iso:`${y}-${pad(mo)}-${pad(m[1])}`,y:1};});
+  add(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4}|\d{2})\b/g,m=>{let a=+m[1],b=+m[2];if(a>12){const t=a;a=b;b=t;}const y=yr(m[3]);return valid(y,a,b)&&{iso:`${y}-${pad(a)}-${pad(b)}`,y:1};});
+  add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})\\b(?!\\s*[:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()];return valid(2000,mo,+m[2])&&{iso:infer(mo,+m[2]),y:0,mo,d:+m[2]};});
+  const low=[];const num=x=>parseFloat(String(x).replace(/[$,\s]/g,''));
+  const inDate=(a,b)=>dates.some(d=>a<d.end&&d.i<b);
+  let mask=s;dates.forEach(d=>{mask=mask.slice(0,d.i)+' '.repeat(d.end-d.i)+mask.slice(d.end);});
+  // ── contract ──
+  let best=null;
+  const occ=/\b([A-Za-z]{1,6})\s?(\d{2})(\d{2})(\d{2})([CP])(\d{8})\b/.exec(s);
+  if(occ)best={ticker:occ[1].toUpperCase(),expiry:`20${occ[2]}-${occ[3]}-${occ[4]}`,strike:+occ[6]/1000,type:occ[5],score:9,eI:occ.index};
+  const STOP=new Set('BUY SELL SOLD BOUGHT BOT SLD CALL PUT CALLS PUTS OPEN CLOSE TO OF AT THE LIMIT MARKET FILLED ORDER QTY PRICE FEE FEES USD GBP EUR ET EST EDT EDT CST PST GMT BST UTC PM AM AND YOU DAY FOR GOOD TYPE CONTRACT OPTION LONG SHORT BTO STO BTC STC ACCOUNT STATUS TOTAL NET COST DATE TRADE TIME SHS CORP INC CO ON AN A I IN IS WAS YOUR MY NEW ID NO OR VIA BY ROTH IRA ACT DESC SYMBOL CODE COMM C P'.split(' '));
+  const MONW=/^(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*$/i;
+  if(!best)for(const m of s.matchAll(/\b(calls?|puts?)\b|(?<=\d\s?)\b([CP])\b/gi)){
+    const k=m.index,type=(m[1]||m[2])[0].toUpperCase();
+    // strike: number nearest to the call/put word, not part of a date, not a qty
+    let st=null;for(const n of s.matchAll(/(?<![\w.,\/-])(\$?)(\d{1,5}(?:,\d{3})*(?:\.\d{1,3})?)(?![\w\/-]|[.,]\d)/g)){
+      const a=n.index,b=a+n[0].length;if(Math.abs((a<k?k-b:a-(k+m[0].length)))>40||inDate(a,b))continue;
+      const v=num(n[2]);if(!(v>=0.5&&v<=20000))continue;if(!n[1]&&!/\./.test(n[2])&&/^\s*(?:contracts?|x\b|shares?|shs|of\b)/i.test(s.slice(b,b+12))||/(?:price|amount|cost|total|fees?|commission|comm|proceeds|paid|debit|credit)\W{0,4}$/i.test(s.slice(Math.max(0,a-14),a))||/(?:[*#]|\bof\s|\bpage\s|\bref\W*)$/i.test(s.slice(Math.max(0,a-8),a))||/(?:qty|quantity|contracts?|bought|buy|sold|sell|@|at)\W{0,3}$/i.test(s.slice(Math.max(0,a-14),a)))continue;
+      const dist=Math.abs(a<k?k-b:a-(k+m[0].length))-(n[1]?6:0)-(/\./.test(n[2])?4:0);if(!st||dist<st.dist)st={v,dist,a,b};}
+    if(!st)continue;
+    let ex=null;const near=d=>Math.min(Math.abs(d.i-k),Math.abs(d.end-k),Math.abs(d.i-st.b),Math.abs(d.end-st.a));
+    dates.filter(d=>d.y).forEach(d=>{const dist=near(d);if(dist<=45&&(!ex||dist<ex.dist))ex={...d,dist};});
+    // yearless expiry right next to the contract ("$170 Call Nov 13") — year inferred later from the trade date
+    if(!ex)dates.filter(d=>!d.y).forEach(d=>{const dist=near(d);if(dist<=12&&(!ex||dist<ex.dist))ex={...d,dist,yl:true};});
+    let tk=null;const lo=Math.min(k,st.a);
+    for(const t of s.matchAll(/\(?\b([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b\)?/g)){
+      const w=t[1],W=w.toUpperCase(),a=t.index;if(STOP.has(W)||MONW.test(w)||inDate(a,a+t[0].length))continue;
+      const dist=a<lo?lo-a:a-Math.max(k,st.b);if(dist>45)continue;
+      const gap=((a<lo?mask.slice(a+t[0].length,lo):mask.slice(Math.max(k+m[0].length,st.b),a)).match(/\S+/g)||[]).length; // words between, dates don't count
+      const sc=gap*10+(w===W?0:3)+(a>lo?6:0)-(t[0].startsWith('(')?10:0);if(!tk||sc<tk.sc)tk={W,sc};}
+    if(!tk)continue;
+    const score=(ex?3:0)+3-st.dist/20-tk.sc/60-(ex?ex.dist/40:0);
+    if(!best||score>best.score)best={ticker:tk.W,strike:st.v,expiry:ex&&!ex.yl?ex.iso:'',yl:ex&&ex.yl?ex:null,type,score,eI:ex?ex.i:-1};
+  }
+  if(!best)return null;
+  if(!best.expiry&&!best.yl)low.push('expiry');
+  const notExp=d=>d.iso!==best.expiry&&d.i!==best.eI;
+  // ── trade date: labelled > account line (·) > any non-expiry date not after today ──
+  let date='';
+  for(const L of ['filled','trade\\s*date','executed','submitted','date','·','\\bon']){
+    const re=new RegExp(L+'(?:\\s*time)?\\W{0,4}','gi');for(const m of s.matchAll(re)){if(/settle(?:ment)?\W*$|expir\w*\W*$/i.test(s.slice(Math.max(0,m.index-12),m.index)))continue;const e=m.index+m[0].length;const d=dates.find(d=>d.i>=e&&d.i-e<=4&&notExp(d)&&d.iso<=today);if(d){date=d.iso;break;}}
+    if(date)break;}
+  // relative times on app confirmations: "· 30m", "2h ago", "Today", "Yesterday"
+  if(!date){const r=/(?:·|\bfilled|\bsubmitted|\bexecuted)\s*(?:(\d{1,3})\s*(?:m|min|mins|minutes?|h|hr|hrs|hours?|s|sec|secs)\b(?:\s+ago)?|(today|just now)|(yesterday))/i.exec(s);
+    if(r){const t=new Date(today+'T12:00:00Z');if(r[3])t.setUTCDate(t.getUTCDate()-1);date=t.toISOString().slice(0,10);}}
+  if(!date){const d=dates.filter(d=>notExp(d)&&d.iso<=today&&!/settle/i.test(s.slice(Math.max(0,d.i-16),d.i))).sort((a,b)=>a.i-b.i)[0];if(d){date=d.iso;low.push('date');}else low.push('date');}
+  // yearless expiry → next occurrence on/after the trade date (or today); always flagged for checking
+  if(best.yl){const base=date||today;let y=+base.slice(0,4);const md=`${pad(best.yl.mo)}-${pad(best.yl.d)}`;if(`${y}-${md}`<base)y++;best.expiry=`${y}-${md}`;low.push('expiry');}
+  // ── contracts ──
+  let qty=null,qsrc='';const ca=[...s.matchAll(/\b(\d{1,4})\s+(?:contracts?\s+)?(?:at|@)\s*\$?(\d[\d,]*(?:\.\d{1,4})?)(?![:\d])/gi)].filter(m=>!inDate(m.index,m.index+m[1].length)).pop(); // not the year of a date
+  if(ca){qty=+ca[1];qsrc='at';}
+  else{const m=/\b(?:quantity|qty|contracts?|filled\s+qty)\W{0,4}(-?\d{1,4})(?![\d.,\/])/i.exec(s)||/\b(?:buy|bought|bot|sell|sold|sld)\s+(?:to\s+open\s+)?(-?\d{1,4})\b(?![\d.,\/])/i.exec(s)||/\b(\d{1,4})\s+contracts?\b/i.exec(s);if(m){qty=Math.abs(+m[1]);qsrc='label';}}
+  if(!qty){qty=1;low.push('contracts');}
+  // ── fees: every fee/commission line ──
+  // each fee/commission label: value right after it, else the next small $ amount within 40 chars (label and value split by a stray line)
+  let fees=0,feeN=0,feeFar=false,feeMiss=false;for(const m of s.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+|contract\s+|clearing\s+|sec\s+|taf\s+|orf\s+)?fees?)\b(?!\s*(?:total|incl))/gi)){
+    const after=s.slice(m.index+m[0].length,m.index+m[0].length+44);const v0=/^\W{0,4}-?\(?\$?(\d+(?:\.\d+)?)/.exec(after),v=v0||/^[^$]{0,40}?\$(\d{1,2}\.\d{2})\b/.exec(after);if(v){fees+=+v[1];feeN++;if(!v0)feeFar=true;}else feeMiss=true;}
+  fees=Math.round(fees*100)/100;
+  if(feeFar||feeMiss||fees>qty*10+10)low.push('fees');
+  // ── price: filled/at/avg > plain price (not limit/est) > @ ──
+  let price=null,psrc='';
+  if(ca){price=num(ca[2]);psrc='at';}
+  else{const m=/(?:avg\.?|average|fill(?:ed)?)\s*(?:fill\s*)?price(?:\s+of)?\W{0,4}\$?([\d,]*\.?\d+)/i.exec(s)||/(?<!(?:limit|stop|est\.?|estimated|mark)\s{0,3})\bprice(?:\s+of)?\W{0,4}\$?([\d,]*\.?\d+)/i.exec(s)||/@\s*\$?([\d,]*\.?\d+)/.exec(s)||/\bat\s+\$([\d,]*\.?\d+)/i.exec(s);if(m){price=num(m[1]);psrc='label';}}
+  // cross-check with cost / amount lines
+  const amts=[...s.matchAll(/\b(?:est\.?\s+cost|cost|net\s+amount|amount|total|principal|proceeds|debit)\W{0,4}-?\(?\$?([\d,]+\.\d{2})/gi)].map(m=>num(m[1]))
+    .concat([...s.matchAll(/(?:^|\s)\$([\d]{1,3}(?:,\d{3})+\.\d{2}|\d{4,}\.\d{2})(?=\s|$)/g)].map(m=>num(m[1])));
+  const fits=p=>amts.some(A=>Math.abs(p*qty*100-A)<=0.02||Math.abs(p*qty*100+fees-A)<=Math.max(0.05,fees*0.05+0.02)||Math.abs(p*qty*100-fees-A)<=0.05);
+  if(price!=null&&!fits(price)&&psrc!=='at'&&amts.length){
+    // a different number in the text might be the real fill — pick one that reconciles
+    const alt=[...s.matchAll(/\$?(\d{1,5}\.\d{2,4})\b/g)].map(m=>num(m[1])).find(p=>p!==price&&fits(p));
+    if(alt!=null){price=alt;}else low.push('price');
+  }else if(price==null){
+    const A=amts.find(A=>A>0);if(A){price=Math.round((A-fees)/(qty*100)*100)/100;low.push('price');}else low.push('price');
+  }else if(!amts.length&&psrc!=='at'&&psrc!=='label')low.push('price');
+  return{ticker:best.ticker,strike:best.strike,expiry:best.expiry,type:best.type,qty,qsrc,price,fees,feeN,date,low};
+}
+function leapScan(text,B,today){
+  today=today||new Date().toISOString().slice(0,10);
+  text=leapNormalize(text);
+  if(text.replace(/\s/g,'').length<8)return{calls:[],rejected:[],error:'Paste a trade confirmation or statement line first.'};
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12},pad=n=>String(n).padStart(2,'0');
+  const num=s=>parseFloat(String(s).replace(/[,$]/g,''));
+  const anyDate=s=>{s=String(s||'');let m=/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i.exec(s);
+    const a=m?m.index:1e9;const m2=/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})\b/i.exec(s);
+    const n=/(\d{4}-\d{2}-\d{2})|\b\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}\b/.exec(s);
+    const c=[[a,m&&`${m[3]}-${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`],[m2?m2.index:1e9,m2&&`${m2[3]}-${pad(MONS[m2[2].slice(0,3).toLowerCase()])}-${pad(m2[1])}`],[n?n.index:1e9,n&&B.pickDate(n[0])]].filter(x=>x[1]).sort((x,y)=>x[0]-y[0]);
+    return c.length?c[0][1]:'';};
+  // contract: shared parser first, then two layouts it doesn't cover ("CALL AAPL 06/16/2028 250.00", "AMZN 2027-12-17 230.00 Call")
+  const findOpt=line=>{
+    const f=B.findOption(line);if(f)return f;
+    let m=/\b(CALL|PUT|Call|Put)\s+([A-Z][A-Z0-9.]{0,5})\s+(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$?(\d+(?:\.\d+)?)/.exec(line);
+    if(m)return{opt:{ticker:m[2],expiry:B.pickDate(m[3]),strike:+m[4],pc:m[1][0].toUpperCase()},start:m.index,end:m.index+m[0].length};
+    m=/\b([A-Z][A-Z0-9.]{0,5})\s+(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$?(\d+(?:\.\d+)?)\s+(Call|CALL|Put|PUT|C|P)\b/.exec(line);
+    if(m)return{opt:{ticker:m[1],expiry:B.pickDate(m[2]),strike:+m[3],pc:m[4][0].toUpperCase()},start:m.index,end:m.index+m[0].length};
+    return null;};
+  // "Filled Jul 23, 4:49 PM" (no year) → latest Jul 23 that isn't after today
+  const yearless=s=>{const m=/\b(?:filled|executed|submitted)\s*:?\s*(?:on\s+)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})\b(?!,?\s*\d{4}\b)/i.exec(s)||/·\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})\b(?!,?\s*\d{4}\b)/i.exec(s);
+    if(!m)return'';let y=+today.slice(0,4);const md=`${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`;if(`${y}-${md}`>today)y--;return`${y}-${md}`;};
+  const sideOf=s=>/\b(?:sell|sold|sld|sto|stc|write|wrote|short)\b/i.test(s)?'sell':/\b(?:buy|bought|bot|bto|btc|purchased?|long)\b/i.test(s)?'buy':'';
+  const effOf=s=>{const pe=/position\s+effect\s*:?\s*(open|close)/i.exec(s);if(pe)return pe[1].toLowerCase()==='open'?'open':'close';return effOf0(s);};
+  const effOf0=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
+  const verdict=c=>{
+    if(c.type!=='C')return'This is a put, not a call — LEAPs here are bought calls only.';
+    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close on the LEAP card instead.':'This is a sold call (sell to open) — use Sell call on the LEAP card (or log it on the wheel), not + LEAP.';
+    if(c.effect==='close')return'This is a buy-to-close (closing a short call) — not a new LEAP.';
+    if(!c.side)return'Couldn\'t tell whether this was bought or sold.';
+    return'';};
+  const out=[];
+  // CSV export (header row + rows)
+  const first=text.trim().split('\n')[0]||'';
+  if((first.match(/,/g)||[]).length>=3&&text.trim().split('\n').length>=2&&/date/i.test(first)){
+    const r=B.parseBrokerCSV(text);
+    if(!r.error){
+      (r.optionFills||[]).forEach(f=>out.push({ticker:f.ticker,strike:f.strike,expiry:f.expiry,type:f.type,side:'buy',effect:f.effect,qty:f.qty,price:f.price,fees:f.fees,date:f.date,src:r.broker}));
+      (r.rows||[]).forEach(x=>out.push({ticker:x.ticker,strike:x.strike,expiry:x.expiry,type:x.action==='CSP'?'P':'C',side:/^(CSP|STOC|STC)$/.test(x.action)?'sell':'buy',effect:/^(BTC|STC|EXP)$/.test(x.action)?'close':'open',qty:Math.round((x.shares||100)/100),price:x.premium,fees:x.fees,date:x.entered,src:r.broker}));
+    }
+  }else{
+    const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+    const isTab=l=>{const f=findOpt(l);if(!f)return false;const rest=l.slice(0,f.start)+' '+l.slice(f.end);
+      return(rest.match(/(?:^|\s)[-(]?[$£€]?\d[\d,]*(?:\.\d+)?\)?(?=\s|$)/g)||[]).length>=3&&(rest.match(/\b[A-Za-z]{3,}\b/g)||[]).length<=3;};
+    const tab=lines.filter(isTab);
+    if(tab.length){
+      // statement lines (IBKR activity/Trades section style) — numbers from the shared statement parser, direction from the line
+      const P=B.parseStatementText(text),pool=[...(P.rows||[]).map(x=>({ticker:x.ticker,strike:x.strike,expiry:x.expiry,qty:Math.round((x.shares||100)/100),price:x.premium,fees:x.fees,date:x.entered})),
+        ...(P.optionFills||[]).map(f=>({ticker:f.ticker,strike:f.strike,expiry:f.expiry,qty:f.qty,price:f.price,fees:f.fees,date:f.date}))];
+      tab.forEach(l=>{const f=findOpt(l),o=f.opt,rest=l.slice(0,f.start)+' '+l.slice(f.end);
+        const i=pool.findIndex(p=>p.ticker===o.ticker&&+p.strike===+o.strike&&p.expiry===o.expiry);const p=i>-1?pool.splice(i,1)[0]:{};
+        const clean=rest.replace(/\d{4}-\d{2}-\d{2}(?:,?\s+\d{1,2}:\d{2}(?::\d{2})?)?|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ');
+        const q=/(?:^|\s)(-?\d{1,4})(?=\s|$)/.exec(clean);const code=/(?:^|\s)([OC])(?:;[A-Za-z]+)*\s*$/.exec(rest);
+        out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest)||(q?(+q[1]<0?'sell':'buy'):''),
+          effect:effOf(rest)||(code?(code[1]==='O'?'open':'close'):'open'),qty:p.qty||(q?Math.abs(+q[1]):1),price:p.price??null,fees:Math.abs(p.fees||0)||(()=>{let x=0;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?|fees?)\W{0,3}-?\$?(\d+(?:\.\d+)?)/gi))x+=+m[1];return Math.round(x*100)/100;})(),date:p.date||anyDate(rest),src:P.broker||'Statement'});});
+    }else{
+      // single confirmation — fields may be spread over several lines
+      const flat=lines.join(' '),f=findOpt(flat);
+      let fz=null;try{fz=leapFuzzy(flat,B,today);}catch(e){fz=null;}
+      if(!f&&fz&&fz.ticker&&fz.strike&&fz.expiry){
+        out.push({ticker:fz.ticker,strike:fz.strike,expiry:fz.expiry,type:fz.type,side:sideOf(flat),effect:effOf(flat)||'open',qty:fz.qty,price:fz.price,fees:fz.fees,date:fz.date,src:'SmartScan (fuzzy)',low:fz.low.slice()});
+      }
+      if(f){const o=f.opt,rest=flat.slice(0,f.start)+' '+flat.slice(f.end);
+        const ca=[...rest.matchAll(/\b(\d{1,4})\s+contracts?\s+at\s+\$?([\d,]*\.?\d+)/gi)].pop(); // Robinhood "3 contracts at $60.35" (filled, last wins)
+        const qm=ca?[0,ca[1]]:/(?:quantity|qty|contracts?)\s*:?\s*(\d{1,4})\b/i.exec(rest)||/\b(?:buy|bought|bot)\s+(\d{1,4})\b/i.exec(rest)||/\b(\d{1,4})\s+contracts?\b/i.exec(rest);
+        const pm=ca?[0,ca[2]]:/(?:avg\.?|average)\s*(?:fill\s*)?price(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/(?<!limit\s)\bprice(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/@\s*\$?([\d,]*\.?\d+)/.exec(rest);
+        let fees=0,feeN=0,feeOdd=false;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+)?fees?)\s*:?\s*\(?-?\$?(\d+(?:\.\d+)?)/gi)){fees+=+m[1];feeN++;if(!/\./.test(m[1]))feeOdd=true;}
+        const dl=/(?:trade\s*date|filled(?:\s*time)?|executed(?:\s+at[^\d]*?)?|(?<!settle(?:ment)?\s)date)\s*:?\s*(?:on\s+)?((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i.exec(rest);
+        const onD=/\bon\s+((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/i.exec(rest);
+        out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest),effect:effOf(rest)||'open',qty:qm?+qm[1]:1,price:pm?num(pm[1]):null,
+          fees:Math.round(fees*100)/100,date:anyDate(dl?dl[1]:onD?onD[1]:rest)||yearless(rest),src:'Confirmation',low:[]});
+        // fill gaps from the layout-agnostic pass (same contract only)
+        const c=out[out.length-1];
+        if(fz&&fz.ticker===c.ticker&&+fz.strike===+c.strike){
+          if(c.price==null&&fz.price!=null){c.price=fz.price;}if(!c.date&&fz.date)c.date=fz.date;if(!qm&&fz.qsrc)c.qty=fz.qty;if(fz.fees&&fz.feeN>feeN)c.fees=fz.fees;
+          if(c.price!=null&&fz.price!=null&&c.price!==fz.price&&!fz.low.includes('price')&&!ca)c.price=fz.price; // reconciled with the cost/amount line
+          fz.low.forEach(k=>{if(k==='price'&&(pm||ca)||k==='contracts'&&qm||k==='date'&&(dl||onD))return;c.low.push(k);});
+        }
+        if(feeOdd||c.fees>c.qty*10+10)c.low.push('fees');
+        if(!qm&&!(fz&&fz.qsrc))c.low.push('contracts');if(c.price==null)c.low.push('price');if(!c.date)c.low.push('date');
+        c.low=[...new Set(c.low)];}
+    }
+  }
+  const calls=[],rejected=[];
+  out.forEach(c=>{c.why=verdict(c);(c.why?rejected:calls).push(c);});
+  const error=calls.length?'':rejected.length?(rejected.length===1?rejected[0].why:`No bought calls found — ${rejected.length} other option trade${rejected.length>1?'s':''} (sold, puts or closes) were skipped.`)
+    :'Couldn\'t find an option contract (ticker, expiry, strike and Call) in that text.';
+  return{calls,rejected,error};
+}
+// ── Add / edit modal (multi-leg — used for "Other options" edits; builder kept in code) ──
+function _optLegRow(l={}){
+  return`<div class="opt-leg" style="display:grid;grid-template-columns:5rem 4.375rem 1fr 1.3fr 3.75rem 1fr 1.625rem;gap:0.3125rem;margin-bottom:0.3125rem">
+    <select class="ol-side"><option value="long"${l.side!=='short'?' selected':''}>Long</option><option value="short"${l.side==='short'?' selected':''}>Short</option></select>
+    <select class="ol-type"><option value="C"${l.type!=='P'?' selected':''}>Call</option><option value="P"${l.type==='P'?' selected':''}>Put</option></select>
+    <input class="ol-strike" type="number" step="0.01" placeholder="Strike" value="${l.strike??''}">
+    <input class="ol-expiry" type="date" value="${l.expiry||''}">
+    <input class="ol-qty" type="number" step="1" min="1" placeholder="Qty" value="${l.qty??1}">
+    <input class="ol-price" type="number" step="0.0001" placeholder="Price/sh" value="${l.entryPrice??''}">
+    <button class="btn btn-ghost btn-icon" onclick="this.parentNode.remove()" title="Remove leg">✕</button></div>`;
+}
+function _optWheelOptions(sel){return`<option value="">— not attached —</option>`+db.wheels.map(w=>`<option value="${w.id}"${w.id===sel?' selected':''}>${esc(w.ticker)} · ${esc(w.label||'')}${w.status!=='open'?' (closed)':''}</option>`).join('');}
+function openOptAdd(){
+  document.getElementById('mOptTitle').textContent='Add option position';
+  document.getElementById('of-group').value='';
+  document.getElementById('of-und').value='';document.getElementById('of-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('of-fees').value='0';document.getElementById('of-notes').value='';document.getElementById('of-paste').value='';
+  document.getElementById('of-wheel').innerHTML=_optWheelOptions('');
+  document.getElementById('of-legs').innerHTML=_optLegRow();
+  document.getElementById('of-mark-wrap').style.display='none';document.getElementById('of-del').style.display='none';
+  document.getElementById('of-addleg').style.display='';
+  openModal('mOpt');
+}
+function openOptEdit(gid){
+  const legs=(db.opts||[]).filter(l=>(l.groupId||l.id)===gid);if(!legs.length)return;
+  document.getElementById('mOptTitle').textContent='Edit position';
+  document.getElementById('of-group').value=gid;
+  document.getElementById('of-und').value=legs[0].underlying;document.getElementById('of-date').value=legs[0].entryDate||'';
+  document.getElementById('of-fees').value=legs.reduce((s,l)=>s+(+l.fees||0),0).toFixed(2);document.getElementById('of-notes').value=legs[0].notes||'';
+  document.getElementById('of-wheel').innerHTML=_optWheelOptions(legs[0].wheelId||'');
+  document.getElementById('of-legs').innerHTML=legs.map(l=>_optLegRow(l).replace('class="opt-leg"',`class="opt-leg" data-id="${l.id}"`)).join('');
+  const mw=document.getElementById('of-mark-wrap');mw.style.display='';
+  mw.innerHTML=legs.filter(l=>l.status==='open').map(l=>`<div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:0.3125rem;margin-bottom:0.25rem;align-items:center" data-mark="${l.id}"><span style="font-size:0.75rem">${l.side} ${fmt2(l.strike)}${l.type} ${esc(l.expiry)}</span><input class="om-mark" type="number" step="0.01" placeholder="Mark/sh" value="${l.mark??''}"><input class="om-iv" type="number" step="0.01" placeholder="IV % (opt.)" value="${l.iv?(l.iv*100).toFixed(1):''}"></div>`).join('')||'<span style="font-size:0.75rem;color:var(--text3)">Position closed</span>';
+  document.getElementById('of-del').style.display='';document.getElementById('of-addleg').style.display='';
+  openModal('mOpt');
+}
+function optAddLeg(){document.getElementById('of-legs').insertAdjacentHTML('beforeend',_optLegRow());}
+function optParsePaste(){
+  const txt=document.getElementById('of-paste').value;if(!txt.trim())return;
+  const p=BCSV.parseStatementText(txt);
+  const fills=(p.optionFills||[]).filter(f=>f.effect==='open');
+  const wheelOpens=(p.rows||[]).filter(r=>r.action==='CSP'||r.action==='STOC').map(r=>({ticker:r.ticker,side:'short',type:r.action==='CSP'?'P':'C',strike:r.strike,expiry:r.expiry,qty:r.shares/100,price:r.premium,fees:r.fees,date:r.entered}));
+  const all=[...fills,...wheelOpens];
+  if(!all.length){alert('Couldn\'t find an opening option fill in that text.');return;}
+  document.getElementById('of-und').value=all[0].ticker;document.getElementById('of-date').value=all[0].date||'';
+  document.getElementById('of-fees').value=all.reduce((s,f)=>s+(+f.fees||0),0).toFixed(2);
+  document.getElementById('of-legs').innerHTML=all.map(f=>_optLegRow({side:f.side,type:f.type,strike:f.strike,expiry:f.expiry,qty:f.qty,entryPrice:f.price})).join('');
+}
+function saveOpt(){
+  const und=document.getElementById('of-und').value.trim().toUpperCase();if(!und){alert('Enter the underlying ticker');return;}
+  const date=document.getElementById('of-date').value,fees=parseFloat(document.getElementById('of-fees').value)||0;
+  const notes=document.getElementById('of-notes').value.trim(),wheelId=document.getElementById('of-wheel').value||null;
+  const rows=[...document.querySelectorAll('#of-legs .opt-leg')];if(!rows.length){alert('Add at least one leg');return;}
+  const gid=document.getElementById('of-group').value||uid();
+  const keep=new Set();
+  rows.forEach((r,i)=>{
+    const id=r.dataset.id||uid();keep.add(id);
+    const old=(db.opts||[]).find(l=>l.id===id)||{status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null};
+    const leg={...old,id,groupId:gid,underlying:und,side:r.querySelector('.ol-side').value,type:r.querySelector('.ol-type').value,strike:parseFloat(r.querySelector('.ol-strike').value)||null,expiry:r.querySelector('.ol-expiry').value||null,qty:parseInt(r.querySelector('.ol-qty').value)||1,entryPrice:parseFloat(r.querySelector('.ol-price').value)||0,entryDate:date,fees:Math.round(fees/rows.length*100)/100,wheelId,notes};
+    const mr=document.querySelector(`[data-mark="${id}"]`);
+    if(mr){const mv=mr.querySelector('.om-mark').value,iv=mr.querySelector('.om-iv').value;
+      if(mv!==''&&+mv!==+old.mark){leg.mark=+mv;leg.markSrc='manual';leg.markAt=new Date().toISOString();leg.delta=null;leg.theta=null;}
+      leg.iv=iv!==''?(+iv)/100:(leg.markSrc==='manual'?null:leg.iv??null);}
+    const i0=(db.opts=db.opts||[]).findIndex(l=>l.id===id);if(i0>-1)db.opts[i0]=leg;else db.opts.push(leg);
+    _saveOpt(leg);
+  });
+  // legs removed from an existing group
+  (db.opts||[]).filter(l=>(l.groupId||l.id)===gid&&!keep.has(l.id)).forEach(l=>_deleteOptDoc(l.id));
+  db.opts=db.opts.filter(l=>(l.groupId||l.id)!==gid||keep.has(l.id));
+  closeModal('mOpt');render();
+}
+function deleteOptGroup(){
+  const gid=document.getElementById('of-group').value;if(!gid||!confirm('Delete this position and all its legs?'))return;
+  db.opts.filter(l=>(l.groupId||l.id)===gid).forEach(l=>_deleteOptDoc(l.id));
+  db.opts=db.opts.filter(l=>(l.groupId||l.id)!==gid);closeModal('mOpt');render();
+}
+// ── Close / roll / expire ──
+function openOptClose(gid,mode){
+  const legs=(db.opts||[]).filter(l=>(l.groupId||l.id)===gid&&l.status==='open');if(!legs.length)return;
+  document.getElementById('oc-group').value=gid;document.getElementById('oc-mode').value=mode;
+  document.getElementById('mOptCloseTitle').textContent=mode==='roll'?'Roll position':'Close position';
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('oc-legs').innerHTML=legs.map(l=>`<div class="oc-leg" data-id="${l.id}" style="border-top:1px solid var(--border);padding-top:0.375rem;margin-top:0.375rem">
+    <div style="font-size:0.75rem;margin-bottom:0.25rem">${l.side==='long'?'Long':'Short'} ${l.qty}× ${esc(l.underlying)} ${fmt2(l.strike)}${l.type} ${esc(l.expiry)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.3125rem">
+      <div class="fld"><label>Close price/sh</label><input class="oc-price" type="number" step="0.0001" value="${l.mark??''}"></div>
+      <div class="fld"><label>Date</label><input class="oc-date" type="date" value="${today}"></div>
+      <div class="fld"><label>Fees</label><input class="oc-fees" type="number" step="0.01" value="0"></div>
+      <div class="fld"><label>Outcome</label><select class="oc-how"><option value="closed">Closed</option><option value="expired">Expired worthless</option><option value="assigned">Assigned/exercised</option></select></div>
+    </div>
+    ${mode==='roll'?`<div style="display:grid;grid-template-columns:1fr 1.3fr 1fr 1fr;gap:0.3125rem;margin-top:0.3125rem">
+      <div class="fld"><label>New strike</label><input class="or-strike" type="number" step="0.01" value="${l.strike}"></div>
+      <div class="fld"><label>New expiry</label><input class="or-expiry" type="date" value="${l.expiry}"></div>
+      <div class="fld"><label>New price/sh</label><input class="or-price" type="number" step="0.0001"></div>
+      <div class="fld"><label>New fees</label><input class="or-fees" type="number" step="0.01" value="0"></div></div>`:''}
+  </div>`).join('');
+  openModal('mOptClose');
+}
+function saveOptClose(){
+  const mode=document.getElementById('oc-mode').value;
+  for(const r of document.querySelectorAll('#oc-legs .oc-leg')){
+    const i=db.opts.findIndex(l=>l.id===r.dataset.id);if(i<0)continue;const l=db.opts[i];
+    const how=r.querySelector('.oc-how').value,price=r.querySelector('.oc-price').value,date=r.querySelector('.oc-date').value,fees=r.querySelector('.oc-fees').value;
+    if(how==='closed'&&price===''){alert('Enter a close price (or choose Expired)');return;}
+    let closed=how==='expired'?{...OPTS.expireLeg(l),closeDate:date||l.expiry}:OPTS.closeLeg(l,how==='assigned'?0:price,date,fees);
+    if(how==='assigned'){closed.status='assigned';closed.closePrice=0;closed.notes=((l.notes?l.notes+' · ':'')+`Assigned/exercised ${date||l.expiry}`);} // recorded in Options only — no share trades
+    if(mode==='roll'){
+      const np=r.querySelector('.or-price').value;if(np===''){alert('Enter the new leg price');return;}
+      const[c,nl]=OPTS.rollLeg(l,{price:how==='closed'?price:0,date,fees},{strike:r.querySelector('.or-strike').value,expiry:r.querySelector('.or-expiry').value,price:np,fees:r.querySelector('.or-fees').value},uid());
+      closed={...c,status:closed.status};db.opts.push(nl);_saveOpt(nl);
+    }
+    db.opts[i]=closed;_saveOpt(closed);
+  }
+  closeModal('mOptClose');render();
+}
+// ── Live marks: CBOE delayed chain via Netlify proxy; graceful fallback to manual marks + local BS greeks ──
+let _optMarksAt=0;
+async function fetchOptionMarks(force){
+  const open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
+  if(!open.length){_optMarkStatus='';return;}
+  if(!force&&Date.now()-_optMarksAt<5*60e3)return;_optMarksAt=Date.now();
+  const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
+  let ok=0,miss=0,failU=[];
+  for(const[u,ls]of Object.entries(byU)){
+    try{
+      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${ls.map(OPTS.occ).join(',')}`,{signal:AbortSignal.timeout(15000)});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const j=await r.json();
+      if(j.spot>0)quotes[u]=quotes[u]||{price:j.spot,prev:j.spot,change:0,pct:0,state:'DELAYED'};
+      ls.forEach(l=>{
+        const c=j.contracts&&j.contracts[OPTS.occ(l)];
+        if(!c){miss++;return;}
+        const mid=c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last||null);
+        if(mid==null){miss++;return;}
+        if(l.markSrc==='manual'&&!force)return; // a manual mark wins until the user refreshes explicitly
+        Object.assign(l,{mark:Math.round(mid*100)/100,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
+        _saveOpt(l);ok++;
+      });
+    }catch(e){failU.push(u);console.warn('Option marks:',u,e.message);}
+  }
+  _optMarkStatus=failU.length&&!ok?'Live marks unavailable — using manual marks':`Marks: ${ok} updated (delayed)${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
+  if(view==='options')render();
 }
 
 function renderSidebar(){
@@ -1584,7 +2765,7 @@ function renderSidebar(){
   // Health badge on the Dashboard nav item — visible from any view
   const _hb=document.getElementById('nav-health-badge');
   if(_hb){
-    const _hi=runDataHealth();
+    const _hi=allDataHealth();
     if(_hi.length){
       const worst=_hi.some(i=>i.sev==='red')?'#ef4444':_hi.some(i=>i.sev==='amber')?'#fbbf24':'#6b7280';
       _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:0.625rem;font-weight:700;border-radius:0.5625rem;padding:1px 0.4375rem;line-height:1.4">${_hi.length}</span>`;
@@ -2212,6 +3393,12 @@ function renderLog(){
 // ── DATA HEALTH ──
 // Detects inconsistent trade records. Detect-and-ask only — never mutates anything.
 // One lifecycle walk per rotation: tracks open option legs + a running share ledger.
+// wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
+function allDataHealth(){
+  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+esc(i.text)}));}catch(e){console.warn('options health',e);}
+  return runDataHealth().concat(o);
+}
+function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
 function runDataHealth(){
   const issues=[]; // {sev:'red'|'amber'|'grey', tradeId, text}
   const today=new Date().toISOString().slice(0,10);
@@ -2457,7 +3644,7 @@ function renderDash(){
   const alerts=buildDashAlerts();
 
   // ── Data Health panel ──
-  const health=runDataHealth();
+  const health=allDataHealth();
   const hRed=health.filter(i=>i.sev==='red').length;
   const hAmber=health.filter(i=>i.sev==='amber').length;
   const hGrey=health.filter(i=>i.sev==='grey').length;
@@ -2471,7 +3658,7 @@ function renderDash(){
       <div style="display:flex;align-items:center;gap:0.625rem;padding:0.5625rem 1rem 0">
         <span class="d-alert-dot" style="background:${sevDot[i.sev]};flex-shrink:0"></span>
         <span style="font-size:0.75rem;color:var(--text2);line-height:1.5;flex:1">${i.text}</span>
-        ${i.tradeId?`<button class="btn btn-ghost" style="font-size:0.625rem;padding:0.1875rem 0.625rem;flex-shrink:0" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button>`:''}
+        ${i.tradeId?`<button class="btn btn-ghost" style="font-size:0.625rem;padding:0.1875rem 0.625rem;flex-shrink:0" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button>`:i.legId?`<button class="btn btn-ghost" style="font-size:0.625rem;padding:0.1875rem 0.625rem;flex-shrink:0" onclick="goToOpt('${i.legId}')">Go to</button>`:''}
       </div>
       ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
     </div>`;
@@ -2624,7 +3811,7 @@ function renderDash(){
     <!-- Data Health -->
     ${healthPanel}
 
-    <!-- Monthly Premium — full width -->
+    <!-- Monthly Wheel Premium — full width -->
     <div class="d-panel">
       <div class="d-panel-hdr"><span class="d-panel-title">Monthly Premium</span></div>
       <div class="d-panel-body" style="padding:0.875rem 1rem">
@@ -3091,7 +4278,7 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.mb').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);});});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mb.open').forEach(el=>closeModal(el.id));});
 
-function openImport(){openModal('mImport');}
+function openImport(){openModal('mImport');initImportDrop();}
 const ACTION_MAP={'csp: cash secured put':'CSP','btc: buy to close':'BTC','stoc: sell to open call':'STOC','stc: sell to close':'STC','in: buy shares':'IN','out: sell shares':'OUT','div: dividend':'DIV','stop: sell to open put':'CSP','acc: assigned covered call':'OUT','acp: assigned cash put':'IN','exp: expired worthless':'EXP','csp':'CSP','btc':'BTC','stoc':'STOC','stc':'STC','in':'IN','out':'OUT','div':'DIV','stop':'CSP','acc':'OUT','acp':'IN','exp':'EXP'};
 const VALID_ACTIONS=new Set(['CSP','BTC','STOC','STC','IN','OUT','DIV','EXP']);
 function parseCSVLine(line){const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur.trim());cur='';}else cur+=ch;}r.push(cur.trim());return r;}
@@ -3127,29 +4314,465 @@ function normDate(s){
   if(/^\d{4}\/\d{2}\/\d{2}$/.test(s)){const[y,mo,d]=s.split('/');return`${y}-${mo}-${d}`;}
   return s;
 }
+// ── Broker-agnostic CSV import (pure; tested from node via tests/brokerimport.test.js) ──
+function brokerCSVLib(){
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  const pad=n=>String(n).padStart(2,'0');
+  let _dmy=false;
+  // whole-document day-first detection: any a/b/yyyy with a>12, or UK/EU broker
+  const sniffDMY=t=>{let dm=false,md=false;for(const m of String(t).matchAll(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/g)){if(+m[1]>12)dm=true;if(+m[2]>12)md=true;}return dm&&!md?true:md?false:/trading ?212|etoro|\bgbp\b|£/i.test(t);};
+  const yr=y=>{y=parseInt(y,10);return y<100?2000+y:y;};
+  // Full-text CSV parser: quotes, "" escapes, commas/newlines inside quotes, CRLF, BOM
+  function parseCSVText(text){
+    text=String(text||'').replace(/^\uFEFF/,'');
+    const rows=[];let row=[],cur='',q=false;
+    for(let i=0;i<text.length;i++){
+      const ch=text[i];
+      if(q){
+        if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}
+        else cur+=ch;
+      }else if(ch==='"')q=true;
+      else if(ch===','){row.push(cur.trim());cur='';}
+      else if(ch==='\n'||ch==='\r'){
+        if(ch==='\r'&&text[i+1]==='\n')i++;
+        row.push(cur.trim());rows.push(row);row=[];cur='';
+      }else cur+=ch;
+    }
+    if(cur!==''||row.length){row.push(cur.trim());rows.push(row);}
+    return rows.filter(r=>r.some(c=>c!==''));
+  }
+  // "$1,234.50" "(12.00)" "-3" → number, or NaN
+  function num(s){
+    if(s==null)return NaN;s=String(s).trim();if(!s||s==='--')return NaN;
+    let neg=false;
+    if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1);}
+    s=s.replace(/[$£€,\s]/g,'');
+    if(s.endsWith('-')){neg=!neg;s=s.slice(0,-1);}
+    const n=parseFloat(s);return isNaN(n)?NaN:(neg?-n:n);
+  }
+  // Pull the first date out of "01/10/2025 as of 01/09/2025", "2025-01-10, 10:32", "20250110;103211", ISO times
+  function pickDate(s){
+    s=String(s||'').trim();if(!s)return'';
+    let m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
+    m=/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/.exec(s);if(m){let a=+m[1],b=+m[2];if(a>12||(_dmy&&b<=12)){const t=a;a=b;b=t;}return`${yr(m[3])}-${pad(a)}-${pad(b)}`;}
+    m=/^(\d{4})(\d{2})(\d{2})\b/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
+    const d=normDate(s.split(/[,;T]/)[0]);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
+  }
+  // Option contract from OCC symbols or human descriptions → {ticker,expiry,strike,pc}
+  function parseOption(s){
+    if(!s)return null;s=String(s).trim();let m;
+    const T='([A-Z][A-Z0-9.]{0,9})';
+    // OCC: "AAPL  250117P00150000" / "AAPL250117P00150000" / ".AAPL250117P150" / "-AAPL250117P150"
+    m=new RegExp('^[-.]?'+T+'\\s*(\\d{2})(\\d{2})(\\d{2})([CP])(\\d{8}|\\d+(?:\\.\\d+)?)$').exec(s.toUpperCase());
+    if(m){const k=m[6].length===8&&!m[6].includes('.')?parseInt(m[6],10)/1000:parseFloat(m[6]);return{ticker:m[1],expiry:`${yr(m[2])}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
+    const PC='(PUT|CALL|P|C)';
+    const fin=(t,y,mo,d,k,pc)=>({ticker:t.toUpperCase(),expiry:`${yr(y)}-${pad(mo)}-${pad(d)}`,strike:parseFloat(String(k).replace(/[$,]/g,'')),pc:pc.toUpperCase()[0]});
+    const U=s.toUpperCase();
+    // "AAPL 01/17/2025 150.00 P" / "AAPL 1/17/2025 Put $150.00" / "AAPL 01/17/25 150 P"
+    m=new RegExp('^'+T+'\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\s+(?:'+PC+'\\s+\\$?([\\d.,]+)|\\$?([\\d.,]+)\\s+'+PC+')\\b').exec(U);
+    if(m)return fin(m[1],m[4],m[2],m[3],m[6]||m[7],m[5]||m[8]);
+    // "AAPL $150 Put 1/17/2025"
+    m=new RegExp('^'+T+'\\s+\\$([\\d.,]+)\\s+(PUT|CALL)\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\b').exec(U);
+    if(m)return fin(m[1],m[6],m[4],m[5],m[2],m[3]);
+    // IBKR "AAPL 17JAN25 150 P"
+    m=new RegExp('^'+T+'\\s+(\\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\\d{2,4})\\s+\\$?([\\d.]+)\\s+'+PC+'\\b').exec(U);
+    if(m)return fin(m[1],m[4],MONS[m[3].toLowerCase()],m[2],m[5],m[6]);
+    // E*Trade "AAPL Jan 17 '25 $150 Put"
+    m=new RegExp('^'+T+"\\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\\w*\\s+(\\d{1,2}),?\\s+'?(\\d{2,4})\\s+\\$?([\\d.]+)\\s+"+PC+'\\b').exec(U);
+    if(m)return fin(m[1],m[4],MONS[m[2].toLowerCase()],m[3],m[5],m[6]);
+    // Robinhood app "TSLA $310 Call Mar 19, 2027" / "TSLA 152.5 Put Jan 15 2027" / "TSLA $310 Call Mar 19 '27"
+    m=new RegExp('^'+T+"\\s+\\$?([\\d.,]+)\\s+(PUT|CALL)\\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\\.?\\s+(\\d{1,2})(?:,\\s*|\\s+)'?(\\d{4}|\\d{2})\\b(?![:\\d])").exec(U);
+    if(m)return fin(m[1],m[6],MONS[m[4].toLowerCase()],m[5],m[2],m[3]);
+    // Fidelity "... PUT (AAPL) APPLE INC JAN 17 25 $150 (100 SHS)"
+    m=/\b(PUT|CALL)\s+\(([A-Z][A-Z0-9.]{0,9})\).*?\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{1,2})\s+(\d{2,4})\s+\$([\d.,]+)/.exec(U);
+    if(m)return fin(m[2],m[5],MONS[m[3].toLowerCase()],m[4],m[6],m[1]);
+    return null;
+  }
+  const norm=h=>String(h||'').toLowerCase().replace(/\(\$\)/g,'').replace(/\s+/g,' ').trim();
+  const SYN={
+    date:['activity date','trade date','run date','transactiondate','transaction date','date/time','tradedate','filled time','date','time','trade time'],
+    symbol:['symbol','instrument','ticker','security','contract','financial instrument'],
+    underlying:['underlying symbol','underlying','root symbol','root'],
+    desc:['description','name','security description'],
+    action:['trans code','action','transaction type','transactiontype','activity','sub type','type','side','buy/sell','open/close','code','activity type'],
+    qty:['quantity','qty','filled','contracts','shares'],
+    price:['price','average price','avg price','t. price','trade price','tradeprice','execution price'],
+    fees:['fees','commission','commissions','comm/fee','fees & comm','ibcommission','reg fee','fee'],
+    amount:['amount','net amount','proceeds','value','net cash','netcash','total'],
+    expiry:['expiration date','expiration','expiry','exp date','expiry date'],
+    strike:['strike price','strike'],
+    pc:['call or put','put/call','put call','option type','right','call/put'],
+    status:['status']
+  };
+  const MULTI=new Set(['action','fees']);
+  function mapCols(hdr){
+    const h=hdr.map(norm),C={};
+    for(const k in SYN){
+      const idx=[];
+      SYN[k].forEach(s=>{h.forEach((x,i)=>{if(x===s&&!idx.includes(i))idx.push(i);});});
+      C[k]=MULTI.has(k)?idx:(idx.length?idx[0]:-1);
+    }
+    // prefer filled over total qty, avg price over limit price
+    return C;
+  }
+  function detectBroker(hdr,firstCell){
+    const h=hdr.map(norm),has=s=>h.includes(s);
+    if(has('ticker')&&has('action')&&has('entered'))return'CoveredWheel';
+    if(firstCell==='trades'||has('t. price')||has('comm/fee')||has('ibcommission'))return'Interactive Brokers';
+    if(has('trans code')&&has('instrument'))return'Robinhood';
+    if(has('underlying symbol')||(has('sub type')&&has('instrument type')))return'Tastytrade';
+    if(has('fees & comm'))return'Schwab';
+    if(has('run date'))return'Fidelity';
+    if(has('transactiondate')||has('transactiontype'))return'E*Trade';
+    if(has('filled time')||(has('side')&&has('placed time')))return'Webull';
+    if(has('price / share')||has('no. of shares'))return'Trading 212';
+    if(has('position id')||(has('units')&&has('details')))return'eToro';
+    return'Generic';
+  }
+  function findHeader(rows){
+    let best=-1,bestScore=0;
+    const all=new Set([].concat(...Object.values(SYN)).concat(['ticker','entered']));
+    for(let i=0;i<Math.min(rows.length,40);i++){
+      const r=rows[i];const cells=(r[0]==='Trades'&&r[1]==='Header')?r.slice(2):r;
+      const score=cells.filter(c=>all.has(norm(c))).length;
+      if(score>bestScore&&cells.length>=3){best=i;bestScore=score;}
+    }
+    return bestScore>=3?best:-1;
+  }
+  // Decide WheelHouse action from broker wording; returns action code, 'SKIP:<why>', or ''
+  function classify(text,opt,qty,broker){
+    let t=' '+String(text||'').toLowerCase().replace(/[_]/g,' ').replace(/\s+/g,' ')+' ';
+    const pc=opt?opt.pc:'';
+    const w=re=>re.test(t);
+    if(!opt){
+      if(w(/dividend|\bcdiv\b|\bdiv\b/))return'SKIP:dividend';
+      if(w(/transfer|deposit|withdraw|\bach\b|journal|interest|wire|\bfee\b|sweep|\bacati?s?\b/))return'SKIP:cash/transfer';
+      return'SKIP:not an option trade';
+    }
+    if(w(/\boexp\b|expir|\bep\b/))return'EXP';
+    if(w(/\boasgn\b|assign|exercis/)||(broker==='Interactive Brokers'&&w(/\ba\b/)))return pc==='P'?'IN':'OUT';
+    // shorthand codes
+    t=t.replace(/\bsto\b/g,' sell to open ').replace(/\bbtc\b/g,' buy to close ').replace(/\bbto\b/g,' buy to open ').replace(/\bstc\b/g,' sell to close ');
+    const sell=w(/\bsell|\bsold\b|\bshort\b/),buy=w(/\bbuy|\bbought\b/);
+    let open=w(/\bopen(ing)?\b/),close=w(/\bclos(e|ing)\b/);
+    if(broker==='Interactive Brokers'&&!open&&!close){if(w(/\bo\b/))open=true;if(w(/\bc\b/))close=true;}
+    let isSell=sell&&!buy,isBuy=buy&&!sell;
+    if(!isSell&&!isBuy&&!isNaN(qty)&&qty!==0){isSell=qty<0;isBuy=qty>0;}
+    if(!open&&!close&&(broker==='Webull'||broker==='Statement')){open=isSell;close=isBuy;}
+    if(isSell&&open)return pc==='P'?'CSP':'STOC';
+    if(isBuy&&close)return'BTC';
+    if(isSell&&close)return'STC';
+    if(isBuy&&open)return'BTO'; // long option — routed to Options positions, never to the wheel
+    return'';
+  }
+  function parseNative(text){
+    const rows=[],bad=[];
+    const lines=text.split('\n');
+    const hdr=lines[0].split(',').map(h=>h.replace(/['"]/g,'').trim().toLowerCase().replace(/:$/,''));
+    const col=n=>hdr.indexOf(n);
+    const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),verified:col('verified'),comment:col('comment')};
+    for(let i=1;i<lines.length;i++){
+      const line=lines[i].trim();if(!line)continue;
+      const v=parseCSVLine(line);
+      const get=(c,def='')=>c>-1&&c<v.length?v[c].replace(/^"|"$/g,'').trim():def;
+      const ticker=get(C.ticker).toUpperCase();if(!ticker){bad.push({line:i+1,raw:line,reason:'no ticker'});continue;}
+      const rawAction=get(C.action).toLowerCase();
+      const action=ACTION_MAP[rawAction]||rawAction.toUpperCase();
+      if(!VALID_ACTIONS.has(action)){bad.push({line:i+1,raw:line,reason:'unknown action'});continue;}
+      const entered=normDate(get(C.entered));if(!entered){bad.push({line:i+1,raw:line,reason:'no date'});continue;}
+      const strike=parseFloat(get(C.strike))||null,shares=parseFloat(get(C.shares))||0;
+      const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
+      const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
+      rows.push({ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days:parseFloat(get(C.days))||0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)});
+    }
+    return{broker:'CoveredWheel',rows,unrecognised:bad,skipped:[]};
+  }
+  // Long options (buy-to-open and the closes/expiries of those same contracts in this file) leave the wheel rows
+  // and become Options-position fills. Wheel rows are otherwise untouched.
+  function splitLongs(res){
+    if(!res||!res.rows)return res;
+    const k=r=>`${r.ticker}|${r.strike}|${r.expiry}`;
+    const pcOf=r=>r._pc||'';
+    const longs=new Set(res.rows.filter(r=>r.action==='BTO').map(k));
+    const shortOpen=new Set(res.rows.filter(r=>r.action==='CSP'||r.action==='STOC').map(k));
+    const fills=[],keep=[];
+    res.rows.forEach(r=>{
+      const isLong=r.action==='BTO'||(longs.has(k(r))&&!shortOpen.has(k(r))&&(r.action==='STC'||r.action==='EXP'||r.action==='OUT'||r.action==='IN'));
+      if(!isLong){keep.push(r);return;}
+      fills.push({ticker:r.ticker,side:'long',effect:r.action==='BTO'?'open':'close',expired:r.action==='EXP',type:r._pc||(r.action==='IN'?'C':'C'),strike:r.strike,expiry:r.expiry,qty:Math.round((r.shares||100)/100),price:r.action==='EXP'?0:(r.action==='IN'||r.action==='OUT'?0:r.premium),fees:r.fees||0,date:r.entered,total:r.total,comment:r.comment||''});
+    });
+    keep.forEach(r=>delete r._pc);
+    return{...res,rows:keep,optionFills:(res.optionFills||[]).concat(fills)};
+  }
+  function parseBrokerCSV(text){
+    text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
+    if(!text)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Empty file'};
+    _dmy=sniffDMY(text);
+    let rows=parseCSVText(text);
+    const hi=findHeader(rows);
+    if(hi<0)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Could not find a header row (expected columns like Date, Symbol, Action, Quantity, Price).'};
+    const ib=rows[hi][0]==='Trades'&&rows[hi][1]==='Header';
+    let hdr=ib?rows[hi].slice(2):rows[hi];
+    const broker=detectBroker(hdr,ib?'trades':'');
+    if(broker==='CoveredWheel'&&hi===0)return parseNative(text);
+    const C=mapCols(hdr);
+    if(C.date>-1)_dmy=sniffDMY(rows.slice(hi+1).map(r=>(ib?r.slice(2):r)[C.date]||'').join('\n')+(/trading ?212|etoro/i.test(broker)?' etoro':''));
+    const out=[],bad=[],skip=[];
+    for(let i=hi+1;i<rows.length;i++){
+      let v=rows[i];
+      if(ib){if(v[0]!=='Trades')continue;if(v[1]!=='Data')continue;v=v.slice(2);}
+      const raw=rows[i].join(',');
+      if(v.length<3){continue;}
+      // repeated header rows / totals / disclaimers
+      if(norm(v[0])===norm(hdr[0])){continue;}
+      const g=c=>c>-1&&c<v.length?v[c]:'';
+      const gs=cs=>cs.map(c=>g(c)).filter(Boolean).join(' ');
+      if(C.status>-1&&g(C.status)&&!/fill/i.test(g(C.status))){skip.push({line:i+1,raw,reason:'order not filled'});continue;}
+      const desc=g(C.desc),sym=g(C.symbol);
+      let opt=parseOption(sym)||parseOption(desc)||parseOption(gs(C.action));
+      // explicit option columns (Tastytrade, generic)
+      if(!opt&&C.strike>-1&&num(g(C.strike))>0&&C.expiry>-1&&g(C.expiry)){
+        const pcs=(g(C.pc)||'').toUpperCase()[0];
+        const tk=(g(C.underlying)||sym.split(/\s/)[0]||'').toUpperCase();
+        if((pcs==='P'||pcs==='C')&&tk)opt={ticker:tk,expiry:pickDate(g(C.expiry)),strike:num(g(C.strike)),pc:pcs};
+      }
+      const entered=pickDate(g(C.date));
+      const qtyRaw=num(g(C.qty));
+      const actText=gs(C.action)+(broker==='Fidelity'||!gs(C.action)?' '+desc:'');
+      const act=classify(actText,opt,qtyRaw,broker);
+      if(act.startsWith('SKIP:')){skip.push({line:i+1,raw,reason:act.slice(5)});continue;}
+      if(!act){bad.push({line:i+1,raw,reason:'could not tell the trade type'});continue;}
+      if(!entered){bad.push({line:i+1,raw,reason:'no trade date'});continue;}
+      const contracts=Math.abs(qtyRaw)||1;
+      const shares=Math.round(contracts*100);
+      let fees=0;C.fees.forEach(c=>{const f=num(g(c));if(!isNaN(f))fees+=Math.abs(f);});
+      fees=Math.round(fees*100)/100;
+      const amt=Math.abs(num(g(C.amount)));
+      let premium,total;
+      if((act==='IN'||act==='OUT')){premium=opt.strike;fees=0;total=computeTotal(act,premium,shares,0);}
+      else if(act==='EXP'){premium=0;fees=0;total=0;}
+      else{
+        premium=Math.abs(num(g(C.price)));
+        if(isNaN(premium)||premium===0)premium=!isNaN(amt)&&amt>0?Math.round((amt+(act==='BTC'?-fees:fees))/shares*10000)/10000:0;
+        else if(!isNaN(amt)&&amt>0&&premium*shares>20*amt)premium=premium/100; // per-contract price
+        total=!isNaN(amt)&&amt>0?amt:computeTotal(act,premium,shares,fees);
+        if(!isNaN(amt)&&amt>0&&fees>0&&Math.abs(premium*shares-amt)<0.006)total=isCredit(act)?amt-fees:amt+fees; // gross proceeds + separate commission
+      }
+      total=Math.round(total*100)/100;
+      const days=opt.expiry&&entered?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
+      out.push({_pc:opt.pc,ticker:opt.ticker,action:act,entered,expiry:opt.expiry||null,strike:opt.strike||null,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${broker}`});
+    }
+    return splitLongs({broker,rows:out,unrecognised:bad,skipped:skip});
+  }
+  // ── PDF statements: text → trades ──
+  // pdf.js text items ({str, transform:[..,x,y], page}) → lines, grouping by y so table rows stay intact
+  function pdfItemsToLines(items){
+    const groups=[];
+    items.forEach(it=>{
+      if(!it||!String(it.str||'').trim())return;
+      // handle rotated (landscape) pages: text direction comes from the matrix
+      const t=it.transform,pg=it.page||1,rot=Math.abs(t[1])>Math.abs(t[0]);
+      const y=rot?(t[1]>0?t[4]:-t[4]):-t[5],x=rot?(t[1]>0?t[5]:-t[5]):t[4];
+      let g=groups.find(g=>g.pg===pg&&Math.abs(g.y-y)<=2.5);
+      if(!g){g={pg,y,items:[]};groups.push(g);}
+      g.items.push({x,s:String(it.str).trim()});
+    });
+    groups.sort((a,b)=>a.pg-b.pg||a.y-b.y);
+    return groups.map(g=>g.items.sort((a,b)=>a.x-b.x).map(i=>i.s).join('  ')).join('\n');
+  }
+  // find an option contract anywhere in a line → {opt,start,end}
+  function findOption(line){
+    const re=/[A-Z][A-Z0-9.]{0,9}\s*\d{6}[CP]\d{3,8}(?:\.\d+)?|(?:PUT|CALL)\s+\([A-Z][A-Z0-9.]{0,9}\)[^$]*\$[\d.,]+/gi;
+    let m;
+    while((m=re.exec(line))){const o=parseOption(m[0].replace(/^[-.]/,''));if(o)return{opt:o,start:m.index,end:m.index+m[0].length};}
+    const words=[...line.matchAll(/\S+/g)];
+    for(let i=0;i<words.length;i++){
+      if(!/^[A-Z][A-Z0-9.]{0,9}$/.test(words[i][0]))continue;
+      for(let n=3;n<=Math.min(7,words.length-i);n++){
+        const st=words[i].index,last=words[i+n-1],en=last.index+last[0].length;
+        const o=parseOption(line.slice(st,en));
+        if(o)return{opt:o,start:st,end:en};
+      }
+    }
+    return null;
+  }
+  function stmtDate(s){
+    let d;
+    const m=/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i.exec(s);
+    if(m)return`${m[3]}-${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`;
+    const m2=/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})\b/i.exec(s);
+    if(m2)return`${m2[3]}-${pad(MONS[m2[2].slice(0,3).toLowerCase()])}-${pad(m2[1])}`;
+    if(/(\d{4})-(\d{2})-(\d{2})|\b\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}\b|^\d{8}\b/.test(s))return pickDate(s);
+    return'';
+  }
+  function detectSource(text){
+    const t=text.toLowerCase();
+    const B=[['Robinhood','robinhood'],['Tastytrade','tastytrade'],['Tastytrade','tastyworks'],['Interactive Brokers','interactive brokers'],['Schwab','schwab'],['Fidelity','fidelity'],['E*Trade','e*trade'],['E*Trade','etrade'],['Webull','webull'],['Trading 212','trading 212'],['Trading 212','trading212'],['eToro','etoro']];
+    for(const[n,k]of B)if(t.includes(k))return n;
+    return'PDF statement';
+  }
+  function parseStatementText(text){
+    text=String(text||'').replace(/\r\n?/g,'\n');
+    const src=detectSource(text);
+    if(text.replace(/\s/g,'').length<20)return{broker:src,rows:[],unrecognised:[],skipped:[],error:"This PDF has no readable text — it looks like a scanned image. WheelHouse can't read scanned PDFs; download a text statement or CSV from your broker instead."};
+    // day-first sniff ignores dates inside option descriptions
+    _dmy=sniffDMY(text.split('\n').map(l=>{const f=findOption(l);return f?l.slice(0,f.start)+' '+l.slice(f.end):l;}).join('\n'));
+    const lines=text.split('\n').map(l=>l.trim());
+    const rows=[],bad=[],skip=[];let lastDate='',optLines=0;
+    const SUMMARY=/^(?:total|totals|subtotal|sub-total|net|realized|unrealized|year to date|ytd|summary|balance|opening|closing|beginning|ending|page\b)/i;
+    const NOTRADE=/^(?:mark-to-market performance summary|realized (?:&|and) unrealized performance summary|open positions|financial instrument information|net stock position summary|codes|cash report|positions|holdings|portfolio(?: summary)?|position summary|forex balances|notes|legal notes)$/i;
+    const TRADESEC=/^(?:trades|transactions|trade confirmations?|account activity|activity|transaction (?:details|history)|options activity(?: summary)?)$/i;
+    const sectioned=lines.some(l=>TRADESEC.test(l))&&lines.some(l=>NOTRADE.test(l));
+    let active=true;
+    for(let i=0;i<lines.length;i++){
+      const L=lines[i];if(!L)continue;
+      if(sectioned){if(TRADESEC.test(L)){active=true;continue;}if(NOTRADE.test(L)){active=false;continue;}if(!active)continue;}
+      const f=findOption(L);
+      if(!f){if(L.length<=14){const d=stmtDate(L);if(d)lastDate=d;}continue;}
+      optLines++;
+      if(SUMMARY.test(L)||/\b(?:realized|unrealized|gain|loss|p\/l|position|market value)\b/i.test(L.slice(0,f.start))){skip.push({line:i+1,raw:L,reason:'summary line, not a trade'});continue;}
+      let rest=(L.slice(0,f.start)+' '+L.slice(f.end)).replace(/\(\s*\d+\s*SHS\s*\)/gi,' ');
+      // "Trade date 01/10/2025" on the next line beats a yearless settlement date
+      const nxt=(lines[i+1]||'')+' '+(lines[i+2]&&!findOption(lines[i+1]||'')?lines[i+2]:'');
+      const td=/trade\s*date[:\s]+([^\s].{0,20})/i.exec(nxt);
+      const dSrc=rest.replace(/\$[\d.,]+/g,' ');
+      let entered=td?stmtDate(td[1]):'';
+      if(!entered){entered=stmtDate(dSrc);if(entered)lastDate=entered;else entered=lastDate;}
+      const numTxt=rest.replace(/\b(\d+)S\b/g,'$1').replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{1,2}\.\d{1,2}\.\d{2,4}\b|\d{4}-\d{2}-\d{2}(?:,?\s+\d{1,2}:\d{2}(?::\d{2})?)?|\b\d{1,2}:\d{2}(?::\d{2})?\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/gi,' ');
+      const nums=[...numTxt.matchAll(/(?:^|\s)(\(?-?[$£€]?\d[\d,]*(?:\.\d+)?\)?-?)(?=\s|$)/g)].map(m=>num(m[1])).filter(n=>!isNaN(n));
+      const qi=nums.findIndex(n=>Number.isInteger(Math.abs(n))&&n!==0&&Math.abs(n)<1000);
+      const act=classify(rest,f.opt,qi>-1?nums[qi]:NaN,src==='Interactive Brokers'?'Interactive Brokers':'Statement');
+      if(!act||act.startsWith('SKIP:')){bad.push({line:i+1,raw:L,reason:'could not tell the trade type'});continue;}
+      if(!entered){bad.push({line:i+1,raw:L,reason:'no trade date'});continue;}
+      const contracts=qi>-1?Math.abs(nums[qi]):1,shares=contracts*100;
+      const opt=f.opt;let premium=0,total=0,fees=0;
+      if(act==='IN'||act==='OUT'){premium=opt.strike;total=computeTotal(act,premium,shares,0);}
+      else if(act!=='EXP'){
+        const after=nums.slice(qi+1).map(Math.abs);
+        // premium = first plausible per-share price; total = a later number ≈ premium×shares (± fees)
+        let best=null;
+        // pass 1: an amount exactly = price×shares (gross proceeds, fee in the next column); pass 2: within fee tolerance (net amount)
+        for(const exact of[true,false]){
+          for(let a=0;a<after.length&&!best;a++){const pr=after[a];if(!(pr>0&&pr<2000))continue;
+            for(let b=a+1;b<after.length;b++){const am=after[b];const diff=Math.abs(pr*shares-am);
+              if(exact?diff<0.006:(diff<=Math.max(3,am*0.08)&&diff<=contracts*15)){best={pr,am,diff,mid:after.slice(b+1,b+2)};break;}}}
+          if(best)break;}
+        if(best){premium=best.pr;total=best.am;
+          const fee=best.mid.find(x=>Math.abs(x-best.diff)<0.006);
+          fees=Math.round(best.diff*100)/100;
+          // IBKR-style: proceeds = gross, comm column separate → net it
+          if(best.diff<0.006){const c=best.mid.find(x=>x>0&&x<contracts*15);if(c){fees=c;total=act==='BTC'||act==='STC'&&false?best.am+c:(isCredit(act)?best.am-c:best.am+c);}}
+          void fee;
+        }else{premium=after.find(x=>x>0&&x<2000)||0;total=computeTotal(act,premium,shares,0);}
+      }
+      total=Math.round(total*100)/100;
+      const days=opt.expiry?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
+      rows.push({_pc:opt.pc,ticker:opt.ticker,action:act,entered,expiry:opt.expiry,strike:opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`});
+    }
+    // single trade confirmation: contract may be split across lines
+    if(!rows.length){
+      const flat=lines.filter(Boolean).join(' ');
+      const f=findOption(flat);
+      if(f){
+        const rest=flat.slice(0,f.start)+' '+flat.slice(f.end);
+        let act=classify(rest,f.opt,NaN,'Statement');
+        let sm={};try{sm=typeof parseSmartText==='function'?(parseSmartText(text)||{}):{};}catch(e){}
+        if(!act||act.startsWith('SKIP:'))act=sm.action&&VALID_ACTIONS.has(sm.action)?sm.action:'';
+        const fl=/(?:filled|executed|trade\s*date|date)[:\s]+(?:on\s+)?([A-Za-z0-9\/.,\- ]{6,20})/i.exec(rest);
+        const entered=(fl&&stmtDate(fl[1]))||stmtDate(rest.replace(/\$[\d.,]+/g,' '));
+        const cm=/(\d+)\s+contracts?\b|contracts?[:\s]+(\d+)/i.exec(rest);
+        const contracts=cm?+(cm[1]||cm[2]):(sm.shares?sm.shares/100:1),shares=contracts*100;
+        const pm=/(?:average|avg\.?|fill|limit)?\s*price[:\s]+\$?([\d.]+)/i.exec(rest);
+        const premium=pm?+pm[1]:(sm.premium||0);
+        const fm=/(?:fees?|commissions?)[^$\d]{0,20}\$?([\d.]+)/i.exec(rest);const fees=fm?+fm[1]:(sm.fees||0);
+        const tm=/(?:net\s+amount|net\s+credit|net\s+debit|total|amount)[:\s]+\$?([\d,.]+)/i.exec(rest);
+        if(act&&entered){
+          const total=Math.round((tm?num(tm[1]):computeTotal(act,premium,shares,fees))*100)/100;
+          const days=Math.max(0,Math.round((Date.parse(f.opt.expiry)-Date.parse(entered))/864e5));
+          return splitLongs({broker:src+' confirmation',rows:[{_pc:f.opt.pc,ticker:f.opt.ticker,action:act,entered,expiry:f.opt.expiry,strike:f.opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`}],unrecognised:[],skipped:[]});
+        }
+      }
+    }
+    return splitLongs({broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')});
+  }
+  return{splitLongs,parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
+}
+const BCSV=brokerCSVLib();
+let _importParsed=null;
+// rows that close a long leg already in Options (and no wheel short on that contract) → options fills
+function _routeToOpenLongs(p){
+  if(!p||!p.rows)return p;
+  const longs=(db.opts||[]).filter(l=>l.status==='open'&&l.side==='long');if(!longs.length)return p;
+  const fills=[...(p.optionFills||[])],keep=[];
+  p.rows.forEach(r=>{
+    const l=(r.action==='STC'||r.action==='EXP')&&longs.find(l=>l.underlying===r.ticker&&+l.strike===+r.strike&&l.expiry===r.expiry);
+    if(l)fills.push({ticker:r.ticker,side:'long',effect:'close',expired:r.action==='EXP',type:l.type,strike:r.strike,expiry:r.expiry,qty:Math.round((r.shares||100)/100),price:r.action==='EXP'?0:r.premium,fees:r.fees||0,date:r.entered});
+    else keep.push(r);
+  });
+  return{...p,rows:keep,optionFills:fills};
+}
+function importPreview(pre){
+  const txt=pre?'x':document.getElementById('import-csv').value;
+  const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
+  if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
+  const p=_routeToOpenLongs(pre||BCSV.parseBrokerCSV(txt));_importParsed=p;
+  if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
+  const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
+  const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
+  const badH=p.unrecognised.length?`<div class="imp-sub">Couldn't understand ${p.unrecognised.length} row${p.unrecognised.length>1?'s':''} (not imported):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'';
+  const skipH=p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">Skipped ${p.skipped.length} non-wheel row${p.skipped.length>1?'s':''} (share trades, dividends, transfers…)</div>`:'';
+  box.innerHTML=`<div class="imp-broker">Detected: <b>${esc(p.broker)}</b> · ${p.rows.length} trade${p.rows.length===1?'':'s'} found</div>`+
+    (p.rows.length?`<div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+badH+skipH;
+  const of=p.optionFills||[];
+  if(of.length)box.innerHTML+=`<div class="imp-sub" style="color:#5eead4">+ ${of.length} long-option fill${of.length>1?'s':''} (buy-to-open and their closes) → Options tab, not the wheel:</div><ul class="imp-bad" style="color:var(--text2)">${of.map(f=>`<li>${esc(f.date)} ${f.effect==='open'?'Buy to open':f.expired?'Expired':'Sell to close'} ${f.qty}× ${esc(f.ticker)} ${f.strike}${f.type} ${esc(f.expiry)}${f.expired?'':' @ '+(+f.price).toFixed(2)}</li>`).join('')}</ul>`;
+  const n=p.rows.length+of.length;
+  btn.disabled=!n;btn.textContent=n?`Import ${n}`:'Import';
+}
+function importLoadFile(file){
+  if(!file)return;
+  document.getElementById('import-fname').textContent=file.name;
+  if(/\.pdf$/i.test(file.name)||file.type==='application/pdf'){importLoadPDF(file);return;}
+  const r=new FileReader();
+  r.onload=()=>{document.getElementById('import-csv').value=r.result;document.getElementById('import-fname').textContent=file.name;importPreview();};
+  r.readAsText(file);
+}
+let _pdfjs=null;
+async function importLoadPDF(file){
+  const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
+  box.innerHTML='<div class="imp-broker">Reading PDF…</div>';btn.disabled=true;_importParsed=null;
+  try{
+    if(!_pdfjs){const V='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';_pdfjs=await import(V+'pdf.min.mjs');_pdfjs.GlobalWorkerOptions.workerSrc=V+'pdf.worker.min.mjs';}
+    const doc=await _pdfjs.getDocument({data:await file.arrayBuffer()}).promise;
+    const items=[];
+    for(let n=1;n<=doc.numPages;n++){const tc=await(await doc.getPage(n)).getTextContent();tc.items.forEach(it=>items.push({str:it.str,transform:it.transform,page:n}));}
+    importPreview(BCSV.parseStatementText(BCSV.pdfItemsToLines(items)));
+  }catch(e){importPreview({broker:'PDF',rows:[],unrecognised:[],skipped:[],error:"Couldn't open this PDF ("+(e&&e.message||e)+"). If it's password-protected, remove the password first; you need to be online the first time a PDF is read."});}
+}
+function initImportDrop(){
+  const z=document.getElementById('import-drop'),fi=document.getElementById('import-file'),ta=document.getElementById('import-csv');
+  if(!z||z._wired)return;z._wired=true;
+  z.addEventListener('click',()=>fi.click());
+  fi.addEventListener('change',()=>{importLoadFile(fi.files[0]);fi.value='';});
+  ['dragenter','dragover'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.remove('drag');}));
+  z.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];importLoadFile(f);});
+  let t;ta.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(importPreview,250);});
+}
 function doImport(){
-  const csv=document.getElementById('import-csv').value.trim();if(!csv)return;
-  const lines=csv.split('\n');if(lines.length<2){alert('No data rows found');return;}
-  const hdr=lines[0].split(',').map(h=>h.replace(/['"]/g,'').trim().toLowerCase().replace(/:$/,''));
-  const col=n=>hdr.indexOf(n);
-  const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),ppd:col('ppd'),verified:col('verified'),comment:col('comment')};
-  let imported=0,skipped=0,dupes=0;
+  if(!_importParsed)importPreview();
+  const p=_importParsed;if(!p||!(p.rows.length||(p.optionFills||[]).length))return;
+  if((p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
+  else if((p.optionFills||[]).length){
+    const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
+    db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));
+    if(r.unmatched.length)console.warn('Option closes with no open long leg:',r.unmatched);
+  }
+  let imported=0,dupes=0;
   const newWheelTickers=new Set();
-  const newWheels=[],newTrades=[]; // track what this import actually creates
-  // Build duplicate fingerprint set from existing trades
+  const newWheels=[],newTrades=[];
   const existingFingerprints=new Set(db.trades.map(t=>`${t.ticker}|${t.action}|${t.entered}|${t.strike||''}|${t.shares||''}`));
-  for(let i=1;i<lines.length;i++){
-    const line=lines[i].trim();if(!line)continue;
-    const v=parseCSVLine(line);
-    const get=(c,def='')=>c>-1&&c<v.length?v[c].replace(/^"|"$/g,'').trim():def;
-    const ticker=get(C.ticker).toUpperCase();if(!ticker){skipped++;continue;}
-    const rawAction=get(C.action).toLowerCase();
-    const action=ACTION_MAP[rawAction]||rawAction.toUpperCase();
-    if(!VALID_ACTIONS.has(action)){skipped++;continue;}
-    const entered=normDate(get(C.entered));if(!entered){skipped++;continue;}
-    const strike=parseFloat(get(C.strike))||null;
-    const shares=parseFloat(get(C.shares))||0;
-    // Duplicate check
+  for(const r of p.rows){
+    const{ticker,action,entered,strike,shares}=r;
     const fp=`${ticker}|${action}|${entered}|${strike||''}|${shares||''}`;
     if(existingFingerprints.has(fp)){dupes++;continue;}
     existingFingerprints.add(fp);
@@ -3161,18 +4784,15 @@ function doImport(){
       const label=`Rotation ${existing+1} — ${mon} ${now.getFullYear()}`;
       const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
       wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};
-      db.wheels.push(wheel);
-      newWheels.push(wheel);
-      newWheelTickers.add(ticker);
+      db.wheels.push(wheel);newWheels.push(wheel);newWheelTickers.add(ticker);
     }
-    const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
-    const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
-    const days=parseFloat(get(C.days))||0;
-    const nt={id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days,ppd:days>0?total/days:0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)};
-    db.trades.push(nt);newTrades.push(nt);
-    imported++;
+    const days=r.days||0;
+    const nt={id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:r.expiry||null,strike,premium:r.premium||0,fees:r.fees||0,shares,total:r.total||0,days,ppd:days>0?(r.total||0)/days:0,verified:!!r.verified,comment:r.comment||''};
+    db.trades.push(nt);newTrades.push(nt);imported++;
   }
-  newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');document.getElementById('import-csv').value='';render();
+  newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');
+  document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();render();
+
   // Fetch logos and prices for any new rotations
   newWheelTickers.forEach(ticker=>{
     fetchSymbol(ticker).then(()=>{
@@ -4157,6 +5777,9 @@ async function migrateLocalStorage(userId) {
     (blob.trades || []).forEach(t => {
       if (t && t.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'trades', t.id), t));
     });
+    (blob.opts || []).forEach(l => {
+      if (l && l.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'optlegs', l.id), l));
+    });
     await Promise.all(writes);
     localStorage.removeItem('wheel_tracker_v7');
     console.log('Migration complete — localStorage cleared.');
@@ -4304,6 +5927,22 @@ window.authGoogle = authGoogle;
 window.authForgot = authForgot;
 window.onboardSubmit = onboardSubmit;
 window.switchView = switchView;
+window.goToOpt = goToOpt;
+window.setOptDemo = setOptDemo;
+window.exportOptsCSV = exportOptsCSV;
+window.setOptFilter = setOptFilter;
+window.openOptAdd = openOptAdd;
+window.openPmccSell=openPmccSell;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.savePmcc=savePmcc;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;
+window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
+window.openOptEdit = openOptEdit;
+window.optAddLeg = optAddLeg;
+window.optParsePaste = optParsePaste;
+window.saveOpt = saveOpt;
+window.deleteOptGroup = deleteOptGroup;
+window.openOptClose = openOptClose;
+window.saveOptClose = saveOptClose;
+window.fetchOptionMarks = fetchOptionMarks;
+
 window.openNewPos = openNewPos;
 window.quickAddRotation = quickAddRotation;
 window.closeModal = closeModal;

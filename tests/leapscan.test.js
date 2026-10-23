@@ -1,0 +1,184 @@
+// leapscan.test.js — SmartScan in the '+ LEAP' form: broker fill text → single long call (fake figures only).
+// Every accepted fill checks ALL fields: ticker, strike, expiry, type, qty, price, fees, date.
+// Run: node tests/leapscan.test.js
+const { extractFn, extractConst } = require('./extract');
+const code = ['MON_PAT','_LEAP_LABELS','MON_MAP','CREDITS','ACTION_MAP','VALID_ACTIONS'].map(extractConst)
+  .concat(['isCredit','computeTotal','parseCSVLine','normDate','parseSmartText','brokerCSVLib','_lev','leapNormalize','leapFuzzy','leapScan'].map(extractFn)).join('\n');
+const L = new Function(code + '\nconst B=brokerCSVLib();return {scan:(t,d)=>leapScan(t,B,d||\'2026-10-21\'),B};')();
+const scan = L.scan;
+let pass = 0, fail = 0;
+const check = (n, ok, x) => { ok ? pass++ : fail++; console.log((ok ? '  ✓ ' : '  ✗ ') + n + (ok || x === undefined ? '' : '  → ' + JSON.stringify(x))); };
+const F = ['ticker', 'strike', 'expiry', 'type', 'qty', 'price', 'fees', 'date'];
+function one(name, text, want) {
+  const r = scan(text);
+  check(`${name}: exactly one bought call, nothing rejected`, r.calls.length === 1 && !r.rejected.length && !r.error, r);
+  const c = r.calls[0] || {};
+  F.forEach((f, i) => check(`${name}: ${f}`, typeof want[i] === 'number' ? Math.abs(c[f] - want[i]) < 0.006 : c[f] === want[i], { got: c[f], want: want[i] }));
+}
+function reject(name, text, re) {
+  const r = scan(text);
+  check(`${name}: not filled, clear message`, r.calls.length === 0 && re.test(r.error), r.error);
+}
+
+one('IBKR confirmation', `Interactive Brokers Trade Confirmation
+Trade Date: 2026-03-10  Settle Date: 2026-03-11
+Symbol: TSLA 15JAN27 450 C
+Action: BUY  Quantity: 1  Price: 98.50  Proceeds: -9850.00  Comm/Fee: -1.05  Code: O`, ['TSLA', 450, '2027-01-15', 'C', 1, 98.5, 1.05, '2026-03-10']);
+one('IBKR statement Trades line (Marc-style TSLA 450C buy)', `TSLA 15JAN27 450 C  2025-11-05, 09:31:02  1  15.00  -1,500.00  -1.05  1,501.05  O`,
+  ['TSLA', 450, '2027-01-15', 'C', 1, 15, 1.05, '2025-11-05']);
+one('IBKR statement section', `Trades
+Equity and Index Options
+USD
+TSLA 15JAN27 450 C  2026-03-10, 10:41:12  1  98.50  -9,850.00  -1.05  9,851.05  O
+Total  -9,850.00
+Open Positions`, ['TSLA', 450, '2027-01-15', 'C', 1, 98.5, 1.05, '2026-03-10']);
+one('Robinhood', `Your order to buy 2 contracts of TSLA $500 Call 12/17/2027 was executed at an average price of $62.40 on March 4, 2026.
+Option Buy to Open
+Contracts: 2
+Average price: $62.40
+Fees: $0.08`, ['TSLA', 500, '2027-12-17', 'C', 2, 62.4, 0.08, '2026-03-04']);
+one('Tastytrade', `Order Filled
+Bought 1 NVDA 01/21/28 Call 160.00 @ 41.25
+Buy to Open · Filled Mar 2, 2026
+Commissions: $1.00  Fees: $0.14`, ['NVDA', 160, '2028-01-21', 'C', 1, 41.25, 1.14, '2026-03-02']);
+one('Schwab', `Trade Confirmation - Charles Schwab
+Trade Date: 04/15/2026
+Action: Buy to Open
+Quantity: 3
+Description: CALL AAPL 06/16/2028 250.00
+Price: $38.10
+Commission: $1.95
+Net Amount: $11,431.95`, ['AAPL', 250, '2028-06-16', 'C', 3, 38.1, 1.95, '2026-04-15']);
+one('Fidelity', `Fidelity Investments - Order Confirmation
+YOU BOUGHT OPENING TRANSACTION
+CALL (MSFT) MICROSOFT CORP JAN 21 28 $520 (100 SHS)
+Trade date: 05/01/2026
+Quantity: 1  Price: $71.30
+Commission: $0.65
+Amount: $7,130.65`, ['MSFT', 520, '2028-01-21', 'C', 1, 71.3, 0.65, '2026-05-01']);
+one('Webull', `Webull Order Filled
+Buy to Open AMZN 2027-12-17 230.00 Call
+Filled Qty: 2  Avg Price: 35.80
+Filled Time: 06/12/2026 10:22:41 EDT
+Fees: $0.10`, ['AMZN', 230, '2027-12-17', 'C', 2, 35.8, 0.1, '2026-06-12']);
+one('Generic broker CSV', `Trade Date,Underlying,Activity,Qty,Price,Commission,Net Amount,Expiry,Strike,Put/Call
+2026-02-21,TSLA,Buy to Open,1,80.00,0.65,8000.65,2028-01-21,400,C`, ['TSLA', 400, '2028-01-21', 'C', 1, 80, 0.65, '2026-02-21']);
+
+// ── Robinhood app confirmation (layout identical to Marc's real paste; dollar figures faked) ──
+const RH = require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'robinhood-app-leap-buy.txt'), 'utf8');
+one('Robinhood app (fixture)', RH, ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']);
+{ const c = scan(RH).calls[0] || {}; check('Robinhood app: long/open, filled price not limit', c.side === 'buy' && c.effect === 'open' && c.price !== 58.55, c); }
+check('yearless date → latest past (today 2026-07-01 → 2025-07-23)', (scan(RH, '2026-07-01').calls[0] || {}).date === '2025-07-23');
+check('yearless date on the day itself stays this year', (scan(RH, '2026-07-23').calls[0] || {}).date === '2026-07-23');
+const rhv = (o) => RH.replace('Buy TSLA $310 Call Mar 19, 2027', o.head || 'Buy TSLA $310 Call Mar 19, 2027').replace('Limit buy', o.type || 'Limit buy')
+  .replace('Position effect\nOpen', 'Position effect\n' + (o.eff || 'Open')).replace(/3 contracts at/g, o.qty || '3 contracts at').replace(/^Quantity\n3$/m, 'Quantity\n' + (o.q || '3'))
+  .replace(/^Filled\nJul 23, 4:49 PM GMT\+1$/m, 'Filled\n' + (o.filled || 'Jul 23, 4:49 PM GMT+1'));
+reject('Robinhood app: Sell … Call (sold)', rhv({ head: 'Sell TSLA $400 Call Mar 19, 2027', type: 'Limit sell' }), /sold call/);
+reject('Robinhood app: Position effect Close (buy)', rhv({ eff: 'Close' }), /buy-to-close/);
+reject('Robinhood app: sell + Close', rhv({ head: 'Sell TSLA $310 Call Mar 19, 2027', type: 'Market sell', eff: 'Close' }), /sell-to-close/);
+reject('Robinhood app: put', rhv({ head: 'Buy TSLA $250 Put Mar 19, 2027' }), /put/);
+one('Robinhood app: Market buy, decimal strike, Jan 15, 2027', rhv({ head: 'Buy TSLA $312.5 Call Jan 15, 2027', type: 'Market buy' }), ['TSLA', 312.5, '2027-01-15', 'C', 3, 58.5, 1.71, '2026-07-23']);
+one('Robinhood app: expiry without comma', rhv({ head: 'Buy TSLA $310 Call Mar 19 2027' }), ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']);
+one('Robinhood app: filled date with year, ET', rhv({ filled: 'Jul 23, 2025, 11:49 AM ET' }), ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2025-07-23']);
+one('Robinhood app: 1 contract at', rhv({ qty: '1 contract at', q: '1' }), ['TSLA', 310, '2027-03-19', 'C', 1, 58.5, 1.71, '2026-07-23']);
+one('Robinhood app: no $ on strike, EDT', rhv({ head: 'Buy NVDA 160 Call Jan 21, 2028', filled: 'Jul 23, 4:49 PM EDT' }), ['NVDA', 160, '2028-01-21', 'C', 3, 58.5, 1.71, '2026-07-23']);
+// ── same weakness elsewhere: month-name expiry with comma, $ strike ──
+one('Tastytrade month-name expiry', `Bought 2 AAPL $250 Call Jun 16, 2028 @ 38.10\nBuy to Open · Filled Apr 15, 2026\nCommissions: $2.00  Fees: $0.28`, ['AAPL', 250, '2028-06-16', 'C', 2, 38.1, 2.28, '2026-04-15']);
+one('Schwab month-name expiry', `Trade Date: 04/15/2026\nAction: Buy to Open\nQuantity: 1\nDescription: AAPL $250 Call Jun 16, 2028\nPrice: $38.10\nCommission: $0.65`, ['AAPL', 250, '2028-06-16', 'C', 1, 38.1, 0.65, '2026-04-15']);
+one('Webull month-name expiry', `Buy to Open AMZN $230 Call Dec 17, 2027\nFilled Qty: 2  Avg Price: 35.80\nFilled Time: 06/12/2026 10:22:41 EDT\nFees: $0.10`, ['AMZN', 230, '2027-12-17', 'C', 2, 35.8, 0.1, '2026-06-12']);
+one('E*Trade style "Jan 21 \'28 $160 Call"', `Bought to Open 1 NVDA Jan 21 '28 $160 Call @ $41.25\nTrade date: 03/02/2026\nCommission: $0.65`, ['NVDA', 160, '2028-01-21', 'C', 1, 41.25, 0.65, '2026-03-02']);
+check('shared findOption: "TSLA $310 Call Mar 19, 2027"', JSON.stringify(L.B.findOption('Buy TSLA $310 Call Mar 19, 2027').opt) === JSON.stringify({ ticker: 'TSLA', expiry: '2027-03-19', strike: 310, pc: 'C' }));
+check('shared findOption: time after day is not a year', !L.B.findOption('TSLA $310 Call Jul 23, 16:49'));
+
+// ══ Garble / fuzz corpus — every variant asserts all fields ══
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const NOISE = ['Robinhood Financial LLC · Member SIPC', 'Page 1 of 2', 'Ref# 8F3K2Q', 'Account ****1234', 'See important disclosures', 'Questions? Visit help center', '▶ Share', 'Done'];
+const withNoise = t => { const L = t.split('\n'); NOISE.forEach((n, i) => L.splice(Math.floor(rnd() * L.length), 0, n)); return L.join('\n'); };
+// RH layout = header lines + label/value pairs: shuffle as blocks (label next to its value), like a re-ordered copy
+const rhBlocks = t => { const L = t.split('\n'), b = L.slice(0, 4).map(x => [x]); for (let i = 4; i < L.length; i += 2) b.push([L[i], L[i + 1]]); return b; };
+const GARBLE = {
+  'merged single line': t => t.split('\n').join(' '),
+  'merged, no spaces kept tidy': t => t.split('\n').join('   ').replace(/ /g, '  '),
+  'shuffled lines': t => shuffle(t.split('\n')).join('\n'),
+  'extra noise lines': t => withNoise(t),
+  'lower case': t => t.toLowerCase(),
+  'UPPER CASE': t => t.toUpperCase(),
+  'table cells': t => t.split('\n').map(l => '| ' + l.replace(/:\s*/, ' | ') + ' |').join('\n'),
+  'tabs + bullets': t => t.split('\n').map(l => '•\t' + l.replace(/:\s+/, ':\t')).join('\n'),
+  'OCR ($→S, Call→Ca11, 0→O)': t => t.replace(/\$(\d)/g, 'S$1').replace(/Call/g, 'Ca11').replace(/CALL/g, 'CA11').replace(/(\d)0/, '$1O'),
+  'combo: noise + lower + merged': t => withNoise(t).toLowerCase().split('\n').join(' '),
+  'combo: OCR + typos + table': t => GARBLE['table cells'](GARBLE['OCR ($→S, Call→Ca11, 0→O)'](GARBLE['typo labels'](t))),
+  'combo: UPPER + noise + tabs': t => GARBLE['tabs + bullets'](withNoise(t.toUpperCase())),
+  'typo labels': t => t.replace(/Quantity/g, 'Quantlty').replace(/Filled/g, 'Fi1led').replace(/Commission/g, 'Comission').replace(/regulatory/g, 'regulatroy').replace(/Trade [Dd]ate/g, 'Trade Dtae').replace(/Price/g, 'Prlce'),
+};
+const BASES = {
+  'Robinhood app': [RH, ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23'], true],
+  'Schwab': [`Trade Confirmation - Charles Schwab\nTrade Date: 04/15/2026\nAction: Buy to Open\nQuantity: 3\nDescription: CALL AAPL 06/16/2028 250.00\nPrice: $38.10\nCommission: $1.95\nNet Amount: $11,431.95`, ['AAPL', 250, '2028-06-16', 'C', 3, 38.1, 1.95, '2026-04-15']],
+  'Tastytrade': [`Order Filled\nBought 1 NVDA 01/21/28 Call 160.00 @ 41.25\nBuy to Open · Filled Mar 2, 2026\nCommissions: $1.00  Fees: $0.14`, ['NVDA', 160, '2028-01-21', 'C', 1, 41.25, 1.14, '2026-03-02']],
+  'Webull': [`Webull Order Filled\nBuy to Open AMZN 2027-12-17 230.00 Call\nFilled Qty: 2  Avg Price: 35.80\nFilled Time: 06/12/2026 10:22:41 EDT\nFees: $0.10`, ['AMZN', 230, '2027-12-17', 'C', 2, 35.8, 0.1, '2026-06-12']],
+  'IBKR confirmation': [`Interactive Brokers Trade Confirmation\nTrade Date: 2026-03-10  Settle Date: 2026-03-11\nSymbol: TSLA 15JAN27 450 C\nAction: BUY  Quantity: 1  Price: 98.50  Proceeds: -9850.00  Comm/Fee: -1.05  Code: O`, ['TSLA', 450, '2027-01-15', 'C', 1, 98.5, 1.05, '2026-03-10']],
+  'Fidelity': [`Fidelity Investments - Order Confirmation\nYOU BOUGHT OPENING TRANSACTION\nCALL (MSFT) MICROSOFT CORP JAN 21 28 $520 (100 SHS)\nTrade date: 05/01/2026\nQuantity: 1  Price: $71.30\nCommission: $0.65\nAmount: $7,130.65`, ['MSFT', 520, '2028-01-21', 'C', 1, 71.3, 0.65, '2026-05-01']],
+};
+const garbleRes = { ok: 0, all: 0, fails: [] };
+const RUNS = []; for (const [bn, b] of Object.entries(BASES)) for (const [gn, g] of Object.entries(GARBLE)) for (const sd of (/shuffled|noise/.test(gn) ? [3, 11, 29] : [7])) RUNS.push([bn, b, gn + (sd !== 7 ? ` #${sd}` : ''), g, sd]);
+for (const [bn, [txt, want, blocks], gn, g, sd] of RUNS) {
+  seed = sd;
+  const t = gn.startsWith('shuffled lines') && blocks ? shuffle(rhBlocks(txt)).map(b => b.join('\n')).join('\n') : g(txt);
+  const r = scan(t), c = r.calls[0] || {};
+  const bad = F.filter((f, i) => !(typeof want[i] === 'number' ? Math.abs(c[f] - want[i]) < 0.006 : c[f] === want[i]));
+  garbleRes.all++; if (!bad.length && r.calls.length === 1) garbleRes.ok++; else garbleRes.fails.push(`${bn} / ${gn}: ${r.error || bad.map(f => f + '=' + c[f]).join(' ')}`);
+  check(`garble ${bn} / ${gn}: all fields`, !bad.length && r.calls.length === 1, r.error || bad.map(f => `${f}: ${c[f]} want ${want[F.indexOf(f)]}`).join('; '));
+}
+// missing labels: values still found; derived ones flagged low-confidence
+{ const t = RH.replace(/^Quantity\n3\n/m, '').replace(/^Filled quantity\n/m, '').replace(/^Filled\n/m, '').replace(/^Submitted\n/m, '');
+  one('missing labels (RH: no Quantity/Filled/Submitted labels)', t, ['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']); }
+{ const r = scan(`Trade Date: 04/15/2026\nAction: Buy to Open\nQuantity: 3\nDescription: CALL AAPL 06/16/2028 250.00\nCommission: $1.95\nNet Amount: $11,431.95`), c = r.calls[0] || {};
+  check('no price label → price derived from net amount, flagged low-confidence', Math.abs(c.price - 38.1) < 0.006 && (c.low || []).includes('price'), c); }
+{ const r = scan(`Bought TSLA 450 Call Jan 15 2027\nFilled 2 at 98.50\nTotal $19,700.00`), c = r.calls[0] || {};
+  check('bare "Filled 2 at 98.50" + total reconciles', c.qty === 2 && c.price === 98.5 && c.ticker === 'TSLA' && c.expiry === '2027-01-15', c); }
+{ const r = scan(`tsla  310c  19 mar 27   bought 3 @ 58.50   fees 1.71   filled jul 23`), c = r.calls[0] || {};
+  check('scrappy note "tsla 310c 19 mar 27 bought 3 @ 58.50"', JSON.stringify(F.map(f => c[f])) === JSON.stringify(['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']), F.map(f => c[f])); }
+{ const r = scan(`TSLA270319C00310000 BUY 3 58.50 open 2026-07-23 comm 1.71`), c = r.calls[0] || {};
+  check('OCC symbol line', JSON.stringify(F.map(f => c[f])) === JSON.stringify(['TSLA', 310, '2027-03-19', 'C', 3, 58.5, 1.71, '2026-07-23']), F.map(f => c[f])); }
+{ const c = scan(RH).calls[0] || {}; check('clean RH paste → no low-confidence fields', !(c.low || []).length, c.low); }
+// refusals survive garbling
+reject('garbled sold call (lower case, merged)', rhv({ head: 'Sell TSLA $400 Call Mar 19, 2027', type: 'Limit sell' }).toLowerCase().split('\n').join(' '), /sold call/);
+reject('garbled put (OCR S, shuffled)', shuffle(rhv({ head: 'Buy TSLA $250 Put Mar 19, 2027' }).split('\n')).join('\n').replace(/\$(\d)/g, 'S$1'), /put/);
+reject('garbled close (UPPER, table)', rhv({ eff: 'Close' }).toUpperCase().split('\n').join(' | '), /buy-to-close/);
+
+// fully shuffled RH lines (labels torn from values): contract/qty/price/date must still be right; fees either right or flagged
+{ let ok = 0; for (let sd = 1; sd <= 40; sd++) { seed = sd * 13; const r = scan(shuffle(RH.split('\n')).join('\n')), c = r.calls[0] || {};
+    const core = c.ticker === 'TSLA' && c.strike === 310 && c.expiry === '2027-03-19' && c.qty === 3 && c.price === 58.5 && c.date === '2026-07-23';
+    if (core && (Math.abs(c.fees - 1.71) < 0.006 || (c.low || []).includes('fees'))) ok++; }
+  check('fully shuffled RH ×40: core fields right, fees right or flagged low-confidence', ok === 40, ok); }
+console.log(`\ngarble corpus: ${garbleRes.ok}/${garbleRes.all} variants fully correct`); garbleRes.fails.forEach(f => console.log('   ✗ ' + f));
+
+// ── not long calls → clear message, nothing filled ──
+reject('sold call (Tastytrade STO)', `Sold 1 TSLA 01/15/27 Call 450.00 @ 12.00\nSell to Open · Filled Mar 2, 2026`, /sold call/);
+reject('bought put', `Bought 1 TSLA 01/15/27 Put 300.00 @ 22.00\nBuy to Open · Filled Mar 2, 2026`, /put/);
+reject('buy to close', `Bought 1 TSLA 11/20/26 Call 450.00 @ 1.10\nBuy to Close · Filled Mar 2, 2026`, /buy-to-close/);
+reject('sell to close', `Sold 1 TSLA 01/15/27 Call 450.00 @ 99.00\nSell to Close · Filled Mar 2, 2026`, /sell-to-close/);
+reject('IBKR SLD line (negative qty, O)', `TSLA 20NOV26 450 C  2026-03-10, 10:41:12  -1  4.10  410.00  -1.05  -408.95  O`, /sold call/);
+reject('IBKR closing buy (code C)', `TSLA 20NOV26 450 C  2026-03-10, 10:41:12  1  1.10  -110.00  -1.05  111.05  C`, /buy-to-close/);
+reject('Schwab sell to open put', `Trade Date: 04/15/2026\nAction: Sell to Open\nQuantity: 1\nDescription: PUT SOFI 07/17/2026 20.00\nPrice: $0.80`, /put/);
+reject('no option at all', `Bought 100 shares of TSLA at $380.00 on Mar 2, 2026`, /Couldn't find an option contract/);
+reject('empty', `   `, /Paste/);
+
+// ── multiple long calls → picker list; others skipped ──
+const m = scan(`Trades
+Equity and Index Options
+TSLA 15JAN27 450 C  2026-03-10, 10:41:12  1  98.50  -9,850.00  -1.05  9,851.05  O
+NVDA 21JAN28 160 C  2026-03-11, 11:02:00  2  41.25  -8,250.00  -2.10  8,252.10  O
+SOFI 17JUL26 20 P  2026-03-12, 11:02:00  -1  0.80  80.00  -1.05  -78.95  O
+Open Positions`);
+check('multi: two calls offered, put skipped', m.calls.length === 2 && m.rejected.length === 1 && m.rejected[0].ticker === 'SOFI');
+check('multi: NVDA all fields', JSON.stringify(F.map(f => m.calls[1][f])) === JSON.stringify(['NVDA', 160, '2028-01-21', 'C', 2, 41.25, 2.1, '2026-03-11']), F.map(f => m.calls[1][f]));
+
+// ── UI wiring: SmartScan never saves; rejects never fill ──
+const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const body = n => extractFn(n);
+check('leapRunScan / leapFillFrom never call save', !/saveLeap\(|_saveOpt|_saveWheel|_saveTrade|saveDB/.test(body('leapRunScan') + body('leapFillFrom') + body('leapLoadFile')));
+check('leapScan is pure (no db / wheel access)', !/\bdb\.|_save|document\./.test(body('leapScan')));
+check('modal has SmartScan + Manual tabs like mPaste', /id="lf-tab-smartscan"/.test(src) && /id="lf-tab-manual"/.test(src) && /id="lf-paste"/.test(src));
+console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
