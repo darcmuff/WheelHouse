@@ -58,6 +58,6 @@ The browser can't call Cboe directly (no CORS header). If the proxy fails, manua
 
 ## Dashboard: "All options, by month" (read-only)
 
-- One row per month, newest first: **Wheel** = the existing `calcMonthlyPnL()` `pNet` (option premium net: CSP + STOC + STC credits − BTC debits, by trade date — the same figure as the Dashboard "Monthly Premium" chart and the sidebar "Option Income"; share buys/sells and dividends are not included). **LEAPs & CCs** = realised P&L of closed/expired/assigned option legs from `optlegs` (`OPTS.legPnL().realized`: premium/proceeds − cost/buyback − all fees), by close date (expiry date if an expired leg has none). **Total** = Wheel + LEAPs & CCs.
+- One row per month, newest first: **Wheel** = the existing `calcMonthlyPnL()` `pNet` (option premium net: CSP + STOC + STC credits − BTC debits, by trade date — the same figure as the Dashboard "Monthly Wheel Premium" chart and the sidebar "Option Income"; share buys/sells and dividends are not included). **LEAPs & CCs** = realised P&L of closed/expired/assigned option legs from `optlegs` (`OPTS.legPnL().realized`: premium/proceeds − cost/buyback − all fees), by close date (expiry date if an expired leg has none). **Total** = Wheel + LEAPs & CCs.
 - Year-to-date and All-time rows, then "Open, not yet banked" = unrealised P&L of open option legs from current marks (unmarked legs counted, not valued). Months only contain closed trades.
 - Writes nothing: no wheel trade, rotation, wheel calculation, sidebar or Analytics figure changes.
