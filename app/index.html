@@ -583,6 +583,26 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .btn-primary{background:var(--orange);color:#fff}
 .leap-card{border-left:1px solid var(--border)}
 .g{color:var(--green)}.r{color:var(--red)}
+
+/* ── Top navigation (desktop) + bottom tab bar (phone) ── */
+#content{margin-left:0!important;padding:1.25rem 1.5rem 3rem!important;max-width:72rem;margin:0 auto!important}
+#topnav{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:1.5rem;padding:0.625rem 1.5rem;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.tn-brand{display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:0.875rem;color:var(--text)}
+.tn-mark{width:1rem;height:1rem;border-radius:50%;border:3px solid var(--orange)}
+.tn-tabs{display:flex;gap:0.25rem}
+#topnav .nav-item,#tabbar .nav-item{border:0;padding:0.4375rem 0.875rem;border-radius:0.625rem;color:var(--text2);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:0.375rem;background:none}
+#topnav .nav-item.active{background:var(--bg2);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
+.tn-right{margin-left:auto;display:flex;align-items:center;gap:0.5rem}
+.tn-paste{padding:0.4375rem 0.875rem;font-size:0.6875rem}
+.tn-gear{background:none;border:0;color:var(--text2);cursor:pointer;padding:0.375rem;border-radius:0.5rem;display:flex}.tn-gear:hover{background:var(--bg3)}
+#tabbar{display:none}
+@media(max-width:700px){
+  .tn-tabs{display:none}#topnav{padding:0.5rem 0.875rem;gap:0.75rem}
+  #content{padding:0.875rem 0.75rem 5.5rem!important}
+  #tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:var(--bg2);border-top:1px solid var(--border);justify-content:space-around;padding:0.375rem 0 calc(0.625rem + env(safe-area-inset-bottom))}
+  #tabbar .nav-item{flex-direction:column;font-size:0.625rem;padding:0.375rem 0.5rem}
+  #tabbar .nav-item.active{color:var(--orange);font-weight:600}
+}
 </style>
 </head>
 <body>
@@ -754,64 +774,15 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 <div id="layout">
 
   <!-- SIDEBAR -->
-  <div id="sidebar">
-    <div id="sb-brand" style="display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div id="sb-brand-name">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="38" height="38" style="flex-shrink:0">
-          <defs>
-            <filter id="wh-g1" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="wh-g2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          </defs>
-          <circle cx="60" cy="60" r="58" fill="#18191c"/>
-          <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="1" opacity="0.3" filter="url(#wh-g2)"/>
-          <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="2" opacity="0.85"/>
-          <path d="M 48.61 17.5 A 44 44 0 0 1 17.5 71.39" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-          <path d="M 20.1 74.32 L 17.5 71.39 L 16.72 75.22" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M 28.89 91.11 A 44 44 0 0 1 91.11 91.11" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-          <path d="M 92.35 87.4 L 91.11 91.11 L 94.82 89.87" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M 102.5 71.39 A 44 44 0 0 1 71.39 17.5" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-          <path d="M 67.56 18.28 L 71.39 17.5 L 68.46 14.9" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="60" y1="47" x2="60" y2="20" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
-          <line x1="48.74" y1="66.5" x2="25.36" y2="80" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
-          <line x1="71.26" y1="66.5" x2="94.64" y2="80" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="60" cy="60" r="13" fill="var(--orange)" opacity="0.12" filter="url(#wh-g1)"/>
-          <circle cx="60" cy="60" r="10" fill="var(--orange)" filter="url(#wh-g1)"/>
-          <circle cx="60" cy="60" r="6" fill="#18191c"/>
-          <circle cx="60" cy="60" r="2.5" fill="var(--orange2)"/>
-        </svg>
-        WheelHouse
-      </div>
-      <div id="sb-brand-sub">Options Wheel Strategy</div>
-      </div>
-      <button onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;padding:0.25rem" title="Collapse sidebar"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:1rem;height:1rem"><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"/></svg></button>
+  <header id="topnav">
+    <div class="tn-brand"><span class="tn-mark"></span>WheelHouse</div>
+    <nav class="tn-tabs"><a class="nav-item active" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
+    <div class="tn-right">
+      <button class="btn btn-primary tn-paste" onclick="pasteFill()" title="Paste a broker fill or screenshot — SmartScan reads it">+ Paste fill</button>
+      <button class="tn-gear" onclick="openSettings()" title="Settings" aria-label="Settings"><svg viewBox="0 0 256 256" width="20" height="20" fill="currentColor"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Z"/></svg></button>
     </div>
-
-    <div style="border-bottom:1px solid var(--border)">
-      <div class="nav-item" data-view="dash" onclick="switchView('dash')">
-        <span class="nav-icon">◈</span>Dashboard<span id="nav-health-badge"></span>
-      </div>
-      <div class="nav-item active" data-view="positions" onclick="switchView('positions')">
-        <span class="nav-icon">⊞</span>Rotations
-      </div>
-      <div class="nav-item" data-view="options" onclick="switchView('options')">
-        <span class="nav-icon">◇</span>LEAPs
-      </div>
-      <div class="nav-item" data-view="analytics" onclick="switchView('analytics')">
-        <span class="nav-icon">▦</span>Analytics
-      </div>
-      <div class="nav-item" data-view="log" onclick="switchView('log')">
-        <span class="nav-icon">≡</span>Trade Log
-      </div>
-    </div>
-
-    <div class="sb-section" id="sb-stats" style="flex-shrink:0"></div>
-
-    <div class="sb-btns"></div>
-    <div class="sb-spacer"></div>
-  </div>
-
-  <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()"><svg viewBox="0 0 256 256" fill="var(--orange)"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></button>
+  </header>
+  <nav id="tabbar"><a class="nav-item active" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
 
   <!-- CONTENT -->
   <div id="content"></div>
@@ -2770,24 +2741,13 @@ async function fetchOptionMarks(force){
 function renderSidebar(){
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
   // Health badge on the Dashboard nav item — visible from any view
-  const _hb=document.getElementById('nav-health-badge');
-  if(_hb){
+  document.querySelectorAll('.nav-health-badge').forEach(_hb=>{
     const _hi=allDataHealth();
     if(_hi.length){
       const worst=_hi.some(i=>i.sev==='red')?'var(--red)':_hi.some(i=>i.sev==='amber')?'var(--yellow)':'var(--text3)';
       _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:0.625rem;font-weight:600;border-radius:0.5625rem;padding:1px 0.4375rem;line-height:1.4">${_hi.length}</span>`;
     }else _hb.innerHTML='';
-  }
-  const ytd=calcYTD();
-  const _now=new Date(),_ym=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
-  const premMo=db.trades.reduce((a,t)=>{if(!t.entered||t.entered.slice(0,7)!==_ym)return a;const v=t.total||0;return t.action==='BTC'?a-v:(t.action==='CSP'||t.action==='STOC'||t.action==='STC')?a+v:a;},0);
-  const un=calcAllUnrealised(db.wheels,db.trades,_priceOf,db.opts||[]);
-  document.getElementById('sb-stats').innerHTML=`
-    <div class="si"><span class="si-lbl">Realised P&amp;L ${_now.getFullYear()}</span><span class="si-val ${colorN(ytd.net)}">${fmtMoney(ytd.net)}</span></div>
-    <div class="si"><span class="si-lbl">Premium this month</span><span class="si-val ${colorN(premMo)}">${fmtMoney(premMo)}</span></div>
-    <div class="si"><span class="si-lbl">Unrealised${un.unpriced?' *':''}</span><span class="si-val ${colorN(un.value)}"${un.unpriced?` title="${un.unpriced} rotation(s) holding shares have no price yet"`:''}>${fmtMoney(un.value)}</span></div>
-  `;
-
+  });
 }
 
 function renderPositions(){
@@ -5763,16 +5723,9 @@ function toggleTheme(isLight){
   const knob=document.getElementById('theme-knob');
   if(knob)knob.style.left=isLight?'18px':'2px';
 }
-function toggleSidebar(){
-  const sb=document.getElementById('sidebar');
-  const btn=document.getElementById('sb-toggle');
-  const content=document.getElementById('content');
-  sb.classList.toggle('collapsed');
-  const collapsed=sb.classList.contains('collapsed');
-  localStorage.setItem('wh-sidebar',collapsed?'collapsed':'open');
-  if(content){content.style.marginLeft=collapsed?'0':'12.5rem';content.style.paddingLeft=collapsed?'36px':'';}
-  if(btn)btn.style.display=collapsed?'flex':'none';
-}
+function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls are harmless)
+// "+ Paste fill": SmartScan for whatever you're looking at — LEAP/short-call fills on LEAPs, wheel fills everywhere else.
+function pasteFill(){ if(view==='options'&&typeof openLeapAdd==='function')openLeapAdd(); else openPasteTrade(); }
 async function doSignOut(){
   try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
@@ -6000,6 +5953,7 @@ window.openAddTrade = openAddTrade;
 window.openImport = openImport;
 window.openSettings = openSettings;
 window.toggleTheme = toggleTheme;
+window.pasteFill = pasteFill;
 window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
