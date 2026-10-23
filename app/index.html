@@ -19,10 +19,19 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://wheelhouse-tracker.netlify.app/wheelhouse-share.png">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#18191c">
+<meta name="theme-color" content="#f6f5f1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
 <!-- Firebase loaded inside main module script -->
 <style>
-:root {
+:root{
+  --bg:#f6f5f1; --bg2:#ffffff; --bg3:#f0efe9; --bg4:#e4e2da;
+  --border:#e6e4dc; --border2:#d3d0c6;
+  --orange:#2f6f4f; --orange2:#3d8562; --orangeL:#e3efe7; --orangeD:rgba(47,111,79,0.08);
+  --text:#1d201e; --text2:#545a56; --text3:#8a908b;
+  --green:#2f7d57; --red:#b5483d; --blue:#3f6c9a; --yellow:#a8701c; --silver:#3c423e;
+  --shadow:0 1px 2px rgba(30,30,20,.04),0 2px 8px rgba(30,30,20,.04);
+}
+[data-theme="dark"]{
   --bg:      #18191c;
   --bg2:     #212327;
   --bg3:     #2b2d32;
@@ -42,27 +51,10 @@
   --yellow:  #fbbf24;
   --silver:  #c8ccd6;
 }
-[data-theme="light"]{
-  --bg:      #f5f5f5;
-  --bg2:     #ffffff;
-  --bg3:     #e8e8e8;
-  --bg4:     #d4d4d4;
-  --border:  #d1d5db;
-  --border2: #9ca3af;
-  --orangeD: rgba(13,148,136,0.08);
-  --text:    #1a1a1a;
-  --text2:   #4b5563;
-  --text3:   #6b7280;
-  --green:   #16a34a;
-  --red:     #dc2626;
-  --blue:    #2563eb;
-  --yellow:  #d97706;
-  --silver:  #374151;
-}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:0.875rem}
-body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem */
+body{font-family:Inter,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 ::-webkit-scrollbar{width:0.375rem;height:0.375rem}
 ::-webkit-scrollbar-track{background:var(--bg2)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:0.25rem}
@@ -94,19 +86,19 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 #content{margin-left:12.5rem;transition:margin-left .2s}
 #sb-brand{padding:0.5rem 0.75rem 0.4375rem;border-bottom:1px solid var(--border)}
 #sb-brand-name{
-  font-size:1.0625rem;font-weight:300;color:var(--orange);
+  font-size:1.0625rem;font-weight:400;color:var(--orange);
   letter-spacing:-0.5px;display:flex;align-items:center;gap:0.4375rem;line-height:1;
 }
 #sb-brand-sub{font-size:0.5rem;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-top:0.1875rem;padding-left:2.0625rem}
 .sb-section{padding:0.625rem 0.875rem;border-bottom:1px solid var(--border)}
-.sb-sec-ttl{font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--orange);margin-bottom:0.5rem}
+.sb-sec-ttl{font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:1.3px;color:var(--orange);margin-bottom:0.5rem}
 .si{display:flex;justify-content:space-between;align-items:baseline;padding:0.1875rem 0}
 .si-lbl{color:var(--text3);font-size:0.8125rem}
-.si-val{font-weight:500;font-size:0.8125rem}
+.si-val{font-weight:600;font-size:0.8125rem}
 .nav-item{
   display:flex;align-items:center;gap:0.4375rem;
   padding:0.4375rem 0.75rem;cursor:pointer;color:var(--text2);
-  font-weight:500;font-size:0.75rem;
+  font-weight:600;font-size:0.75rem;
   border-left:0.1875rem solid transparent;
   transition:color .15s,border-color .15s,background .15s;
 }
@@ -158,24 +150,24 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .rot-mini .rot-num{width:1.375rem;height:1.375rem;font-size:0.625rem}
 .rot-mini .rot-logo{width:1.375rem;height:1.375rem}
 .rot-mini .mini-ticker{
-  font-size:0.6875rem;font-weight:700;color:var(--orange);letter-spacing:.4px;
+  font-size:0.6875rem;font-weight:600;color:var(--orange);letter-spacing:.4px;
   background:var(--orangeD);border:1px solid rgba(249,115,22,.35);
   padding:2px 0.4375rem;border-radius:0.25rem;text-align:center;
 }
 .rot-mini .mini-ticker.cn{color:var(--text3);background:var(--bg3);border-color:var(--border)}
-.rot-mini .mini-price{font-size:0.75rem;color:var(--silver);font-weight:300;text-align:right}
-.rot-mini .mini-chg{font-size:0.625rem;font-weight:300;text-align:right}
-.rot-mini .mini-pnl{font-size:0.75rem;font-weight:300;text-align:right}
-.rot-mini .mini-leg{font-size:0.6875rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rot-mini .mini-price{font-size:0.75rem;color:var(--silver);font-weight:400;text-align:right}
+.rot-mini .mini-chg{font-size:0.625rem;font-weight:400;text-align:right}
+.rot-mini .mini-pnl{font-size:0.75rem;font-weight:400;text-align:right}
+.rot-mini .mini-leg{font-size:0.6875rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rot-mini .mini-dte{
-  font-size:0.5625rem;font-weight:300;padding:2px 0.4375rem;border-radius:0.625rem;
+  font-size:0.5625rem;font-weight:400;padding:2px 0.4375rem;border-radius:0.625rem;
   white-space:nowrap;border:1px solid;text-align:center;justify-self:center;
 }
 .rot-mini .mini-badge{
   padding:2px 0.5rem;border-radius:1.25rem;font-size:0.5rem;
-  font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;justify-self:end;
+  font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;justify-self:end;
 }
-.rot-mini .mini-badge.open{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}
+.rot-mini .mini-badge.open{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.4)}
 .rot-mini .mini-badge.closed{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}
 .rot-mini .mini-hide{
   font-size:0.625rem;color:var(--text3);padding:2px 0.3125rem;border:none;background:none;cursor:pointer;opacity:0;transition:opacity .15s;justify-self:center;
@@ -206,7 +198,7 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   background:none;border:none;cursor:pointer;text-align:left;
 }
 .sort-dropdown-item:hover{background:var(--bg3);color:var(--text)}
-.sort-dropdown-item.active{color:var(--orange);font-weight:500}
+.sort-dropdown-item.active{color:var(--orange);font-weight:600}
 
 .rotation-window{
   background:var(--bg2);border:1px solid var(--border);
@@ -226,7 +218,7 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   width:1.5rem;height:1.5rem;border-radius:50%;flex-shrink:0;
   background:var(--orangeD);border:2px solid var(--orange);
   display:flex;align-items:center;justify-content:center;
-  font-size:0.6875rem;font-weight:700;color:var(--orange);
+  font-size:0.6875rem;font-weight:600;color:var(--orange);
 }
 .rot-num.cn{background:var(--bg3);border-color:var(--border2);color:var(--text3)}
 .rot-logo{
@@ -235,24 +227,24 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 }
 .rot-logo.cn{opacity:.5}
 .rot-ticker{
-  font-size:0.6875rem;font-weight:700;color:var(--orange);letter-spacing:.4px;
+  font-size:0.6875rem;font-weight:600;color:var(--orange);letter-spacing:.4px;
   background:var(--orangeD);border:1px solid rgba(249,115,22,.35);
   padding:2px 0.4375rem;border-radius:0.25rem;flex-shrink:0;
 }
 .rot-ticker.cn{color:var(--text3);background:var(--bg3);border-color:var(--border)}
-.rot-label{flex:1;font-size:0.75rem;font-weight:300;color:var(--silver);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rot-label{flex:1;font-size:0.75rem;font-weight:400;color:var(--silver);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rot-header-price{display:inline-flex;flex-direction:column;align-items:flex-start;flex-shrink:0;line-height:1.2;gap:1px}
 .rot-shares{font-size:0.625rem;color:var(--text3);flex-shrink:0;white-space:nowrap}
-.rot-price{font-size:0.75rem;font-weight:300;color:var(--silver);flex-shrink:0;white-space:nowrap}
+.rot-price{font-size:0.75rem;font-weight:400;color:var(--silver);flex-shrink:0;white-space:nowrap}
 .rot-dte-badge{
   font-size:0.625rem;font-weight:normal;padding:2px 0.5rem;border-radius:0.625rem;
   flex-shrink:0;white-space:nowrap;border:1px solid;
 }
 .rot-badge{
   padding:2px 0.5rem;border-radius:1.25rem;font-size:0.5625rem;
-  font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;
+  font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;
 }
-.rot-badge.open{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}
+.rot-badge.open{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.4)}
 .rot-badge.closed{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}
 .rot-expand{font-size:0.8125rem;color:var(--text3);transition:transform .2s,color .15s;flex-shrink:0}
 .rot-expand.open{transform:rotate(90deg)}
@@ -265,9 +257,9 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   padding:0.375rem 0.625rem;border-right:1px solid var(--border);min-width:0;
 }
 .rmb-col:last-child{border-right:none}
-.rmb-lbl{font-size:0.5rem;font-weight:500;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:2px;white-space:nowrap}
-.rmb-val{font-size:0.75rem;font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rmb-sub{font-size:0.625rem;font-weight:500;color:var(--text3);margin-top:0.1875rem;white-space:nowrap}
+.rmb-lbl{font-size:0.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:2px;white-space:nowrap}
+.rmb-val{font-size:0.75rem;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmb-sub{font-size:0.625rem;font-weight:600;color:var(--text3);margin-top:0.1875rem;white-space:nowrap}
 
 
 .trade-body{display:none;border-top:1px solid var(--border)}
@@ -276,10 +268,10 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   display:grid;
   grid-template-columns:minmax(0,120fr) minmax(0,82fr) minmax(0,82fr) minmax(0,62fr) minmax(0,64fr) minmax(0,54fr) minmax(0,84fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,38fr);
   gap:0.375rem;padding:0.4375rem 1rem;background:var(--bg3);
-  font-size:0.625rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);
+  font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);
   min-width:0;
 }
-.trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 0.1875rem 0 0 var(--teal,#14B8A6);}
+.trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 0.1875rem 0 0 var(--teal,var(--orange2));}
 .trow{
   display:grid;
   grid-template-columns:minmax(0,120fr) minmax(0,82fr) minmax(0,82fr) minmax(0,62fr) minmax(0,64fr) minmax(0,54fr) minmax(0,84fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,38fr);
@@ -291,20 +283,20 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .trow-health{border-top:none}
 .trow.roll-trade{border-left:0.1875rem solid #0891b2;padding-left:0.8125rem;background:rgba(8,145,178,0.07)}
 .chain-row{display:flex;gap:0.875rem;align-items:baseline;padding:0.375rem 1rem 0.5rem 0.8125rem;border-left:0.1875rem solid #0891b2;background:rgba(8,145,178,0.12);font-size:0.7188rem;border-top:1px dashed rgba(8,145,178,0.35)}
-.chain-row .chain-tag{color:#22d3ee;font-weight:700;letter-spacing:.4px;text-transform:uppercase;font-size:0.625rem}
-.chain-row .chain-net{font-weight:500;font-variant-numeric:tabular-nums}
+.chain-row .chain-tag{color:#22d3ee;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-size:0.625rem}
+.chain-row .chain-net{font-weight:600;font-variant-numeric:tabular-nums}
 .chain-row .chain-be{color:var(--text2)}
 .roll-badge{font-size:0.9375rem;color:#0891b2;font-weight:normal;line-height:1}
 .action-cell{display:flex;align-items:center;gap:0.375rem;white-space:nowrap;min-width:0}
 .roll-slot{flex:0 0 1rem;display:flex;align-items:center;justify-content:center}
 .trow.expired-trade{border-left:0.1875rem solid var(--green);padding-left:0.8125rem;background:rgba(34,197,94,0.04)}
-.exp-badge{font-size:0.625rem;font-weight:700;color:var(--green);letter-spacing:.5px;vertical-align:middle}
-.ab{padding:0.1875rem 0.5rem;border-radius:0.25rem;font-size:0.6875rem;font-weight:700;white-space:nowrap;display:inline-block;letter-spacing:.3px}
-.ab-CSP{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.28)}
-.ab-BTC{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.28)}
+.exp-badge{font-size:0.625rem;font-weight:600;color:var(--green);letter-spacing:.5px;vertical-align:middle}
+.ab{padding:0.1875rem 0.5rem;border-radius:0.25rem;font-size:0.6875rem;font-weight:600;white-space:nowrap;display:inline-block;letter-spacing:.3px}
+.ab-CSP{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.28)}
+.ab-BTC{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.28)}
 .ab-STOC{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.28)}
 .ab-STC{background:rgba(167,139,250,.12);color:#a78bfa;border:1px solid rgba(167,139,250,.28)}
-.ab-IN{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.28)}
+.ab-IN{background:rgba(251,191,36,.12);color:var(--yellow);border:1px solid rgba(251,191,36,.28)}
 .ab-OUT{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.28)}
 .ab-DIV{background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.28)}
 .ab-EXP{background:rgba(100,116,139,.1);color:#94a3b8;border:1px solid rgba(100,116,139,.2)}
@@ -316,7 +308,7 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 /* ── BUTTONS ── */
 .btn{
   padding:0.4375rem 0.75rem;border:none;border-radius:0.375rem;cursor:pointer;
-  font-size:0.75rem;font-weight:700;transition:opacity .15s,transform .1s;
+  font-size:0.75rem;font-weight:600;transition:opacity .15s,transform .1s;
   display:inline-flex;align-items:center;gap:0.25rem;white-space:nowrap;
 }
 .btn:hover{opacity:.85}.btn:active{transform:scale(.97)}
@@ -335,7 +327,7 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .lt{width:100%;border-collapse:collapse;font-size:0.875rem;min-width:68.75rem}
 .lt th{
   background:var(--bg3);padding:0.625rem 0.75rem;text-align:left;
-  color:var(--text3);font-weight:700;border-bottom:1px solid var(--border);
+  color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);
   white-space:nowrap;cursor:pointer;font-size:0.6875rem;text-transform:uppercase;letter-spacing:.5px;
 }
 .lt th:hover{color:var(--text2)}
@@ -354,8 +346,8 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .dcard{background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.8125rem;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .dcard.hl{border-color:var(--orange)}
 .dcard.xplain{transition:border-color .15s}
-.dcard-title{font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:0.4375rem;font-weight:700;display:flex;align-items:center;gap:0.3125rem}
-.dcard-info{display:inline-flex;align-items:center;justify-content:center;width:0.9375rem;height:0.9375rem;border-radius:50%;background:var(--bg4);color:var(--text3);font-size:0.5625rem;font-weight:700;flex-shrink:0;border:1px solid var(--border2);cursor:help;transition:background .15s,color .15s,border-color .15s;position:absolute;top:0.5rem;right:0.5rem}
+.dcard-title{font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:0.4375rem;font-weight:600;display:flex;align-items:center;gap:0.3125rem}
+.dcard-info{display:inline-flex;align-items:center;justify-content:center;width:0.9375rem;height:0.9375rem;border-radius:50%;background:var(--bg4);color:var(--text3);font-size:0.5625rem;font-weight:600;flex-shrink:0;border:1px solid var(--border2);cursor:help;transition:background .15s,color .15s,border-color .15s;position:absolute;top:0.5rem;right:0.5rem}
 .dcard-info:hover{background:var(--orange);color:#fff;border-color:var(--orange)}
 .dcard-val{font-size:1.375rem;font-weight:normal;line-height:1}
 .dcard-sub{font-size:0.6875rem;color:var(--text3);margin-top:0.25rem}
@@ -370,37 +362,37 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   opacity:0;transition:opacity .12s ease;display:block;
 }
 #xpop.vis{opacity:1}
-#xpop-title{font-size:0.6875rem;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.6px;margin-bottom:0.4375rem}
+#xpop-title{font-size:0.6875rem;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:.6px;margin-bottom:0.4375rem}
 #xpop-body{font-size:0.75rem;color:var(--text2);line-height:1.6}
-.sec-title{font-size:0.875rem;font-weight:700;color:var(--orange);margin-bottom:0.625rem;margin-top:1.25rem}
+.sec-title{font-size:0.875rem;font-weight:600;color:var(--orange);margin-bottom:0.625rem;margin-top:1.25rem}
 .tt{width:100%;border-collapse:collapse;font-size:0.875rem}
-.tt th{background:var(--bg3);padding:0.625rem 0.875rem;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.tt th{background:var(--bg3);padding:0.625rem 0.875rem;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
 .tt td{padding:0.6875rem 0.875rem;border-bottom:1px solid var(--border)}
 .tt tr:hover td{background:var(--bg3)}
 .tt.compact th{padding:0.5rem 0.625rem;font-size:0.625rem;white-space:nowrap}
 .tt.compact td{padding:0.5625rem 0.625rem;font-size:0.75rem;white-space:nowrap}
 .idx-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.0625rem,1fr));gap:0.5625rem;margin-bottom:1.625rem}
 .idx-card{background:var(--bg2);border:1px solid var(--border);border-radius:0.625rem;padding:0.8125rem 0.9375rem}
-.idx-sym{font-size:0.75rem;font-weight:700;color:var(--text3);letter-spacing:.4px}
+.idx-sym{font-size:0.75rem;font-weight:600;color:var(--text3);letter-spacing:.4px}
 .idx-name{font-size:0.625rem;color:var(--text3);margin-bottom:0.375rem}
-.idx-price{font-size:1.1875rem;font-weight:700}
-.idx-chg{font-size:0.8125rem;font-weight:500;margin-top:2px}
+.idx-price{font-size:1.1875rem;font-weight:600}
+.idx-chg{font-size:0.8125rem;font-weight:600;margin-top:2px}
 .idx-spark{width:100%;height:2.1875rem;margin-top:0.4375rem;display:block}
 
 /* ── ANALYTICS ── */
 .analytics-wrap{padding:1.5rem 1.75rem;max-width:62.5rem}
-.analytics-title{font-size:1.125rem;font-weight:700;color:var(--orange);margin-bottom:0.375rem}
+.analytics-title{font-size:1.125rem;font-weight:600;color:var(--orange);margin-bottom:0.375rem}
 .analytics-sub{font-size:0.75rem;color:var(--text3);margin-bottom:1.5rem}
 .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.25rem}
-.chart-card-title{font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:1rem}
+.chart-card-title{font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:1rem}
 .chart-legend{display:flex;gap:1.125rem;margin-top:0.75rem}
 .chart-legend-item{display:flex;align-items:center;gap:0.375rem;font-size:0.6875rem;color:var(--text2)}
 .chart-legend-dot{width:0.625rem;height:0.625rem;border-radius:2px;flex-shrink:0}
 .analytics-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0.875rem;margin-bottom:1.25rem}
 #chart-tip{position:fixed;pointer-events:none;z-index:300;background:#1a1d22;border:1px solid var(--border2);border-radius:0.5625rem;padding:0.6875rem 0.9375rem;font-size:0.75rem;color:var(--text);box-shadow:0 0.375rem 1.5rem rgba(0,0,0,0.55);display:none;min-width:9.375rem}
 .astat{background:var(--bg2);border:1px solid var(--border);border-radius:0.625rem;padding:0.875rem 1rem}
-.astat-val{font-size:1.25rem;font-weight:700;color:var(--text);margin-bottom:2px}
-.astat-lbl{font-size:0.625rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
+.astat-val{font-size:1.25rem;font-weight:600;color:var(--text);margin-bottom:2px}
+.astat-lbl{font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
 .astat-sub{font-size:0.6875rem;color:var(--text2);margin-top:0.1875rem}
 
 /* ── NEW DASHBOARD ── */
@@ -413,30 +405,30 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .d-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:0.875rem 1rem;position:relative;transition:border-color .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .d-kpi:hover{border-color:var(--border2)}
 .d-kpi-accent{border-top:2px solid var(--orange)}
-.d-kpi-label{font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:0.375rem;display:flex;align-items:center;gap:0.3125rem}
-.d-kpi-val{font-size:1.5rem;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
+.d-kpi-label{font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:0.375rem;display:flex;align-items:center;gap:0.3125rem}
+.d-kpi-val{font-size:1.5rem;font-weight:400;line-height:1;font-variant-numeric:tabular-nums}
 .d-kpi-sub{font-size:0.625rem;color:var(--text3);margin-top:0.3125rem;font-variant-numeric:tabular-nums}
-.d-kpi-badge{display:inline-flex;align-items:center;gap:0.1875rem;font-size:0.5625rem;font-weight:700;padding:2px 0.4375rem;border-radius:0.625rem;letter-spacing:.3px}
+.d-kpi-badge{display:inline-flex;align-items:center;gap:0.1875rem;font-size:0.5625rem;font-weight:600;padding:2px 0.4375rem;border-radius:0.625rem;letter-spacing:.3px}
 .d-panel{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;overflow:hidden;transition:border-color .2s}
 .d-panel:hover{border-color:var(--border2)}
 .d-panel-hdr{padding:0.75rem 1rem 0.625rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
-.d-panel-title{font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--orange)}
-.d-panel-count{font-size:0.5625rem;font-weight:700;color:var(--text3);background:var(--bg4);padding:2px 0.4375rem;border-radius:0.625rem}
+.d-panel-title{font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--orange)}
+.d-panel-count{font-size:0.5625rem;font-weight:600;color:var(--text3);background:var(--bg4);padding:2px 0.4375rem;border-radius:0.625rem}
 .d-panel-body{padding:0}
-.d-table-hdr{display:grid;gap:0.75rem;padding:0.5625rem 1.25rem 0.4375rem;background:var(--bg3);font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
+.d-table-hdr{display:grid;gap:0.75rem;padding:0.5625rem 1.25rem 0.4375rem;background:var(--bg3);font-size:0.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
 .d-table-row{display:grid;gap:0.75rem;padding:0.625rem 1.25rem;border-bottom:1px solid var(--border);font-size:0.75rem;align-items:center;transition:background .12s}
 .d-table-row:hover{background:rgba(255,255,255,.02)}
 .d-table-row:last-child{border-bottom:none}
 .d-alert-dot{width:0.375rem;height:0.375rem;border-radius:50%;flex-shrink:0}
-.d-phase{padding:2px 0.5rem;border-radius:0.25rem;font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
-.d-phase-csp{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
+.d-phase{padding:2px 0.5rem;border-radius:0.25rem;font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.d-phase-csp{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25)}
 .d-phase-cc{background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.25)}
-.d-phase-hold{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.25)}
+.d-phase-hold{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.25)}
 .d-phase-idle{background:rgba(100,116,139,.08);color:#94a3b8;border:1px solid rgba(100,116,139,.2)}
 .d-mini-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:0.5625rem;text-align:center}
-.d-mini-cal-hdr{color:var(--text3);font-weight:700;padding:2px 0}
+.d-mini-cal-hdr{color:var(--text3);font-weight:600;padding:2px 0}
 .d-mini-cal-day{padding:0.1875rem 0;border-radius:0.1875rem;color:var(--text3);position:relative}
-.d-mini-cal-day.today{color:var(--text);font-weight:700;background:var(--bg4)}
+.d-mini-cal-day.today{color:var(--text);font-weight:600;background:var(--bg4)}
 .d-mini-cal-dot{width:0.25rem;height:0.25rem;border-radius:50%;position:absolute;bottom:1px;left:50%;transform:translateX(-50%)}
 .d-pct-bar{height:0.375rem;border-radius:0.1875rem;background:var(--bg4);overflow:hidden}
 .d-pct-fill{height:100%;border-radius:0.1875rem;transition:width .3s ease}
@@ -450,27 +442,27 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .a-sec-chevron.open{transform:rotate(90deg)}
 .a-sec-body{overflow:hidden;transition:max-height .3s ease}
 .a-sec-body.collapsed{max-height:0 !important;overflow:hidden}
-.a-sec-title{font-size:0.8125rem;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.6px}
+.a-sec-title{font-size:0.8125rem;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:.6px}
 .a-sec-sub{font-size:0.625rem;color:var(--text3)}
 .a-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.625rem}
 .a-stat{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:0.875rem 1rem;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.a-stat-val{font-size:1.25rem;font-weight:300;line-height:1;margin-bottom:0.1875rem;font-variant-numeric:tabular-nums}
-.a-stat-lbl{font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
+.a-stat-val{font-size:1.25rem;font-weight:400;line-height:1;margin-bottom:0.1875rem;font-variant-numeric:tabular-nums}
+.a-stat-lbl{font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
 .a-stat-sub{font-size:0.625rem;color:var(--text3);margin-top:0.25rem}
 .a-chart-box{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:1.125rem 1.25rem;margin-bottom:0.75rem}
-.mpl-table .num{text-align:right}.mpl-table .mpl-sum td{font-weight:500;border-top:1px solid var(--border)}.mpl-note{font-size:0.6875rem;color:var(--text3);padding:0.625rem 0.75rem}
-.t3{color:var(--text3)}.t3-xs{color:var(--text3);font-size:0.625rem}.t3-s{color:var(--text3);font-size:0.6875rem}.t2-nw{color:var(--text2);white-space:nowrap}.fw5{font-weight:500}.fs-sm{font-size:0.75rem}.sq-20{width:1.25rem;height:1.25rem}.row-sb{display:flex;justify-content:space-between;align-items:center;padding:0.3125rem 0}.mini-lbl{font-size:0.5625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:0.1875rem;font-weight:700}
+.mpl-table .num{text-align:right}.mpl-table .mpl-sum td{font-weight:600;border-top:1px solid var(--border)}.mpl-note{font-size:0.6875rem;color:var(--text3);padding:0.625rem 0.75rem}
+.t3{color:var(--text3)}.t3-xs{color:var(--text3);font-size:0.625rem}.t3-s{color:var(--text3);font-size:0.6875rem}.t2-nw{color:var(--text2);white-space:nowrap}.fw5{font-weight:600}.fs-sm{font-size:0.75rem}.sq-20{width:1.25rem;height:1.25rem}.row-sb{display:flex;justify-content:space-between;align-items:center;padding:0.3125rem 0}.mini-lbl{font-size:0.5625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:0.1875rem;font-weight:600}
 @media (max-width:1100px){.d-panel-body{overflow-x:auto}.d-panel-body>.d-table-hdr,.d-panel-body>.d-table-row{min-width:43.75rem}}
-.a-chart-title{font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:0.875rem}
+.a-chart-title{font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:0.875rem}
 .a-chart-legend{display:flex;gap:1rem;margin-top:0.625rem}
 .a-chart-legend-item{display:flex;align-items:center;gap:0.3125rem;font-size:0.625rem;color:var(--text2)}
 .a-chart-legend-dot{width:0.5rem;height:0.5rem;border-radius:2px;flex-shrink:0}
 .a-table{width:100%;border-collapse:collapse;font-size:0.75rem}
-.a-table th{background:var(--bg3);padding:0.5rem 0.75rem;text-align:left;color:var(--text3);font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);white-space:nowrap}
+.a-table th{background:var(--bg3);padding:0.5rem 0.75rem;text-align:left;color:var(--text3);font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);white-space:nowrap}
 .a-table td{padding:0.5625rem 0.75rem;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
 .a-table tr:hover td{background:rgba(255,255,255,.015)}
 .a-heatmap{display:grid;gap:0.1875rem}
-.a-heat-cell{border-radius:0.1875rem;display:flex;align-items:center;justify-content:center;font-size:0.5625rem;font-weight:500;min-height:1.75rem;transition:opacity .15s}
+.a-heat-cell{border-radius:0.1875rem;display:flex;align-items:center;justify-content:center;font-size:0.5625rem;font-weight:600;min-height:1.75rem;transition:opacity .15s}
 .a-heat-cell:hover{opacity:.8}
 
 /* ── MODAL ── */
@@ -479,15 +471,15 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .mbox{background:var(--bg2);border:1px solid var(--border2);border-radius:0.8125rem;padding:1.5625rem;width:35rem;max-width:96vw;max-height:92vh;overflow-y:auto}
 .mbox.sm{width:23.125rem}
 #mSettings{background:transparent;align-items:flex-start;justify-content:flex-end}
-#mSettings .mtitle{font-size:0.8125rem;font-weight:300;margin-bottom:0.625rem}
+#mSettings .mtitle{font-size:0.8125rem;font-weight:400;margin-bottom:0.625rem}
 #mSettings .mbox{width:13.75rem;padding:0.875rem;border-radius:0.625rem;margin:0.5rem 0.5rem 0 0}
 #mSettings .btn{justify-content:flex-start}
-.mtitle{font-size:1.0625rem;font-weight:700;color:var(--orange);margin-bottom:1.1875rem;display:flex;justify-content:space-between;align-items:center}
+.mtitle{font-size:1.0625rem;font-weight:600;color:var(--orange);margin-bottom:1.1875rem;display:flex;justify-content:space-between;align-items:center}
 .mx{cursor:pointer;color:var(--text3);font-size:1.375rem;line-height:1}.mx:hover{color:var(--text)}
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
 .fld{display:flex;flex-direction:column;gap:0.1875rem}
 .fld.s2{grid-column:span 2}
-.fld label{font-size:0.625rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.fld label{font-size:0.625rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 .fld input,.fld select,.fld textarea{
   background:var(--bg);border:1px solid var(--border2);color:var(--text);
   padding:0.375rem 0.5625rem;border-radius:0.375rem;font-size:0.8125rem;width:100%;transition:border-color .15s;
@@ -505,13 +497,13 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .hint{font-size:0.875rem;color:var(--text3);margin-bottom:0.9375rem;line-height:1.7}
 .empty{text-align:center;padding:4.375rem 1.25rem;color:var(--text3)}
 .empty h3{font-size:1.25rem;margin-bottom:0.5625rem;color:var(--text2)}
-.imp-drop{border:2px dashed #0d9488;border-radius:0.5625rem;padding:1rem;text-align:center;color:#99f6e4;background:#0f2e2a;cursor:pointer;margin-bottom:0.625rem;font-size:0.875rem;transition:background .15s}
+.imp-drop{border:2px dashed var(--orange);border-radius:0.5625rem;padding:1rem;text-align:center;color:#99f6e4;background:#0f2e2a;cursor:pointer;margin-bottom:0.625rem;font-size:0.875rem;transition:background .15s}
 .imp-drop.drag{background:#134e48;border-color:#5eead4}
 #import-preview{margin-top:0.625rem;font-size:0.8125rem}
 .imp-broker{color:#5eead4;margin-bottom:0.5rem}
 .imp-tbl-wrap{max-height:15rem;overflow:auto;border:1px solid var(--border2);border-radius:0.4375rem}
 .imp-tbl{width:100%;border-collapse:collapse;font-size:0.75rem}
-.imp-tbl th{position:sticky;top:0;background:#141414;color:var(--text3);text-align:left;padding:0.3125rem 0.375rem;font-weight:600}
+.imp-tbl th{position:sticky;top:0;background:var(--bg3);color:var(--text3);text-align:left;padding:0.3125rem 0.375rem;font-weight:600}
 .imp-tbl td{padding:0.25rem 0.375rem;border-top:1px solid var(--border2);white-space:nowrap}
 .imp-sub{margin-top:0.5rem;color:#fca5a5}
 .imp-bad{margin:0.25rem 0 0 1.125rem;color:var(--text3);font-size:0.75rem;max-height:7.5rem;overflow:auto}
@@ -522,27 +514,27 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .leap-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-bottom:0.75rem}
 .leap-sc{background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.6875rem 0.8125rem}
 .leap-sc .l{font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
-.leap-sc .v{font-size:1.25rem;font-weight:550;margin-top:0.1875rem;white-space:nowrap}.leap-sc .s{font-size:0.6875rem;color:var(--text3);margin-top:2px}
+.leap-sc .v{font-size:1.25rem;font-weight:600;margin-top:0.1875rem;white-space:nowrap}.leap-sc .s{font-size:0.6875rem;color:var(--text3);margin-top:2px}
 .leap-grid{display:flex;flex-direction:column;gap:0.625rem}
 .leap-card{background:var(--bg2);border:1px solid var(--border);border-left:0.25rem solid var(--orange);border-radius:0.5rem;overflow:hidden;transition:border-color .2s}
 .leap-card:hover{border-color:var(--border2)}.leap-card.warn{border-left-color:var(--yellow)}.leap-card.cn{border-left-color:var(--border2)}
 .leap-ch{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem}
-.leap-ct{font-size:0.75rem;color:var(--silver);font-weight:300;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.leap-badge{padding:2px 0.5rem;border-radius:1.25rem;font-size:0.5625rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
-.leap-badge.itm{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}
+.leap-ct{font-size:0.75rem;color:var(--silver);font-weight:400;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leap-badge{padding:2px 0.5rem;border-radius:1.25rem;font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.leap-badge.itm{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.4)}
 .leap-badge.otm{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}
 .leap-badge.cl{background:var(--bg3);color:var(--text3);border:1px solid var(--border2)}
 .leap-row{display:grid;grid-template-columns:minmax(14.375rem,1.5fr) minmax(13.75rem,2fr) repeat(3,minmax(5.9375rem,1fr));border-top:1px solid var(--border);background:var(--bg3)}
 .leap-row .rmb-col{padding:0.5rem 0.75rem;display:flex;flex-direction:column;justify-content:center}
-.leap-row .leap-c1{flex-direction:row;justify-content:flex-start;gap:1.375rem;align-items:flex-end}.leap-c1 .lab{font-size:0.625rem;color:var(--text3)}.leap-c1 .val{font-size:1.375rem;font-weight:550}.leap-c1 .pl{font-size:0.875rem;font-weight:550;white-space:nowrap}
+.leap-row .leap-c1{flex-direction:row;justify-content:flex-start;gap:1.375rem;align-items:flex-end}.leap-c1 .lab{font-size:0.625rem;color:var(--text3)}.leap-c1 .val{font-size:1.375rem;font-weight:600}.leap-c1 .pl{font-size:0.875rem;font-weight:600;white-space:nowrap}
 .leap-c2 .leap-bar{margin:0.25rem 0 0}.leap-row .leap-kv{margin-top:0}
 .leap-note{font-size:0.625rem;color:var(--yellow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .leap-btns{display:flex;gap:0.375rem;margin-left:auto;flex-shrink:0}.leap-btns .btn{padding:0.25rem 0.625rem;font-size:0.6875rem}
 .leap-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:0.5rem}
-.leap-hero .lab{font-size:0.625rem;color:var(--text3)}.leap-hero .val{font-size:1.375rem;font-weight:550}.leap-hero .pl{font-size:0.875rem;font-weight:550;text-align:right;white-space:nowrap}
+.leap-hero .lab{font-size:0.625rem;color:var(--text3)}.leap-hero .val{font-size:1.375rem;font-weight:600}.leap-hero .pl{font-size:0.875rem;font-weight:600;text-align:right;white-space:nowrap}
 .leap-bar{height:0.3125rem;background:var(--bg4);border-radius:0.1875rem;overflow:hidden;margin:0.625rem 0 0.25rem}.leap-bar>i{display:block;height:100%;background:var(--orange)}
 .leap-barl{display:flex;justify-content:space-between;font-size:0.625rem;color:var(--text3)}.leap-barl b{color:var(--text)}
-.leap-split{display:flex;height:1rem;border-radius:0.25rem;overflow:hidden;margin-top:0.625rem;font-size:0.5625rem;font-weight:700;white-space:nowrap}
+.leap-split{display:flex;height:1rem;border-radius:0.25rem;overflow:hidden;margin-top:0.625rem;font-size:0.5625rem;font-weight:600;white-space:nowrap}
 .leap-split .in{background:rgba(13,148,136,.35);color:var(--orangeL);display:flex;align-items:center;padding-left:0.375rem;overflow:hidden}
 .leap-split .tv{background:rgba(251,191,36,.18);color:var(--yellow);display:flex;align-items:center;padding-left:0.375rem;flex:1;overflow:hidden}
 .leap-kv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-top:0.625rem}
@@ -557,17 +549,17 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .pmcc-h{display:flex;align-items:center;gap:0.5rem;padding:0.4375rem 0.75rem;border-bottom:1px solid var(--border);background:var(--bg2)}.pmcc-h .pmcc-t{min-width:0}
 .pmcc-row .pmcc-c1{flex-direction:row;justify-content:flex-start;gap:1.375rem;align-items:flex-start}
 .pmcc-row .rmb-col{overflow:hidden}
-.pmcc-tag{font-size:0.5rem;font-weight:800;letter-spacing:.6px;color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.35);padding:0 0.3125rem;border-radius:1.25rem;margin-right:0.3125rem;vertical-align:1px}
-.pmcc-t{display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap;font-size:0.8125rem;font-weight:550;line-height:1.3}
+.pmcc-tag{font-size:0.5rem;font-weight:600;letter-spacing:.6px;color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.35);padding:0 0.3125rem;border-radius:1.25rem;margin-right:0.3125rem;vertical-align:1px}
+.pmcc-t{display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap;font-size:0.8125rem;font-weight:600;line-height:1.3}
 .pmcc-btns{display:flex;gap:0.375rem;margin-left:auto;flex-shrink:0}.pmcc-btns .btn{padding:0.25rem 0.625rem;font-size:0.6875rem}
-.pmcc-lb{padding:1px 0.375rem;border-radius:1.25rem;font-size:0.5312rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;line-height:1.5}
-.pmcc-lb.g{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}.pmcc-lb.a{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}.pmcc-lb.r{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.4)}
-.pmcc-row .rmb-val{font-weight:550}
+.pmcc-lb{padding:1px 0.375rem;border-radius:1.25rem;font-size:0.5312rem;font-weight:600;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;line-height:1.5}
+.pmcc-lb.g{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.4)}.pmcc-lb.a{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}.pmcc-lb.r{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.4)}
+.pmcc-row .rmb-val{font-weight:600}
 .mo-pnl .d-table-row,.mo-pnl .d-table-hdr{white-space:nowrap}.mo-pnl .ls{display:none}.mo-pnl .d-table-row>span{overflow:hidden;text-overflow:ellipsis}
 @media(max-width:640px){.mo-pnl .d-table-row,.mo-pnl .d-table-hdr{padding-left:0.625rem;padding-right:0.625rem;gap:0.375rem}.mo-pnl .d-table-row{font-size:0.6875rem}.mo-pnl .d-panel-count{display:none}.mo-pnl .lf{display:none}.mo-pnl .ls{display:inline}}
 .pmcc-hist{border-top:1px solid var(--border);padding:0.375rem 0.75rem}
 .pmcc-hist summary{font-size:0.6875rem;color:var(--text3);cursor:pointer}
-.pmcc-hist table{width:100%;border-collapse:collapse;font-size:0.6875rem;margin-top:0.25rem}.pmcc-hist td,.pmcc-hist th{padding:0.1875rem 0.375rem;text-align:left;border-top:1px solid var(--border);white-space:nowrap}.pmcc-hist th{color:var(--text3);font-weight:500}
+.pmcc-hist table{width:100%;border-collapse:collapse;font-size:0.6875rem;margin-top:0.25rem}.pmcc-hist td,.pmcc-hist th{padding:0.1875rem 0.375rem;text-align:left;border-top:1px solid var(--border);white-space:nowrap}.pmcc-hist th{color:var(--text3);font-weight:600}
 .pmcc-hist .tw{overflow-x:auto}
 @media(max-width:1100px){.pmcc-row{grid-template-columns:1fr 1fr 1fr}.pmcc-row .pmcc-c1,.pmcc-row .pmcc-c2{grid-column:1/-1;border-right:none;border-bottom:1px solid var(--border)}.pmcc-row .rmb-lbl{white-space:normal}.pmcc-h{flex-wrap:wrap}}
 @media(max-width:640px){.pmcc-btns{margin-left:0;width:100%}.pmcc-btns .btn{flex:1}}
@@ -576,6 +568,21 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
 .leap-empty{grid-column:1/-1;text-align:center;color:var(--text3);padding:2.5rem 0.625rem;font-size:0.8125rem;background:var(--bg2);border:1px dashed var(--border2);border-radius:0.5625rem}
 @media(max-width:1100px){.leap-row{grid-template-columns:1fr 1fr 1fr}.leap-row .leap-c1,.leap-row .leap-c2{grid-column:1/-1;border-right:none;border-bottom:1px solid var(--border)}.leap-ch{flex-wrap:wrap}.leap-note{order:9;flex-basis:100%}}
 @media(max-width:640px){.leap-sum{grid-template-columns:1fr 1fr}.leap-sc .v{font-size:1.0625rem}.leap-grid{grid-template-columns:1fr}.leap-hero .val{font-size:1.1875rem}}
+
+/* ═══ Direction A · Calm minimal ═══ */
+body{background:var(--bg);color:var(--text);line-height:1.45}
+.d-panel,.d-kpi,.leap-card,.a-chart-box,.a-stat,.chart-card,.rot-card,.astat{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;box-shadow:var(--shadow)}
+.d-kpi-accent{border-top:1px solid var(--border)}
+.d-panel-hdr{border-bottom:0;padding:1rem 1.25rem 0.5rem}
+.d-panel-title,.a-chart-title,.chart-card-title{font-size:0.8125rem;font-weight:600;text-transform:none;letter-spacing:0;color:var(--text)}
+.d-kpi-label,.rmb-lbl,.a-stat-lbl,.astat-lbl{font-size:0.625rem;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)}
+.d-kpi-val{font-weight:600}
+.d-table-hdr,.a-table th{background:transparent;text-transform:none;letter-spacing:0;font-weight:400;color:var(--text3);font-size:0.625rem}
+.d-table-row,.a-table td{border-bottom:1px solid var(--bg3)}
+.btn{border-radius:0.625rem;font-weight:600}
+.btn-primary{background:var(--orange);color:#fff}
+.leap-card{border-left:1px solid var(--border)}
+.g{color:var(--green)}.r{color:var(--red)}
 </style>
 </head>
 <body>
@@ -591,29 +598,29 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
     <!-- Logo -->
     <div style="text-align:center;margin-bottom:2rem;">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="56" height="56" style="margin-bottom:0.75rem">
-        <circle cx="60" cy="60" r="58" fill="#212327"/>
+        <circle cx="60" cy="60" r="58" fill="var(--bg2)"/>
         <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="3" opacity="0.6"/>
-        <line x1="60" y1="60" x2="60" y2="18" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="60" y1="60" x2="96" y2="81" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="60" y1="60" x2="24" y2="81" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="60" cy="60" r="8" fill="#0d9488"/>
+        <line x1="60" y1="60" x2="60" y2="18" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="60" y1="60" x2="96" y2="81" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="60" y1="60" x2="24" y2="81" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="60" cy="60" r="8" fill="var(--orange)"/>
         <circle cx="60" cy="60" r="4" fill="#18191c"/>
       </svg>
-      <div style="color:#f0f1f3;font-size:1.375rem;font-weight:700;letter-spacing:-0.02em;">WheelHouse</div>
-      <div style="color:#6b7280;font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
+      <div style="color:var(--text);font-size:1.375rem;font-weight:600;letter-spacing:-0.02em;">WheelHouse</div>
+      <div style="color:var(--text3);font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
     </div>
 
     <!-- Tab switcher -->
-    <div style="display:flex;background:#212327;border-radius:0.5rem;padding:0.25rem;margin-bottom:1.5rem;">
+    <div style="display:flex;background:var(--bg2);border-radius:0.5rem;padding:0.25rem;margin-bottom:1.5rem;">
       <button id="tab-signin" style="
         flex:1;padding:0.5rem;border:none;border-radius:0.375rem;cursor:pointer;
-        font-size:0.8125rem;font-weight:500;transition:all 0.2s;
-        background:#2b2d32;color:#f0f1f3;
+        font-size:0.8125rem;font-weight:600;transition:all 0.2s;
+        background:var(--bg3);color:var(--text);
       ">Sign In</button>
       <button id="tab-signup" style="
         flex:1;padding:0.5rem;border:none;border-radius:0.375rem;cursor:pointer;
-        font-size:0.8125rem;font-weight:500;transition:all 0.2s;
-        background:transparent;color:#6b7280;
+        font-size:0.8125rem;font-weight:600;transition:all 0.2s;
+        background:transparent;color:var(--text3);
       ">Create Account</button>
     </div>
 
@@ -626,15 +633,15 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
     <!-- Email form -->
     <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1rem;">
       <input id="auth-email" type="email" placeholder="Email address" style="
-        background:#212327;border:1px solid #33363d;border-radius:0.375rem;
-        padding:0.75rem 0.875rem;color:#f0f1f3;font-size:0.875rem;outline:none;
+        background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;
+        padding:0.75rem 0.875rem;color:var(--text);font-size:0.875rem;outline:none;
         transition:border-color 0.2s;
-      " onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#33363d'">
+      " onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border)'">
       <input id="auth-password" type="password" placeholder="Password" style="
-        background:#212327;border:1px solid #33363d;border-radius:0.375rem;
-        padding:0.75rem 0.875rem;color:#f0f1f3;font-size:0.875rem;outline:none;
+        background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;
+        padding:0.75rem 0.875rem;color:var(--text);font-size:0.875rem;outline:none;
         transition:border-color 0.2s;
-      " onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#33363d'"
+      " onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border)'"
       >
     </div>
 
@@ -643,25 +650,25 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
     </div>
 
     <button id="auth-submit-btn" style="
-      width:100%;padding:0.75rem;background:#0d9488;color:#fff;
-      border:none;border-radius:0.375rem;font-size:0.875rem;font-weight:500;
+      width:100%;padding:0.75rem;background:var(--orange);color:#fff;
+      border:none;border-radius:0.375rem;font-size:0.875rem;font-weight:600;
       cursor:pointer;margin-bottom:1rem;transition:opacity 0.2s;
     ">Sign In</button>
 
     <!-- Divider -->
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-      <div style="flex:1;height:1px;background:#33363d;"></div>
-      <span style="color:#6b7280;font-size:0.75rem;">or</span>
-      <div style="flex:1;height:1px;background:#33363d;"></div>
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+      <span style="color:var(--text3);font-size:0.75rem;">or</span>
+      <div style="flex:1;height:1px;background:var(--border);"></div>
     </div>
 
     <!-- Google -->
     <button id="auth-google-btn" style="
-      width:100%;padding:0.75rem;background:#212327;color:#f0f1f3;
-      border:1px solid #33363d;border-radius:0.375rem;font-size:0.875rem;font-weight:500;
+      width:100%;padding:0.75rem;background:var(--bg2);color:var(--text);
+      border:1px solid var(--border);border-radius:0.375rem;font-size:0.875rem;font-weight:600;
       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.625rem;
       transition:border-color 0.2s;
-    " onmouseover="this.style.borderColor='#6b7280'" onmouseout="this.style.borderColor='#33363d'">
+    " onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border)'">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Continue with Google
     </button>
@@ -679,19 +686,19 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   align-items:center;justify-content:center;
 ">
   <div style="width:100%;max-width:27.5rem;padding:2rem 1.5rem;text-align:center;">
-    <div style="color:#0d9488;font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">Welcome to WheelHouse</div>
-    <h2 style="color:#f0f1f3;font-size:1.5rem;font-weight:700;margin-bottom:0.5rem;letter-spacing:-0.02em;">What's your first ticker?</h2>
-    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
+    <div style="color:var(--orange);font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">Welcome to WheelHouse</div>
+    <h2 style="color:var(--text);font-size:1.5rem;font-weight:600;margin-bottom:0.5rem;letter-spacing:-0.02em;">What's your first ticker?</h2>
+    <p style="color:var(--text3);font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
     <input id="onboard-ticker" type="text" placeholder="e.g. SOFI" maxlength="8" style="
-      width:100%;background:#212327;border:1px solid #33363d;border-radius:0.375rem;
-      padding:0.875rem;color:#f0f1f3;font-size:1.25rem;font-weight:700;text-align:center;
+      width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;
+      padding:0.875rem;color:var(--text);font-size:1.25rem;font-weight:600;text-align:center;
       letter-spacing:0.1em;text-transform:uppercase;outline:none;margin-bottom:1rem;
       transition:border-color 0.2s;box-sizing:border-box;
-    " onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#33363d'"
+    " onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border)'"
     oninput="this.value=this.value.toUpperCase()">
     <button id="onboard-submit-btn" style="
-      width:100%;padding:0.875rem;background:#0d9488;color:#fff;
-      border:none;border-radius:0.375rem;font-size:0.9375rem;font-weight:500;
+      width:100%;padding:0.875rem;background:var(--orange);color:#fff;
+      border:none;border-radius:0.375rem;font-size:0.9375rem;font-weight:600;
       cursor:pointer;transition:opacity 0.2s;
     ">Start Tracking →</button>
     <div style="margin-top:1rem;color:#4b5563;font-size:0.75rem;">You can rename or delete this ticker later from Settings</div>
@@ -719,25 +726,25 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   <div style="position:relative;width:5rem;height:5rem;margin-bottom:1.5rem">
     <svg viewBox="0 0 120 120" style="width:5rem;height:5rem;animation:wh-spin 3s linear infinite">
       <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="2" opacity="0.85"/>
-      <path d="M 48.61 17.5 A 44 44 0 0 1 17.5 71.39" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-      <path d="M 20.1 74.32 L 17.5 71.39 L 16.72 75.22" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M 28.89 91.11 A 44 44 0 0 1 91.11 91.11" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-      <path d="M 92.35 87.4 L 91.11 91.11 L 94.82 89.87" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M 102.5 71.39 A 44 44 0 0 1 71.39 17.5" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-      <path d="M 67.56 18.28 L 71.39 17.5 L 68.46 14.9" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <line x1="60" y1="47" x2="60" y2="20" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-      <line x1="48.74" y1="66.5" x2="25.36" y2="80" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-      <line x1="71.26" y1="66.5" x2="94.64" y2="80" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="60" cy="60" r="13" fill="#0d9488" opacity="0.12"/>
-      <circle cx="60" cy="60" r="10" fill="#0d9488"/>
+      <path d="M 48.61 17.5 A 44 44 0 0 1 17.5 71.39" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 20.1 74.32 L 17.5 71.39 L 16.72 75.22" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 28.89 91.11 A 44 44 0 0 1 91.11 91.11" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 92.35 87.4 L 91.11 91.11 L 94.82 89.87" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 102.5 71.39 A 44 44 0 0 1 71.39 17.5" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 67.56 18.28 L 71.39 17.5 L 68.46 14.9" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="60" y1="47" x2="60" y2="20" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
+      <line x1="48.74" y1="66.5" x2="25.36" y2="80" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
+      <line x1="71.26" y1="66.5" x2="94.64" y2="80" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="60" cy="60" r="13" fill="var(--orange)" opacity="0.12"/>
+      <circle cx="60" cy="60" r="10" fill="var(--orange)"/>
       <circle cx="60" cy="60" r="6" fill="#18191c"/>
-      <circle cx="60" cy="60" r="2.5" fill="#14b8a6"/>
+      <circle cx="60" cy="60" r="2.5" fill="var(--orange2)"/>
     </svg>
   </div>
-  <div id="loading-progress" style="width:11.25rem;height:0.1875rem;background:#2b2d32;border-radius:0.1875rem;overflow:hidden;margin-bottom:0.75rem">
-    <div id="loading-bar" style="width:0%;height:100%;background:#0d9488;border-radius:0.1875rem;transition:width .3s"></div>
+  <div id="loading-progress" style="width:11.25rem;height:0.1875rem;background:var(--bg3);border-radius:0.1875rem;overflow:hidden;margin-bottom:0.75rem">
+    <div id="loading-bar" style="width:0%;height:100%;background:var(--orange);border-radius:0.1875rem;transition:width .3s"></div>
   </div>
-  <div id="loading-text" style="font-size:0.6875rem;color:#6b7280;letter-spacing:.5px">Loading...</div>
+  <div id="loading-text" style="font-size:0.6875rem;color:var(--text3);letter-spacing:.5px">Loading...</div>
 </div>
 <style>
 @keyframes wh-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -759,19 +766,19 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
           <circle cx="60" cy="60" r="58" fill="#18191c"/>
           <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="1" opacity="0.3" filter="url(#wh-g2)"/>
           <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="2" opacity="0.85"/>
-          <path d="M 48.61 17.5 A 44 44 0 0 1 17.5 71.39" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-          <path d="M 20.1 74.32 L 17.5 71.39 L 16.72 75.22" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M 28.89 91.11 A 44 44 0 0 1 91.11 91.11" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-          <path d="M 92.35 87.4 L 91.11 91.11 L 94.82 89.87" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M 102.5 71.39 A 44 44 0 0 1 71.39 17.5" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-          <path d="M 67.56 18.28 L 71.39 17.5 L 68.46 14.9" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="60" y1="47" x2="60" y2="20" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-          <line x1="48.74" y1="66.5" x2="25.36" y2="80" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-          <line x1="71.26" y1="66.5" x2="94.64" y2="80" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="60" cy="60" r="13" fill="#0d9488" opacity="0.12" filter="url(#wh-g1)"/>
-          <circle cx="60" cy="60" r="10" fill="#0d9488" filter="url(#wh-g1)"/>
+          <path d="M 48.61 17.5 A 44 44 0 0 1 17.5 71.39" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+          <path d="M 20.1 74.32 L 17.5 71.39 L 16.72 75.22" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 28.89 91.11 A 44 44 0 0 1 91.11 91.11" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+          <path d="M 92.35 87.4 L 91.11 91.11 L 94.82 89.87" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 102.5 71.39 A 44 44 0 0 1 71.39 17.5" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+          <path d="M 67.56 18.28 L 71.39 17.5 L 68.46 14.9" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="60" y1="47" x2="60" y2="20" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
+          <line x1="48.74" y1="66.5" x2="25.36" y2="80" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
+          <line x1="71.26" y1="66.5" x2="94.64" y2="80" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="60" cy="60" r="13" fill="var(--orange)" opacity="0.12" filter="url(#wh-g1)"/>
+          <circle cx="60" cy="60" r="10" fill="var(--orange)" filter="url(#wh-g1)"/>
           <circle cx="60" cy="60" r="6" fill="#18191c"/>
-          <circle cx="60" cy="60" r="2.5" fill="#14b8a6"/>
+          <circle cx="60" cy="60" r="2.5" fill="var(--orange2)"/>
         </svg>
         WheelHouse
       </div>
@@ -863,7 +870,7 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
     <input type="hidden" id="tf-id">
     <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem">
       <button class="btn btn-danger" id="tf-delete-btn" style="display:none;margin-right:auto" onclick="deleteTradeFromModal()">✕ Delete</button>
-      <button class="btn" id="tf-expired-btn" style="display:none;background:rgba(34,197,94,.12);border-color:var(--green);color:var(--green);font-weight:500" onclick="markExpiredFromModal()">★ Expired</button>
+      <button class="btn" id="tf-expired-btn" style="display:none;background:rgba(34,197,94,.12);border-color:var(--green);color:var(--green);font-weight:600" onclick="markExpiredFromModal()">★ Expired</button>
       <button class="btn btn-ghost" onclick="closeModal('mTrade')">Cancel</button>
       <button class="btn btn-primary" onclick="saveTrade()">Save Trade</button>
     </div>
@@ -887,15 +894,15 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
     <input type="hidden" id="paste-wheelId">
     <!-- Tab switcher -->
     <div style="display:flex;gap:0;border:1px solid var(--border2);border-radius:0.4375rem;overflow:hidden;margin-bottom:0.875rem">
-      <button id="tab-smartscan" onclick="switchPasteTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:700;letter-spacing:.3px">✦ SmartScan</button>
-      <button id="tab-manual" onclick="switchPasteTab('manual')" style="flex:1;padding:0.4375rem;background:var(--bg3);color:var(--text2);border:none;cursor:pointer;font-size:0.75rem;font-weight:500;letter-spacing:.3px">✎ Manual Entry</button>
+      <button id="tab-smartscan" onclick="switchPasteTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✦ SmartScan</button>
+      <button id="tab-manual" onclick="switchPasteTab('manual')" style="flex:1;padding:0.4375rem;background:var(--bg3);color:var(--text2);border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✎ Manual Entry</button>
     </div>
     <!-- Step 1: Paste -->
     <div id="paste-step1">
       <!-- SmartScan panel -->
       <div id="paste-panel-smartscan">
         <p style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.625rem">Paste any trade confirmation — Robinhood, Tastytrade, IBKR, Schwab, E*Trade, Fidelity, Webull, eToro, Trading 212 or any other broker. SmartScan figures it out.</p>
-        <textarea id="paste-raw" style="width:100%;height:11.25rem;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
+        <textarea id="paste-raw" style="width:100%;height:11.25rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
         <div id="paste-error" style="color:var(--red);font-size:0.75rem;margin-top:0.5rem;display:none"></div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="parsePaste()">SmartScan →</button></div>
       </div>
@@ -952,12 +959,12 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mLeapTitle">Add LEAP (long call)</span><span class="mx" onclick="closeModal('mLeap')">✕</span></div>
     <input type="hidden" id="lf-id">
     <div id="lf-tabs" style="display:flex;gap:0;border:1px solid var(--border2);border-radius:0.4375rem;overflow:hidden;margin-bottom:0.75rem">
-      <button id="lf-tab-smartscan" onclick="switchLeapTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:700;letter-spacing:.3px">✦ SmartScan</button>
+      <button id="lf-tab-smartscan" onclick="switchLeapTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✦ SmartScan</button>
       <button id="lf-tab-manual" onclick="switchLeapTab('manual')" style="flex:1;padding:0.4375rem;background:var(--bg3);color:var(--text2);border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✎ Manual Entry</button>
     </div>
     <div id="lf-panel-smartscan">
       <p style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.625rem">Paste the buy-to-open confirmation for your call — IBKR, Robinhood, Tastytrade, Schwab, Fidelity, Webull or a statement line. Or drop a PDF / CSV / text file on the box. Nothing is saved until you check the details and press Save.</p>
-      <textarea id="lf-paste" style="width:100%;height:9.375rem;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here… (or drop a PDF / CSV)"></textarea>
+      <textarea id="lf-paste" style="width:100%;height:9.375rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here… (or drop a PDF / CSV)"></textarea>
       <div id="lf-scan-msg" style="font-size:0.75rem;margin-top:0.5rem;display:none"></div>
       <div id="lf-pick" style="margin-top:0.5rem"></div>
       <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mLeap')">Cancel</button><button class="btn btn-primary" onclick="leapRunScan()">SmartScan →</button></div>
@@ -990,12 +997,12 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
     <input type="hidden" id="pcc-leap">
     <div id="pcc-ctx" style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.5rem"></div>
     <div style="display:flex;gap:0;border:1px solid var(--border2);border-radius:0.4375rem;overflow:hidden;margin-bottom:0.75rem">
-      <button id="pcc-tab-smartscan" onclick="pmccTab('smartscan')" style="flex:1;padding:0.4375rem;border:none;cursor:pointer;font-size:0.75rem;font-weight:700">✦ SmartScan</button>
+      <button id="pcc-tab-smartscan" onclick="pmccTab('smartscan')" style="flex:1;padding:0.4375rem;border:none;cursor:pointer;font-size:0.75rem;font-weight:600">✦ SmartScan</button>
       <button id="pcc-tab-manual" onclick="pmccTab('manual')" style="flex:1;padding:0.4375rem;border:none;cursor:pointer;font-size:0.75rem;font-weight:600">✎ Manual Entry</button>
     </div>
     <div id="pcc-panel-smartscan">
       <p style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.625rem">Paste the sell-to-open confirmation for the call you sold — any broker, any layout. Nothing is saved until you check the details and press Save.</p>
-      <textarea id="pcc-paste" style="width:100%;height:8.75rem;background:#0e0f11;border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
+      <textarea id="pcc-paste" style="width:100%;height:8.75rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
       <div id="pcc-scan-msg" style="font-size:0.75rem;margin-top:0.5rem;display:none"></div>
       <div id="pcc-pick" style="margin-top:0.5rem"></div>
       <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="pmccRunScan()">SmartScan →</button></div>
@@ -1020,7 +1027,7 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   <div class="mbox" style="width:40rem;padding:0.875rem">
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mOptTitle">Add option position</span><span class="mx" onclick="closeModal('mOpt')">✕</span></div>
     <details style="margin-bottom:0.5rem"><summary style="font-size:0.75rem;color:var(--text3);cursor:pointer">✦ Paste a fill / confirmation (SmartScan)</summary>
-      <textarea id="of-paste" rows="3" style="width:100%;margin-top:0.375rem;background:#141414;border:1px solid var(--border2);color:var(--text);padding:0.5rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace" placeholder="e.g. 11/05/2025 Buy to Open TSLA 11/14/2025 450.00 C 1 15.00 1,501.05"></textarea>
+      <textarea id="of-paste" rows="3" style="width:100%;margin-top:0.375rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.5rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace" placeholder="e.g. 11/05/2025 Buy to Open TSLA 11/14/2025 450.00 C 1 15.00 1,501.05"></textarea>
       <button class="btn btn-ghost" style="padding:0.25rem 0.625rem;font-size:0.6875rem;margin-top:0.25rem" onclick="optParsePaste()">Fill from text</button></details>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.5rem">
       <div class="fld"><label>Underlying</label><input id="of-und" type="text" placeholder="AAPL" style="text-transform:uppercase"></div>
@@ -1059,7 +1066,7 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
     <p class="hint">Drop a trade-log CSV or PDF statement from any broker (Robinhood, Tastytrade, IBKR, Schwab, Fidelity, E*Trade, Webull…) or your CoveredWheel export. Check the preview, then tap Import.</p>
     <div id="import-drop" class="imp-drop"><div style="font-size:1.375rem">⬇</div><div><b>Drop CSV or PDF here</b> or tap to choose a file</div><div id="import-fname" style="color:var(--text3);font-size:0.75rem;margin-top:0.25rem"></div></div>
     <input type="file" id="import-file" accept=".csv,.pdf,text/csv,text/plain,application/pdf" style="display:none">
-    <textarea id="import-csv" style="width:100%;height:6.875rem;background:#141414;border:1px solid var(--border2);color:var(--text);padding:0.625rem;border-radius:0.4375rem;font-size:0.8125rem;font-family:monospace;resize:vertical" placeholder="…or paste CSV here"></textarea>
+    <textarea id="import-csv" style="width:100%;height:6.875rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.625rem;border-radius:0.4375rem;font-size:0.8125rem;font-family:monospace;resize:vertical" placeholder="…or paste CSV here"></textarea>
     <div id="import-preview"></div>
     <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" id="import-go" disabled onclick="doImport()">Import</button></div>
   </div>
@@ -1103,7 +1110,7 @@ html{font-size:135%} /* root scale: replaces body zoom:1.35; all sizes are rem *
   }
   // Restore theme preference
   var theme=localStorage.getItem('wh-theme');
-  if(theme==='light')document.documentElement.setAttribute('data-theme','light');
+  if(theme==='dark')document.documentElement.setAttribute('data-theme','dark');
   // Restore sidebar state
   var sbState=localStorage.getItem('wh-sidebar');
   if(sbState==='collapsed'){
@@ -1887,7 +1894,7 @@ async function fetchAllQuotes(){
 
 function buildSpark(prices,isUp,w=52,h=20){
   if(!prices||prices.length<3)return'';
-  const color=isUp?'#22c55e':'#ef4444';
+  const color=isUp?'var(--green)':'var(--red)';
   const pad=2,min=Math.min(...prices),max=Math.max(...prices),range=max-min||1;
   const pts=prices.map((p,i)=>{
     const x=pad+(i/(prices.length-1))*(w-pad*2);
@@ -2067,7 +2074,7 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
   const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample positions shown <b>instead of</b> your real ones. Nothing here is saved; edits, closes and rolls stay in memory only. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
   return`${err}${demoH}
   <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;flex-wrap:wrap">
-    <span style="font-size:0.8125rem;font-weight:300;color:var(--silver)">Options</span>
+    <span style="font-size:0.8125rem;font-weight:400;color:var(--silver)">Options</span>
     <span class="toolbar-spacer"></span>
     <span style="font-size:0.6875rem;color:var(--text3)">${esc(_optMarkStatus)}</span>
     <button class="btn btn-ghost" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="fetchOptionMarks(true)">↻ Marks</button>
@@ -2235,7 +2242,7 @@ function renderOptions(){
   const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample LEAPs shown <b>instead of</b> your real ones. Nothing here is saved. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
   return`${err}${demoH}
   <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;flex-wrap:wrap">
-    <span style="font-size:0.8125rem;font-weight:300;color:var(--silver)">◇ LEAPs <span style="font-size:0.6875rem;color:var(--text3)">long-dated calls held outside the wheel</span></span>
+    <span style="font-size:0.8125rem;font-weight:400;color:var(--silver)">◇ LEAPs <span style="font-size:0.6875rem;color:var(--text3)">long-dated calls held outside the wheel</span></span>
     <span class="toolbar-spacer" style="flex:1"></span>
     ${_optMarkStatus?`<span style="font-size:0.625rem;color:var(--text3);max-width:11.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(_optMarkStatus)}">${esc(_optMarkStatus)}</span>`:''}
     <span class="leap-seg"><button class="${leapStatus==='open'?'on':''}" onclick="setLeapStatus('open')">Open</button><button class="${leapStatus!=='open'?'on':''}" onclick="setLeapStatus('closed')">Closed</button></span>
@@ -2767,8 +2774,8 @@ function renderSidebar(){
   if(_hb){
     const _hi=allDataHealth();
     if(_hi.length){
-      const worst=_hi.some(i=>i.sev==='red')?'#ef4444':_hi.some(i=>i.sev==='amber')?'#fbbf24':'#6b7280';
-      _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:0.625rem;font-weight:700;border-radius:0.5625rem;padding:1px 0.4375rem;line-height:1.4">${_hi.length}</span>`;
+      const worst=_hi.some(i=>i.sev==='red')?'var(--red)':_hi.some(i=>i.sev==='amber')?'var(--yellow)':'var(--text3)';
+      _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:0.625rem;font-weight:600;border-radius:0.5625rem;padding:1px 0.4375rem;line-height:1.4">${_hi.length}</span>`;
     }else _hb.innerHTML='';
   }
   const ytd=calcYTD();
@@ -2820,7 +2827,7 @@ function renderPositions(){
       <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
     </div>
     <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg></button>
-    <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:5rem;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:500;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
+    <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:5rem;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
@@ -2897,10 +2904,10 @@ function fmtMonYear(d){
 function showChartTip(evt,label,credits,debits){
   const tip=document.getElementById('chart-tip');if(!tip)return;
   const net=credits-debits;
-  tip.innerHTML=`<div style="font-weight:700;margin-bottom:0.5rem;color:var(--silver);font-size:0.8125rem">${label}</div>`
-    +(credits>0?`<div style="display:flex;justify-content:space-between;gap:1.25rem;margin-bottom:0.25rem"><span class="t3">Credits</span><span style="color:var(--green);font-weight:500">+${fmtMoney(credits)}</span></div>`:'')
-    +(debits>0?`<div style="display:flex;justify-content:space-between;gap:1.25rem;margin-bottom:0.25rem"><span class="t3">Debits</span><span style="color:var(--red);font-weight:500">−${fmtMoney(debits)}</span></div>`:'')
-    +`<div style="display:flex;justify-content:space-between;gap:1.25rem;border-top:1px solid var(--border);padding-top:0.375rem;margin-top:0.25rem"><span class="t3">Net</span><span style="font-weight:700;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':''}${fmtMoney(net)}</span></div>`;
+  tip.innerHTML=`<div style="font-weight:600;margin-bottom:0.5rem;color:var(--silver);font-size:0.8125rem">${label}</div>`
+    +(credits>0?`<div style="display:flex;justify-content:space-between;gap:1.25rem;margin-bottom:0.25rem"><span class="t3">Credits</span><span style="color:var(--green);font-weight:600">+${fmtMoney(credits)}</span></div>`:'')
+    +(debits>0?`<div style="display:flex;justify-content:space-between;gap:1.25rem;margin-bottom:0.25rem"><span class="t3">Debits</span><span style="color:var(--red);font-weight:600">−${fmtMoney(debits)}</span></div>`:'')
+    +`<div style="display:flex;justify-content:space-between;gap:1.25rem;border-top:1px solid var(--border);padding-top:0.375rem;margin-top:0.25rem"><span class="t3">Net</span><span style="font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':''}${fmtMoney(net)}</span></div>`;
   tip.style.display='block';moveChartTip(evt);
 }
 function moveChartTip(evt){
@@ -3150,8 +3157,8 @@ function renderRotationWindow(wheel){
   const chgColor=chg!=null?(chg>=0?'var(--green)':'var(--red)'):'var(--text3)';
   const headerPriceHtml=rawP!=null
     ?`<span class="rot-header-price" style="flex-direction:row;align-items:baseline;gap:0.375rem">
-        <span style="color:var(--silver);font-size:0.8125rem;font-weight:300">$${rawP.toFixed(2)}</span>
-        ${chg!=null?`<span style="color:${chgColor};font-size:0.6875rem;font-weight:300">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
+        <span style="color:var(--silver);font-size:0.8125rem;font-weight:400">$${rawP.toFixed(2)}</span>
+        ${chg!=null?`<span style="color:${chgColor};font-size:0.6875rem;font-weight:400">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
       </span>`
     :'';
   const shares=(m.sharesHeld>0?m.sharesHeld:0)+' shares';
@@ -3166,8 +3173,8 @@ function renderRotationWindow(wheel){
   // Leg-type-aware ITM check: CSP is ITM when price is below strike; covered call when above
   const _legAction=openLegForDTE?.action;
   const _itm=rawP!=null&&_strike?(_legAction==='CSP'?rawP<_strike:_legAction==='STOC'?rawP>_strike:false):false;
-  const _itmTag=_itm?`<span style="font-size:0.5625rem;font-weight:500;color:var(--red);border:1px solid var(--red);border-radius:0.25rem;padding:1px 0.25rem;margin-left:0.25rem;vertical-align:1px">ITM</span>`:'';
-  const _pctHtml=_pctToStrike!==null?`<span style="font-size:0.6875rem;font-weight:300"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:0.75rem;font-weight:300;color:var(--silver)">To Strike</span>${_itmTag}</span>`:'';
+  const _itmTag=_itm?`<span style="font-size:0.5625rem;font-weight:600;color:var(--red);border:1px solid var(--red);border-radius:0.25rem;padding:1px 0.25rem;margin-left:0.25rem;vertical-align:1px">ITM</span>`:'';
+  const _pctHtml=_pctToStrike!==null?`<span style="font-size:0.6875rem;font-weight:400"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:0.75rem;font-weight:400;color:var(--silver)">To Strike</span>${_itmTag}</span>`:'';
   const _dteCl=activeDTE!==null?dteCls(activeDTE):'g';
   const _dteColor=_dteCl==='r'?'var(--red)':_dteCl==='o'?'var(--orange)':'var(--green)';
   const dteBadge=activeDTE!==null
@@ -3199,7 +3206,7 @@ function renderRotationWindow(wheel){
   const _opDteCl=openPos?dteCls(openPos.dte):'g';
   const _opDteColor=_opDteCl==='r'?'var(--red)':_opDteCl==='o'?'var(--yellow)':'var(--green)';
   const openPosHtml=openPos
-    ?`<div class="rmb-val" style="font-size:0.75rem;font-weight:500;color:${openPos.action==='CSP'?'var(--green)':'var(--blue)'}">
+    ?`<div class="rmb-val" style="font-size:0.75rem;font-weight:600;color:${openPos.action==='CSP'?'var(--green)':'var(--blue)'}">
         ${openPos.action} $${fmt2(openPos.strike)}
       </div>
       <div class="rmb-sub">exp <span style="color:${_opDteColor};font-weight:normal;padding:1px 0.375rem;border:1px solid ${_opDteColor};border-radius:0.625rem;font-size:0.625rem">${fmtDateShort(openPos.expiry)} (${openPos.dte}d)</span></div>
@@ -3216,7 +3223,7 @@ function renderRotationWindow(wheel){
   const metricsBar=`<div class="rot-metrics-bar">
     <div class="rmb-col">
       <div class="rmb-lbl">Last Action</div>
-      <div class="rmb-val" style="color:var(--orange2);font-size:0.6875rem;font-weight:700">${lastAct}</div>
+      <div class="rmb-val" style="color:var(--orange2);font-size:0.6875rem;font-weight:600">${lastAct}</div>
       <div class="rmb-sub">${m.trades.length} trade${m.trades.length!==1?'s':''}</div>
       <button class="btn btn-ghost btn-sm" style="margin-top:0.375rem;font-size:0.625rem;padding:0.1875rem 0.5rem;line-height:1;border-color:var(--orange);color:var(--orange)" onclick="openPasteTrade('${wheel.id}');event.stopPropagation()">✦ Add Trade</button>
     </div>
@@ -3350,7 +3357,7 @@ function renderLog(){
     const ppd=t.days>0?'$'+(t.total/t.days).toFixed(2):'—';
     const wh=db.wheels.find(w=>w.id===t.wheelId);
     return`<tr>
-      <td style="font-weight:700" class="${wh?.status==='open'?'o':'m'}">${esc(t.ticker)}</td>
+      <td style="font-weight:600" class="${wh?.status==='open'?'o':'m'}">${esc(t.ticker)}</td>
       <td><span class="ab ab-${t.action}">${t.action}</span></td>
       <td style="font-size:0.75rem;color:var(--text3)">${esc(wh?.label||'—')}</td>
       <td>${fmtDateFull(t.entered)}</td>
@@ -3367,7 +3374,7 @@ function renderLog(){
   }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:3.125rem">No trades</td></tr>';
   return`
   <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0">
-    <span style="font-size:0.8125rem;font-weight:300;color:var(--silver)">Trade Log</span>
+    <span style="font-size:0.8125rem;font-weight:400;color:var(--silver)">Trade Log</span>
     <button class="rot-header-btn" onclick="switchView('positions')" title="Close" style="margin-left:0.25rem"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:1rem;height:1rem"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
     <span class="toolbar-spacer"></span>
     <input class="search-inp" type="search" placeholder="Search…" value="${esc(logQ)}" oninput="setLogQ(this.value)" style="width:8.75rem;background:var(--bg3);border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.6875rem;color:var(--text)">
@@ -3618,7 +3625,7 @@ function buildMiniCal(){
     const price=(quotes[t.ticker]?.price)||(wh.lastPrice)||null;
     const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
     if(t.expiry.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)){
-      expiryDates[d]=itm?'#ef4444':dte<=7?'#fbbf24':'#22c55e';
+      expiryDates[d]=itm?'var(--red)':dte<=7?'var(--yellow)':'var(--green)';
       if(!expiryTargets[d])expiryTargets[d]={wheelId:wh.id,tradeId:t.id}; // first expiring leg that day
     }
     });
@@ -3648,10 +3655,10 @@ function renderDash(){
   const hRed=health.filter(i=>i.sev==='red').length;
   const hAmber=health.filter(i=>i.sev==='amber').length;
   const hGrey=health.filter(i=>i.sev==='grey').length;
-  const sevDot={red:'#ef4444',amber:'#fbbf24',grey:'#6b7280'};
-  const healthBadge=[hRed?`<span style="color:#ef4444;font-size:0.6875rem;font-weight:700">${hRed} critical</span>`:'',
-      hAmber?`<span style="color:#fbbf24;font-size:0.6875rem;font-weight:700">${hAmber} warning${hAmber>1?'s':''}</span>`:'',
-      hGrey?`<span style="color:#6b7280;font-size:0.6875rem;font-weight:500">${hGrey} note${hGrey>1?'s':''}</span>`:''].filter(Boolean).join('');
+  const sevDot={red:'var(--red)',amber:'var(--yellow)',grey:'var(--text3)'};
+  const healthBadge=[hRed?`<span style="color:var(--red);font-size:0.6875rem;font-weight:600">${hRed} critical</span>`:'',
+      hAmber?`<span style="color:var(--yellow);font-size:0.6875rem;font-weight:600">${hAmber} warning${hAmber>1?'s':''}</span>`:'',
+      hGrey?`<span style="color:var(--text3);font-size:0.6875rem;font-weight:600">${hGrey} note${hGrey>1?'s':''}</span>`:''].filter(Boolean).join('');
   const healthRows=health.map(i=>{
     const t=db.trades.find(x=>x.id===i.tradeId);
     return`<div style="border-top:1px solid var(--border)">
@@ -3666,7 +3673,7 @@ function renderDash(){
   const healthPanel=`<div class="d-panel" id="health-panel">
     <div class="d-panel-hdr">
       <span class="d-panel-title">Data Health</span>
-      <span style="display:flex;gap:0.75rem;align-items:center">${health.length?healthBadge:`<span style="color:#22c55e;font-size:0.6875rem;font-weight:700">✓ All clear</span>`}</span>
+      <span style="display:flex;gap:0.75rem;align-items:center">${health.length?healthBadge:`<span style="color:var(--green);font-size:0.6875rem;font-weight:600">✓ All clear</span>`}</span>
     </div>
     ${health.length?`<div class="d-panel-body">
       <div class="thead-row">${'<span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span>'}</div>
@@ -3677,7 +3684,7 @@ function renderDash(){
   // Capital utilisation
   const totalAccount=cap.maxCap||1;// best proxy without account balance input
   const utilPct=cap.atRisk>0&&totalAccount>0?Math.min(100,(cap.atRisk/totalAccount*100)):0;
-  const utilCol=utilPct<70?'#22c55e':utilPct<85?'#fbbf24':'#ef4444';
+  const utilCol=utilPct<70?'var(--green)':utilPct<85?'var(--yellow)':'var(--red)';
 
   // Last month comparison
   // Use the real calendar month (and the one before it), not just the last months that happen to have trades
@@ -3705,27 +3712,27 @@ function renderDash(){
     </div>`;
   }
 
-  const k1=kpi('Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'#22c55e':'#ef4444',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
-  const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'#22c55e':'#ef4444',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
+  const k1=kpi('Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
+  const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
   const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
 
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
   const avgArocVal=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
-  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'#22c55e':'#ef4444',false,'Average Annualised Return on Capital across your currently open rotations. Calculated as (net premium ÷ capital at risk) × (365 ÷ days held).');
+  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average Annualised Return on Capital across your currently open rotations. Calculated as (net premium ÷ capital at risk) × (365 ÷ days held).');
 
   // ── Alert strip ──
   const aDanger=alerts.filter(a=>a.type==='danger').length;
   const aWarn=alerts.filter(a=>a.type==='warn').length;
-  const aBadge=[aDanger?`<span style="color:#ef4444;font-size:0.6875rem;font-weight:700">${aDanger} urgent</span>`:'',
-    aWarn?`<span style="color:#fbbf24;font-size:0.6875rem;font-weight:700">${aWarn} expiring</span>`:''].filter(Boolean).join('');
+  const aBadge=[aDanger?`<span style="color:var(--red);font-size:0.6875rem;font-weight:600">${aDanger} urgent</span>`:'',
+    aWarn?`<span style="color:var(--yellow);font-size:0.6875rem;font-weight:600">${aWarn} expiring</span>`:''].filter(Boolean).join('');
   const alertHtml=alerts.length?`<div class="d-panel">
     <div class="d-panel-hdr">
       <span class="d-panel-title">Alerts</span>
       <span style="display:flex;gap:0.75rem;align-items:center">${aBadge}</span>
     </div>
     <div class="d-panel-body">${alerts.map(a=>{
-      const dotCol=a.type==='danger'?'#ef4444':a.type==='warn'?'#fbbf24':'var(--orange)';
+      const dotCol=a.type==='danger'?'var(--red)':a.type==='warn'?'var(--yellow)':'var(--orange)';
       const click=a.tradeId?` onclick="goToTrade('${a.wheelId}','${a.tradeId}')" title="Go to trade"`:'';
       return`<div class="d-table-row"${click} style="grid-template-columns:0.875rem 1fr auto;gap:0.625rem;align-items:center${a.tradeId?';cursor:pointer':''}">
         <span class="d-alert-dot" style="background:${dotCol}"></span>
@@ -3745,16 +3752,16 @@ function renderDash(){
     const price=(quotes[w.ticker]?.price)||(w.lastPrice)||null;
     const openLeg=buildOpenPosition(m.trades);
     const dte=openLeg?.dte??null;
-    const dteCol=dte===null?'var(--text3)':dte<=3?'#ef4444':dte<=14?'#fbbf24':'#22c55e';
+    const dteCol=dte===null?'var(--text3)':dte<=3?'var(--red)':dte<=14?'var(--yellow)':'var(--green)';
     const strike=openLeg?.strike;
     const pctToStrike=price!=null&&strike?((price-strike)/strike*100):null;
-    const pctCol=pctToStrike===null?'var(--text3)':pctToStrike<0?'#ef4444':pctToStrike<5?'#fbbf24':'#22c55e';
+    const pctCol=pctToStrike===null?'var(--text3)':pctToStrike<0?'var(--red)':pctToStrike<5?'var(--yellow)':'var(--green)';
     const basis=m.sharesHeld>0&&m.breakeven!=null?'$'+fmt2(m.breakeven):'—';
     return`<div class="d-table-row" style="grid-template-columns:${posCols};gap:0.75rem;cursor:pointer" onclick="goToWheel('${w.id}')" title="Go to rotation">
-      <span style="font-weight:700;color:var(--orange)">${esc(w.ticker)}</span>
+      <span style="font-weight:600;color:var(--orange)">${esc(w.ticker)}</span>
       <span><span class="d-phase ${ph.cls}">${ph.label}</span></span>
-      <span class="t2-nw">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:500;margin-left:0.375rem">/ ${dte}d</span>`:''}</span>
-      <span style="color:${pctCol};font-weight:500">${pctToStrike!==null?(pctToStrike>=0?'+':'')+pctToStrike.toFixed(1)+'%':'—'}</span>
+      <span class="t2-nw">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:600;margin-left:0.375rem">/ ${dte}d</span>`:''}</span>
+      <span style="color:${pctCol};font-weight:600">${pctToStrike!==null?(pctToStrike>=0?'+':'')+pctToStrike.toFixed(1)+'%':'—'}</span>
       <span style="color:var(--silver);white-space:nowrap">${price!=null?'$'+price.toFixed(2):'—'}</span>
       <span class="${colorN(m.premiumNet)}" style="white-space:nowrap">${fmtMoney(m.premiumNet)}</span>
       <span class="t2-nw">${basis}</span>
@@ -3771,12 +3778,12 @@ function renderDash(){
     const w=db.wheels.find(x=>x.id===t.wheelId);
     return`<div class="d-table-row" style="grid-template-columns:${recCols};gap:0.75rem;cursor:pointer" onclick="goToTrade('${t.wheelId}','${t.id}')" title="Go to trade">
     <span style="color:var(--text3);font-size:0.6875rem;white-space:nowrap">${fmtDateFull(t.entered)}</span>
-    <span style="font-weight:700;color:var(--orange)">${esc(t.ticker)}</span>
+    <span style="font-weight:600;color:var(--orange)">${esc(t.ticker)}</span>
     <span><span class="ab ab-${t.action}" style="font-size:0.5625rem;padding:2px 0.3125rem">${t.action}</span></span>
     <span class="t2-nw">${t.strike?'$'+fmt2(t.strike):'—'}</span>
     <span class="t2-nw">${t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span style="color:var(--text3);font-size:0.6875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w?.label||'—'}</span>
-    <span class="${isCredit(t.action)?'g':'r'}" style="text-align:right;font-weight:500;white-space:nowrap">${fmtMoney(t.total)}</span>
+    <span class="${isCredit(t.action)?'g':'r'}" style="text-align:right;font-weight:600;white-space:nowrap">${fmtMoney(t.total)}</span>
   </div>`;}).join('')||`<div style="padding:1.5rem 1rem;text-align:center;color:var(--text3);font-size:0.75rem">No trades yet</div>`;
 
   // ── Monthly P&L mini chart ──
@@ -3791,12 +3798,12 @@ function renderDash(){
   const ytdSummary=`
     <div style="padding:0.75rem 1rem;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box">
       <div style="width:100%;max-width:16.25rem">
-        <div class="row-sb"><span class="t3-s">Option Income</span><span class="${colorN(ytd.optNet)}" style="font-size:0.6875rem;font-weight:500;text-align:center;min-width:5rem">${fmtMoney(ytd.optNet)}</span></div>
-        ${ytd.stockIncome!==0?`<div class="row-sb"><span class="t3-s">Shares Realised P&amp;L</span><span class="${colorN(ytd.stockIncome)}" style="font-size:0.6875rem;font-weight:500;text-align:center;min-width:5rem">${fmtMoney(ytd.stockIncome)}</span></div>`:''}
-        ${ytd.divs>0?`<div class="row-sb"><span class="t3-s">Dividends</span><span class="g" style="font-size:0.6875rem;font-weight:500;text-align:center;min-width:5rem">${fmtMoney(ytd.divs)}</span></div>`:''}
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:0.375rem 0;margin-top:0.25rem;border-top:1px solid var(--border)"><span style="color:var(--text2);font-size:0.6875rem;font-weight:500">Total Realised</span><span class="${colorN(s.totalRealised)}" style="font-size:0.75rem;font-weight:700;text-align:center;min-width:5rem">${fmtMoney(s.totalRealised)}</span></div>
-        <div class="row-sb"><span class="t3-s">Win Rate</span><span style="font-size:0.6875rem;font-weight:500;text-align:center;min-width:5rem;color:${parseFloat(wl.wr||0)>=60?'#22c55e':'var(--text2)'}">${wl.wr?wl.wr+'%':'—'} <span style="color:var(--text3);font-weight:normal">(${wl.wins}W/${wl.losses}L)</span></span></div>
-        <div class="row-sb"><span class="t3-s">Projected Yearly</span><span class="${colorN(ytd.yearly)}" style="font-size:0.6875rem;font-weight:500;text-align:center;min-width:5rem">${fmtMoney(ytd.yearly)}</span></div>
+        <div class="row-sb"><span class="t3-s">Option Income</span><span class="${colorN(ytd.optNet)}" style="font-size:0.6875rem;font-weight:600;text-align:center;min-width:5rem">${fmtMoney(ytd.optNet)}</span></div>
+        ${ytd.stockIncome!==0?`<div class="row-sb"><span class="t3-s">Shares Realised P&amp;L</span><span class="${colorN(ytd.stockIncome)}" style="font-size:0.6875rem;font-weight:600;text-align:center;min-width:5rem">${fmtMoney(ytd.stockIncome)}</span></div>`:''}
+        ${ytd.divs>0?`<div class="row-sb"><span class="t3-s">Dividends</span><span class="g" style="font-size:0.6875rem;font-weight:600;text-align:center;min-width:5rem">${fmtMoney(ytd.divs)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0.375rem 0;margin-top:0.25rem;border-top:1px solid var(--border)"><span style="color:var(--text2);font-size:0.6875rem;font-weight:600">Total Realised</span><span class="${colorN(s.totalRealised)}" style="font-size:0.75rem;font-weight:600;text-align:center;min-width:5rem">${fmtMoney(s.totalRealised)}</span></div>
+        <div class="row-sb"><span class="t3-s">Win Rate</span><span style="font-size:0.6875rem;font-weight:600;text-align:center;min-width:5rem;color:${parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)'}">${wl.wr?wl.wr+'%':'—'} <span style="color:var(--text3);font-weight:normal">(${wl.wins}W/${wl.losses}L)</span></span></div>
+        <div class="row-sb"><span class="t3-s">Projected Yearly</span><span class="${colorN(ytd.yearly)}" style="font-size:0.6875rem;font-weight:600;text-align:center;min-width:5rem">${fmtMoney(ytd.yearly)}</span></div>
       </div>
     </div>`;
 
@@ -3929,7 +3936,7 @@ function renderDashChart(){
       const y=PT+ch-h;
       ctx.fillStyle='rgba(34,197,94,0.65)';
       ctx.beginPath();ctx.roundRect(x,y,singleW,h,2);ctx.fill();
-      if(h>16){ctx.fillStyle='#22c55e';ctx.font='500 8px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fv(m.c),x+singleW/2,y-2);}
+      if(h>16){ctx.fillStyle='#22c55e';ctx.font='400 8px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fv(m.c),x+singleW/2,y-2);}
     }
     // Debit bar (right)
     if(m.d>0){
@@ -3938,7 +3945,7 @@ function renderDashChart(){
       const y=PT+ch-h;
       ctx.fillStyle='rgba(239,68,68,0.55)';
       ctx.beginPath();ctx.roundRect(x,y,singleW,h,2);ctx.fill();
-      if(h>16){ctx.fillStyle='#ef4444';ctx.font='500 8px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fv(m.d),x+singleW/2,y-2);}
+      if(h>16){ctx.fillStyle='#ef4444';ctx.font='400 8px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fv(m.d),x+singleW/2,y-2);}
     }
   });
   // Y axis
@@ -3947,12 +3954,12 @@ function renderDashChart(){
   // Baseline
   ctx.beginPath();ctx.moveTo(PL,PT+ch);ctx.lineTo(PL+cw,PT+ch);ctx.stroke();
   // Y labels
-  ctx.fillStyle='#6b7280';ctx.font='500 9px -apple-system,sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
+  ctx.fillStyle='#6b7280';ctx.font='400 9px -apple-system,sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
   ctx.fillText('$'+(maxA>=1000?(maxA/1000).toFixed(0)+'k':Math.round(maxA)),PL-5,PT+4);
   ctx.fillText('$0',PL-5,PT+ch);
   // X labels
   ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#6b7280';
-  ctx.font='500 9px -apple-system,sans-serif';
+  ctx.font='400 9px -apple-system,sans-serif';
   raw.forEach((m,i)=>{ctx.fillText(m.l,PL+i*slotW+slotW/2,PT+ch+7);});
 }
 
@@ -4894,16 +4901,16 @@ function renderAnalytics(){
 
   // ── Section 1: Performance Overview ──
   const perfStats=`<div class="a-stat-grid">
-    ${stat(fmtMoney(s.totalRealised),'Realised P&L','all-time: premium + shares + dividends',s.totalRealised>=0?'#22c55e':'#ef4444','Everything earned from the wheel — option premiums, stock sales, and dividends. Open stock positions excluded.')}
+    ${stat(fmtMoney(s.totalRealised),'Realised P&L','all-time: premium + shares + dividends',s.totalRealised>=0?'var(--green)':'var(--red)','Everything earned from the wheel — option premiums, stock sales, and dividends. Open stock positions excluded.')}
     ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed rotations','var(--orange)','Average Annualised Return on Capital across closed rotations. Formula: (net premium ÷ capital at risk) × (365 ÷ days held).')}
     ${stat(sortinoStr,'Sortino Ratio','risk-adjusted','var(--text)','Risk-adjusted return using only downside volatility. Higher is better. Unlike Sharpe, it does not penalise upside variance — fairer for option-selling strategies.')}
-    ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','#ef4444','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
+    ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--red)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
   </div>
   <div class="a-stat-grid" style="margin-top:0.625rem">
-    ${stat(profitFactorStr,'Profit Factor','gross credits ÷ debits',parseFloat(profitFactorStr)>=1.5?'#22c55e':'var(--text2)','Gross premium credits divided by total buyback debits. Above 1.0 means profitable overall. Above 2.0 is excellent.')}
-    ${stat(wl.wr?wl.wr+'%':'—','Win Rate',wl.wins+'W · '+wl.losses+'L',parseFloat(wl.wr||0)>=60?'#22c55e':'var(--text2)','Percentage of option cycles that ended profitably — expired worthless or closed for a gain.')}
-    ${stat(fmtMoney(s.pNet),'Premium','all-time, net of buybacks',s.pNet>=0?'#22c55e':'#ef4444','Option credits (CSP, STOC, STC) minus buybacks (BTC), all-time.')}
-    ${stat(fmtMoney(ytd.yearly),'Annualised Projection','based on YTD pace',ytd.yearly>=0?'#22c55e':'#ef4444','Current YTD daily income rate projected forward to a full year.')}
+    ${stat(profitFactorStr,'Profit Factor','gross credits ÷ debits',parseFloat(profitFactorStr)>=1.5?'var(--green)':'var(--text2)','Gross premium credits divided by total buyback debits. Above 1.0 means profitable overall. Above 2.0 is excellent.')}
+    ${stat(wl.wr?wl.wr+'%':'—','Win Rate',wl.wins+'W · '+wl.losses+'L',parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)','Percentage of option cycles that ended profitably — expired worthless or closed for a gain.')}
+    ${stat(fmtMoney(s.pNet),'Premium','all-time, net of buybacks',s.pNet>=0?'var(--green)':'var(--red)','Option credits (CSP, STOC, STC) minus buybacks (BTC), all-time.')}
+    ${stat(fmtMoney(ytd.yearly),'Annualised Projection','based on YTD pace',ytd.yearly>=0?'var(--green)':'var(--red)','Current YTD daily income rate projected forward to a full year.')}
   </div>`;
 
   // ── Equity curve (cumulative premium SVG) ──
@@ -4920,20 +4927,20 @@ function renderAnalytics(){
     const pts=cumData.map((d,i)=>{const x=ePL+(i/(cumData.length-1))*ecW;return{x,y:eqY(d.val)};});
     eqLine=`<polyline points="${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')}" fill="none" stroke="var(--orange)" stroke-width="2"/>`;
     eqArea=`<polygon points="${ePL},${eqY(0)} ${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')} ${pts[pts.length-1].x.toFixed(1)},${eqY(0)}" fill="rgba(13,148,136,0.08)"/>`;
-    eqDots=pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${cumData[i].val>=0?'var(--orange)':'#ef4444'}" stroke="var(--bg2)" stroke-width="1.5"/>`).join('');
+    eqDots=pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${cumData[i].val>=0?'var(--orange)':'var(--red)'}" stroke="var(--bg2)" stroke-width="1.5"/>`).join('');
   }
   let eqYTicks='';
   const eqTickStep=Math.ceil(eqRange/4/100)*100||100;
   for(let v=Math.floor(eqMin/eqTickStep)*eqTickStep;v<=eqMax;v+=eqTickStep){
     const y=eqY(v);if(y<ePT||y>ePT+ecH)continue;
     eqYTicks+=`<line x1="${ePL}" x2="${eqW-ePR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;
-    eqYTicks+=`<text x="${ePL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" fill="#6b7280" font-size="9">$${v>=1000?(v/1000).toFixed(1)+'k':v}</text>`;
+    eqYTicks+=`<text x="${ePL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" fill="var(--text3)" font-size="9">$${v>=1000?(v/1000).toFixed(1)+'k':v}</text>`;
   }
   let eqXLabels='';
   cumData.forEach((d,i)=>{
     if(cumData.length>8&&i%2!==0&&i!==cumData.length-1)return;
     const x=ePL+(i/(Math.max(1,cumData.length-1)))*ecW;
-    eqXLabels+=`<text x="${x.toFixed(1)}" y="${(ePT+ecH+14).toFixed(1)}" text-anchor="middle" fill="#6b7280" font-size="8">${d.label}</text>`;
+    eqXLabels+=`<text x="${x.toFixed(1)}" y="${(ePT+ecH+14).toFixed(1)}" text-anchor="middle" fill="var(--text3)" font-size="8">${d.label}</text>`;
   });
   const eqSvg=`<svg width="100%" viewBox="0 0 ${eqW} ${eqH}" xmlns="http://www.w3.org/2000/svg" style="display:block">${eqYTicks}${eqArea}${eqLine}${eqDots}${eqXLabels}
     <line x1="${ePL}" x2="${ePL}" y1="${ePT}" y2="${ePT+ecH}" stroke="#2a2d33" stroke-width="1"/>
@@ -4959,11 +4966,11 @@ function renderAnalytics(){
     dteAnalysis[label]={count:trades.length,totalPrem,avgPPD,avgROC};
   }
   const dteRows=Object.entries(dteAnalysis).map(([label,d])=>`<tr>
-    <td style="font-weight:500;color:var(--silver)">${label}</td>
+    <td style="font-weight:600;color:var(--silver)">${label}</td>
     <td>${d.count}</td>
     <td class="g">${fmtMoney(d.totalPrem)}</td>
     <td style="color:var(--orange)">${fmtMoney(d.avgPPD)}/d</td>
-    <td style="color:${d.avgROC!=null?(d.avgROC>=15?'#22c55e':d.avgROC>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${d.avgROC!=null?d.avgROC.toFixed(1)+'%':'—'}</td>
+    <td style="color:${d.avgROC!=null?(d.avgROC>=15?'var(--green)':d.avgROC>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${d.avgROC!=null?d.avgROC.toFixed(1)+'%':'—'}</td>
   </tr>`).join('');
 
   // Delta analysis
@@ -4977,17 +4984,17 @@ function renderAnalytics(){
   }
   const deltaTableRows=['≤0.15','0.16–0.25','0.26–0.35','≥0.36'].filter(k=>deltaBuckets[k]).map(k=>{
     const b=deltaBuckets[k];const avgRoc=b.rocCount?b.totalROC/b.rocCount:null;
-    return`<tr><td style="font-weight:500;color:var(--silver)">${k}</td><td>${b.count}</td><td class="g">${fmtMoney(b.totalCr)}</td>
-    <td style="color:${avgRoc!=null?(avgRoc>=15?'#22c55e':'var(--orange)'):'var(--text3)'}">${avgRoc!=null?avgRoc.toFixed(1)+'%':'—'}</td></tr>`;
+    return`<tr><td style="font-weight:600;color:var(--silver)">${k}</td><td>${b.count}</td><td class="g">${fmtMoney(b.totalCr)}</td>
+    <td style="color:${avgRoc!=null?(avgRoc>=15?'var(--green)':'var(--orange)'):'var(--text3)'}">${avgRoc!=null?avgRoc.toFixed(1)+'%':'—'}</td></tr>`;
   }).join('');
 
   // ── Section 4: Roll Effectiveness ──
   const rollSection=rollCount>0?`
     <div class="a-stat-grid">
       ${stat(rollCount+' rolls','Total Rolls','linked roll pairs','var(--text)','Number of detected roll pairs — a BTC followed by a new CSP or STOC on the same ticker.')}
-      ${stat(rollNet>=0?'+'+fmtMoney(rollNet):fmtMoney(rollNet),'Roll Net P&L','cumulative',rollNet>=0?'#22c55e':'#ef4444','Total premium collected from roll openings minus the cost of the buybacks that preceded them.')}
-      ${stat(fmtMoney(rollCredits),'Roll Credits','premium collected','#22c55e','Premium collected from the new legs opened as part of rolls.')}
-      ${stat(fmtMoney(rollDebits),'Roll Debits','buyback costs','#ef4444','Cost of buying back positions that were rolled into new ones.')}
+      ${stat(rollNet>=0?'+'+fmtMoney(rollNet):fmtMoney(rollNet),'Roll Net P&L','cumulative',rollNet>=0?'var(--green)':'var(--red)','Total premium collected from roll openings minus the cost of the buybacks that preceded them.')}
+      ${stat(fmtMoney(rollCredits),'Roll Credits','premium collected','var(--green)','Premium collected from the new legs opened as part of rolls.')}
+      ${stat(fmtMoney(rollDebits),'Roll Debits','buyback costs','var(--red)','Cost of buying back positions that were rolled into new ones.')}
     </div>`:`<div style="padding:1.25rem;text-align:center;color:var(--text3);font-size:0.75rem">No rolls detected. Rolls are auto-linked when you paste paired BTC + open trades via SmartScan.</div>`;
 
   // ── Section 5: Strategy Comparison ──
@@ -4999,7 +5006,7 @@ function renderAnalytics(){
         <div><span class="t3-xs">Trades</span><div class="fw5">${cspTrades.length}</div></div>
         <div><span class="t3-xs">Total Premium</span><div class="g fw5">${fmtMoney(cspTotal)}</div></div>
         <div><span class="t3-xs">Avg DTE</span><div class="fw5">${cspAvgDTE?cspAvgDTE.toFixed(0)+'d':'—'}</div></div>
-        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:500;color:var(--orange)">${fmtMoney(timing.avgCspPPD)}</div></div>
+        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:600;color:var(--orange)">${fmtMoney(timing.avgCspPPD)}</div></div>
       </div>
     </div>
     <div class="a-chart-box">
@@ -5008,7 +5015,7 @@ function renderAnalytics(){
         <div><span class="t3-xs">Trades</span><div class="fw5">${ccTrades.length}</div></div>
         <div><span class="t3-xs">Total Premium</span><div class="g fw5">${fmtMoney(ccTotal)}</div></div>
         <div><span class="t3-xs">Avg DTE</span><div class="fw5">${ccAvgDTE?ccAvgDTE.toFixed(0)+'d':'—'}</div></div>
-        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:500;color:var(--orange)">${fmtMoney(timing.avgStocPPD)}</div></div>
+        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:600;color:var(--orange)">${fmtMoney(timing.avgStocPPD)}</div></div>
       </div>
     </div>
   </div>`;
@@ -5018,18 +5025,18 @@ function renderAnalytics(){
     const avgA=t.arocs.length?t.arocs.reduce((a,b)=>a+b,0)/t.arocs.length:null;
     const pct=(Math.abs(t.premium)/totalPremium*100);
     return`<tr>
-      <td style="font-weight:700;color:var(--orange)">${esc(t.ticker)}</td>
+      <td style="font-weight:600;color:var(--orange)">${esc(t.ticker)}</td>
       <td>${t.cycles}</td>
       <td>${t.trades}</td>
       <td class="${colorN(t.premium)} fw5">${fmtMoney(t.premium)}</td>
-      <td style="color:${avgA!=null&&avgA>=0?'#22c55e':'#ef4444'}">${avgA!=null?avgA.toFixed(1)+'%':'—'}</td>
+      <td style="color:${avgA!=null&&avgA>=0?'var(--green)':'var(--red)'}">${avgA!=null?avgA.toFixed(1)+'%':'—'}</td>
       <td><div class="d-pct-bar" style="width:5rem"><div class="d-pct-fill" style="width:${pct.toFixed(0)}%;background:var(--orange)"></div></div></td>
     </tr>`;
   }).join('');
 
   // ── Section 6: Risk ──
   const riskStats=`<div class="a-stat-grid">
-    ${stat(fmtMoney(cap.atRisk),'Current Exposure','open CSP collateral',cap.atRisk>0?'#ef4444':'var(--text3)','Total notional of all currently open cash-secured puts — strike × shares for each live put.')}
+    ${stat(fmtMoney(cap.atRisk),'Current Exposure','open CSP collateral',cap.atRisk>0?'var(--red)':'var(--text3)','Total notional of all currently open cash-secured puts — strike × shares for each live put.')}
     ${stat(fmtMoney(cap.maxCap),'Peak Exposure','highest single CSP','var(--text2)','Largest single cash-secured put notional ever opened. Your peak capital requirement.')}
     ${stat(fmtMoney(cap.totalFees),'Total Fees',cap.feesPct.toFixed(1)+'% of gross premium','var(--text2)','All commissions and regulatory fees logged across every trade.')}
     ${stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
@@ -5044,7 +5051,7 @@ function renderAnalytics(){
     const rotDiv=m.trades.filter(t=>t.action==='DIV').reduce((s,t)=>s+(t.total||0),0);
     const rotRealised=m.premiumNet+stockReal+rotDiv;
     return`<tr>
-      <td style="font-weight:700;color:var(--orange)">${w.sortOrder||'?'}</td>
+      <td style="font-weight:600;color:var(--orange)">${w.sortOrder||'?'}</td>
       <td>${(w.label||w.ticker).replace(/^Rotation\s+\d+\s*[—–\-]+\s*/i,'')}</td>
       <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:0.625rem;font-size:0.5625rem">${w.status==='open'?'● Open':'✓ Closed'}</span></td>
       <td>${m.trades.length}</td>
@@ -5052,22 +5059,22 @@ function renderAnalytics(){
       <td class="${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</td>
       <td class="${colorN(rotRealised)} fw5">${fmtMoney(rotRealised)}</td>
       <td>${m.breakeven!=null?'$'+fmt2(m.breakeven):'—'}</td>
-      <td class="${ar&&ar.aroc!=null?colorN(ar.aroc):'m'}" style="font-weight:700">${ar&&ar.aroc!=null?ar.aroc.toFixed(1)+'%':'—'}</td>
+      <td class="${ar&&ar.aroc!=null?colorN(ar.aroc):'m'}" style="font-weight:600">${ar&&ar.aroc!=null?ar.aroc.toFixed(1)+'%':'—'}</td>
     </tr>`;
   }).join('');
 
   // ── Section: Streaks & Records ──
   const recordStats=`<div class="a-stat-grid">
-    ${stat(streaks.maxStreak?streaks.maxStreak+' mo':'—','Win Streak','consecutive profitable months','#22c55e','Longest run of consecutive months with positive net option income.')}
-    ${stat(streaks.best?fmtMoney(streaks.best.pNet):'—','Best Month',streaks.best?streaks.best.label:'','#22c55e','Single best calendar month by net option premium.')}
-    ${stat(streaks.worst?fmtMoney(streaks.worst.pNet):'—','Worst Month',streaks.worst?streaks.worst.label:'','#ef4444','Worst calendar month by net option premium. Negative means buyback costs exceeded credits.')}
-    ${stat(bw.best?fmtMoney(bw.best.total):'—','Best Single Trade',bw.best?bw.best.action+' · '+fmtDate(bw.best.entered):'','#22c55e','Highest-premium single option trade by total credit received.')}
+    ${stat(streaks.maxStreak?streaks.maxStreak+' mo':'—','Win Streak','consecutive profitable months','var(--green)','Longest run of consecutive months with positive net option income.')}
+    ${stat(streaks.best?fmtMoney(streaks.best.pNet):'—','Best Month',streaks.best?streaks.best.label:'','var(--green)','Single best calendar month by net option premium.')}
+    ${stat(streaks.worst?fmtMoney(streaks.worst.pNet):'—','Worst Month',streaks.worst?streaks.worst.label:'','var(--red)','Worst calendar month by net option premium. Negative means buyback costs exceeded credits.')}
+    ${stat(bw.best?fmtMoney(bw.best.total):'—','Best Single Trade',bw.best?bw.best.action+' · '+fmtDate(bw.best.entered):'','var(--green)','Highest-premium single option trade by total credit received.')}
   </div>`;
 
   // ═══ ASSEMBLE ═══
   return`<div class="a-wrap">
     <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:1.25rem">
-      <span style="font-size:1.125rem;font-weight:300;color:var(--orange);letter-spacing:-0.5px">Analytics</span>
+      <span style="font-size:1.125rem;font-weight:400;color:var(--orange);letter-spacing:-0.5px">Analytics</span>
       <span style="font-size:0.6875rem;color:var(--text3)">All-time performance · ${totalTrades} trades · ${db.wheels.length} rotations</span>
     </div>
 
@@ -5097,8 +5104,8 @@ function renderAnalytics(){
       <div class="a-stat-grid" style="margin-top:0.625rem">
         ${stat(timing.totalOptDays+'d','Total Option-Days','cumulative risk exposure','var(--text2)','Sum of DTE across every option opened. Your total time exposure to the market.')}
         ${stat(fmtMoney(avgTradeSize),'Avg Leg Size','per option opened','var(--text2)','Average premium collected each time you open a new option position.')}
-        ${stat(bw.bestPPD?fmtMoney(bw.bestPPD.total/bw.bestPPD.days)+'/d':'—','Best PPD Trade',bw.bestPPD?bw.bestPPD.action+' · '+bw.bestPPD.days+'d':'','#22c55e','Single option trade with the highest Premium Per Day — your most capital-efficient trade.')}
-        ${stat(bw.biggestBTC?fmtMoney(bw.biggestBTC.total):'—','Biggest BTC',bw.biggestBTC?fmtDate(bw.biggestBTC.entered):'','#ef4444','Most expensive single buyback. Large BTCs eat into premium — track these to improve roll timing.')}
+        ${stat(bw.bestPPD?fmtMoney(bw.bestPPD.total/bw.bestPPD.days)+'/d':'—','Best PPD Trade',bw.bestPPD?bw.bestPPD.action+' · '+bw.bestPPD.days+'d':'','var(--green)','Single option trade with the highest Premium Per Day — your most capital-efficient trade.')}
+        ${stat(bw.biggestBTC?fmtMoney(bw.biggestBTC.total):'—','Biggest BTC',bw.biggestBTC?fmtDate(bw.biggestBTC.entered):'','var(--red)','Most expensive single buyback. Large BTCs eat into premium — track these to improve roll timing.')}
       </div>
     ${stratTable}
       <div class="a-chart-box" style="margin-top:0.75rem">
@@ -5524,8 +5531,8 @@ function showRollPreview(trades){
     return`<div style="background:var(--bg3);border:1px solid var(--border);border-left:0.1875rem solid ${borderCol};border-radius:0.5rem;padding:0.75rem;flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:0.4375rem;margin-bottom:0.5625rem">
         <span class="ab ab-${p.action}">${p.action}</span>
-        <span style="color:var(--silver);font-weight:700;font-size:0.8125rem">${esc(p.ticker)}${p.strike?' $'+p.strike:''}</span>
-        <span style="margin-left:auto;font-weight:700;color:${col}">${cr?'+':'-'}$${(p.total||0).toFixed(2)}</span>
+        <span style="color:var(--silver);font-weight:600;font-size:0.8125rem">${esc(p.ticker)}${p.strike?' $'+p.strike:''}</span>
+        <span style="margin-left:auto;font-weight:600;color:${col}">${cr?'+':'-'}$${(p.total||0).toFixed(2)}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3125rem;font-size:0.6875rem;color:var(--text2)">
         <div><span class="t3">Entered: </span>${fmtDateFull(p.entered)}</div>
@@ -5538,13 +5545,13 @@ function showRollPreview(trades){
   const net=trades.reduce((s,t)=>s+(isCredit(t.action)?t.total:-t.total),0);
   document.getElementById('paste-preview').innerHTML=`
     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6875rem">
-      <span style="background:rgba(13,148,136,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:700;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">↻ ROLL DETECTED</span>
+      <span style="background:rgba(13,148,136,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">↻ ROLL DETECTED</span>
       <span style="font-size:0.6875rem;color:var(--text3)">Both trades linked automatically</span>
-      <span style="margin-left:auto;font-size:0.875rem;font-weight:700;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit: +':'Net debit: -'}$${Math.abs(net).toFixed(2)}</span>
+      <span style="margin-left:auto;font-size:0.875rem;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit: +':'Net debit: -'}$${Math.abs(net).toFixed(2)}</span>
     </div>
     <div style="display:flex;gap:0.5rem;align-items:stretch;margin-bottom:0.75rem">
       ${tradeCard(trades[0])}
-      <div style="display:flex;align-items:center;color:var(--orange);font-size:1.25rem;font-weight:700;flex-shrink:0">→</div>
+      <div style="display:flex;align-items:center;color:var(--orange);font-size:1.25rem;font-weight:600;flex-shrink:0">→</div>
       ${tradeCard(trades[1])}
     </div>
     <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>`;
@@ -5585,9 +5592,9 @@ function showPastePreview(p){
     <div style="background:var(--bg3);border:1px solid var(--border);border-left:0.1875rem solid var(--orange);border-radius:0.5rem;padding:0.875rem;margin-bottom:0.875rem">
       <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.875rem">
         <span class="ab ab-${p.action}">${p.action}</span>
-        <span style="font-weight:700;font-size:1rem;color:var(--silver)">${esc(p.ticker)}</span>
+        <span style="font-weight:600;font-size:1rem;color:var(--silver)">${esc(p.ticker)}</span>
         ${p.strike?`<span style="color:var(--text2);font-size:0.8125rem">$${p.strike} ${p.action==='CSP'?'Put':'Call'}</span>`:''}
-        <span style="margin-left:auto;font-size:1.125rem;font-weight:700;color:${totalCol}">${totalSign}$${(p.total||0).toFixed(2)}</span>
+        <span style="margin-left:auto;font-size:1.125rem;font-weight:600;color:${totalCol}">${totalSign}$${(p.total||0).toFixed(2)}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.625rem">
         <div><div class="mini-lbl">Entered</div><div class="fs-sm">${fmtDateFull(p.entered)}</div></div>
@@ -5648,10 +5655,10 @@ function confirmParsed(){
 // ════════════════════════════════════════════════════════
 function authTab(tab){
   const isSign = tab==='signin';
-  document.getElementById('tab-signin').style.background = isSign?'#2b2d32':'transparent';
-  document.getElementById('tab-signin').style.color = isSign?'#f0f1f3':'#6b7280';
-  document.getElementById('tab-signup').style.background = isSign?'transparent':'#2b2d32';
-  document.getElementById('tab-signup').style.color = isSign?'#6b7280':'#f0f1f3';
+  document.getElementById('tab-signin').style.background = isSign?'var(--bg3)':'transparent';
+  document.getElementById('tab-signin').style.color = isSign?'var(--text)':'var(--text3)';
+  document.getElementById('tab-signup').style.background = isSign?'transparent':'var(--bg3)';
+  document.getElementById('tab-signup').style.color = isSign?'var(--text3)':'var(--text)';
   document.getElementById('auth-submit-btn').textContent = isSign?'Sign In':'Create Account';
   document.getElementById('auth-submit-btn').dataset.mode = tab;
   document.getElementById('auth-error').style.display='none';
@@ -5696,7 +5703,7 @@ async function authForgot(e){
     if(err.code==='auth/too-many-requests'){showAuthError('Too many attempts. Please try again later.');return;}
   }
   el.textContent='If that email has an account, a reset link is on its way. Check your inbox (and spam).';
-  el.style.background='#0f2e2a';el.style.borderColor='#0d9488';el.style.color='#99f6e4';el.style.display='block';
+  el.style.background='#0f2e2a';el.style.borderColor='var(--orange)';el.style.color='#99f6e4';el.style.display='block';
 }
 
 async function authGoogle(){
@@ -5738,7 +5745,7 @@ function openSettings(){
   const toggle=document.getElementById('theme-toggle');
   const knob=document.getElementById('theme-knob');
   if(toggle){
-    const isLight=document.documentElement.getAttribute('data-theme')==='light';
+    const isLight=document.documentElement.getAttribute('data-theme')!=='dark';
     toggle.checked=isLight;
     if(knob)knob.style.left=isLight?'18px':'2px';
   }
@@ -5751,7 +5758,7 @@ function setDateFmt(val){
   render();
 }
 function toggleTheme(isLight){
-  document.documentElement.setAttribute('data-theme',isLight?'light':'');
+  if(isLight)document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme','dark');
   localStorage.setItem('wh-theme',isLight?'light':'dark');
   const knob=document.getElementById('theme-knob');
   if(knob)knob.style.left=isLight?'18px':'2px';
