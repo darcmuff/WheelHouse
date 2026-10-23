@@ -660,6 +660,47 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 .act-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin:0.25rem 0 0.875rem}.act-head h1{font-size:1.375rem;font-weight:600}.act-head p{color:var(--text3);font-size:0.7rem}
 .act-btns{display:flex;flex-wrap:wrap;gap:0.375rem}
+
+/* ── Rotation detail (A) ── */
+.trade-body{border-top:1px solid var(--bg3);margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;overflow:hidden}
+.thead-row{background:transparent;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.6rem;color:var(--text3);border-bottom:1px solid var(--border);padding:0.5rem 0.875rem}
+.trow{border-top:1px solid var(--bg3);padding:0.5rem 0.875rem;font-size:0.7rem}.trow:hover{background:var(--bg)}
+.trow.roll-trade,.trow.expired-trade{border-left:0;padding-left:0.875rem;background:transparent}
+.chain-row{border-left:0;background:var(--bg);color:var(--text2);padding:0.4rem 0.875rem;font-size:0.65rem}
+.chain-row .chain-tag{color:var(--orange);text-transform:none;letter-spacing:0;font-size:0.6rem}
+.roll-badge{color:var(--orange)}
+.ab{border:0!important;border-radius:1rem;padding:0.15rem 0.55rem;font-size:0.6rem;letter-spacing:0;font-weight:600}
+.ab-CSP,.ab-OUT,.ab-DIV{background:color-mix(in srgb,var(--green) 12%,transparent);color:var(--green)}
+.ab-BTC{background:color-mix(in srgb,var(--red) 11%,transparent);color:var(--red)}
+.ab-STOC,.ab-STC{background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue)}
+.ab-IN{background:color-mix(in srgb,var(--yellow) 13%,transparent);color:var(--yellow)}
+.ab-EXP{background:var(--bg3);color:var(--text3)}
+.exp-badge{color:var(--text3);font-weight:400}
+.rot-actions{background:transparent;border-top:1px solid var(--bg3);padding:0.625rem 0.875rem}
+.trow-focus{background:var(--orangeL)!important;box-shadow:inset 0.1875rem 0 0 var(--orange)}
+/* ── Modals (A) ── */
+.mb{background:rgba(29,32,30,.38);backdrop-filter:blur(3px)}
+.mbox{background:var(--bg2);border:1px solid var(--border);border-radius:1.25rem;box-shadow:0 12px 40px rgba(20,24,20,.18);padding:1.375rem 1.5rem}
+.mtitle{color:var(--text);font-size:0.95rem;font-weight:600}
+.fld label{text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2);font-size:0.625rem}
+.fld input,.fld select,.fld textarea,.mbox textarea,.mbox input[type=text]{background:var(--bg)!important;border:1px solid var(--border)!important;border-radius:0.625rem!important;color:var(--text)!important}
+.fld input:focus,.fld select:focus,.fld textarea:focus,.mbox textarea:focus{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeD)}
+.mfoot{border-top:1px solid var(--bg3)}
+.hint{color:var(--text3)}
+.imp-drop{border:1.5px dashed var(--border2);background:var(--bg);color:var(--text2);border-radius:0.875rem}
+.imp-drop.drag{background:var(--orangeL);border-color:var(--orange)}
+#mSettings{background:rgba(29,32,30,.12)}
+#mSettings .mbox{width:15rem;border-radius:1rem;padding:0.875rem 0.75rem}
+#mSettings .btn{border-radius:0.625rem}
+.btn-ghost{background:var(--bg2);border:1px solid var(--border);color:var(--text)}.btn-ghost:hover{background:var(--bg3)}
+/* dark theme tune-up */
+[data-theme="dark"]{--bg:#141716;--bg2:#1c201e;--bg3:#252a27;--bg4:#2f3531;--border:#2c322e;--border2:#3a413c;--orange:#5fae86;--orange2:#7cc39d;--orangeL:rgba(95,174,134,.14);--orangeD:rgba(95,174,134,.12);--text:#e9ece9;--text2:#b0b8b2;--text3:#838c86;--green:#6cc493;--red:#e07a6e;--blue:#86aee0;--yellow:#d9a54d;--silver:#c8ccc8;--shadow:none}
+[data-theme="dark"] .hb-w{background:#3d6b55}
+.btn-success,.btn-warn{background:var(--bg2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid color-mix(in srgb,var(--red) 35%,transparent)}
+.btn-danger:hover{background:color-mix(in srgb,var(--red) 10%,transparent)}
+[data-theme="dark"] #topnav .nav-item.active{background:var(--bg3);color:var(--text)}
+[data-theme="dark"] #topnav{background:color-mix(in srgb,var(--bg) 92%,transparent)}
 </style>
 </head>
 <body>
@@ -1129,6 +1170,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 </div>
 
 <script>
+// Theme: the stored value keeps its old meaning ('light' → light, 'dark' → dark); nothing stored → light.
+function themeFromStored(v){return v==='dark'?'dark':'light';}
 // Legacy GitHub Pages deployment — redirect to the live app. Never fake a user.
 (function(){
   var h=window.location.hostname;
@@ -1137,8 +1180,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     return;
   }
   // Restore theme preference
+  // Stored 'wh-theme' keeps its old meaning: 'light' → light, 'dark' → dark. Nothing stored → light (new default). Read-only.
   var theme=localStorage.getItem('wh-theme');
-  if(theme==='dark')document.documentElement.setAttribute('data-theme','dark');
+  if(themeFromStored(theme)==='dark')document.documentElement.setAttribute('data-theme','dark');else document.documentElement.removeAttribute('data-theme');
   // Restore sidebar state
   var sbState=localStorage.getItem('wh-sidebar');
   if(sbState==='collapsed'){
