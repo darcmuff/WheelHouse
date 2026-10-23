@@ -603,6 +603,28 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   #tabbar .nav-item{flex-direction:column;font-size:0.625rem;padding:0.375rem 0.5rem}
   #tabbar .nav-item.active{color:var(--orange);font-weight:600}
 }
+
+/* ── Home ── */
+.home{display:flex;flex-direction:column;gap:1rem}
+.home-head h1{font-size:1.375rem;font-weight:600;margin:0.25rem 0 0.125rem}.home-head p{color:var(--text3);font-size:0.75rem}
+.hk-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:0.75rem}
+.hk{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
+.hk-l{color:var(--text3);font-size:0.6875rem}.hk-v{font-size:1.375rem;font-weight:600;margin-top:0.25rem;letter-spacing:-0.01em}.hk.big .hk-v{font-size:2.125rem}
+.hk-s{color:var(--text2);font-size:0.65rem;margin-top:0.125rem}.hk-how{color:var(--text3);font-size:0.575rem;margin-top:0.5rem;line-height:1.4}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.home-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:0.75rem}
+.hcard{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
+.hc-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.75rem}.hc-h h2{font-size:0.8125rem;font-weight:600;margin:0}.hc-note{color:var(--text3);font-size:0.625rem}
+.hb{display:flex;align-items:flex-end;gap:0.75rem;height:8rem}.hb-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:0.25rem}
+.hb-stack{width:100%;max-width:2.25rem;border-radius:0.375rem;overflow:hidden;display:flex;flex-direction:column}.hb-w{background:#9cc6ae}.hb-l{background:var(--orange)}
+.hb-v{font-size:0.575rem;color:var(--text2)}.hb-m{font-size:0.575rem;color:var(--text3)}.hb-m.now{color:var(--text);font-weight:600}
+.hb-leg{display:flex;gap:1rem;font-size:0.6rem;color:var(--text2);margin-top:0.625rem}.hb-leg i{display:inline-block;width:0.5rem;height:0.5rem;border-radius:0.125rem;margin-right:0.3rem}
+.ny-row{display:flex;align-items:center;gap:0.5rem;font-size:0.6875rem;padding:0.4375rem 0;border-top:1px solid var(--bg3)}.ny-row:first-of-type{border-top:0}.ny-row a{margin-left:auto;color:var(--orange);cursor:pointer;font-size:0.625rem}
+.ny-dot{width:0.4375rem;height:0.4375rem;border-radius:50%;flex-shrink:0}.ny-dot.r{background:var(--red)}.ny-dot.a{background:var(--yellow)}.ny-dot.g{background:var(--green)}
+.ny-none{color:var(--text3);font-size:0.6875rem;padding:0.25rem 0 0.5rem}
+.hc-links{display:flex;flex-direction:column;gap:0.375rem;margin-top:0.875rem;padding-top:0.625rem;border-top:1px solid var(--bg3)}.hc-links a{color:var(--orange);font-size:0.65rem;cursor:pointer}
+.ms-head{display:flex;align-items:baseline;gap:1rem;margin:0.25rem 0 0.5rem 1rem}.ms-head a{color:var(--orange);cursor:pointer;font-size:0.65rem}.ms-head h1{font-size:1.25rem;font-weight:600}
+@media(max-width:900px){.hk-grid{grid-template-columns:1fr 1fr}.hk.big{grid-column:1/-1}.home-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -1948,8 +1970,8 @@ function render(){
   const c=document.getElementById('content');
   if(view==='positions')c.innerHTML=renderPositions();
   if(view==='log')c.innerHTML=renderLog();
-  if(view==='dash'){c.innerHTML=renderDash();requestAnimationFrame(renderDashChart);}
-  if(view==='analytics')c.innerHTML=renderAnalytics();
+  if(view==='dash'){c.innerHTML=renderHome();}
+  if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
   if(view==='options'){c.innerHTML=renderOptions();fetchOptionMarks(false);}
 }
 
@@ -3602,7 +3624,7 @@ function buildMiniCal(){
   return cells;
 }
 
-function renderDash(){
+function renderStatsOverview(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();const cap=calcCapitalStats();
   const monthly=calcMonthlyPnL();
   const openWheels=db.wheels.filter(w=>w.status==='open').sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
@@ -3672,7 +3694,7 @@ function renderDash(){
     </div>`;
   }
 
-  const k1=kpi('Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
+  const k1=kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
   const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
 
@@ -3778,17 +3800,6 @@ function renderDash(){
     <!-- Data Health -->
     ${healthPanel}
 
-    <!-- Monthly Wheel Premium — full width -->
-    <div class="d-panel">
-      <div class="d-panel-hdr"><span class="d-panel-title">Monthly Premium</span></div>
-      <div class="d-panel-body" style="padding:0.875rem 1rem">
-        <canvas id="dash-bar-canvas" style="width:100%;height:11.25rem;display:block"></canvas>
-      </div>
-    </div>
-
-    <!-- Monthly P&L (Realised) — the one home for P&L by month -->
-    ${renderMonthlyRealised()}
-
     <!-- Open Positions — full width -->
     <div class="d-panel">
       <div class="d-panel-hdr">
@@ -3798,16 +3809,77 @@ function renderDash(){
       <div class="d-panel-body">${posHdr}${posRows}</div>
     </div>
 
-    <!-- Recent Activity — full width -->
-    <div class="d-panel">
-      <div class="d-panel-hdr">
-        <span class="d-panel-title">Recent Activity</span>
-        <span class="d-panel-count">${recentTrades.length} trades</span>
-      </div>
-      <div class="d-panel-body">${recHdr}${recRows}</div>
-    </div>
-
   </div>`;
+}
+
+
+// ═══ HOME (Direction A) — read-only figures built from the Monthly P&L rows ═══
+// Pure: rows from calcMonthlyRealised; returns this month (wheel vs LEAPs) and this year.
+function homeFigures(rows,today){
+  const ym=today.slice(0,7),yr=today.slice(0,4);
+  const wheelOf=r=>r.premium+r.shares+r.divs,leapsOf=r=>Object.values(r.extra||{}).reduce((a,v)=>a+v,0);
+  const m=rows.find(r=>r.ym===ym)||{premium:0,shares:0,divs:0,extra:{},total:0};
+  const y=rows.filter(r=>r.ym.startsWith(yr));
+  const rd=n=>Math.round(n*100)/100;
+  return{month:{wheel:rd(wheelOf(m)),leaps:rd(leapsOf(m)),total:rd(m.total||0)},
+    year:{wheel:rd(y.reduce((a,r)=>a+wheelOf(r),0)),leaps:rd(y.reduce((a,r)=>a+leapsOf(r),0)),total:rd(y.reduce((a,r)=>a+r.total,0))}};
+}
+// Pure: soonest open expiry across wheel legs [{ticker,strike,type,expiry}] and open option legs.
+function nextExpiry(wheelLegs,legs,today){
+  const all=[...(wheelLegs||[]).map(l=>({ticker:l.ticker,what:(l.action==='CSP'?'put':'call')+' $'+(+l.strike||0),expiry:l.expiry})),
+    ...(legs||[]).filter(l=>l.status==='open'&&l.expiry).map(l=>({ticker:l.underlying||l.und||l.ticker||'',what:(l.side==='long'?'LEAP':'call')+' $'+(+l.strike||0),expiry:l.expiry}))]
+    .filter(x=>x.expiry&&x.expiry>=today).sort((a,b)=>a.expiry.localeCompare(b.expiry));
+  if(!all.length)return null;
+  const d=Math.round((new Date(all[0].expiry+'T12:00:00')-new Date(today+'T12:00:00'))/864e5);
+  return{...all[0],dte:d};
+}
+// Pure: 'Needs you' list from the status labels on open short calls (+ wheel legs expiring within 7 days).
+function needsYou(shorts,spots,today,wheelLegs){
+  const out=[];
+  (shorts||[]).forEach(c=>{const tk=c.underlying||c.und||c.ticker||'';pmccLabels(c,spots[tk],today).forEach(l=>out.push({c:l.c,text:`${tk} $${+c.strike}C · ${l.t}`,legId:c.id}));});
+  (wheelLegs||[]).forEach(l=>{const d=Math.round((new Date(l.expiry+'T12:00:00')-new Date(today+'T12:00:00'))/864e5);if(d>=0&&d<=7)out.push({c:d<=0?'r':'a',text:`${l.ticker} ${l.action==='CSP'?'put':'call'} $${+l.strike} · ${d<=0?'Expires today':'Expiring soon · '+d+'d'}`,wheelId:l.wheelId});});
+  const rank={r:0,a:1,g:2};return out.sort((a,b)=>rank[a.c]-rank[b.c]);
+}
+function renderHome(){
+  const today=new Date().toISOString().slice(0,10);
+  const legs=db.opts||[];
+  const rows=calcMonthlyRealised(db.trades,monthlyExtraSources(legs));
+  const F=homeFigures(rows,today);
+  const un=calcAllUnrealised(db.wheels,db.trades,_priceOf,legs);
+  const wheelLegs=db.wheels.filter(w=>w.status==='open').flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).map(l=>({...l,ticker:l.ticker||w.ticker,wheelId:w.id})));
+  const nx=nextExpiry(wheelLegs,legs,today);
+  const shorts=legs.filter(l=>l.side==='short'&&l.status==='open');
+  const ny=needsYou(shorts,_optSpots(),today,wheelLegs);
+  const health=allDataHealth();
+  const mName=new Date().toLocaleDateString('en-GB',{month:'long'});
+  const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
+  const cls=n=>n>0?'pos':n<0?'neg':'';
+  // stacked monthly bars: last 6 months, wheel vs LEAPs
+  const months=[];for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);months.push(d.toISOString().slice(0,7));}
+  const mrows=months.map(ym=>{const r=rows.find(x=>x.ym===ym)||{premium:0,shares:0,divs:0,extra:{},total:0};const w=r.premium+r.shares+r.divs,l=Object.values(r.extra||{}).reduce((a,v)=>a+v,0);return{ym,w,l,t:w+l};});
+  const mx=Math.max(1,...mrows.map(m=>Math.max(0,m.w)+Math.max(0,m.l)));
+  const bars=mrows.map((m,i)=>{const hw=Math.max(0,m.w)/mx*100,hl=Math.max(0,m.l)/mx*100;const lab=new Date(m.ym+'-02').toLocaleDateString('en-GB',{month:'short'});
+    return`<div class="hb-col"><span class="hb-v ${m.t<0?'neg':''}">${m.t?sgn(m.t):''}</span><div class="hb-stack" style="height:${Math.max(hw+hl,m.t?2:0)}%"><div class="hb-l" style="height:${hw+hl?hl/(hw+hl)*100:0}%"></div><div class="hb-w" style="flex:1"></div></div><span class="hb-m${i===5?' now':''}">${lab}</span></div>`;}).join('');
+  const nyHtml=ny.length?ny.slice(0,5).map(n=>`<div class="ny-row"><span class="ny-dot ${n.c}"></span><span>${esc(n.text)}</span>${n.wheelId?`<a onclick="goToWheel('${n.wheelId}')">Open</a>`:`<a onclick="switchView('options')">Open</a>`}</div>`).join(''):`<div class="ny-none">Nothing needs you right now.</div>`;
+  return`<div class="home">
+  <div class="home-head"><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div>
+  <div class="hk-grid">
+    <div class="hk big"><div class="hk-l">Options P&amp;L this month</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
+      <div class="hk-s">Wheel ${sgn(F.month.wheel)} · LEAPs &amp; calls ${sgn(F.month.leaps)}</div>
+      <div class="hk-how">Realised P&amp;L: wheel premium + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, in ${mName}.</div></div>
+    <div class="hk"><div class="hk-l">This year</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · LEAPs ${sgn(F.year.leaps)}</div><div class="hk-how">Realised P&amp;L since 1 January.</div></div>
+    <div class="hk"><div class="hk-l">Unrealised</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · LEAPs ${sgn(un.leaps)}</div><div class="hk-how">Open shares and LEAPs at today's price, minus what they cost${un.unpriced?` · ${un.unpriced} without a price`:''}.</div></div>
+    <div class="hk"><div class="hk-l">Next expiry</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div><div class="hk-how">Soonest open option, wheel or LEAPs.</div></div>
+  </div>
+  <div class="home-grid">
+    <div class="hcard"><div class="hc-h"><h2>Options P&amp;L by month</h2><span class="hc-note">last 6 months</span></div>
+      <div class="hb">${bars}</div>
+      <div class="hb-leg"><span><i class="hb-w"></i>Wheel</span><span><i class="hb-l"></i>LEAPs &amp; calls</span></div></div>
+    <div class="hcard"><div class="hc-h"><h2>Needs you</h2><span class="hc-note">${ny.length||''}</span></div>${nyHtml}
+      <div class="hc-links"><a onclick="switchView('analytics')">More stats →</a><a onclick="switchView('analytics')">Data health${health.length?` (${health.length})`:''} &amp; fees →</a></div></div>
+  </div>
+  ${renderMonthlyRealised()}
+</div>`;
 }
 
 // Extra realised-P&L sources for the Monthly P&L table (e.g. LEAPs & short calls once the options code lands).
