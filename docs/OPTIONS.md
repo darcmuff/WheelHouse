@@ -55,3 +55,9 @@ The browser can't call Cboe directly (no CORS header). If the proxy fails, manua
 - No risk warnings, by design (Marc's call: he places the trades himself). Nothing about strike, expiry or contract count blocks a save. SmartScan still highlights low-confidence fields and flags wrong side/ticker/put pastes — those are data checks, not risk advice.
 - An orphaned short (its LEAP deleted) falls back to "Other options" and raises a data-health warning.
 - Status labels (card only, on the open short call; informational, never block): **Expiring soon** (amber, ≤7 DTE) / **Expires today** (red, DTE 0); **Near the money** (amber, underlying within 5% below the short strike); **In the money** (red, underlying above strike); **Take profit · N%** (green, ≥40% of the premium captured, i.e. mark ≤ 60% of sale price). Price labels only appear when there's a live underlying price / mark.
+
+## Dashboard: "All options, by month" (read-only)
+
+- One row per month, newest first: **Wheel** = the existing `calcMonthlyPnL()` `pNet` (option premium net: CSP + STOC + STC credits − BTC debits, by trade date — the same figure as the Dashboard "Monthly Premium" chart and the sidebar "Option Income"; share buys/sells and dividends are not included). **LEAPs & CCs** = realised P&L of closed/expired/assigned option legs from `optlegs` (`OPTS.legPnL().realized`: premium/proceeds − cost/buyback − all fees), by close date (expiry date if an expired leg has none). **Total** = Wheel + LEAPs & CCs.
+- Year-to-date and All-time rows, then "Open, not yet banked" = unrealised P&L of open option legs from current marks (unmarked legs counted, not valued). Months only contain closed trades.
+- Writes nothing: no wheel trade, rotation, wheel calculation, sidebar or Analytics figure changes.

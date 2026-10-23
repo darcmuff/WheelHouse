@@ -556,6 +556,8 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .pmcc-lb{padding:1px 6px;border-radius:20px;font-size:8.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;line-height:1.5}
 .pmcc-lb.g{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.4)}.pmcc-lb.a{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}.pmcc-lb.r{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.4)}
 .pmcc-row .rmb-val{font-weight:550}
+.mo-pnl .d-table-row,.mo-pnl .d-table-hdr{white-space:nowrap}.mo-pnl .ls{display:none}.mo-pnl .d-table-row>span{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:640px){.mo-pnl .d-table-row,.mo-pnl .d-table-hdr{padding-left:10px;padding-right:10px;gap:6px}.mo-pnl .d-table-row{font-size:11px}.mo-pnl .d-panel-count{display:none}.mo-pnl .lf{display:none}.mo-pnl .ls{display:inline}}
 .pmcc-hist{border-top:1px solid var(--border);padding:6px 12px}
 .pmcc-hist summary{font-size:11px;color:var(--text3);cursor:pointer}
 .pmcc-hist table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}.pmcc-hist td,.pmcc-hist th{padding:3px 6px;text-align:left;border-top:1px solid var(--border);white-space:nowrap}.pmcc-hist th{color:var(--text3);font-weight:500}
@@ -1491,6 +1493,44 @@ function calcMonthlyPnL(){
   }));
 }
 
+// ── All options, by month (READ-ONLY: reads db.trades via calcMonthlyPnL and db.opts; writes nothing) ──
+// Options realised P&L by close date (expired → expiry if no close date). Open legs only feed the "open, not yet banked" line.
+function optsMonthly(legs){
+  const mo={};let openPl=0,unmarked=0,openN=0;
+  (legs||[]).forEach(l=>{
+    const p=OPTS.legPnL(l);
+    if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;return;}
+    const d=l.closeDate||l.expiry;if(!d)return;const ym=d.slice(0,7);mo[ym]=(mo[ym]||0)+p.realized;
+  });
+  Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);
+  return{byMonth:mo,openPl:Math.round(openPl*100)/100,unmarked,openN};
+}
+function allOptionsByMonth(wheelMonthly,legs,today){
+  const W={};(wheelMonthly||[]).forEach(m=>W[m.ym]=m.pNet);
+  const O=optsMonthly(legs),yr=(today||new Date().toISOString()).slice(0,4);
+  const yms=[...new Set([...Object.keys(W),...Object.keys(O.byMonth)])].sort().reverse();
+  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.byMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
+  const sum=(f,yr0)=>Math.round(rows.filter(r=>!yr0||r.ym.startsWith(yr0)).reduce((a,r)=>a+r[f],0)*100)/100;
+  return{rows,ytd:{wheel:sum('wheel',yr),opts:sum('opts',yr),total:sum('total',yr),year:yr},all:{wheel:sum('wheel'),opts:sum('opts'),total:sum('total')},open:{pl:O.openPl,unmarked:O.unmarked,n:O.openN}};
+}
+function renderAllOptionsByMonth(monthly){
+  const A=allOptionsByMonth(monthly,db.opts||[],new Date().toISOString().slice(0,10));
+  if(!A.rows.length&&!A.open.n)return'';
+  const kf=n=>{const a=Math.abs(n);return(n<0?'-':'')+'$'+(a>=1e4?Math.round(a/1e3)+'k':a>=1e3?(a/1e3).toFixed(1)+'k':Math.round(a));};
+  const m=n=>`<span class="${n>0?'g':n<0?'r':''}" style="${n?'':'color:var(--text3)'}">${n?`<span class="lf">${(n>0?'+':'')+fmtMoney(n).replace(/\.\d\d$/,'')}</span><span class="ls">${(n>0?'+':'')+kf(n)}</span>`:'—'}</span>`;
+  const two=(f,sh)=>`<span class="lf">${f}</span><span class="ls">${sh}</span>`;
+  const cols='minmax(0,1.2fr) repeat(3,minmax(0,1fr))';
+  const row=(a,b,c,d,st='')=>`<div class="d-table-row" style="grid-template-columns:${cols};${st}"><span>${a}</span><span style="text-align:right">${b}</span><span style="text-align:right">${c}</span><span style="text-align:right;font-weight:600">${d}</span></div>`;
+  const body=A.rows.map(r=>row(two(r.label,new Date(r.ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'2-digit'})),m(r.wheel),m(r.opts),m(r.total))).join('');
+  const tot=row(`<b>${two('Year to date '+A.ytd.year,'YTD')}</b>`,m(A.ytd.wheel),m(A.ytd.opts),m(A.ytd.total),'background:var(--bg3)')+row('<b>All time</b>',m(A.all.wheel),m(A.all.opts),m(A.all.total),'background:var(--bg3)');
+  const openH=`<div style="padding:9px 20px;font-size:11px;color:var(--text3);display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span><b style="color:var(--text2)">Open, not yet banked:</b> ${A.open.n?m(A.open.pl):'—'}</span><span>${A.open.n} open LEAP${A.open.n!==1?'s':''} &amp; short calls${A.open.unmarked?` · ${A.open.unmarked} without a mark`:''} · moves with prices, not in the months above${optDemo?' · <b style="color:#fcd34d">options figures are DEMO</b>':''}</span></div>`;
+  return`<div class="d-panel mo-pnl">
+      <div class="d-panel-hdr"><span class="d-panel-title">All options, by month</span><span class="d-panel-count">wheel premium + realised LEAPs &amp; covered calls</span></div>
+      <div class="d-panel-body"><div class="d-table-hdr" style="grid-template-columns:${cols}"><span>Month</span><span style="text-align:right">Wheel</span><span style="text-align:right">${two('LEAPs &amp; CCs','LEAPs+CC')}</span><span style="text-align:right">Total</span></div>
+      <div style="max-height:420px;overflow-y:auto">${body}</div>${tot}${openH}</div>
+    </div>`;
+}
+
 function calcOverall(){
   let pc=0,pd=0,wins=0,losses=0,open=0,closed=0,sh=0;
   let capDeployed=0,stockRealised=0,divs=0;
@@ -1925,7 +1965,10 @@ function optDemoLegs(todayISO,wheels){
   const s4=L(8,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:390,expiry:wk,entryPrice:4.20,entryDate:past(4),mark:6.80,iv:0.6});
   // expiry-day, in-the-money short on the TSLA 400 LEAP (spot 380 > 360)
   const s5=L(9,{underlying:'TSLA',side:'short',parentLeapId:'demo-1',strike:360,expiry:add(0),entryPrice:3.10,entryDate:past(6),mark:20.40,iv:0.6,qty:2,fees:1.30});
-  legs.push(s1,s2,s3,s4,s5);
+  // closed history for the Dashboard's month table: a LEAP sold at a profit, and a short call bought back on the TSLA 300 LEAP
+  const c1=L(10,{underlying:'AAPL',strike:200,expiry:past(-200),entryPrice:38.00,entryDate:past(420),status:'closed',closePrice:52.40,closeDate:past(40),closeFees:0.65,mark:null});
+  const c2=L(11,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:420,expiry:past(18),entryPrice:6.10,entryDate:past(45),status:'closed',closePrice:1.20,closeDate:past(25),closeFees:0.65,mark:null});
+  legs.push(s1,s2,s3,s4,s5,c1,c2);
   return legs;
 }
 function setOptDemo(on){
@@ -3757,6 +3800,9 @@ function renderDash(){
         <canvas id="dash-bar-canvas" style="width:100%;height:180px;display:block"></canvas>
       </div>
     </div>
+
+    <!-- All options, by month (read-only) -->
+    ${renderAllOptionsByMonth(monthly)}
 
     <!-- Open Positions — full width -->
     <div class="d-panel">
