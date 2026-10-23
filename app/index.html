@@ -652,6 +652,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .lc-note{color:var(--yellow);font-size:0.6rem;margin-top:0.25rem}
 .lc-hero{display:flex;gap:1.75rem;margin-top:0.75rem;flex-wrap:wrap}.lc-k{color:var(--text3);font-size:0.6rem}.lc-v{font-size:1.25rem;font-weight:600}.lc-v.sm{font-size:0.95rem;margin-top:0.25rem}.lc-mut{color:var(--text2)}
 .lc-bar{height:0.3rem;background:var(--bg3);border-radius:1rem;margin:0.75rem 0 0.375rem;overflow:hidden}.lc-bar i{display:block;height:100%;background:var(--orange)}
+.ii{position:relative;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0 0.125rem;margin-left:0.25rem;font:inherit;font-size:0.8em;font-weight:400;line-height:1;color:var(--text3);opacity:.7;cursor:help;vertical-align:baseline;text-transform:none;letter-spacing:0}.ii:hover,.ii:focus{opacity:1;color:var(--text2);outline:none}.ii:focus-visible{outline:1px solid var(--border);border-radius:4px}.ii:hover::after,.ii:focus::after{content:attr(data-tip);position:absolute;z-index:50;top:calc(100% + 6px);left:50%;transform:translateX(-50%);width:max-content;max-width:17rem;padding:0.5rem 0.625rem;border-radius:8px;background:var(--surface,var(--bg2,#fff));color:var(--text2);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:0.6875rem;font-weight:400;line-height:1.45;text-align:left;white-space:normal;pointer-events:none}.ii.ii-r::after{left:auto;right:-0.25rem;transform:none}.ii.ii-l::after{left:-0.25rem;transform:none}
 .lc-how{color:var(--text3);font-size:0.575rem}
 .lc-short{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;background:var(--bg3);border-radius:0.75rem;padding:0.5rem 0.75rem;margin-top:0.75rem;font-size:0.65rem}
 .lc-short.none{color:var(--text3)}.lc-sr{display:flex;align-items:center;gap:0.375rem}
@@ -2340,10 +2341,9 @@ function renderLeapCard(l,spot,today){
   <div class="lc-h"><div><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}</div>
   ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
-    <div><div class="lc-k">Cost after calls</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
+    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls sold against it.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
     <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
-  <div class="lc-how">Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls sold against it.</div>
   ${shortRow}
   <div class="lc-acts">${c?'':''}<button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Sell call</button><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','roll')">Roll LEAP</button><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close LEAP</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></div>
   <details class="wl-more"><summary>More numbers &amp; past calls</summary><div class="leap-row">${row}</div>${renderPmcc(l,today,spot)}</details></div>`;
@@ -3369,10 +3369,9 @@ function renderRotationWindow(wheel){
   const _cap=(m.sharesHeld>0&&openPos&&openPos.action==='STOC'&&_rss.openShares>0)?calledAwayProfit(openPos.strike,_rss.openShares,_rss.openCost,m.premiumNet,_rss.realised):null;
   const _fCall=_cap!=null?_fact('Profit if called',(_cap>=0?'+':'')+fmtMoney(_cap).replace(/\.00$/,''),colorN(_cap)):'';
   const wheelCardBody=`<div class="wl-body">
-    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span></div>
+    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span>${ii(`Premium = option credits minus buybacks. Shares P&amp;L and Unrealised use each share's actual cost (first in, first out). Cycle return = premium + share P&amp;L + dividends${_cr&&_cr.incUnrealised?' + unrealised':''}, ÷ capital tied up (biggest put collateral, or share cost), annualised over ${_cr?_cr.days:0} day${_cr&&_cr.days===1?'':'s'}${_cr&&_cr.ann==null?' (under 7 days: not annualised)':''}.${_cap!=null?' If called = (strike − share cost) × shares + premium.':''}`)}</div>
     ${_steps}
     <div class="wl-facts">${_f2}${_f3}${m.sharesHeld>0?_fact('Open leg',openPos?`Call $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d`:'none'):_fact('Last action',lastAct)}${_fRet}${_fCall}</div>
-    <div class="wl-how">Premium = option credits minus buybacks. Shares P&amp;L and Unrealised use each share's actual cost (first in, first out). Cycle return = premium + share P&amp;L + dividends${_cr&&_cr.incUnrealised?' + unrealised':''}, ÷ capital tied up (biggest put collateral, or share cost), annualised over ${_cr?_cr.days:0} day${_cr&&_cr.days===1?'':'s'}${_cr&&_cr.ann==null?' (under 7 days: not annualised)':''}.${_cap!=null?' If called = (strike − share cost) × shares + premium.':''}</div>
     <div class="wl-acts" onclick="event.stopPropagation()">
       <button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">+ Paste fill</button>
       <button class="btn btn-ghost btn-sm" onclick="openAddTrade('${wheel.id}')">Add trade</button>
@@ -4054,13 +4053,12 @@ function renderHome(){
   return`<div class="home">
   <div class="home-head"><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div>
   <div class="hk-grid">
-    <div class="hk big"><div class="hk-l">Options P&amp;L this month</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
-      <div class="hk-s">Wheel ${sgn(F.month.wheel)} · LEAPs &amp; calls ${sgn(F.month.leaps)}</div>
-      <div class="hk-how">Realised P&amp;L: wheel premium + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, in ${mName}.</div></div>
-    <div class="hk"><div class="hk-l">This year</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · LEAPs ${sgn(F.year.leaps)}</div><div class="hk-how">Realised P&amp;L since 1 January.</div></div>
-    <div class="hk"><div class="hk-l">Unrealised</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · LEAPs ${sgn(un.leaps)}</div><div class="hk-how">Open shares and LEAPs at today's price, minus what they cost${un.unpriced?` · ${un.unpriced} without a price`:''}.</div></div>
-    <div class="hk"><div class="hk-l">Capital at work</div><div class="hk-v">${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Puts ${fmtMoney(caw.puts).replace(/\.\d\d$/,'')} · Shares ${fmtMoney(caw.shares).replace(/\.\d\d$/,'')}${caw.leaps?` · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')} separate`:''}</div><div class="hk-how">Wheel money tied up now: open put collateral (strike × shares) + what your open shares cost. LEAPs at what you paid, shown separately.</div></div>
-    <div class="hk"><div class="hk-l">Next expiry</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div><div class="hk-how">Soonest open option, wheel or LEAPs.</div></div>
+    <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Realised P&amp;L: wheel premium + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, in ${mName}.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
+      <div class="hk-s">Wheel ${sgn(F.month.wheel)} · LEAPs &amp; calls ${sgn(F.month.leaps)}</div></div>
+    <div class="hk"><div class="hk-l">This year ${ii(`Realised P&amp;L since 1 January.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · LEAPs ${sgn(F.year.leaps)}</div></div>
+    <div class="hk"><div class="hk-l">Unrealised ${ii(`Open shares and LEAPs at today's price, minus what they cost${un.unpriced?` · ${un.unpriced} without a price`:''}.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · LEAPs ${sgn(un.leaps)}</div></div>
+    <div class="hk"><div class="hk-l">Capital at work ${ii(`Wheel money tied up now: open put collateral (strike × shares) + what your open shares cost. LEAPs at what you paid, shown separately.`)}</div><div class="hk-v">${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Puts ${fmtMoney(caw.puts).replace(/\.\d\d$/,'')} · Shares ${fmtMoney(caw.shares).replace(/\.\d\d$/,'')}${caw.leaps?` · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')} separate`:''}</div></div>
+    <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="home-grid">
     <div class="hcard"><div class="hc-h"><h2>Options P&amp;L by month</h2><span class="hc-note">last 6 months</span></div>
@@ -4070,10 +4068,9 @@ function renderHome(){
       <div class="hc-links"><a onclick="switchView('analytics')">More stats →</a><a onclick="switchView('analytics')">Data health${health.length?` (${health.length})`:''} &amp; fees →</a></div></div>
   </div>
   ${renderMonthlyRealised()}
-  ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
+  ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Premium + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
     <div class="tk-row tk-hd"><span>Ticker</span><span>${today.slice(0,4)}</span><span>All time</span></div>
-    ${tpl.map(t=>`<div class="tk-row"><span>${esc(t.ticker)}</span><span class="${cls(t.year)}">${sgn(t.year)}</span><span class="${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}
-    <div class="hk-how">Premium + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.</div></div>`:''}
+    ${tpl.map(t=>`<div class="tk-row"><span>${esc(t.ticker)}</span><span class="${cls(t.year)}">${sgn(t.year)}</span><span class="${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}</div>`:''}
 </div>`;
 }
 
@@ -4119,13 +4116,12 @@ function renderMonthlyRealised(){
   const line=(label,r,cls)=>`<tr class="${cls||''}"><td>${label}</td>${cell(r.premium)}${cell(r.shares)}${showDiv?cell(r.divs):''}${extras.map(x=>cell(r.extra[x.key]||0)).join('')}${cell(r.total)}</tr>`;
   const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
   return`<div class="d-panel">
-      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L</span><span class="d-panel-count">Realised</span></div>
+      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L ${ii(`Premium = option credits minus buybacks. Shares P&amp;L = each share sale against its rotation's cost (first in, first out). LEAPs &amp; calls = closed and expired legs, by the month they closed. Unrealised moves are not included.`)}</span><span class="d-panel-count">Realised</span></div>
       <div class="d-panel-body">
         <table class="a-table mpl-table"><thead><tr><th>Month</th><th class="num">Premium</th><th class="num">Shares P&amp;L</th>${showDiv?'<th class="num">Dividends</th>':''}${extras.map(x=>`<th class="num">${x.label}</th>`).join('')}<th class="num">Realised P&amp;L</th></tr></thead>
         <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
         ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr))),'mpl-sum')}
         ${line('All time',sum(rows),'mpl-sum')}</tbody></table>
-        <div class="mpl-note">Premium = option credits minus buybacks. Shares P&amp;L = each share sale against its rotation's cost (first in, first out). LEAPs &amp; calls = closed and expired legs, by the month they closed. Unrealised moves are not included.</div>
       </div>
     </div>`;
 }
@@ -5348,12 +5344,14 @@ function renderAnalytics(){
     <div class="a-section">${sec('Risk & Exposure','Capital deployed, exposure & fees')}${riskStats}${secEnd}</div>
 
     <div class="a-section">${sec('Rotation Scoreboard','Per-rotation performance')}
-      <table class="a-table"><thead><tr><th>#</th><th>Rotation</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th title="Premium + share P&amp;L + dividends (+ unrealised if open) ÷ capital, annualised. * = under 7 days, not annualised">Cycle /yr</th></tr></thead><tbody>${rotRows}</tbody></table>
-      <div style="font-size:0.625rem;color:var(--text3);margin-top:0.375rem">AROC uses premium only. Cycle /yr is the whole cycle: premium + share P&amp;L + dividends (+ unrealised for open cycles) ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.</div>
+      <table class="a-table"><thead><tr><th>#</th><th>Rotation</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th>Cycle /yr ${ii(`AROC uses premium only. Cycle /yr is the whole cycle: premium + share P&amp;L + dividends (+ unrealised for open cycles) ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table>
     ${secEnd}</div>
   </div>`;
 }
 
+function _iiPos(e){const b=e.target&&e.target.closest&&e.target.closest('.ii');if(!b)return;const r=b.getBoundingClientRect(),w=Math.min(272,innerWidth-24);b.classList.toggle('ii-r',r.left+w/2>innerWidth-12);b.classList.toggle('ii-l',r.left-w/2<12)}
+if(typeof document!=='undefined'){document.addEventListener('mouseover',_iiPos);document.addEventListener('focusin',_iiPos)}
+function ii(t){return`<button type="button" class="ii" aria-label="How it's worked out" data-tip="${String(t).replace(/<[^>]*>/g,'').replace(/"/g,'&quot;')}" onclick="event.stopPropagation();this.focus()">ⓘ</button>`}
 function exportCSV(){
   const q=logQ.toLowerCase();
   const filtered=db.trades.filter(t=>{
