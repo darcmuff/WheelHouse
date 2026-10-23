@@ -457,6 +457,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
 .a-stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
 .a-stat-sub{font-size:10px;color:var(--text3);margin-top:4px}
 .a-chart-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:12px}
+.mpl-table .num{text-align:right}.mpl-table .mpl-sum td{font-weight:600;border-top:1px solid var(--border)}.mpl-note{font-size:11px;color:var(--text3);padding:10px 12px}
 .a-chart-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:14px}
 .a-chart-legend{display:flex;gap:16px;margin-top:10px}
 .a-chart-legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2)}
@@ -2638,6 +2639,9 @@ function renderDash(){
       </div>
     </div>
 
+    <!-- Monthly P&L (Realised) — the one home for P&L by month -->
+    ${renderMonthlyRealised()}
+
     <!-- Open Positions — full width -->
     <div class="d-panel">
       <div class="d-panel-hdr">
@@ -2657,6 +2661,49 @@ function renderDash(){
     </div>
 
   </div>`;
+}
+
+// Extra realised-P&L sources for the Monthly P&L table (e.g. LEAPs & short calls once the options code lands).
+// Each entry: {key,label,byMonth:{'YYYY-MM':number}}. Empty on this branch. Read-only.
+function monthlyExtraSources(){return [];}
+
+// Monthly Realised P&L: Premium + Shares Realised P&L (FIFO) + Dividends (+ any extra sources), by month. Read-only.
+function calcMonthlyRealised(trades,extras){
+  extras=extras||[];
+  const mo={};
+  const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{}});
+  trades.forEach(t=>{
+    if(!t.entered)return;const ym=t.entered.slice(0,7),v=t.total||0;
+    if(t.action==='CSP'||t.action==='STOC'||t.action==='STC')row(ym).premium+=v;
+    else if(t.action==='BTC')row(ym).premium-=v;
+    else if(t.action==='DIV')row(ym).divs+=v;
+  });
+  shareRealisations(trades).events.forEach(e=>{if(e.date)row(e.date.slice(0,7)).shares+=e.pnl;});
+  extras.forEach(x=>Object.entries(x.byMonth||{}).forEach(([ym,v])=>{const r=row(ym);r.extra[x.key]=(r.extra[x.key]||0)+v;}));
+  return Object.values(mo).sort((a,b)=>b.ym.localeCompare(a.ym)).map(r=>({...r,
+    total:r.premium+r.shares+r.divs+Object.values(r.extra).reduce((a,v)=>a+v,0)}));
+}
+
+function renderMonthlyRealised(){
+  const extras=monthlyExtraSources();
+  const rows=calcMonthlyRealised(db.trades,extras);
+  if(!rows.length)return '';
+  const yr=String(new Date().getFullYear());
+  const showDiv=rows.some(r=>r.divs!==0);
+  const sum=list=>{const o={premium:0,shares:0,divs:0,extra:{},total:0};list.forEach(r=>{o.premium+=r.premium;o.shares+=r.shares;o.divs+=r.divs;o.total+=r.total;extras.forEach(x=>{o.extra[x.key]=(o.extra[x.key]||0)+(r.extra[x.key]||0);});});return o;};
+  const cell=v=>`<td class="num ${v?colorN(v):'m'}">${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
+  const line=(label,r,cls)=>`<tr class="${cls||''}"><td>${label}</td>${cell(r.premium)}${cell(r.shares)}${showDiv?cell(r.divs):''}${extras.map(x=>cell(r.extra[x.key]||0)).join('')}${cell(r.total)}</tr>`;
+  const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+  return`<div class="d-panel">
+      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L</span><span class="d-panel-count">Realised</span></div>
+      <div class="d-panel-body">
+        <table class="a-table mpl-table"><thead><tr><th>Month</th><th class="num">Premium</th><th class="num">Shares P&amp;L</th>${showDiv?'<th class="num">Dividends</th>':''}${extras.map(x=>`<th class="num">${x.label}</th>`).join('')}<th class="num">Realised P&amp;L</th></tr></thead>
+        <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
+        ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr))),'mpl-sum')}
+        ${line('All time',sum(rows),'mpl-sum')}</tbody></table>
+        <div class="mpl-note">Premium = option credits minus buybacks. Shares P&amp;L = each share sale against its rotation's cost (first in, first out). Unrealised share moves are not included.</div>
+      </div>
+    </div>`;
 }
 
 function renderDashChart(){
@@ -3270,22 +3317,10 @@ function renderAnalytics(){
   </svg>`;
 
   // ── Section 2: Income Analysis (13-month chart reuse) ──
-  const chartHtml=_renderAnalyticsCharts();
 
   // ── Monthly P&L table ──
   let runTotal=0;
   const maxBar=monthly.length?Math.max(...monthly.map(m=>Math.abs(m.pNet)||1)):1;
-  const monthRows=monthly.map(mo=>{
-    runTotal+=mo.pNet;
-    const barW=Math.min(100,Math.abs(mo.pNet)/maxBar*100).toFixed(1);
-    return`<tr>
-      <td style="font-weight:600;color:var(--silver)">${mo.label}</td>
-      <td class="g">${fmtMoney(mo.pCr)}</td>
-      <td class="${colorN(mo.pNet)}">${fmtMoney(mo.pNet)}</td>
-      <td class="${colorN(runTotal)}">${fmtMoney(runTotal)}</td>
-      <td style="min-width:100px"><div class="d-pct-bar"><div class="d-pct-fill" style="width:${barW}%;background:${mo.pNet>=0?'#22c55e':'#ef4444'}"></div></div></td>
-    </tr>`;
-  }).join('');
 
   // ── Section 3: Trade Quality — DTE analysis ──
   const dteBuckets={'1-7d':{min:1,max:7},'8-14d':{min:8,max:14},'15-30d':{min:15,max:30},'31-45d':{min:31,max:45},'45d+':{min:46,max:999}};
@@ -3439,16 +3474,6 @@ function renderAnalytics(){
       </div>
     ${secEnd}</div>
 
-    <div class="a-section">${sec('Income Analysis','Monthly breakdown & 13-month chart')}${chartHtml}
-      <div class="a-chart-box" style="margin-top:12px">
-        <div class="a-chart-title">Monthly Income History</div>
-        <table class="a-table">
-          <thead><tr><th>Month</th><th>Gross Premium</th><th>Net Premium</th><th>Running Total</th><th>Bar</th></tr></thead>
-          <tbody>${monthRows}</tbody>
-        </table>
-      </div>
-    ${secEnd}</div>
-
     <div class="a-section">${sec('Trade Quality','DTE ranges, delta selection & efficiency')}
       <div class="d-grid d-grid-2" style="gap:12px">
         <div class="a-chart-box">
@@ -3485,143 +3510,6 @@ function renderAnalytics(){
 
     <div class="a-section">${sec('Streaks & Records','Personal bests & consistency')}${recordStats}${secEnd}</div>
   </div>`;
-}
-
-function _renderAnalyticsCharts(){
-  // ── Build last 13 months of data ──
-  const today=new Date();
-  const months=[];
-  for(let i=12;i>=0;i--){
-    const d=new Date(today.getFullYear(),today.getMonth()-i,1);
-    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    months.push({key,label:mn[d.getMonth()]+(i===0?'':" '"+String(d.getFullYear()).slice(2)),credits:0,debits:0});
-  }
-  const CREDIT_ACTIONS=new Set(['CSP','STOC','DIV']);
-  const DEBIT_ACTIONS=new Set(['BTC']);
-  for(const t of db.trades){
-    if(!t.entered)continue;
-    const mk=t.entered.slice(0,7);
-    const mo=months.find(m=>m.key===mk);
-    if(!mo)continue;
-    if(CREDIT_ACTIONS.has(t.action))mo.credits+=t.total||0;
-    else if(DEBIT_ACTIONS.has(t.action))mo.debits+=t.total||0;
-  }
-  // ── Summary stats ──
-  const last12=months.slice(1);
-  const totalCredits=last12.reduce((s,m)=>s+m.credits,0);
-  const totalDebits=last12.reduce((s,m)=>s+m.debits,0);
-  const netIncome=totalCredits-totalDebits;
-  const monthsWithIncome=last12.filter(m=>m.credits>0).length;
-  const avgMonthly=monthsWithIncome>0?netIncome/monthsWithIncome:0;
-  const bestMonth=last12.reduce((b,m)=>((m.credits-m.debits)>(b.credits-b.debits)?m:b),last12[0]);
-  // ── Chart SVG ──
-  const W=760,H=200,PAD_L=52,PAD_R=12,PAD_T=16,PAD_B=36;
-  const chartW=W-PAD_L-PAD_R,chartH=H-PAD_T-PAD_B;
-  const maxVal=Math.max(...months.map(m=>Math.max(m.credits,m.debits)),1);
-  const barW=Math.floor(chartW/months.length);
-  const barGap=4;const singleW=Math.max(4,barW/2-barGap);
-  // Y axis ticks
-  const nTicks=4;
-  const tickStep=Math.ceil(maxVal/nTicks/50)*50||50;
-  let yTicks='';
-  for(let v=0;v<=maxVal*1.1;v+=tickStep){
-    const y=PAD_T+chartH-(v/maxVal)*chartH;
-    if(y<PAD_T)break;
-    yTicks+=`<line x1="${PAD_L}" x2="${W-PAD_R}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
-    yTicks+=`<text x="${PAD_L-6}" y="${(y+4).toFixed(1)}" text-anchor="end" fill="#8d95a8" font-size="10">$${v>=1000?(v/1000).toFixed(0)+'k':v}</text>`;
-  }
-  // Running net line
-  let runNet=0;const linePoints=[];
-  months.forEach((m,i)=>{
-    runNet+=(m.credits-m.debits);
-    const cx=PAD_L+i*barW+barW/2;
-    const ry=PAD_T+chartH-(Math.max(0,runNet)/Math.max(runNet,totalCredits,1))*chartH;
-    linePoints.push(`${cx.toFixed(1)},${ry.toFixed(1)}`);
-  });
-  // Bars + hover groups + value labels
-  const MN_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  let barGroups='',axisLabels='';
-  months.forEach((m,i)=>{
-    const x=PAD_L+i*barW;
-    const cx=x+barW/2;
-    const today2=new Date();
-    const [ky,km]=m.key.split('-');
-    const fullLabel=MN_FULL[parseInt(km,10)-1]+' '+ky;
-    let innerBars='';
-    if(m.credits>0){
-      const bh=(m.credits/maxVal)*chartH;
-      const by=PAD_T+chartH-bh;
-      innerBars+=`<rect x="${(cx-singleW-barGap/2).toFixed(1)}" y="${by.toFixed(1)}" width="${singleW.toFixed(1)}" height="${bh.toFixed(1)}" fill="rgba(34,197,94,0.75)" rx="2"/>`;
-      if(bh>18)innerBars+=`<text x="${(cx-singleW/2-barGap/2).toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle" fill="rgba(34,197,94,0.9)" font-size="8" font-weight="600">$${m.credits>=1000?(m.credits/1000).toFixed(1)+'k':m.credits.toFixed(0)}</text>`;
-    }
-    if(m.debits>0){
-      const bh=(m.debits/maxVal)*chartH;
-      const by=PAD_T+chartH-bh;
-      innerBars+=`<rect x="${(cx+barGap/2).toFixed(1)}" y="${by.toFixed(1)}" width="${singleW.toFixed(1)}" height="${bh.toFixed(1)}" fill="rgba(239,68,68,0.65)" rx="2"/>`;
-      if(bh>18)innerBars+=`<text x="${(cx+singleW/2+barGap/2).toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle" fill="rgba(239,68,68,0.85)" font-size="8" font-weight="600">$${m.debits>=1000?(m.debits/1000).toFixed(1)+'k':m.debits.toFixed(0)}</text>`;
-    }
-    // Hover hit area covers full column
-    const esc=s=>s.replace(/'/g,"\\'");
-    barGroups+=`<g>
-      <rect x="${x.toFixed(1)}" y="${PAD_T}" width="${barW}" height="${chartH}" fill="transparent"/>
-      ${innerBars}
-    </g>`;
-    axisLabels+=`<text x="${cx.toFixed(1)}" y="${(PAD_T+chartH+14).toFixed(1)}" text-anchor="middle" fill="#8d95a8" font-size="9">${m.label}</text>`;
-  });
-  const svgChart=`<svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">
-    ${yTicks}${barGroups}${axisLabels}
-    <polyline points="${linePoints.join(' ')}" fill="none" stroke="rgba(13,148,136,0.7)" stroke-width="1.5" stroke-dasharray="4 3"/>
-    <line x1="${PAD_L}" x2="${PAD_L}" y1="${PAD_T}" y2="${PAD_T+chartH}" stroke="#33363d" stroke-width="1"/>
-    <line x1="${PAD_L}" x2="${W-PAD_R}" y1="${PAD_T+chartH}" y2="${PAD_T+chartH}" stroke="#33363d" stroke-width="1"/>
-  </svg>`;
-  // ── Delta analysis table ──
-  const deltaRows=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.delta!=null);
-  const deltaBuckets={};
-  for(const t of deltaRows){
-    const b=t.delta<=0.15?'≤0.15':t.delta<=0.25?'0.16–0.25':t.delta<=0.35?'0.26–0.35':'≥0.36';
-    if(!deltaBuckets[b])deltaBuckets[b]={count:0,totalCr:0,totalROC:0,rocCount:0};
-    deltaBuckets[b].count++;deltaBuckets[b].totalCr+=t.total||0;
-    const roc=calcTradeROC(t);if(roc!=null){deltaBuckets[b].totalROC+=roc;deltaBuckets[b].rocCount++;}
-  }
-  const deltaTable=Object.keys(deltaBuckets).length?`
-  <div class="chart-card" style="margin-top:20px">
-    <div class="chart-card-title">Delta Performance Breakdown</div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <tr style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)">
-        <td style="padding:6px 8px">Delta Range</td><td style="padding:6px 8px">Trades</td>
-        <td style="padding:6px 8px">Total Credits</td><td style="padding:6px 8px">Avg AROC%</td>
-      </tr>
-      ${['≤0.15','0.16–0.25','0.26–0.35','≥0.36'].filter(k=>deltaBuckets[k]).map(k=>{
-        const b=deltaBuckets[k];
-        const avgRoc=b.rocCount?b.totalROC/b.rocCount:null;
-        return`<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:7px 8px;color:var(--silver);font-weight:600">${k}</td>
-          <td style="padding:7px 8px;color:var(--text2)">${b.count}</td>
-          <td style="padding:7px 8px;color:var(--green)">${fmtMoney(b.totalCr)}</td>
-          <td style="padding:7px 8px;color:${avgRoc!=null?(avgRoc>=15?'var(--green)':avgRoc>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${avgRoc!=null?avgRoc.toFixed(1)+'%':'—'}</td>
-        </tr>`;
-      }).join('')}
-    </table>
-  </div>`:'';
-  return`
-    <div style="margin-top:20px;margin-bottom:10px;font-size:14px;font-weight:800;color:var(--orange)">13-Month Premium Chart</div>
-    <div class="analytics-stats" style="margin-bottom:16px">
-      <div class="astat"><div class="astat-val g">${fmtMoney(totalCredits)}</div><div class="astat-lbl">Gross Credits</div><div class="astat-sub">Last 12 months</div></div>
-      <div class="astat"><div class="astat-val r">${fmtMoney(totalDebits)}</div><div class="astat-lbl">Total Debits</div><div class="astat-sub">BTC costs</div></div>
-      <div class="astat"><div class="astat-val ${netIncome>=0?'g':'r'}">${fmtMoney(netIncome)}</div><div class="astat-lbl">Net Income</div><div class="astat-sub">12-month</div></div>
-      <div class="astat"><div class="astat-val" style="color:var(--orange)">${fmtMoney(avgMonthly)}</div><div class="astat-lbl">Avg / Month</div><div class="astat-sub">${monthsWithIncome} active months</div></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-card-title">Monthly Premium Income — last 13 months</div>
-      ${svgChart}
-      <div class="chart-legend">
-        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:rgba(34,197,94,0.75)"></div>Credits (CSP/STOC)</div>
-        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:rgba(239,68,68,0.65)"></div>Debits (BTC)</div>
-        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:rgba(13,148,136,0.7);height:3px;border-radius:0"></div>Cumulative net</div>
-      </div>
-    </div>
-    ${deltaTable}`;
 }
 
 function exportCSV(){
