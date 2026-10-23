@@ -10,7 +10,7 @@ const stubs = `const fmt2=n=>(+n).toFixed(2);const fmtMoney=n=>(n<0?'-':'')+'$'+
 let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);`;
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
   ['splitLeapLegs','pmccShortsFor','pmccWarnings','pmccStats','pmccFormLeg','_fdShort','renderPmcc','optsToCSV'].map(extractFn).join('\n') +
-  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),splitLeapLegs,pmccShortsFor,pmccWarnings,pmccStats,pmccFormLeg,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
+  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccWarnings,pmccStats,pmccFormLeg,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2028-06-16', qty: 2, entryPrice: 72, fees: 1.30, entryDate: '2026-06-01', status: 'open' };
@@ -92,6 +92,23 @@ rj('put refused', `Sell to open SPCX 11/20/2026 180 P 1 @ 3.00 on 10/09/2026`, /
 rj('empty paste', `  `, /Paste/);
 const nos = S.scan(`SPCX 20NOV26 245 C qty 2 price 6.40 date 2026-10-09`);
 check('side unknown → accepted but flagged low-confidence', nos.calls.length === 1 && nos.calls[0].low.includes('side'), nos);
+
+
+// ── Robinhood app: yearless expiry ("Nov 13") + relative time ("· 30m") — Marc's real-world paste layout, fake figures ──
+const rh = 'Sell SPCX $170 Call Nov 13\nIndividual · 30m\n$501.00\n3 contracts at $1.67\nType\nLimit sell\nPosition effect\n';
+const yl = (name, text, d, exp) => { const r = S.scanAt(text, d); const x = r.calls[0] || {};
+  const ok = r.calls.length === 1 && Object.entries(exp).every(([k, v]) => typeof v === 'number' ? Math.abs(x[k] - v) < 0.006 : x[k] === v) && x.low.includes('expiry');
+  check(name, ok, r.calls.length ? x : r.error); };
+yl('RH yearless, cut off after "Position effect"', rh + '...', '2026-10-23', { ticker: 'SPCX', strike: 170, expiry: '2026-11-13', side: 'sell', qty: 3, price: 1.67, date: '2026-10-23' });
+yl('RH yearless, full tail (Open, Filled, fees, Total)', rh + 'Open\nFilled\nOct 23, 3:58 PM\n3 contracts at $1.67\nRegulatory fees\n$0.06\nContract fees\n$1.86\nTotal\n$499.08', '2026-10-23', { expiry: '2026-11-13', qty: 3, price: 1.67, fees: 1.92, date: '2026-10-23' });
+yl('RH yearless "2h ago"', rh.replace('30m', '2h ago') + 'Open', '2026-10-23', { expiry: '2026-11-13', date: '2026-10-23' });
+yl('yearless expiry rolls into next year (Jan 15 sold in Dec)', 'Sell SPCX $170 Call Jan 15\nIndividual · 2h\n3 contracts at $1.67\nPosition effect\nOpen', '2026-12-20', { expiry: '2027-01-15', date: '2026-12-20' });
+yl('yearless expiry on the trade date itself (0DTE) stays this year', 'Sell SPCX $170 Call Oct 23\nIndividual · 30m\n1 contract at $0.40\nPosition effect\nOpen', '2026-10-23', { expiry: '2026-10-23', qty: 1, price: 0.4 });
+yl('"Yesterday" → trade date = day before', 'Sell SPCX $170 Call Nov 13\nIndividual · Yesterday\n3 contracts at $1.67\nPosition effect\nOpen', '2026-10-23', { date: '2026-10-22', expiry: '2026-11-13' });
+const lb = S.leapAt('Buy SPCX $170 Call Jan 15\nIndividual · 30m\n$501.00\n3 contracts at $1.67\nPosition effect\nOpen', '2026-10-23');
+check('+ LEAP form: yearless Robinhood buy also parses (expiry flagged)', lb.calls.length === 1 && lb.calls[0].expiry === '2027-01-15' && lb.calls[0].low.includes('expiry') && lb.calls[0].price === 1.67, lb);
+const ls = S.leapAt(rh + 'Open', '2026-10-23');
+check('+ LEAP form: yearless sold call refused, points to Sell call', !ls.calls.length && /Sell call/.test(ls.error), ls.error);
 
 console.log(`\n${pass} pass / ${fail} fail`);
 if (fail) process.exit(1);

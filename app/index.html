@@ -2366,7 +2366,7 @@ function leapFuzzy(s,B,today){
   add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,\\s*|\\s+)\'?(\\d{4}|\\d{2})\\b(?![:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()],y=yr(m[3]);return valid(y,mo,+m[2])&&{iso:`${y}-${pad(mo)}-${pad(m[2])}`,y:1};});
   add(new RegExp('\\b(\\d{1,2})[\\s-]?'+MON+'[\\s-]?\'?(\\d{4}|\\d{2})\\b(?![:\\d])','gi'),m=>{const mo=MONS[m[2].toLowerCase()],y=yr(m[3]);return valid(y,mo,+m[1])&&{iso:`${y}-${pad(mo)}-${pad(m[1])}`,y:1};});
   add(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4}|\d{2})\b/g,m=>{let a=+m[1],b=+m[2];if(a>12){const t=a;a=b;b=t;}const y=yr(m[3]);return valid(y,a,b)&&{iso:`${y}-${pad(a)}-${pad(b)}`,y:1};});
-  add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})\\b(?!\\s*[:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()];return valid(2000,mo,+m[2])&&{iso:infer(mo,+m[2]),y:0};});
+  add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})\\b(?!\\s*[:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()];return valid(2000,mo,+m[2])&&{iso:infer(mo,+m[2]),y:0,mo,d:+m[2]};});
   const low=[];const num=x=>parseFloat(String(x).replace(/[$,\s]/g,''));
   const inDate=(a,b)=>dates.some(d=>a<d.end&&d.i<b);
   let mask=s;dates.forEach(d=>{mask=mask.slice(0,d.i)+' '.repeat(d.end-d.i)+mask.slice(d.end);});
@@ -2384,7 +2384,10 @@ function leapFuzzy(s,B,today){
       const v=num(n[2]);if(!(v>=0.5&&v<=20000))continue;if(!n[1]&&!/\./.test(n[2])&&/^\s*(?:contracts?|x\b|shares?|shs|of\b)/i.test(s.slice(b,b+12))||/(?:price|amount|cost|total|fees?|commission|comm|proceeds|paid|debit|credit)\W{0,4}$/i.test(s.slice(Math.max(0,a-14),a))||/(?:[*#]|\bof\s|\bpage\s|\bref\W*)$/i.test(s.slice(Math.max(0,a-8),a))||/(?:qty|quantity|contracts?|bought|buy|sold|sell|@|at)\W{0,3}$/i.test(s.slice(Math.max(0,a-14),a)))continue;
       const dist=Math.abs(a<k?k-b:a-(k+m[0].length))-(n[1]?6:0)-(/\./.test(n[2])?4:0);if(!st||dist<st.dist)st={v,dist,a,b};}
     if(!st)continue;
-    let ex=null;dates.filter(d=>d.y).forEach(d=>{const dist=Math.min(Math.abs(d.i-k),Math.abs(d.end-k),Math.abs(d.i-st.b),Math.abs(d.end-st.a));if(dist<=45&&(!ex||dist<ex.dist))ex={...d,dist};});
+    let ex=null;const near=d=>Math.min(Math.abs(d.i-k),Math.abs(d.end-k),Math.abs(d.i-st.b),Math.abs(d.end-st.a));
+    dates.filter(d=>d.y).forEach(d=>{const dist=near(d);if(dist<=45&&(!ex||dist<ex.dist))ex={...d,dist};});
+    // yearless expiry right next to the contract ("$170 Call Nov 13") — year inferred later from the trade date
+    if(!ex)dates.filter(d=>!d.y).forEach(d=>{const dist=near(d);if(dist<=12&&(!ex||dist<ex.dist))ex={...d,dist,yl:true};});
     let tk=null;const lo=Math.min(k,st.a);
     for(const t of s.matchAll(/\(?\b([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b\)?/g)){
       const w=t[1],W=w.toUpperCase(),a=t.index;if(STOP.has(W)||MONW.test(w)||inDate(a,a+t[0].length))continue;
@@ -2393,16 +2396,22 @@ function leapFuzzy(s,B,today){
       const sc=gap*10+(w===W?0:3)+(a>lo?6:0)-(t[0].startsWith('(')?10:0);if(!tk||sc<tk.sc)tk={W,sc};}
     if(!tk)continue;
     const score=(ex?3:0)+3-st.dist/20-tk.sc/60-(ex?ex.dist/40:0);
-    if(!best||score>best.score)best={ticker:tk.W,strike:st.v,expiry:ex?ex.iso:'',type,score,eI:ex?ex.i:-1};
+    if(!best||score>best.score)best={ticker:tk.W,strike:st.v,expiry:ex&&!ex.yl?ex.iso:'',yl:ex&&ex.yl?ex:null,type,score,eI:ex?ex.i:-1};
   }
   if(!best)return null;
-  if(!best.expiry)low.push('expiry');
+  if(!best.expiry&&!best.yl)low.push('expiry');
+  const notExp=d=>d.iso!==best.expiry&&d.i!==best.eI;
   // ── trade date: labelled > account line (·) > any non-expiry date not after today ──
   let date='';
   for(const L of ['filled','trade\\s*date','executed','submitted','date','·','\\bon']){
-    const re=new RegExp(L+'(?:\\s*time)?\\W{0,4}','gi');for(const m of s.matchAll(re)){if(/settle(?:ment)?\W*$|expir\w*\W*$/i.test(s.slice(Math.max(0,m.index-12),m.index)))continue;const e=m.index+m[0].length;const d=dates.find(d=>d.i>=e&&d.i-e<=4&&d.iso!==best.expiry&&d.iso<=today);if(d){date=d.iso;break;}}
+    const re=new RegExp(L+'(?:\\s*time)?\\W{0,4}','gi');for(const m of s.matchAll(re)){if(/settle(?:ment)?\W*$|expir\w*\W*$/i.test(s.slice(Math.max(0,m.index-12),m.index)))continue;const e=m.index+m[0].length;const d=dates.find(d=>d.i>=e&&d.i-e<=4&&notExp(d)&&d.iso<=today);if(d){date=d.iso;break;}}
     if(date)break;}
-  if(!date){const d=dates.filter(d=>d.iso!==best.expiry&&d.iso<=today&&!/settle/i.test(s.slice(Math.max(0,d.i-16),d.i))).sort((a,b)=>a.i-b.i)[0];if(d){date=d.iso;low.push('date');}else low.push('date');}
+  // relative times on app confirmations: "· 30m", "2h ago", "Today", "Yesterday"
+  if(!date){const r=/(?:·|\bfilled|\bsubmitted|\bexecuted)\s*(?:(\d{1,3})\s*(?:m|min|mins|minutes?|h|hr|hrs|hours?|s|sec|secs)\b(?:\s+ago)?|(today|just now)|(yesterday))/i.exec(s);
+    if(r){const t=new Date(today+'T12:00:00Z');if(r[3])t.setUTCDate(t.getUTCDate()-1);date=t.toISOString().slice(0,10);}}
+  if(!date){const d=dates.filter(d=>notExp(d)&&d.iso<=today&&!/settle/i.test(s.slice(Math.max(0,d.i-16),d.i))).sort((a,b)=>a.i-b.i)[0];if(d){date=d.iso;low.push('date');}else low.push('date');}
+  // yearless expiry → next occurrence on/after the trade date (or today); always flagged for checking
+  if(best.yl){const base=date||today;let y=+base.slice(0,4);const md=`${pad(best.yl.mo)}-${pad(best.yl.d)}`;if(`${y}-${md}`<base)y++;best.expiry=`${y}-${md}`;low.push('expiry');}
   // ── contracts ──
   let qty=null,qsrc='';const ca=[...s.matchAll(/\b(\d{1,4})\s+(?:contracts?\s+)?(?:at|@)\s*\$?(\d[\d,]*(?:\.\d{1,4})?)(?![:\d])/gi)].filter(m=>!inDate(m.index,m.index+m[1].length)).pop(); // not the year of a date
   if(ca){qty=+ca[1];qsrc='at';}
@@ -2458,7 +2467,7 @@ function leapScan(text,B,today){
   const effOf0=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
   const verdict=c=>{
     if(c.type!=='C')return'This is a put, not a call — LEAPs here are bought calls only.';
-    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close on the LEAP card instead.':'This is a sold call (sell to open) — that belongs to the wheel, not LEAPs.';
+    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close on the LEAP card instead.':'This is a sold call (sell to open) — use Sell call on the LEAP card (or log it on the wheel), not + LEAP.';
     if(c.effect==='close')return'This is a buy-to-close (closing a short call) — not a new LEAP.';
     if(!c.side)return'Couldn\'t tell whether this was bought or sold.';
     return'';};
