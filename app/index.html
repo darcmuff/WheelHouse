@@ -1165,6 +1165,24 @@ function shareRealisations(trades){
   return{events,open};
 }
 
+// Per-rotation share figures: Shares P&L (realised, FIFO) and Unrealised (open shares at price minus their FIFO cost).
+// priceOf(wheel) -> number|null. Read-only.
+function rotationShareStats(wheel,trades,priceOf){
+  const sr=shareRealisations(trades.filter(t=>t.wheelId===wheel.id));
+  const realised=sr.events.reduce((a,e)=>a+e.pnl,0);
+  const o=sr.open[wheel.id]||{shares:0,cost:0};
+  const price=priceOf?priceOf(wheel):null;
+  const unrealised=o.shares>0&&price!=null?price*o.shares-o.cost:(o.shares>0?null:0);
+  return{realised,openShares:o.shares,openCost:o.cost,unrealised};
+}
+// Unrealised across open rotations. Returns {value, unpriced} (unpriced = rotations holding shares with no price).
+function calcUnrealised(wheels,trades,priceOf){
+  let value=0,unpriced=0;
+  wheels.filter(w=>w.status==='open').forEach(w=>{const r=rotationShareStats(w,trades,priceOf);if(r.unrealised==null)unpriced++;else value+=r.unrealised;});
+  return{value,unpriced};
+}
+function _priceOf(w){return (typeof quotes!=='undefined'&&quotes[w.ticker]?.price)||(w.lastPrice!=null?w.lastPrice:null);}
+
 function calcOverall(){
   let pc=0,pd=0,wins=0,losses=0,open=0,closed=0,sh=0;
   let capDeployed=0,stockRealised=0,divs=0;
@@ -1569,46 +1587,16 @@ function renderSidebar(){
       _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:10px;font-weight:800;border-radius:9px;padding:1px 7px;line-height:1.4">${_hi.length}</span>`;
     }else _hb.innerHTML='';
   }
-  const s=calcOverall();
-  const wl=calcWinLoss();
   const ytd=calcYTD();
-  const openWheels=db.wheels.filter(w=>w.status==='open').length;
-  const totalWheels=db.wheels.length;
-  // Market value: sum across all open wheels with shares held
-  let mktVal=null;
-  db.wheels.filter(w=>w.status==='open').forEach(w=>{
-    const wm=calcWheel(w);
-    const q=quotes[w.ticker];
-    if(q&&wm.sharesHeld>0){mktVal=(mktVal||0)+q.price*wm.sharesHeld;}
-  });
+  const _now=new Date(),_ym=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
+  const premMo=db.trades.reduce((a,t)=>{if(!t.entered||t.entered.slice(0,7)!==_ym)return a;const v=t.total||0;return t.action==='BTC'?a-v:(t.action==='CSP'||t.action==='STOC'||t.action==='STC')?a+v:a;},0);
+  const un=calcUnrealised(db.wheels,db.trades,_priceOf);
   document.getElementById('sb-stats').innerHTML=`
-    <div class="sb-sec-ttl">Open Positions</div>
-    <div class="si"><span class="si-lbl">${openWheels} open · ${totalWheels} total</span><span class="si-val o">${openWheels}/${totalWheels}</span></div>
-    <div class="si"><span class="si-lbl">W/L</span><span class="si-val"><span style="color:var(--green)">${wl.wins}</span> / <span style="color:var(--red)">${wl.losses}</span> &nbsp;<span style="color:${wl.wr&&parseFloat(wl.wr)>=50?'var(--green)':'var(--red)'}">${wl.wr?wl.wr+'%':'—'}</span></span></div>
-    <div class="sb-sec-ttl" style="margin-top:14px">Total P&amp;L</div>
-    <div class="si"><span class="si-lbl">Option Income (all-time)</span><span class="si-val ${colorN(s.pNet)}">${fmtMoney(s.pNet)}</span></div>
-    ${s.stockRealised!==0?`<div class="si"><span class="si-lbl">Stock Realised</span><span class="si-val ${colorN(s.stockRealised)}">${fmtMoney(s.stockRealised)}</span></div>`:''}
-    ${s.divs>0?`<div class="si"><span class="si-lbl">Dividends</span><span class="si-val g">${fmtMoney(s.divs)}</span></div>`:''}
-    ${s.capDeployed>0?`<div class="si"><span class="si-lbl">Deployed</span><span class="si-val" style="color:var(--orange)">${fmtMoney(s.capDeployed)}</span></div>`:''}
-    ${mktVal!=null?`<div class="si"><span class="si-lbl">Mkt Value</span><span class="si-val g">${fmtMoney(mktVal)}</span></div>`:''}
-    <div class="si" style="margin-top:7px;padding-top:6px;border-top:1px solid var(--border)">
-      <span class="si-lbl" style="font-weight:500;color:var(--text2)">Total Realised</span>
-      <span class="si-val ${colorN(s.totalRealised)}" style="font-weight:500">${fmtMoney(s.totalRealised)}</span>
-    </div>
-    <div class="sb-sec-ttl" style="margin-top:14px">YTD P&amp;L</div>
-    <div class="si"><span class="si-lbl">Option Income (YTD)</span><span class="si-val ${colorN(ytd.optNet)}">${fmtMoney(ytd.optNet)}</span></div>
-    ${ytd.stockIncome!==0?`<div class="si"><span class="si-lbl">Shares Realised P&amp;L</span><span class="si-val ${colorN(ytd.stockIncome)}">${fmtMoney(ytd.stockIncome)}</span></div>`:''}
-    ${ytd.divs>0?`<div class="si"><span class="si-lbl">Dividends</span><span class="si-val g">${fmtMoney(ytd.divs)}</span></div>`:''}
-    ${ytd.capDeployedYTD>0?`<div class="si"><span class="si-lbl">Deployed YTD</span><span class="si-val" style="color:var(--orange)">${fmtMoney(ytd.capDeployedYTD)}</span></div>`:''}
-    <div class="si" style="margin-top:7px;padding-top:6px;border-top:1px solid var(--border)">
-      <span class="si-lbl" style="font-weight:500;color:var(--text2)">YTD Income</span>
-      <span class="si-val ${colorN(ytd.net)}" style="font-weight:500">${fmtMoney(ytd.net)}</span>
-    </div>
-    <div class="sb-sec-ttl" style="margin-top:14px">Rate</div>
-    <div class="si"><span class="si-lbl">Daily avg</span><span class="si-val ${colorN(ytd.daily)}">${fmtMoney(ytd.daily)}</span></div>
-    <div class="si"><span class="si-lbl">Weekly avg</span><span class="si-val ${colorN(ytd.weekly)}">${fmtMoney(ytd.weekly)}</span></div>
-    <div class="si"><span class="si-lbl">Yearly proj.</span><span class="si-val ${colorN(ytd.yearly)}">${fmtMoney(ytd.yearly)}</span></div>
+    <div class="si"><span class="si-lbl">Realised P&amp;L ${_now.getFullYear()}</span><span class="si-val ${colorN(ytd.net)}">${fmtMoney(ytd.net)}</span></div>
+    <div class="si"><span class="si-lbl">Premium this month</span><span class="si-val ${colorN(premMo)}">${fmtMoney(premMo)}</span></div>
+    <div class="si"><span class="si-lbl">Unrealised${un.unpriced?' *':''}</span><span class="si-val ${colorN(un.value)}"${un.unpriced?` title="${un.unpriced} rotation(s) holding shares have no price yet"`:''}>${fmtMoney(un.value)}</span></div>
   `;
+
 }
 
 function renderPositions(){
@@ -2040,6 +2028,7 @@ function renderRotationWindow(wheel){
   const rotStockOUT=m.trades.filter(t=>t.action==='OUT').reduce((s,t)=>s+(t.total||0),0);
   const rotCapDeployed=m.sharesHeld>0?Math.max(0,rotStockIN-rotStockOUT):0;
 
+  const _rss=rotationShareStats(wheel,db.trades,_priceOf);
   const metricsBar=`<div class="rot-metrics-bar">
     <div class="rmb-col">
       <div class="rmb-lbl">Last Action</div>
@@ -2048,9 +2037,10 @@ function renderRotationWindow(wheel){
       <button class="btn btn-ghost btn-sm" style="margin-top:6px;font-size:10px;padding:3px 8px;line-height:1;border-color:var(--orange);color:var(--orange)" onclick="openPasteTrade('${wheel.id}');event.stopPropagation()">✦ Add Trade</button>
     </div>
     <div class="rmb-col">
-      <div class="rmb-lbl">Net P&amp;L</div>
-      <div class="rmb-val ${colorN(m.netPnL)}">${fmtMoney(m.netPnL)}</div>
-      <div class="rmb-sub">Premium: <span class="${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</span></div>
+      <div class="rmb-lbl">Premium</div>
+      <div class="rmb-val ${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</div>
+      <div class="rmb-sub">Shares P&amp;L: <span class="${colorN(_rss.realised)}">${_rss.realised?fmtMoney(_rss.realised):'—'}</span></div>
+      <div class="rmb-sub">Unrealised: ${_rss.unrealised==null?'<span class="m">no price</span>':`<span class="${colorN(_rss.unrealised)}">${_rss.openShares>0?fmtMoney(_rss.unrealised):'—'}</span>`}</div>
       ${aroc?`<div class="rmb-sub">${aroc.aroc!=null?`AROC: <span class="${colorN(aroc.aroc)}">${aroc.aroc.toFixed(1)}%</span> &middot; `:''}ROC: <span class="${colorN(aroc.roc)}">${aroc.roc.toFixed(1)}%</span>${aroc.aroc==null?` <span style="color:var(--text3)">(too early to annualise)</span>`:''}</div>`:''}
     </div>
     <div class="rmb-col">
@@ -2525,7 +2515,7 @@ function renderDash(){
     </div>`;
   }
 
-  const k1=kpi('YTD Income',fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'#22c55e':'#ef4444',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
+  const k1=kpi('Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'#22c55e':'#ef4444',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'#22c55e':'#ef4444',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
   const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
 
@@ -2558,7 +2548,7 @@ function renderDash(){
   // ── Positions table ──
   const posCols='minmax(70px,0.8fr) minmax(110px,1.2fr) minmax(110px,1.2fr) minmax(80px,0.9fr) minmax(75px,0.8fr) minmax(90px,1fr) minmax(85px,0.9fr) minmax(80px,1fr)';
   const posHdr=`<div class="d-table-hdr" style="grid-template-columns:${posCols};gap:12px">
-    <span>Ticker</span><span>Phase</span><span>Strike / DTE</span><span>% to Strike</span><span>Price</span><span>Net Premium</span><span>Cost Basis</span><span style="text-align:right">Net P&L</span>
+    <span>Ticker</span><span>Phase</span><span>Strike / DTE</span><span>% to Strike</span><span>Price</span><span>Premium</span><span>Cost Basis</span><span style="text-align:right">Unrealised</span>
   </div>`;
   const posRows=openWheels.map(w=>{
     const m=calcWheel(w);const ph=getWheelPhase(w);
@@ -2578,7 +2568,7 @@ function renderDash(){
       <span style="color:var(--silver);white-space:nowrap">${price!=null?'$'+price.toFixed(2):'—'}</span>
       <span class="${colorN(m.premiumNet)}" style="white-space:nowrap">${fmtMoney(m.premiumNet)}</span>
       <span style="color:var(--text2);white-space:nowrap">${basis}</span>
-      <span style="text-align:right;white-space:nowrap" class="${colorN(m.netPnL)}">${fmtMoney(m.netPnL)}</span>
+      ${(()=>{const u=rotationShareStats(w,db.trades,_priceOf).unrealised;return`<span style="text-align:right;white-space:nowrap" class="${u==null?'m':colorN(u)}">${u==null?'no price':u===0&&m.sharesHeld<=0?'—':fmtMoney(u)}</span>`;})()}
     </div>`;
   }).join('')||`<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:12px">No open positions</div>`;
 
