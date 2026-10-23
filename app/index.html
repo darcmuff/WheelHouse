@@ -2774,7 +2774,7 @@ function renderSidebar(){
   const ytd=calcYTD();
   const _now=new Date(),_ym=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
   const premMo=db.trades.reduce((a,t)=>{if(!t.entered||t.entered.slice(0,7)!==_ym)return a;const v=t.total||0;return t.action==='BTC'?a-v:(t.action==='CSP'||t.action==='STOC'||t.action==='STC')?a+v:a;},0);
-  const un=calcUnrealised(db.wheels,db.trades,_priceOf);
+  const un=calcAllUnrealised(db.wheels,db.trades,_priceOf,db.opts||[]);
   document.getElementById('sb-stats').innerHTML=`
     <div class="si"><span class="si-lbl">Realised P&amp;L ${_now.getFullYear()}</span><span class="si-val ${colorN(ytd.net)}">${fmtMoney(ytd.net)}</span></div>
     <div class="si"><span class="si-lbl">Premium this month</span><span class="si-val ${colorN(premMo)}">${fmtMoney(premMo)}</span></div>
@@ -3845,7 +3845,17 @@ function renderDash(){
 
 // Extra realised-P&L sources for the Monthly P&L table (e.g. LEAPs & short calls once the options code lands).
 // Each entry: {key,label,byMonth:{'YYYY-MM':number}}. Empty on this branch. Read-only.
-function monthlyExtraSources(){return [];}
+function monthlyExtraSources(legs){
+  legs=legs===undefined?(typeof db!=='undefined'?db.opts:[]):legs;
+  if(!legs||!legs.length)return [];
+  return [{key:'leaps',label:'LEAPs &amp; calls',byMonth:optsMonthly(legs).byMonth}];
+}
+// Unrealised = open wheel shares (price minus FIFO cost) + open LEAPs & short calls at their marks. Read-only.
+function calcAllUnrealised(wheels,trades,priceOf,legs){
+  const sh=calcUnrealised(wheels,trades,priceOf);
+  const o=optsMonthly(legs||[]);
+  return{value:Math.round((sh.value+o.openPl)*100)/100,shares:sh.value,leaps:o.openPl,unpriced:sh.unpriced+o.unmarked};
+}
 
 // Monthly Realised P&L: Premium + Shares Realised P&L (FIFO) + Dividends (+ any extra sources), by month. Read-only.
 function calcMonthlyRealised(trades,extras){
@@ -3881,7 +3891,7 @@ function renderMonthlyRealised(){
         <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
         ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr))),'mpl-sum')}
         ${line('All time',sum(rows),'mpl-sum')}</tbody></table>
-        <div class="mpl-note">Premium = option credits minus buybacks. Shares P&amp;L = each share sale against its rotation's cost (first in, first out). Unrealised share moves are not included.</div>
+        <div class="mpl-note">Premium = option credits minus buybacks. Shares P&amp;L = each share sale against its rotation's cost (first in, first out). LEAPs &amp; calls = closed and expired legs, by the month they closed. Unrealised moves are not included.</div>
       </div>
     </div>`;
 }
