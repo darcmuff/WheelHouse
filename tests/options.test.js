@@ -103,7 +103,7 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);let quotes={AAPL:{price:205}};let view='options';let _optsLoadError='';let optDemo=false;const DEMO_SPOTS={};
   let db={wheels:[{id:'w1',ticker:'AAPL',label:'Rotation 1',status:'open'}],trades:[],opts:[]};`;
   const R = new Function(stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-    ['setOptFilter','_optSpots','_legLine','renderOptions','renderOptionsLegacy','splitLeapLegs','leapStats','_fdShort','renderLeapCard','leapFormLeg','pmccShortsFor','pmccStats','renderPmcc'].map(extractFn).join('\n') +
+    ['setOptFilter','_optSpots','_legLine','renderOptions','renderOptionsLegacy','splitLeapLegs','leapStats','_fdShort','renderLeapCard','colorN','leapPayback','pmccLabels','leapFormLeg','pmccShortsFor','pmccStats','renderPmcc'].map(extractFn).join('\n') +
     `\nlet optFilter={status:'open',tenor:'all',side:'all'};let _optMarkStatus='';let leapStatus='open';\nreturn {render:renderOptions,legacy:renderOptionsLegacy,split:splitLeapLegs,stats:leapStats,form:leapFormLeg,setDb:d=>{db.opts=d;},setStatus:v=>{leapStatus=v;}};`)();
   check('render: LEAPs empty state', /No open LEAPs/.test(R.render()) && !/Other options/.test(R.render()));
   const LC = (o) => L({ type: 'C', side: 'long', strike: 180, expiry: '2028-01-21', entryDate: '2026-01-02', entryPrice: 30, mark: 40, iv: 0.3, qty: 2, fees: 1.3, ...o });
@@ -114,12 +114,12 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   check('render: non-long-call legs listed under Other options (2 groups), not dropped', /Other options \(2\)/.test(h) && /Call vertical/.test(h));
   check('render: no multi-leg builder / tenor / side filter chips', !/Any expiry|Long &amp; short|Long & short|\+ Position/.test(h) && /\+ LEAP/.test(h));
   check('render: ITM badge, intrinsic/time split, breakeven, days-left bar, Roll/Close', /leap-badge itm/.test(h) && /Intrinsic \$25\.00/.test(h) && /Time \$15\.00/.test(h) && /Breakeven<\/div><div class="rmb-val">\$210\.00/.test(h) && /days left/.test(h) && /'roll'/.test(h) && /'close'/.test(h));
-  check('full-width layout: header holds Roll/Close/••• before the metrics row; 3 stat columns', /class="leap-ch">[\s\S]*leap-btns[\s\S]*'roll'[\s\S]*<\/div>\s*<div class="leap-row">/.test(h) && (h.match(/class="rmb-col"/g) || []).length === 3);
+  check('calm card: value now vs cost after calls, payback bar, Roll/Close actions; old metrics kept under More numbers (3 stat columns)', /class="lc-hero"/.test(h) && /Cost after calls/.test(h) && /lc-bar/.test(h) && /'roll'/.test(h) && /'close'/.test(h) && /<details class="wl-more">[\s\S]*<div class="leap-row">/.test(h) && (h.match(/class="rmb-col"/g) || []).length === 3);
   const S1 = R.stats(LC({}), 205, TODAY);
   check('stats: value, cost incl fees, P&L, BE %, delta-as-shares>0, theta<0', S1.value === 8000 && S1.cost === 6001.3 && Math.abs(S1.pl - 1998.7) < 0.01 && Math.abs(S1.beDist - (210 / 205 * 100 - 100)) < 1e-9 && S1.dsh > 0 && S1.dsh < 200 && S1.thd < 0, S1);
   R.setDb([LC({ id: 'w', expiry: '2027-03-19', reviewDate: '2026-11-01' })]);
   const hw = R.render();
-  check('under 270 days → yellow border + review note; review date shown', /leap-card warn/.test(hw) && /Under 9 months left/.test(hw) && /Review 1 Nov 26/.test(hw), hw.slice(0, 200));
+  check('under 270 days → yellow border + review note; review date shown', /leap-card lc warn/.test(hw) && /Under 9 months left/.test(hw) && /Review 1 Nov 26/.test(hw), hw.slice(0, 200));
   R.setDb([LC({ id: 'c', status: 'closed', closePrice: 45, closeDate: '2026-09-01' })]); R.setStatus('closed');
   const hc = R.render();
   check('closed toggle shows closed LEAP with realised P&L', /data-leap="c"/.test(hc) && /Realised/.test(hc) && !/leap-sum/.test(hc));

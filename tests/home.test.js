@@ -26,3 +26,9 @@ test('needs you lists status labels, red first', () => {
   assert.strictEqual(ny[0].c, 'r');
   assert.ok(ny.some(n => /Take profit/.test(n.text)));
 });
+test('LEAP payback bar is the share of cost won back by calls, 0–100', () => {
+  const { leapPayback } = new Function(require('./extract').extractFn('leapPayback') + 'return {leapPayback};')();
+  assert.strictEqual(leapPayback(15000, 5680).pct, 38);
+  assert.strictEqual(leapPayback(15000, -200).pct, 0);
+  assert.strictEqual(leapPayback(1000, 5000).pct, 100);
+});

@@ -644,6 +644,19 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .wl-more{padding:0 1.125rem 0.75rem}.wl-more summary{color:var(--text3);font-size:0.6rem;cursor:pointer}
 .wl-more .rot-metrics-bar{margin-top:0.5rem;border-radius:0.75rem;background:var(--bg3)}
 @media(max-width:700px){.wl-facts{grid-template-columns:1fr 1fr}.rot-header .rot-label,.rot-header .rot-shares{display:none}}
+
+/* ── LEAP cards ── */
+.lc{padding:1rem 1.125rem;margin-bottom:0.75rem}
+.lc-h{display:flex;justify-content:space-between;align-items:center}.lc-tk{font-weight:600;font-size:0.9375rem;margin-right:0.5rem}.lc-ct{color:var(--text2);font-size:0.65rem}
+.lc-note{color:var(--yellow);font-size:0.6rem;margin-top:0.25rem}
+.lc-hero{display:flex;gap:1.75rem;margin-top:0.75rem;flex-wrap:wrap}.lc-k{color:var(--text3);font-size:0.6rem}.lc-v{font-size:1.25rem;font-weight:600}.lc-v.sm{font-size:0.95rem;margin-top:0.25rem}.lc-mut{color:var(--text2)}
+.lc-bar{height:0.3rem;background:var(--bg3);border-radius:1rem;margin:0.75rem 0 0.375rem;overflow:hidden}.lc-bar i{display:block;height:100%;background:var(--orange)}
+.lc-how{color:var(--text3);font-size:0.575rem}
+.lc-short{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;background:var(--bg3);border-radius:0.75rem;padding:0.5rem 0.75rem;margin-top:0.75rem;font-size:0.65rem}
+.lc-short.none{color:var(--text3)}.lc-sr{display:flex;align-items:center;gap:0.375rem}
+.lc-lbl{font-size:0.55rem;padding:0.1rem 0.45rem;border-radius:1rem;margin-left:0.25rem;font-weight:600}.lc-lbl.r{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}.lc-lbl.a{background:color-mix(in srgb,var(--yellow) 14%,transparent);color:var(--yellow)}.lc-lbl.g{background:var(--orangeL);color:var(--green)}
+.lc-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.625rem}
+.lc .wl-more{padding:0.5rem 0 0}
 </style>
 </head>
 <body>
@@ -2198,6 +2211,8 @@ function renderPmcc(leap,today,spot){
     ${hist}</div>`;
 }
 function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
+// Pure: share of the LEAP's cost won back by calls sold against it (0–100, whole %).
+function leapPayback(cost,net){return{pct:cost>0?Math.max(0,Math.min(100,Math.round(net/cost*100))):0};}
 function renderLeapCard(l,spot,today){
   const S=leapStats(l,spot,today),open=l.status==='open';
   const plH=S.pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${S.pl>=0?'g':'r'}">${S.pl>=0?'+':''}${fmtMoney(S.pl).replace(/\.\d\d$/,'')}${S.cost>0?` <small>(${S.pl>=0?'+':''}${(S.pl/S.cost*100).toFixed(1)}%)</small>`:''}</span>`;
@@ -2220,6 +2235,27 @@ function renderLeapCard(l,spot,today){
   }else{
     row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Paid → closed</div><div class="val" style="font-size:1rem">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div><div><div class="rmb-lbl">Realised</div><div class="pl">${plH}</div></div></div>
     <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>Closed ${_fdShort(l.closeDate)}</span></div></div><div class="rmb-col"></div><div class="rmb-col"></div><div class="rmb-col"></div>`;
+  }
+  if(open){
+    const P=pmccStats(l,db.opts||[],today),pb=leapPayback(P.cost,P.net);
+    const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
+    const c=P.cur,lb=c?pmccLabels(c,spot,today):[];
+    const lbH=lb.map(x=>`<span class="lc-lbl ${x.c}">${esc(x.t)}</span>`).join('');
+    const shortRow=c?`<div class="lc-short"><div class="lc-sl"><b>Short call</b> ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} · ${_fdShort(c.expiry)} · ${P.curDte}d ${lbH}</div>
+        <div class="lc-sr"><span class="${P.curPnl==null?'m':colorN(P.curPnl)}">${P.curPnl==null?'no mark':(P.curPnl>=0?'+':'')+m0(P.curPnl)+' so far'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','close')">Buy back</button><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','roll')">Roll</button><button class="btn btn-ghost btn-sm" onclick="pmccExpire('${esc(c.id)}')">Expired</button></div></div>`
+      :`<div class="lc-short none"><span>No call sold against this LEAP right now.</span><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(l.id)}')">Sell call</button></div>`;
+    return`<div class="leap-card lc${warn?" warn":""}" data-leap="${esc(l.id)}">
+  <div class="lc-h"><div><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}</div>
+  ${note?`<div class="lc-note">${note}</div>`:''}
+  <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
+    <div><div class="lc-k">Cost after calls</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
+    <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div></div>
+  <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
+  <div class="lc-how">Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls sold against it.</div>
+  ${shortRow}
+  <div class="lc-acts">${c?'':''}<button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Sell call</button><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','roll')">Roll LEAP</button><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close LEAP</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></div>
+  <details class="wl-more"><summary>More numbers &amp; past calls</summary><div class="leap-row">${row}</div>${renderPmcc(l,today,spot)}</details></div>`;
   }
   return`<div class="leap-card ${!open?'cn':warn?'warn':''}" data-leap="${esc(l.id)}">
   <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
