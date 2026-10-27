@@ -5270,10 +5270,10 @@ function pnlBuckets(daily,range,gran,today){
   const tot=buckets.reduce((a,b)=>({gain:a.gain+b.gain,loss:a.loss+b.loss}),{gain:0,loss:0});
   return{start,end:today,gran,buckets,gain:Math.round(tot.gain*100)/100,loss:Math.round(tot.loss*100)/100,net:Math.round((tot.gain-tot.loss)*100)/100};
 }
-let pnlRange='All',pnlGran=null,pnlFull=false;
+let pnlRange='All',pnlFull=false;
 function pnlCurveHtml(){
   const today=new Date().toISOString().slice(0,10);
-  const B=pnlBuckets(realisedDaily(db.trades,db.opts||[],today),pnlRange,pnlGran,today);
+  const B=pnlBuckets(realisedDaily(db.trades,db.opts||[],today),pnlRange,null,today); // granularity follows the range
   const el=typeof document!=='undefined'&&document.getElementById('pnl-curve');
   const W=pnlFull?Math.max(600,window.innerWidth-96):Math.max(600,(el&&el.clientWidth?el.clientWidth-40:1100)),H=pnlFull?Math.max(320,window.innerHeight-170):380;
   const PL=60,PR=14,PT=14,PB=30,cw=W-PL-PR,ch=H-PT-PB,n=Math.max(1,B.buckets.length);
@@ -5294,7 +5294,7 @@ function pnlCurveHtml(){
   const btn=(k,on,fn)=>`<button type="button" class="pc-r${on?' on':''}" onclick="${fn}('${k}')">${k}</button>`;
   return`<div class="pc-head"><div class="a-chart-title" style="margin:0">Realised P&amp;L ${ii('Realised only: closed trades, on the day they closed. Green = profit (premium collected from options that closed, expired or were assigned, PMCC call credits, share sales and LEAPs closed above cost, dividends). Red = loss (buybacks, share sales and LEAPs closed below cost). Open positions are not included. Hover a bar for that period.')}</div>
     <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span><span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> profit · <span class="r">${fmtMoney(-B.loss)}</span> loss</span>
-    <div class="pc-btns">${PNL_RANGES.map(([k])=>btn(k,k===pnlRange,'setPnlRange')).join('')}<span class="pc-sep"></span>${['Day','Week','Month'].map(k=>btn(k,k===B.gran,'setPnlGran')).join('')}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
+    <div class="pc-btns">${PNL_RANGES.map(([k])=>btn(k,k===pnlRange,'setPnlRange')).join('')}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
     <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg><div class="pc-tip" id="pc-tip"></div></div>
     <div class="a-chart-legend"><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Profit</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div></div>`;
 }
@@ -5303,11 +5303,10 @@ function pnlTip(e,el){const t=document.getElementById('pc-tip');if(!t)return;if(
   t.innerHTML=`<b>${el.dataset.l}</b><div>Profit <span class="g">${fmtMoney(+el.dataset.g)}</span></div><div>Loss <span class="r">${fmtMoney(-el.dataset.s)}</span></div><div>Net <span class="${+el.dataset.n<0?'r':'g'}">${fmtMoney(+el.dataset.n)}</span></div>`;
   t.style.display='block';const x=e.clientX-box.left+14;t.style.left=Math.min(x,box.width-170)+'px';t.style.top=Math.max(0,e.clientY-box.top-70)+'px';}
 function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.innerHTML=pnlCurveHtml();}
-function setPnlRange(k){pnlRange=k;pnlGran=null;_pnlRedraw();}
-function setPnlGran(k){pnlGran=k;_pnlRedraw();}
+function setPnlRange(k){pnlRange=k;_pnlRedraw();}
 function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=document.getElementById('pnl-curve');if(el)el.classList.toggle('pc-full',pnlFull);document.body.classList.toggle('pc-lock',pnlFull);_pnlRedraw();}
 function goToHealth(){switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
-window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlGran=setPnlGran;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;
+window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
 window.addEventListener('resize',()=>_pnlRedraw());
 
