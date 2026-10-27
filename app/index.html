@@ -665,7 +665,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .lc-hero{display:flex;gap:1.75rem;margin-top:0.75rem;flex-wrap:wrap}.lc-k{color:var(--text3);font-size:0.6rem}.lc-v{font-size:1.25rem;font-weight:600}.lc-v.sm{font-size:0.95rem;margin-top:0.25rem}.lc-mut{color:var(--text2)}
 .lc-bar{height:0.3rem;background:var(--bg3);border-radius:1rem;margin:0.75rem 0 0.375rem;overflow:hidden}.lc-bar i{display:block;height:100%;background:var(--orange)}
 .mn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:0.75rem 1.25rem;padding:0.75rem 0 0.25rem}.mn span{display:block;color:var(--text3);font-size:0.625rem}.mn b{display:block;font-weight:550;font-size:0.8125rem;color:var(--text);margin-top:0.125rem}.mn b.g{color:var(--green)}.mn b.r{color:var(--red)}.mn i{display:block;font-style:normal;color:var(--text3);font-size:0.6rem;margin-top:0.0625rem}.mn-hist{margin-top:0.75rem}.mn-ht{color:var(--text3);font-size:0.625rem;margin-bottom:0.25rem}.mn-hr{display:grid;grid-template-columns:11rem 1fr auto;gap:0.75rem;font-size:0.6875rem;padding:0.3125rem 0;border-top:1px solid var(--border);color:var(--text2)}.mn-hr .t3{color:var(--text3)}.mn-hr b{font-weight:550}.mn-hr b.g{color:var(--green)}.mn-hr b.r{color:var(--red)}
-.ii{position:relative;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0 0.125rem;margin-left:0.25rem;font:inherit;font-size:0.8em;font-weight:400;line-height:1;color:var(--text3);opacity:.7;cursor:help;vertical-align:baseline;text-transform:none;letter-spacing:0}.ii:hover,.ii:focus{opacity:1;color:var(--text2);outline:none}.ii:focus-visible{outline:1px solid var(--border);border-radius:4px}.ii:hover::after,.ii:focus::after{content:attr(data-tip);position:absolute;z-index:50;top:calc(100% + 6px);left:50%;transform:translateX(-50%);width:max-content;max-width:17rem;padding:0.5rem 0.625rem;border-radius:8px;background:var(--surface,var(--bg2,#fff));color:var(--text2);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:0.6875rem;font-weight:400;line-height:1.45;text-align:left;white-space:normal;pointer-events:none}.ii.ii-r::after{left:auto;right:-0.25rem;transform:none}.ii.ii-l::after{left:-0.25rem;transform:none}
+.ii{position:relative;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0 0.125rem;margin-left:0.25rem;font:inherit;font-size:0.8em;font-weight:400;line-height:1;color:var(--text3);opacity:.7;cursor:help;vertical-align:baseline;text-transform:none;letter-spacing:0}.ii:hover,.ii:focus{opacity:1;color:var(--text2);outline:none}.ii:focus-visible{outline:1px solid var(--border);border-radius:4px}#ii-pop{position:fixed;z-index:10000;max-width:17rem;width:max-content;padding:0.5rem 0.625rem;border-radius:8px;background:var(--surface,var(--bg2,#fff));color:var(--text2);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:0.6875rem;font-weight:400;line-height:1.45;text-align:left;white-space:normal;pointer-events:none;text-transform:none;letter-spacing:0}#ii-pop[hidden]{display:none}.hk{position:relative}.hk-back{position:absolute;inset:0;background:var(--bg2);border-radius:inherit;padding:0.75rem 1.5rem 0.75rem 0.875rem;overflow-y:auto;cursor:pointer;animation:hkFlip .18s ease-out}.hk-bt{font-size:0.75rem;line-height:1.4;color:var(--text2)}.hk-x{position:absolute;top:0.375rem;right:0.5rem;font-size:1rem;line-height:1;color:var(--text3)}@keyframes hkFlip{from{opacity:0;transform:rotateY(70deg)}to{opacity:1;transform:none}}
 .lc-how{color:var(--text3);font-size:0.575rem}
 .lc-short{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;background:var(--bg3);border-radius:0.75rem;padding:0.45rem 0.75rem;margin-top:0.75rem;font-size:0.65rem}
 .lc-short.none{color:var(--text3)}.lc-sr{display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap}
@@ -5624,6 +5624,34 @@ function renderAnalytics(){
 function _iiPos(e){const b=e.target&&e.target.closest&&e.target.closest('.ii');if(!b)return;const r=b.getBoundingClientRect(),w=Math.min(272,innerWidth-24);b.classList.toggle('ii-r',r.left+w/2>innerWidth-12);b.classList.toggle('ii-l',r.left-w/2<12)}
 if(typeof document!=='undefined'){document.addEventListener('mouseover',_iiPos);document.addEventListener('focusin',_iiPos)}
 function _mn(l,v,sub='',c=''){return`<div class="mn"><span>${l}</span><b class="${c}">${v}</b>${sub?`<i>${sub}</i>`:''}</div>`}
+// Pure: where to put a tip box (w×h) for an icon rect r inside a vw×vh viewport — below by default, flips up, kept 8px inside the edges.
+function iiPlace(r,w,h,vw,vh){
+  const m=8,g=6;let left=r.left+r.width/2-w/2;left=Math.max(m,Math.min(left,vw-w-m));
+  let top=r.bottom+g;if(top+h>vh-m&&r.top-g-h>=m)top=r.top-g-h;top=Math.max(m,Math.min(top,vh-h-m));
+  return{left:Math.round(left),top:Math.round(top)};
+}
+// ⓘ tips render in one body-level popup so tiles/panels with overflow:hidden never clip them (hover, focus, tap).
+(function(){
+  if(typeof document==='undefined')return;
+  let cur=null;
+  const pop=()=>{let p=document.getElementById('ii-pop');if(!p){p=document.createElement('div');p.id='ii-pop';p.setAttribute('role','tooltip');p.hidden=true;document.body.appendChild(p);}return p;};
+  const show=b=>{const p=pop();p.textContent=b.getAttribute('data-tip')||'';p.hidden=false;const r=b.getBoundingClientRect(),q=p.getBoundingClientRect(),o=iiPlace(r,q.width,q.height,innerWidth,innerHeight);p.style.left=o.left+'px';p.style.top=o.top+'px';cur=b;};
+  const hide=()=>{const p=document.getElementById('ii-pop');if(p)p.hidden=true;cur=null;};
+  document.addEventListener('mouseover',e=>{const b=e.target.closest&&e.target.closest('.ii');if(b&&b!==cur&&!b.closest('.hk'))show(b);});
+  document.addEventListener('mouseout',e=>{const b=e.target.closest&&e.target.closest('.ii');if(b&&b===cur&&!(e.relatedTarget&&b.contains(e.relatedTarget))&&document.activeElement!==b)hide();});
+  document.addEventListener('focusin',e=>{const b=e.target.closest&&e.target.closest('.ii');if(b&&!b.closest('.hk'))show(b);});
+  document.addEventListener('focusout',e=>{if(e.target===cur)hide();});
+  // Home tiles: tapping ⓘ flips the tile itself to show the tip (same size); tap the tile again to flip back. One at a time.
+  const unflip=()=>document.querySelectorAll('.hk.hk-flipped').forEach(t=>{t.classList.remove('hk-flipped');const k=t.querySelector('.hk-back');if(k)k.remove();});
+  document.addEventListener('click',e=>{
+    const t=e.target.closest&&e.target.closest('.hk');
+    if(t&&t.classList.contains('hk-flipped')){e.stopPropagation();e.preventDefault();unflip();return;}
+    const b=e.target.closest&&e.target.closest('.ii');
+    if(b&&t){e.stopPropagation();e.preventDefault();hide();unflip();const k=document.createElement('div');k.className='hk-back';k.innerHTML='<span class="hk-x" aria-label="Close">×</span><div class="hk-bt"></div>';k.querySelector('.hk-bt').textContent=b.getAttribute('data-tip')||'';t.appendChild(k);t.classList.add('hk-flipped');return;}
+    if(b){show(b);}else{if(cur)hide();if(!t)unflip();}
+  },true);
+  addEventListener('scroll',()=>{if(cur)hide();},true);addEventListener('resize',()=>{if(cur)hide();});
+})();
 function ii(t){return`<button type="button" class="ii" aria-label="How it's worked out" data-tip="${String(t).replace(/<[^>]*>/g,'').replace(/"/g,'&quot;')}" onclick="event.stopPropagation();this.focus()">ⓘ</button>`}
 function exportCSV(){
   const q=logQ.toLowerCase();
