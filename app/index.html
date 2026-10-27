@@ -617,7 +617,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 /* ── Home ── */
 .home{display:flex;flex-direction:column;gap:1rem}
 .home-head h1{font-size:1.375rem;font-weight:600;margin:0.25rem 0 0.125rem}.home-head p{color:var(--text3);font-size:0.75rem}
-.hk-grid{display:grid;grid-template-columns:1.4fr repeat(5,1fr);gap:0.75rem}
+.hk-grid{display:grid;grid-template-columns:1.4fr repeat(6,1fr);gap:0.75rem}.home-chart{border-radius:1rem;box-shadow:var(--shadow)}
 @media(max-width:1280px){.hk-grid{grid-template-columns:1.4fr 1fr 1fr}}
 .hk{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
 .hk-l{color:var(--text3);font-size:0.6875rem}.hk-v{font-size:1.375rem;font-weight:600;margin-top:0.25rem;letter-spacing:-0.01em}.hk.big .hk-v{font-size:2.125rem}
@@ -2155,9 +2155,8 @@ function render(){
   const c=document.getElementById('content');
   if(view==='positions')c.innerHTML=renderPositions();
   if(view==='log')c.innerHTML=renderActivityHead()+renderLog();
-  if(view==='dash'){c.innerHTML=renderHome();}
+  if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
-  if(view==='analytics')setTimeout(_pnlRedraw,0);
   if(view==='options'){c.innerHTML=renderOptions();fetchOptionMarks(false);}
 }
 
@@ -4023,7 +4022,7 @@ function renderStatsOverview(){
       ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
     </div>`;
   }).join('');
-  const healthPanel=`<div class="d-panel" id="health-panel" hidden>
+  const healthPanel=`<div class="d-panel" id="health-panel">
     <div class="d-panel-hdr">
       <span class="d-panel-title">Data Health</span>
       <span style="display:flex;gap:0.75rem;align-items:center">${health.length?healthBadge:`<span style="color:var(--green);font-size:0.6875rem;font-weight:600">✓ All clear</span>`}</span>
@@ -4069,7 +4068,6 @@ function renderStatsOverview(){
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
   const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
 
-  const k6=kpi('Data health',health.length?`${health.length} issue${health.length>1?'s':''}`:'✓ All clear',health.length?[hRed?hRed+' critical':'',hAmber?hAmber+' warning'+(hAmber>1?'s':''):'',hGrey?hGrey+' note'+(hGrey>1?'s':''):''].filter(Boolean).join(' · ')+' · click for details':`All ${db.trades.length} trades checked`,hRed?'var(--red)':hAmber?'var(--yellow)':health.length?'var(--text2)':'var(--green)',false,'Checks every trade for lapsed legs, contradictions, orphan closers and duplicates. Click the tile to show or hide the list.').replace('<div class="d-kpi','<div onclick="const p=document.getElementById(\'health-panel\');if(p)p.hidden=!p.hidden" style="cursor:pointer" class="d-kpi');
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
   const avgArocVal=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
@@ -4164,10 +4162,7 @@ function renderStatsOverview(){
   return`<div style="padding:0.875rem 1rem 3.125rem;display:flex;flex-direction:column;gap:0.625rem">
 
     <!-- KPI Row -->
-    <div class="d-grid d-grid-4" style="grid-template-columns:repeat(5,minmax(0,1fr))">${k1}${k2}${k3}${k5}${k6}</div>
-
-    <!-- Realised P&L chart — full width -->
-    <div class="a-chart-box pc-box" id="pnl-curve">${pnlCurveHtml()}</div>
+    <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div>
 
     <!-- Alert strip -->
     ${alertHtml}
@@ -4234,12 +4229,6 @@ function renderHome(){
   const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
-  // stacked monthly bars: last 6 months, wheel vs LEAPs
-  const months=[];for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);months.push(d.toISOString().slice(0,7));}
-  const mrows=months.map(ym=>{const r=rows.find(x=>x.ym===ym)||{premium:0,shares:0,divs:0,extra:{},total:0};const w=r.premium+r.shares+r.divs,l=Object.values(r.extra||{}).reduce((a,v)=>a+v,0);return{ym,w,l,t:w+l};});
-  const mx=Math.max(1,...mrows.map(m=>Math.max(0,m.w)+Math.max(0,m.l)));
-  const bars=mrows.map((m,i)=>{const hw=Math.max(0,m.w)/mx*100,hl=Math.max(0,m.l)/mx*100;const lab=new Date(m.ym+'-02').toLocaleDateString('en-GB',{month:'short'});
-    return`<div class="hb-col"><span class="hb-v ${m.t<0?'neg':''}">${m.t?sgn(m.t):''}</span><div class="hb-stack" style="height:${Math.max(hw+hl,m.t?2:0)}%"><div class="hb-l" style="height:${hw+hl?hl/(hw+hl)*100:0}%"></div><div class="hb-w" style="flex:1"></div></div><span class="hb-m${i===5?' now':''}">${lab}</span></div>`;}).join('');
   const nyHtml=ny.length?ny.slice(0,5).map(n=>`<div class="ny-row"><span class="ny-dot ${n.c}"></span><span>${esc(n.text)}</span>${n.wheelId?`<a onclick="goToWheel('${n.wheelId}')">Open</a>`:`<a onclick="switchView('options')">Open</a>`}</div>`).join(''):`<div class="ny-none">Nothing needs you right now.</div>`;
   return`<div class="home">
   <div class="home-head"><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div>
@@ -4250,15 +4239,12 @@ function renderHome(){
     <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price minus cost, plus premium on open wheel puts &amp; calls (at the credit received — no live option price)${un.unpriced?` · ${un.unpriced} without a price`:''}.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Open premium ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}</div></div>
     <div class="hk"><div class="hk-l">Capital at work ${ii(`Wheel money tied up now: open put collateral (strike × shares) + what your open shares cost. LEAPs at what you paid, shown separately.`)}</div><div class="hk-v">${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Puts ${fmtMoney(caw.puts).replace(/\.\d\d$/,'')} · Shares ${fmtMoney(caw.shares).replace(/\.\d\d$/,'')}${caw.leaps?` · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')} separate`:''}</div></div>
     <div class="hk"><div class="hk-l">Win rate ${ii(`Closed option trades only. A win is a put or call that expired worthless, was assigned or called away (premium kept), or was bought back for less than you sold it. A loss is one bought back for more. Open options don't count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
+    <div class="hk" style="cursor:pointer" onclick="goToHealth()"><div class="hk-l">Data health ${ii(`Checks every trade for lapsed legs, contradictions, orphan closers and duplicates. Click for the full list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.some(i=>i.sev==='amber')?'y':health.length?'':'g'}">${health.length?health.length+' issue'+(health.length>1?'s':''):'✓ Clear'}</div><div class="hk-s">${health.length?(()=>{const n=v=>health.filter(i=>i.sev===v).length;return[n('red')?n('red')+' critical':'',n('amber')?n('amber')+' warning'+(n('amber')>1?'s':''):'',n('grey')?n('grey')+' note'+(n('grey')>1?'s':''):''].filter(Boolean).join(' · ');})():'All '+db.trades.length+' trades checked'}</div></div>
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
-  <div class="home-grid">
-    <div class="hcard"><div class="hc-h"><h2>Options P&amp;L by month</h2><span class="hc-note">last 6 months</span></div>
-      <div class="hb">${bars}</div>
-      <div class="hb-leg"><span><i class="hb-w"></i>Wheel</span><span><i class="hb-l"></i>LEAPs &amp; calls</span></div></div>
-    <div class="hcard"><div class="hc-h"><h2>Needs you</h2><span class="hc-note">${ny.length||''}</span></div>${nyHtml}
-      <div class="hc-links"><a onclick="switchView('analytics')">More stats →</a><a onclick="switchView('analytics')">Data health${health.length?` (${health.length})`:''} &amp; fees →</a></div></div>
-  </div>
+  <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
+  <div class="hcard"><div class="hc-h"><h2>Needs you</h2><span class="hc-note">${ny.length||''}</span></div>${nyHtml}
+    <div class="hc-links"><a onclick="switchView('analytics')">More stats →</a><a onclick="goToHealth()">Data health${health.length?` (${health.length})`:''} &amp; fees →</a></div></div>
   ${renderMonthlyRealised()}
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
     <div class="tk-row tk-hd"><span>Ticker</span><span>${today.slice(0,4)}</span><span>All time</span></div>
@@ -5320,7 +5306,8 @@ function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.inn
 function setPnlRange(k){pnlRange=k;pnlGran=null;_pnlRedraw();}
 function setPnlGran(k){pnlGran=k;_pnlRedraw();}
 function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=document.getElementById('pnl-curve');if(el)el.classList.toggle('pc-full',pnlFull);document.body.classList.toggle('pc-lock',pnlFull);_pnlRedraw();}
-window.setPnlRange=setPnlRange;window.setPnlGran=setPnlGran;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;
+function goToHealth(){switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
+window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlGran=setPnlGran;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
 window.addEventListener('resize',()=>_pnlRedraw());
 
