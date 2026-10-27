@@ -1540,7 +1540,7 @@ function optionsLib(){
 const OPTS=optionsLib();
 
 function calcWheel(wheel){
-  const trades=db.trades.filter(t=>t.wheelId===wheel.id).sort((a,b)=>a.entered.localeCompare(b.entered));
+  const trades=db.trades.filter(t=>t.wheelId===wheel.id).sort((a,b)=>(a.entered||'').localeCompare(b.entered||''));
   let credits=0,debits=0,sharesHeld=0,premiumCredits=0,premiumDebits=0;
   trades.forEach(t=>{
     const total=t.total||0;
@@ -1557,11 +1557,18 @@ function calcWheel(wheel){
   const netPnL=credits-debits;
   const premiumNet=premiumCredits-premiumDebits;
   const netCashOut=debits-credits;
-  const breakeven=sharesHeld>0?netCashOut/sharesHeld:null;
+  // Adjusted cost basis per share held (standard wheel method): what the shares still held cost
+  // (first in, first out, incl. fees on the IN), minus ALL net option premium on this rotation (puts before
+  // assignment + calls, buybacks add back) and dividends. Shares already sold are settled in Shares P&L and
+  // don't distort the basis of the ones left. With no sales this equals the old net-cash figure.
+  const divs=trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0);
+  const lots=(shareRealisations(trades.map(t=>({...t,wheelId:wheel.id}))).open[wheel.id])||{shares:0,cost:0};
+  const shareCost=lots.cost;
+  const breakeven=sharesHeld>0?(shareCost-premiumNet-divs)/sharesHeld:null;
   let unrealised=null;
   if(wheel.lastPrice!=null&&sharesHeld>0){unrealised=(wheel.lastPrice*sharesHeld)-netCashOut;}
   const lastTrade=trades.length?trades[trades.length-1]:null;
-  return{credits,debits,netPnL,premiumNet,premiumCredits,premiumDebits,sharesHeld,breakeven,unrealised,trades,lastTrade,netCashOut};
+  return{credits,debits,netPnL,premiumNet,premiumCredits,premiumDebits,sharesHeld,breakeven,shareCost,unrealised,trades,lastTrade,netCashOut};
 }
 
 // Annualised Return on Capital — capital at risk = highest CSP strike × shares
@@ -1937,8 +1944,7 @@ function calcAssignmentIntel(){
     const avgCallIncome=stocs.length?stocs.reduce((s,t)=>s+(t.total||0),0)/stocs.length:0;
     // calls-to-breakeven based on option income only (premium net, not capital deployed)
     const callsNeeded=avgCallIncome>0&&m.premiumNet<0?Math.ceil(-m.premiumNet/avgCallIncome):0;
-    const basisReduction=m.breakeven&&m.sharesHeld>0
-      ?(m.premiumNet/(m.sharesHeld*m.breakeven)*100):0;
+    const basisReduction=m.shareCost>0?(m.premiumNet/m.shareCost*100):0; // % of what the shares cost, paid back by premium
     return{wheel:w,m,avgCallIncome,callsNeeded,basisReduction};
   }).filter(Boolean);
 }
