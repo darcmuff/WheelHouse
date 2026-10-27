@@ -6,11 +6,18 @@ let pass = 0, fail = 0;
 const check = (n, ok, x) => { ok ? pass++ : fail++; console.log((ok ? '  ✓ ' : '  ✗ ') + n + (ok || x === undefined ? '' : '  → ' + JSON.stringify(x))); };
 const scanCode = ['MON_PAT','_LEAP_LABELS','MON_MAP','CREDITS','ACTION_MAP','VALID_ACTIONS'].map(extractConst)
   .concat(['isCredit','computeTotal','parseCSVLine','normDate','parseSmartText','brokerCSVLib','_lev','leapNormalize','leapFuzzy','leapScan','pmccScan'].map(extractFn)).join('\n');
-const stubs = `const fmt2=n=>(+n).toFixed(2);const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);const esc=s=>String(s??'');
-let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);`;
+const stubs = [
+  "const fmt2=n=>(+n).toFixed(2);",
+  "const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);",
+  "const fmtPrem=n=>(+n).toFixed(2);",
+  "const fmtDateFull=d=>d||'-';",
+  "const esc=s=>String(s==null?'':s);",
+  "function colorN(n){return n==null?'m':(n>=0?'g':'r');}",
+  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let expandedLeaps=new Set();"
+].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','renderPmcc','optsToCSV'].map(extractFn).join('\n') +
-  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccLabels,pmccFormLeg,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','pmccTradeEvents','renderPmccTradeRow','renderPmcc','optsToCSV'].map(extractFn).join('\n') +
+  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccLabels,pmccFormLeg,pmccTradeEvents,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2028-06-16', qty: 2, entryPrice: 72, fees: 1.30, entryDate: '2026-06-01', status: 'open' };
@@ -44,7 +51,7 @@ check('history newest first', P.past.map(l => l.id).join() === 'b,a');
 const risky = [leap, sh({ id: 'r', strike: 120, expiry: '2029-01-19', entryPrice: 9, qty: 5 })];
 S.setOpts(risky);
 const rh0 = S.renderPmcc(leap, today);
-check('risky short (below breakeven, past LEAP expiry, over-sold) renders with no warning text', !/⚠|warn|naked|risk|lock in a loss|uncovered|expires after/i.test(rh0) && /5× \$120C/.test(rh0), rh0);
+check('risky short (below breakeven, past LEAP expiry, over-sold) renders with no warning text', !/⚠|warn|naked|risk|lock in a loss|uncovered|expires after/i.test(rh0) && /ab-STO/.test(rh0) && /\$120/.test(rh0), rh0);
 check('stats carry no warnings field', !('warnings' in S.pmccStats(leap, risky, today)));
 check('risky short still saves (no blocking)', !!S.pmccFormLeg({ strike: '120', expiry: '2029-01-19', qty: '5', price: '9', newId: 'z' }, leap).leg);
 const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
@@ -63,8 +70,8 @@ check('Take profit green ≥40% captured with %', T({ c: o({ mark: 3.84 }), spot
 check('no price → no price-based labels (expiry still shown)', T({ c: o({ mark: null, expiry: '2026-10-25' }), spot: undefined }) === 'Expiring soon/a');
 check('closed short → no labels', T({ c: o({ status: 'closed', mark: 0.1 }), spot: 300 }) === '');
 S.setOpts(legs);
-check('labels render on the card strip', /pmcc-lb g">Take profit · 52%/.test(S.renderPmcc(leap, today, 205)));
-check('no spot → no money-ness labels on the strip', !/the money/.test(S.renderPmcc(leap, today, undefined)) && /In the money/.test(S.renderPmcc(leap, today, 300)));
+check('labels render on the open STO row', /pmcc-lb g">Take profit · 52%/.test(S.renderPmcc(leap, today, 205)));
+check('no spot → no money-ness labels on the open row', !/the money/.test(S.renderPmcc(leap, today, undefined)) && /In the money/.test(S.renderPmcc(leap, today, 300)));
 
 // ── form leg ──
 const f = S.pmccFormLeg({ strike: '245', expiry: '2026-11-20', qty: '2', price: '6.40', date: '2026-10-09', fees: '1.30', notes: '', newId: 'n1' }, leap);
@@ -75,9 +82,10 @@ check('form validation: strike required', /strike/.test(S.pmccFormLeg({ strike: 
 // ── render ──
 S.setOpts(legs);
 const h = S.renderPmcc(leap, today);
-check('card strip shows short, premium, adjusted cost, history and actions', /PMCC/.test(h) && /2× \$245C/.test(h) && /Premium collected/.test(h) && /Adj\. LEAP cost/.test(h) && /Past short calls \(2\)/.test(h) && /Buy back/.test(h) && /Roll/.test(h) && /Expired/.test(h));
-check('LEAP with no short calls renders no strip (Sell call lives in the card header)', S.renderPmcc({ ...leap, id: 'none' }, today) === '');
-check('history labels rolled vs expired', /rolled/.test(h) && /expired/.test(h));
+check('trade table: BTO + STO/BTC/EXP rows, soft action pills, open-row actions', /pmcc-trades/.test(h) && /ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && /Buy back/.test(h) && /Roll/.test(h) && /Expired/.test(h) && /\$245/.test(h));
+check('LEAP with no short calls renders no table (Sell call lives on the card)', S.renderPmcc({ ...leap, id: 'none' }, today) === '');
+check('roll chain tip shows chain row', /chain-row/.test(h) && /Chain/.test(h));
+check('events newest-first with BTO present', (()=>{const ev=S.pmccTradeEvents(leap,legs);return ev[0].entered>=ev[ev.length-1].entered && ev.some(e=>e.action==='BTO') && ev.filter(e=>e.action==='STO').length===3;})());
 check('no wheel data touched by rendering', S.db.wheels.length === 1 && S.db.trades.length === 1 && S.writes.length === 0);
 const csv = S.optsToCSV(legs);
 check('Options CSV export carries parentLeapId', csv.split('\n')[0].includes('parentLeapId') && csv.includes(',L1,'));

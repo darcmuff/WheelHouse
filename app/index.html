@@ -300,6 +300,14 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .ab-OUT{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.28)}
 .ab-DIV{background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.28)}
 .ab-EXP{background:rgba(100,116,139,.1);color:#94a3b8;border:1px solid rgba(100,116,139,.2)}
+.ab-BTO{background:rgba(251,191,36,.12);color:var(--yellow);border:1px solid rgba(251,191,36,.28)}
+.ab-STO{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.28)}
+.ab-ASN{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.28)}
+.pmcc-trades .thead-row,.pmcc-trades .trow{
+  grid-template-columns:minmax(0,110fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,52fr) minmax(0,78fr) minmax(0,48fr) minmax(0,72fr) minmax(0,140fr);
+}
+.pmcc-trades .trow .pmcc-row-acts{display:flex;gap:0.25rem;flex-wrap:wrap;justify-content:flex-end}
+.pmcc-trades .trow .pmcc-lb{margin-left:0.25rem}
 .rot-actions{
   padding:0.5625rem 1rem;border-top:1px solid var(--border);
   background:var(--bg3);display:flex;gap:0.375rem;flex-wrap:wrap;align-items:center;
@@ -656,8 +664,10 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .mn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:0.75rem 1.25rem;padding:0.75rem 0 0.25rem}.mn span{display:block;color:var(--text3);font-size:0.625rem}.mn b{display:block;font-weight:550;font-size:0.8125rem;color:var(--text);margin-top:0.125rem}.mn b.g{color:var(--green)}.mn b.r{color:var(--red)}.mn i{display:block;font-style:normal;color:var(--text3);font-size:0.6rem;margin-top:0.0625rem}.mn-hist{margin-top:0.75rem}.mn-ht{color:var(--text3);font-size:0.625rem;margin-bottom:0.25rem}.mn-hr{display:grid;grid-template-columns:11rem 1fr auto;gap:0.75rem;font-size:0.6875rem;padding:0.3125rem 0;border-top:1px solid var(--border);color:var(--text2)}.mn-hr .t3{color:var(--text3)}.mn-hr b{font-weight:550}.mn-hr b.g{color:var(--green)}.mn-hr b.r{color:var(--red)}
 .ii{position:relative;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0 0.125rem;margin-left:0.25rem;font:inherit;font-size:0.8em;font-weight:400;line-height:1;color:var(--text3);opacity:.7;cursor:help;vertical-align:baseline;text-transform:none;letter-spacing:0}.ii:hover,.ii:focus{opacity:1;color:var(--text2);outline:none}.ii:focus-visible{outline:1px solid var(--border);border-radius:4px}.ii:hover::after,.ii:focus::after{content:attr(data-tip);position:absolute;z-index:50;top:calc(100% + 6px);left:50%;transform:translateX(-50%);width:max-content;max-width:17rem;padding:0.5rem 0.625rem;border-radius:8px;background:var(--surface,var(--bg2,#fff));color:var(--text2);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:0.6875rem;font-weight:400;line-height:1.45;text-align:left;white-space:normal;pointer-events:none}.ii.ii-r::after{left:auto;right:-0.25rem;transform:none}.ii.ii-l::after{left:-0.25rem;transform:none}
 .lc-how{color:var(--text3);font-size:0.575rem}
-.lc-short{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;background:var(--bg3);border-radius:0.75rem;padding:0.5rem 0.75rem;margin-top:0.75rem;font-size:0.65rem}
-.lc-short.none{color:var(--text3)}.lc-sr{display:flex;align-items:center;gap:0.375rem}
+.lc-short{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;background:var(--bg3);border-radius:0.75rem;padding:0.45rem 0.75rem;margin-top:0.75rem;font-size:0.65rem}
+.lc-short.none{color:var(--text3)}.lc-sr{display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap}
+.lc-short .lc-sl{display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;min-width:0}
+.leap-card .pmcc-trades{margin:0.75rem 0 0}
 .lc-lbl{font-size:0.55rem;padding:0.1rem 0.45rem;border-radius:1rem;margin-left:0.25rem;font-weight:600}.lc-lbl.r{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}.lc-lbl.a{background:color-mix(in srgb,var(--yellow) 14%,transparent);color:var(--yellow)}.lc-lbl.g{background:var(--orangeL);color:var(--green)}
 .lc-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.625rem}
 .lc .wl-more{padding:0.5rem 0 0}
@@ -679,6 +689,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .ab-STOC,.ab-STC{background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue)}
 .ab-IN{background:color-mix(in srgb,var(--yellow) 13%,transparent);color:var(--yellow)}
 .ab-EXP{background:var(--bg3);color:var(--text3)}
+.ab-BTO{background:color-mix(in srgb,var(--yellow) 13%,transparent);color:var(--yellow)}
+.ab-STO{background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue)}
+.ab-ASN{background:color-mix(in srgb,var(--green) 12%,transparent);color:var(--green)}
 .exp-badge{color:var(--text3);font-weight:400}
 .rot-actions{background:transparent;border-top:1px solid var(--bg3);padding:0.625rem 0.875rem}
 .trow-focus{background:var(--orangeL)!important;box-shadow:inset 0.1875rem 0 0 var(--orange)}
@@ -2062,6 +2075,7 @@ function buildSpark(prices,isUp,w=52,h=20){
 // ════════════════════════════════════════════════════════
 let view=localStorage.getItem('wh-view')||'positions';
 let expanded=new Set(JSON.parse(localStorage.getItem('wh-expanded')||'[]'));
+let expandedLeaps=new Set(JSON.parse(localStorage.getItem('wh-expandedLeaps')||'[]'));
 let minimised=new Set(JSON.parse(localStorage.getItem('wh-minimised')||'[]'));
 let hidden=new Set(JSON.parse(localStorage.getItem('wh-hidden')||'[]'));
 let showClosed=localStorage.getItem('wh-showClosed')==='true';
@@ -2111,6 +2125,7 @@ function switchView(v){
 function _saveUIState(){
   localStorage.setItem('wh-view',view);
   localStorage.setItem('wh-expanded',JSON.stringify([...expanded]));
+  localStorage.setItem('wh-expandedLeaps',JSON.stringify([...expandedLeaps]));
   localStorage.setItem('wh-minimised',JSON.stringify([...minimised]));
   localStorage.setItem('wh-hidden',JSON.stringify([...hidden]));
   localStorage.setItem('wh-showClosed',showClosed);
@@ -2308,29 +2323,84 @@ function pmccLabels(c,spot,today){
   if(mark!=null&&sold>0){const cap=(sold-mark)/sold;if(cap>=0.4)out.push({t:`Take profit · ${Math.round(cap*100)}%`,c:'g'});}
   return out;
 }
+// Build chronological trade events for a LEAP + its poor man's covered calls (newest first, like the wheel).
+// Pure: never writes. Events mirror wheel trade rows: BTO (LEAP), STO/BTC/EXP/ASN (short calls).
+function pmccTradeEvents(leap,legs){
+  const all=legs||[], shorts=pmccShortsFor(leap,all), ev=[];
+  const cashOpen=l=>{const p=OPTS.legPnL(l);return p.openCash;};
+  const cashClose=l=>{if(l.status==='open')return 0;const p=(l.status==='expired'||l.status==='assigned'?0:(+l.closePrice||0));const sign=l.side==='long'?1:-1;return Math.round((sign*p*100*(+l.qty||0)-(+l.closeFees||0))*100)/100;};
+  // LEAP buy
+  ev.push({id:leap.id+':bto',legId:leap.id,action:'BTO',entered:leap.entryDate||'',expiry:leap.expiry||'',strike:+leap.strike||0,premium:+leap.entryPrice||0,qty:+leap.qty||0,fees:+leap.fees||0,total:cashOpen(leap),net:null,open:leap.status==='open',kind:'leap',rolledFrom:null,status:leap.status});
+  if(leap.status==='closed'){
+    const tot=cashClose(leap);const p=OPTS.legPnL(leap);
+    ev.push({id:leap.id+':btc',legId:leap.id,action:'BTC',entered:leap.closeDate||'',expiry:leap.expiry||'',strike:+leap.strike||0,premium:+leap.closePrice||0,qty:+leap.qty||0,fees:+leap.closeFees||0,total:tot,net:p.realized,open:false,kind:'leap',rolledFrom:null,status:'closed'});
+  }else if(leap.status==='expired'||leap.status==='assigned'){
+    const p=OPTS.legPnL(leap);const act=leap.status==='assigned'?'ASN':'EXP';
+    ev.push({id:leap.id+':'+act.toLowerCase(),legId:leap.id,action:act,entered:leap.closeDate||leap.expiry||'',expiry:leap.expiry||'',strike:+leap.strike||0,premium:0,qty:+leap.qty||0,fees:+leap.closeFees||0,total:cashClose(leap),net:p.realized,open:false,kind:'leap',rolledFrom:null,status:leap.status});
+  }
+  shorts.forEach(l=>{
+    const p=OPTS.legPnL(l);
+    ev.push({id:l.id+':sto',legId:l.id,action:'STO',entered:l.entryDate||'',expiry:l.expiry||'',strike:+l.strike||0,premium:+l.entryPrice||0,qty:+l.qty||0,fees:+l.fees||0,total:p.openCash,net:l.status==='open'?p.unrealized:null,open:l.status==='open',kind:'short',rolledFrom:l.rolledFrom||null,status:l.status,leg:l});
+    if(l.status==='closed'){
+      ev.push({id:l.id+':btc',legId:l.id,action:'BTC',entered:l.closeDate||'',expiry:l.expiry||'',strike:+l.strike||0,premium:+l.closePrice||0,qty:+l.qty||0,fees:+l.closeFees||0,total:cashClose(l),net:p.realized,open:false,kind:'short',rolledFrom:l.rolledFrom||null,status:'closed',leg:l});
+    }else if(l.status==='expired'||l.status==='assigned'){
+      const act=l.status==='assigned'?'ASN':'EXP';
+      ev.push({id:l.id+':'+act.toLowerCase(),legId:l.id,action:act,entered:l.closeDate||l.expiry||'',expiry:l.expiry||'',strike:+l.strike||0,premium:0,qty:+l.qty||0,fees:+l.closeFees||0,total:cashClose(l),net:p.realized,open:false,kind:'short',rolledFrom:l.rolledFrom||null,status:l.status,leg:l});
+    }
+  });
+  // newest first (wheel table order); same-day: closers before openers
+  const closer=a=>(a==='BTC'||a==='EXP'||a==='ASN')?0:1;
+  ev.sort((a,b)=>{const dc=(b.entered||'').localeCompare(a.entered||'');if(dc)return dc;return closer(a.action)-closer(b.action);});
+  return ev;
+}
+function renderPmccTradeRow(e,spot,today){
+  const rollBadge=e.rolledFrom&&e.action==='STO'?'<span class="roll-badge">↻</span>':'';
+  const expBadge=e.action==='EXP'?'<span class="exp-badge">EXP</span>':'';
+  let labels='';let acts='';
+  if(e.open&&e.kind==='short'&&e.leg){
+    const lb=pmccLabels(e.leg,spot,today);
+    labels=lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('');
+    acts=`<span class="pmcc-row-acts"><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(e.legId)}','close')">Buy back</button><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(e.legId)}','roll')">Roll</button><button class="btn btn-ghost btn-sm" onclick="pmccExpire('${esc(e.legId)}')">Expired</button></span>`;
+  }
+  const totCls=e.total>=0?'g':'r';
+  const netH=e.net==null?'—':`<span class="${colorN(e.net)}">${e.net>=0?'+':''}${fmtMoney(e.net)}</span>`;
+  const rowCls=e.rolledFrom&&e.action==='STO'?'roll-trade':(e.action==='EXP'?'expired-trade':'');
+  // chain tip: a STO that has no later short rolled from it, but itself has rolledFrom — show chain net under it
+  let chainHtml='';
+  if(e.action==='STO'&&e.rolledFrom&&e.leg){
+    // walk rolledFrom chain for net of completed legs + this open
+    const legs=db.opts||[];const chain=[];let cur=e.leg,n=0;
+    while(cur&&n++<20){chain.push(cur);cur=cur.rolledFrom?legs.find(x=>x.id===cur.rolledFrom):null;}
+    if(chain.length>1){
+      let net=0;chain.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?(p.unrealized!=null?p.unrealized:p.openCash):p.realized;});
+      net=Math.round(net*100)/100;
+      chainHtml=`<div class="chain-row"><span class="chain-tag">⛓ Chain</span><span>${chain.length-1} roll${chain.length-1>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;
+    }
+  }
+  return`<div class="trow ${rowCls}" data-pmid="${esc(e.id)}">
+    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${e.action}">${e.action}</span>${expBadge}${labels}</span>
+    <span>${fmtDateFull(e.entered)}</span>
+    <span>${(e.action==='BTC'||e.action==='EXP'||e.action==='ASN')?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
+    <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
+    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}</span>
+    <span>${e.qty||'—'}</span>
+    <span class="${totCls}">${fmtMoney(e.total)}</span>
+    <span>${e.fees?'$'+fmt2(e.fees):'—'}</span>
+    <span>${netH}</span>
+    <span>${acts}</span>
+  </div>${chainHtml}`;
+}
+// Expandable PMCC trade list — same rounded panel / soft action pills as the wheel rotation detail.
 function renderPmcc(leap,today,spot){
-  const P=pmccStats(leap,db.opts||[],today),open=leap.status==='open';
-  if(!P.shorts.length)return''; // nothing sold yet: just the 'Sell call' button in the card header
-  const m0=n=>fmtMoney(n).replace(/\.\d\d$/,''),k=(l,v,sub='')=>`<div class="pmcc-kv"><div class="rmb-lbl">${l}</div><div class="rmb-val">${v}</div>${sub?`<div class="rmb-sub">${sub}</div>`:''}</div>`;
-  const sk=l=>`${l.qty}× $${fmt2(l.strike).replace(/\.00$/,'')}C · ${_fdShort(l.expiry)}`;
-  const col=(cls,l,v,sub='')=>`<div class="rmb-col ${cls}"><div class="rmb-lbl">${l}</div><div class="rmb-val">${v}</div>${sub?`<div class="rmb-sub">${sub}</div>`:''}</div>`;
-  const kv=(l,v,sub='')=>`<div><div class="rmb-lbl">${l}</div><div class="rmb-val">${v}</div>${sub?`<div class="rmb-sub">${sub}</div>`:''}</div>`;
-  const tag='<span class="pmcc-tag">PMCC</span>';
-  let head,c1,c2,c5;
-  if(P.cur){const c=P.cur,pl=P.curPnl,lb=pmccLabels(c,spot,today),tot=c.entryDate?OPTS.dte(c.expiry,c.entryDate):null;
-    const prog=P.curDte!=null&&tot>0?Math.min(1,Math.max(0,1-P.curDte/tot)):null;
-    head=`<div class="pmcc-t">${tag}<span>Short call · ${sk(c)}</span>${lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('')}</div>`;
-    c1=`<div class="rmb-col pmcc-c1">${kv('Credit',m0((+c.entryPrice||0)*100*(+c.qty||0)-(+c.fees||0)),`${c.qty}× $${(+c.entryPrice||0).toFixed(2)}`)}${kv('Short P&amp;L',pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${pl>=0?'g':'r'}">${pl>=0?'+':''}${m0(pl)}</span>`,pl!=null&&c.entryPrice>0?`${Math.round(pl/((+c.entryPrice)*100*(+c.qty||1))*100)}% of premium`:'')}</div>`;
-    c2=`<div class="rmb-col pmcc-c2"><div class="leap-barl"><span>Sold ${_fdShort(c.entryDate)} @ $${(+c.entryPrice||0).toFixed(2)}</span><span>${P.curDte!=null&&P.curDte>=0?`<b>${P.curDte}</b> days left`:'—'}</span></div><div class="leap-bar"><i style="width:${prog!=null?(prog*100).toFixed(0):0}%"></i></div>${P.open.length>1?`<div class="rmb-sub">+${P.open.length-1} more open</div>`:''}</div>`;
-    c5=col('','Mark',c.mark!=null&&c.mark!==''?`$${(+c.mark).toFixed(2)}`:'—',`sold $${(+c.entryPrice||0).toFixed(2)}`);
-  }else{head=`<div class="pmcc-t">${tag}<span style="color:var(--text3)">No short call open</span></div>`;c1=`<div class="rmb-col pmcc-c1">${kv('Short call','—',open?'use Sell call to write the next one':'')}</div>`;c2='<div class="rmb-col pmcc-c2"></div>';c5='<div class="rmb-col"></div>';}
-  const btns=open&&P.cur?`<span class="pmcc-btns"><button class="btn btn-ghost" onclick="pmccClose('${esc(P.cur.id)}','close')">Buy back</button><button class="btn btn-ghost" onclick="pmccClose('${esc(P.cur.id)}','roll')">Roll</button><button class="btn btn-ghost" onclick="pmccExpire('${esc(P.cur.id)}')">Expired</button></span>`:'';
-  const hist=P.past.length?`<details class="pmcc-hist"><summary>Past short calls (${P.past.length})</summary><div class="tw"><table><tr><th>Call</th><th>Sold</th><th>Closed</th><th>Outcome</th><th>Net</th></tr>${P.past.map(l=>{const r=OPTS.legPnL(l).realized;return`<tr><td>${sk(l)}</td><td>${_fdShort(l.entryDate)} @ $${(+l.entryPrice||0).toFixed(2)}</td><td>${_fdShort(l.closeDate)}${l.status==='closed'?` @ $${(+l.closePrice||0).toFixed(2)}`:''}</td><td>${l.status==='expired'?'expired':l.status==='assigned'?'assigned':P.shorts.some(x=>x.rolledFrom===l.id)?'rolled':'bought back'}</td><td class="${r>=0?'g':'r'}">${r>=0?'+':''}${fmtMoney(r)}</td></tr>`;}).join('')}</table></div></details>`:'';
-  return`<div class="pmcc"><div class="pmcc-h">${head}${btns}</div><div class="pmcc-row">${c1}${c2}
-    ${col('','Premium collected',`<span class="${P.net>=0?'g':'r'}">${P.net>=0?'+':''}${m0(P.net)}</span>`,`${P.shorts.length} call${P.shorts.length!==1?'s':''} · net of fees`)}
-    ${col('','Adj. LEAP cost',m0(P.adj),`$${P.adjPerSh.toFixed(2)}/sh (was $${(P.cost/(100*(+leap.qty||1))).toFixed(2)})`)}
-    ${c5}</div>
-    ${hist}</div>`;
+  const P=pmccStats(leap,db.opts||[],today);
+  const ev=pmccTradeEvents(leap,db.opts||[]);
+  // No short calls yet → empty (Sell call lives on the card face). Still show when the LEAP itself has a close/expiry event.
+  if(!P.shorts.length&&leap.status==='open')return'';
+  const rows=ev.map(e=>renderPmccTradeRow(e,spot,today)).join('');
+  return`<div class="trade-body open pmcc-trades">
+    <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Price</span><span>Qty</span><span>Total</span><span>Fees</span><span>Net</span><span></span></div>
+    ${rows||'<div class="trow"><span style="grid-column:1/-1;color:var(--text3)">No trades yet</span></div>'}
+  </div>`;
 }
 function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
 // Pure: share of the LEAP's cost won back by calls sold against it (0–100, whole %).
@@ -2363,10 +2433,12 @@ function renderLeapCard(l,spot,today){
     const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
     const c=P.cur,lb=c?pmccLabels(c,spot,today):[];
     const lbH=lb.map(x=>`<span class="lc-lbl ${x.c}">${esc(x.t)}</span>`).join('');
+    const nEv=pmccTradeEvents(l,db.opts||[]).length;
+    const leapExp=expandedLeaps.has(l.id);
     const shortRow=c?`<div class="lc-short"><div class="lc-sl"><b>Short call</b> ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} · ${_fdShort(c.expiry)} · ${P.curDte}d ${lbH}</div>
         <div class="lc-sr"><span class="${P.curPnl==null?'m':colorN(P.curPnl)}">${P.curPnl==null?'no mark':(P.curPnl>=0?'+':'')+m0(P.curPnl)+' so far'}</span>
         <button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','close')">Buy back</button><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','roll')">Roll</button><button class="btn btn-ghost btn-sm" onclick="pmccExpire('${esc(c.id)}')">Expired</button></div></div>`
-      :`<div class="lc-short none"><span>No call sold against this LEAP right now.</span><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(l.id)}')">Sell call</button></div>`;
+      :(P.shorts.length?`<div class="lc-short none"><span>No short call open · ${P.past.length} past</span></div>`:`<div class="lc-short none"><span>No call sold against this LEAP right now.</span><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(l.id)}')">Sell call</button></div>`);
     return`<div class="leap-card lc${warn?" warn":""}" data-leap="${esc(l.id)}">
   <div class="lc-h"><div><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}</div>
   ${note?`<div class="lc-note">${note}</div>`:''}
@@ -2375,14 +2447,14 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
   ${shortRow}
-  <div class="lc-acts">${c?'':''}<button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Sell call</button><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','roll')">Roll LEAP</button><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close LEAP</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></div>
-  <details class="wl-more"><summary>More numbers${P.past.length?' &amp; past calls':''}</summary><div class="mn-grid">
+  <div class="lc-acts"><button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Sell call</button><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','roll')">Roll LEAP</button><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close LEAP</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button>${nEv?`<button class="btn btn-ghost btn-sm" onclick="toggleLeapExpand('${esc(l.id)}')">${leapExp?'Hide trades':'Trades ('+nEv+')'}</button>`:''}</div>
+  ${leapExp?renderPmcc(l,today,spot):''}
+  <details class="wl-more"><summary>More numbers</summary><div class="mn-grid">
     ${_mn('Breakeven','$'+S.be.toFixed(2),S.beDist!=null?`${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:'no spot')}
     ${_mn('Share equiv.',S.dsh!=null?Math.round(S.dsh)+' sh':'—',S.dsh!=null&&S.q?`Δ ${(S.dsh/100/S.q).toFixed(2)}`:'no greeks')}
     ${_mn('Theta / day',S.thd!=null?fmtMoney(S.thd).replace(/\.\d\d$/,''):'—','',S.thd<0?'r':'')}
     ${_mn('Intrinsic',S.intr!=null?'$'+S.intr.toFixed(2):'—','per share')}
-    ${_mn('Time value',S.tv!=null?'$'+S.tv.toFixed(2):'—','per share')}</div>
-    ${P.past.length?`<div class="mn-hist"><div class="mn-ht">Past calls (${P.past.length})</div>${P.past.map(x=>{const r=OPTS.legPnL(x).realized;return`<div class="mn-hr"><span>${x.qty}× $${fmt2(x.strike).replace(/\.00$/,'')}C · ${_fdShort(x.expiry)}</span><span class="t3">${_fdShort(x.entryDate)} → ${_fdShort(x.closeDate)} · ${esc(x.status==='closed'?'closed':x.status||'')}</span><b class="${r>=0?'g':'r'}">${r>=0?'+':''}${m0(r)}</b></div>`}).join('')}</div>`:''}</details></div>`;
+    ${_mn('Time value',S.tv!=null?'$'+S.tv.toFixed(2):'—','per share')}</div></details></div>`;
   }
   return`<div class="leap-card ${!open?'cn':warn?'warn':''}" data-leap="${esc(l.id)}">
   <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
@@ -4232,7 +4304,8 @@ function renderDashChart(){
 // ════════════════════════════════════════════════════════
 // INTERACTIONS
 // ════════════════════════════════════════════════════════
-function toggleExpand(id){expanded.has(id)?expanded.delete(id):expanded.add(id);render();}
+function toggleExpand(id){expanded.has(id)?expanded.delete(id):expanded.add(id);_saveUIState();render();}
+function toggleLeapExpand(id){expandedLeaps.has(id)?expandedLeaps.delete(id):expandedLeaps.add(id);_saveUIState();render();}
 function toggleMinimise(id){
   if(minimised.has(id)){minimised.delete(id);}
   else{minimised.add(id);expanded.delete(id);}
@@ -6247,6 +6320,7 @@ window.toggleStatus = toggleStatus;
 window.moveWheel = moveWheel;
 window.deleteWheel = deleteWheel;
 window.toggleExpand = toggleExpand;
+window.toggleLeapExpand = toggleLeapExpand;
 window.toggleMinimise = toggleMinimise;
 window.toggleHide = toggleHide;
 window.toggleMinAll = toggleMinAll;
