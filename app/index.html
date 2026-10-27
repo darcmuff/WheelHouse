@@ -266,7 +266,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .trade-body.open{display:block;overflow-x:auto}
 .thead-row{
   display:grid;
-  grid-template-columns:minmax(0,120fr) minmax(0,82fr) minmax(0,82fr) minmax(0,62fr) minmax(0,64fr) minmax(0,54fr) minmax(0,84fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,38fr);
+  grid-template-columns:minmax(0,52fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,48fr) minmax(0,78fr) minmax(0,46fr) minmax(0,78fr) minmax(0,52fr) minmax(0,36fr);
   gap:0.375rem;padding:0.4375rem 1rem;background:var(--bg3);
   font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);
   min-width:0;
@@ -274,7 +274,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 0.1875rem 0 0 var(--teal,var(--orange2));}
 .trow{
   display:grid;
-  grid-template-columns:minmax(0,120fr) minmax(0,82fr) minmax(0,82fr) minmax(0,62fr) minmax(0,64fr) minmax(0,54fr) minmax(0,84fr) minmax(0,52fr) minmax(0,84fr) minmax(0,52fr) minmax(0,38fr);
+  grid-template-columns:minmax(0,52fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,48fr) minmax(0,78fr) minmax(0,46fr) minmax(0,78fr) minmax(0,52fr) minmax(0,36fr);
   gap:0.375rem;padding:0.5625rem 1rem;align-items:center;
   font-size:0.75rem;border-top:1px solid var(--border);
   min-width:0;
@@ -287,7 +287,8 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .chain-row .chain-net{font-weight:600;font-variant-numeric:tabular-nums}
 .chain-row .chain-be{color:var(--text2)}
 .roll-badge{font-size:0.9375rem;color:#0891b2;font-weight:normal;line-height:1}
-.action-cell{display:flex;align-items:center;gap:0.375rem;white-space:nowrap;min-width:0}
+.action-cell{display:flex;align-items:center;gap:0.25rem;flex-wrap:wrap;min-width:0;line-height:1.2}
+.roll-slot:empty{display:none}
 .roll-slot{flex:0 0 1rem;display:flex;align-items:center;justify-content:center}
 .trow.expired-trade{border-left:0.1875rem solid var(--green);padding-left:0.8125rem;background:rgba(34,197,94,0.04)}
 .exp-badge{font-size:0.625rem;font-weight:600;color:var(--green);letter-spacing:.5px;vertical-align:middle}
@@ -670,6 +671,14 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .leap-card .pmcc-trades,.leap-card .pmcc-open{margin:0.75rem 0 0}
 .leap-card .pmcc-open .trow-empty{border-top:0}
 .leap-card .pmcc-open .pmcc-lb{margin-left:0.25rem}
+.pmcc-open .thead-row.has-to-strike,.pmcc-open .trow.has-to-strike{
+  grid-template-columns:minmax(0,52fr) minmax(0,70fr) minmax(0,70fr) minmax(0,52fr) minmax(0,92fr) minmax(0,52fr) minmax(0,44fr) minmax(0,72fr) minmax(0,42fr) minmax(0,72fr) minmax(0,48fr) minmax(0,36fr);
+}
+.pmcc-open .to-strike{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:0.65rem}
+.pmcc-open .to-strike.m{color:var(--text3)}
+.pmcc-open .to-strike.a{color:var(--yellow)}
+.pmcc-open .to-strike.r{color:var(--red)}
+
 .lc-lbl{font-size:0.55rem;padding:0.1rem 0.45rem;border-radius:1rem;margin-left:0.25rem;font-weight:600}.lc-lbl.r{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}.lc-lbl.a{background:color-mix(in srgb,var(--yellow) 14%,transparent);color:var(--yellow)}.lc-lbl.g{background:var(--orangeL);color:var(--green)}
 .lc-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.625rem}
 .lc .wl-more{padding:0.5rem 0 0}
@@ -2365,14 +2374,28 @@ function pmccLegToTrade(c,today){
   return{id:c.id,action:'STO',entered:c.entryDate||'',expiry:c.expiry||'',strike:+c.strike||0,premium:+c.entryPrice||0,shares:qty*100,total:cash,fees:+c.fees||0,days,rollId:null,expiredWorthless:false,ticker:c.underlying};
 }
 // Open short call on the LEAP card face — same trade-body / thead / trow / rot-actions as the wheel.
-// Shared trade-table header. lastCol defaults to AROC% (wheel); LEAP open face passes "Captured".
-function tradeTableHead(lastCol){
-  lastCol=lastCol||'AROC%';
-  return`<div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>${esc(lastCol)}</span><span></span></div>`;
+// Distance from live underlying price to the short call strike.
+// Positive = price must rise to reach strike; negative = already in the money.
+// Colour matches status labels: muted normally, amber within 5%, red when ITM.
+function toStrike(spot,strike){
+  if(!(spot>0)||!(strike>0))return{text:'—',cls:'m',pct:null,dollars:null};
+  const dollars=strike-spot,pct=dollars/spot*100;
+  // Colour matches pmccLabels: red ITM (spot>strike), amber near (within 5% below strike), else muted
+  const cls=spot>strike?'r':spot>=strike*0.95?'a':'m';
+  const sign=pct>=0?'+':'';
+  return{text:`${sign}${pct.toFixed(1)}% · $${Math.abs(dollars).toFixed(2)}`,cls,pct,dollars};
+}
+// Shared trade-table header. opts: string lastCol (legacy) or {lastCol, toStrike}.
+// lastCol defaults to AROC% (wheel); LEAP open face passes Captured + toStrike.
+function tradeTableHead(opts){
+  if(typeof opts==='string'||opts==null)opts={lastCol:opts||'AROC%'};
+  const last=opts.lastCol||'AROC%';
+  const extra=opts.toStrike?'<span>To strike</span>':'';
+  return`<div class="thead-row${opts.toStrike?' has-to-strike':''}"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span>${extra}<span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>${esc(last)}</span><span></span></div>`;
 }
 function renderPmccOpenFace(leap,today,spot){
   const P=pmccStats(leap,db.opts||[],today);
-  const head=tradeTableHead('Captured');
+  const head=tradeTableHead({lastCol:'Captured',toStrike:true});
   if(!P.cur){
     return`<div class="trade-body open pmcc-open"><div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3);display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">No short call open.${leap.status==='open'?` <button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Sell call</button>`:''}</span></div></div>`;
   }
@@ -2383,7 +2406,8 @@ function renderPmccOpenFace(leap,today,spot){
   const sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
   let rocHtml='—',rocColor='var(--text3)';
   if(mark!=null&&sold>0){const cap=Math.round((sold-mark)/sold*100);rocHtml=cap+'%';rocColor=cap>=40?'var(--green)':cap>=0?'var(--text2)':'var(--red)';}
-  const row=renderTradeRow(t,null,{labelsHtml,rocHtml,rocColor,editOnclick:`openOptEdit('${esc(c.groupId||c.id)}')`});
+  const ts=toStrike(spot,+c.strike);
+  const row=renderTradeRow(t,null,{labelsHtml,rocHtml,rocColor,editOnclick:`openOptEdit('${esc(c.groupId||c.id)}')`,extraAfterStrike:`<span class="to-strike ${ts.cls}">${esc(ts.text)}</span>`});
   const acts=`<div class="rot-actions">
       <button class="btn btn-ghost btn-sm" onclick="openOptEdit('${esc(c.groupId||c.id)}');event.stopPropagation()">•••</button>
       <button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','close');event.stopPropagation()">Buy back</button>
@@ -3612,7 +3636,7 @@ function calcTradeROC(t){
   return((t.total/collateral)*(365/dte)*100);
 }
 function renderTradeRow(t,wheelTrades,opts){
-  // opts (optional): {labelsHtml, rocHtml, rocColor, editOnclick} — used by PMCC open face so the same row never drifts from the wheel
+  // opts (optional): {labelsHtml, rocHtml, rocColor, editOnclick, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
   opts=opts||{};
   // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
   let chainHtml='';
@@ -3640,11 +3664,13 @@ function renderTradeRow(t,wheelTrades,opts){
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
   const labels=opts.labelsHtml||'';
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
-  return`<div class="trow ${rowCls}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
+  const hasExtra=opts.extraAfterStrike!=null;
+  return`<div class="trow ${rowCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}${labels}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?'$'+fmt2(t.strike):'—'}</span>
+    ${hasExtra?opts.extraAfterStrike:''}
     <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
     <span>${t.shares||'—'}</span>
     <span class="${isCredit(t.action)?'g':'r'}">${fmtMoney(t.total)}</span>

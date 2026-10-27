@@ -24,8 +24,8 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','tradeTableHead','renderPmccOpenFace','renderPmccTradeRow','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
-  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccLabels,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,renderPmccOpenFace,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','renderPmccTradeRow','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
+  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccLabels,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmccOpenFace,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2028-06-16', qty: 2, entryPrice: 72, fees: 1.30, entryDate: '2026-06-01', status: 'open' };
@@ -97,9 +97,18 @@ check('events newest-first with BTO present', (()=>{const ev=S.pmccTradeEvents(l
 check('no wheel data touched by rendering', S.db.wheels.length === 1 && S.db.trades.length === 1 && S.writes.length === 0);
 const face = S.renderPmccOpenFace(leap, today, 205);
 check('open face: same trade-body/thead/trow as wheel, STO pill, shares=qty×100, no grey strip', /trade-body open pmcc-open/.test(face) && /thead-row/.test(face) && /ab-STO/.test(face) && /rot-actions/.test(face) && /Buy back/.test(face) && /✕ Delete/.test(face) && !/lc-short|Short call 2×/.test(face) && /200/.test(face) /* 2×100 shares */);
-check('open face: Captured header (not AROC%) and % value', /Captured/.test(face) && !/>AROC%</.test(face) && (/52%/.test(face) || /pmcc-lb/.test(face)));
+check('open face: Captured header (not AROC%) and % value', /Captured/.test(face) && !/>AROC%</.test(face) && (/52%/.test(face) || /pmcc-lb/.test(face)) && /To strike/.test(face));
 check('open face empty state when no shorts', /No short call open/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)) && /Sell call/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)));
 check('pmccLegToTrade maps to STO with shares×100', (()=>{const tr=S.pmccLegToTrade(c, today);return tr.action==='STO'&&tr.shares===200&&tr.premium===6.4;})());
+// ── To strike (LEAP open face only) ──
+const ts = (spot, K) => S.toStrike(spot, K);
+check('toStrike: no price → dash', ts(null, 245).text === '—' && ts(0, 245).text === '—' && ts(200, 0).cls === 'm');
+check('toStrike: below strike shows +% and $ to rise', (()=>{const r=ts(200, 245);return r.cls==='m' && Math.abs(r.pct-22.5)<0.01 && /\+22\.5% · \$45\.00/.test(r.text);})());
+check('toStrike: within 5% of strike → amber (same as Near the money)', ts(245*0.95, 245).cls === 'a' && ts(245*0.95-0.01, 245).cls === 'm');
+check('toStrike: at strike → amber (0%, near)', ts(245, 245).cls === 'a' && /\+0\.0%/.test(ts(245, 245).text));
+check('toStrike: above strike (ITM) → red negative', (()=>{const r=ts(260, 245);return r.cls==='r' && r.pct<0 && /-/.test(r.text);})());
+check('open face includes To strike header and cell', /To strike/.test(S.renderPmccOpenFace(leap, today, 205)) && /to-strike/.test(S.renderPmccOpenFace(leap, today, 205)));
+check('wheel header has no To strike', !/To strike/.test(S.tradeTableHead()) && /AROC%/.test(S.tradeTableHead()));
 const csv = S.optsToCSV(legs);
 check('Options CSV export carries parentLeapId', csv.split('\n')[0].includes('parentLeapId') && csv.includes(',L1,'));
 
