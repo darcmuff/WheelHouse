@@ -1288,6 +1288,7 @@ function autoMarkExpiredTrades(){
 function loadDB(){
   // Auth-gated — real load happens in loadDBFromFirestore after sign-in
   db = JSON.parse(JSON.stringify(SEED_DATA));
+  window._db = db;
 }
 
 async function loadDBFromFirestore(userId){
@@ -6150,6 +6151,7 @@ function showAuthOverlay() {
   const btn = document.getElementById('auth-signout-btn');
   if (btn) btn.remove();
   db = JSON.parse(JSON.stringify(SEED_DATA));
+  window._db = db;
   render();
 }
 
