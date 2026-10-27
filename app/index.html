@@ -622,6 +622,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .hk{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
 .hk-l{color:var(--text3);font-size:0.6875rem}.hk-v{font-size:1.375rem;font-weight:600;margin-top:0.25rem;letter-spacing:-0.01em}.hk.big .hk-v{font-size:2.125rem}
 .hk-s{color:var(--text2);font-size:0.65rem;margin-top:0.125rem}.hk-how{color:var(--text3);font-size:0.575rem;margin-top:0.5rem;line-height:1.4}
+.hk-wl{margin-top:0.375rem;display:flex;flex-direction:column;gap:0.125rem}.hk-wl>div{display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;white-space:nowrap}.hk-wl span{color:var(--text2);font-size:0.6875rem}.hk-wl b{font-size:1.0625rem;font-weight:600;letter-spacing:-0.01em}
 .pos{color:var(--green)}.neg{color:var(--red)}
 .home-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:0.75rem}
 .hcard{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
@@ -1808,7 +1809,8 @@ function calcOverall(){
 // Pure: Home tile text for average win / average loss ('—' when there are none).
 function avgWinLossText(wl){
   const m=n=>'$'+Math.round(n).toLocaleString('en-US');
-  return{big:(wl.avgWin!=null?'+'+m(wl.avgWin):'—')+' / '+(wl.avgLoss!=null?'−'+m(wl.avgLoss):'—'),sub:'from '+wl.wins+' win'+(wl.wins===1?'':'s')+' · '+wl.losses+' loss'+(wl.losses===1?'':'es')};
+  return{win:wl.avgWin!=null?'+'+m(wl.avgWin):'—',winCls:wl.avgWin!=null?'pos':'',loss:wl.avgLoss!=null?'−'+m(wl.avgLoss):'—',lossCls:wl.avgLoss!=null?'neg':'',
+    sub:'from '+wl.wins+' win'+(wl.wins===1?'':'s')+' · '+wl.losses+' loss'+(wl.losses===1?'':'es')};
 }
 function calcWinLoss(){
   let wins=0,losses=0,openOpts=0,winAmt=0,lossAmt=0;
@@ -4255,7 +4257,7 @@ function renderHome(){
   </div>
   <div class="hk-grid hk-row2">
     <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p)p.hidden=!p.hidden"><div class="hk-l">Needs you ${ii(`Open options expiring within a week, PMCC calls that need a decision, and any data issues (lapsed legs, contradictions, orphan closers, duplicates). Click to show the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':(ny.length+health.length)?'y':'g'}">${(ny.length+health.length)?(ny.length+health.length)+' item'+((ny.length+health.length)>1?'s':''):'✓ All clear'}</div><div class="hk-s">${(ny.length+health.length)?[ny.length?ny.length+' to act on':'',health.length?health.length+' data issue'+(health.length>1?'s':''):''].filter(Boolean).join(' · '):'nothing to do'}</div></div>
-    <div class="hk"><div class="hk-l">Avg win / Avg loss ${ii(`Closed option trades only, the same ones as Win rate. Average win is the premium you kept on a winning trade. Average loss is how much more a losing buyback cost than the premium you sold it for. Open options are not counted.`)}</div><div class="hk-v">${avgWinLossText(wl).big}</div><div class="hk-s">${avgWinLossText(wl).sub}</div></div>
+    <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed option trades only, the same ones as Win rate. Average win is the premium you kept on a winning trade. Average loss is how much more a losing buyback cost than the premium you sold it for. Open options are not counted.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
   <div class="hcard ny-panel" id="ny-panel" hidden><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="document.getElementById('ny-panel').hidden=true">Close</a></span></div>${ny.length||!health.length?nyHtml:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(i=>`<div class="ny-row"><span class="ny-dot ${i.sev==='red'?'r':i.sev==='amber'?'a':'g'}"></span><span>${i.text}</span><a onclick="goToHealth()">Open</a></div>`).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
   <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>

@@ -36,7 +36,7 @@ test('avg win / avg loss use the same closed trades as win rate', () => {
   const wl = run(db);
   assert.strictEqual(wl.avgWin, 400); assert.strictEqual(wl.avgLoss, 200);
   const T = new Function(extractFn('avgWinLossText') + 'return avgWinLossText;')();
-  assert.deepStrictEqual(T(wl), { big: '+$400 / −$200', sub: 'from 2 wins · 1 loss' });
+  assert.deepStrictEqual(T(wl), { win: '+$400', winCls: 'pos', loss: '−$200', lossCls: 'neg', sub: 'from 2 wins · 1 loss' });
 });
 test('no losses shows a dash for avg loss', () => {
   const wl = run({ wheels: [{ id: 'w', status: 'open' }], trades: [
@@ -46,6 +46,7 @@ test('no losses shows a dash for avg loss', () => {
   ] });
   assert.strictEqual(wl.avgLoss, null); assert.strictEqual(wl.avgWin, 250);
   const T = new Function(extractFn('avgWinLossText') + 'return avgWinLossText;')();
-  assert.deepStrictEqual(T(wl), { big: '+$250 / —', sub: 'from 2 wins · 0 losses' });
-  assert.strictEqual(T({ wins: 0, losses: 0, avgWin: null, avgLoss: null }).big, '— / —');
+  assert.deepStrictEqual(T(wl), { win: '+$250', winCls: 'pos', loss: '—', lossCls: '', sub: 'from 2 wins · 0 losses' });
+  const none = T({ wins: 0, losses: 0, avgWin: null, avgLoss: null });
+  assert.strictEqual(none.win, '—'); assert.strictEqual(none.loss, '—'); assert.strictEqual(none.winCls, ''); assert.strictEqual(none.lossCls, '');
 });
