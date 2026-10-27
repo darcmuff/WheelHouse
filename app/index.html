@@ -5244,10 +5244,9 @@ function doImport(){
 function realisedDaily(trades,legs,today){
   const d={};const add=(dt,v)=>{if(!dt||!v)return;dt=dt.slice(0,10);const o=d[dt]||(d[dt]={date:dt,gain:0,loss:0});if(v>=0)o.gain+=v;else o.loss-=v;};
   realisedPremium(trades,today).events.forEach(e=>add(e.date,e.amount));
-  shareRealisations(trades).events.forEach(e=>add(e.date,e.pnl));
-  (trades||[]).forEach(t=>{if(t.action==='DIV')add(t.entered,t.total||0);});
-  (legs||[]).forEach(l=>{if(l.status==='open')return;const p=OPTS.legPnL(l),dt=l.closeDate||l.expiry;
-    if(l.side==='short'){add(dt,p.openCash);add(dt,p.realized-p.openCash);}else add(dt,p.realized);});
+  // Options income only (matches Monthly P&L): share sales, dividends and closed long LEAPs belong to Positions P&L
+  (legs||[]).forEach(l=>{if(l.status==='open'||l.side!=='short')return;const p=OPTS.legPnL(l),dt=l.closeDate||l.expiry;
+    add(dt,p.openCash);add(dt,p.realized-p.openCash);});
   return Object.values(d).sort((x,y)=>x.date.localeCompare(y.date)).map(o=>({date:o.date,gain:Math.round(o.gain*100)/100,loss:Math.round(o.loss*100)/100,amount:Math.round((o.gain-o.loss)*100)/100}));
 }
 const PNL_RANGES=[['1W',7],['1M',30],['3M',91],['6M',182],['1Y',365],['All',0]];
@@ -5288,19 +5287,19 @@ function pnlCurveHtml(){
   let bars='';B.buckets.forEach((b,i)=>{const cx=PL+slot*i+slot/2;
     if(b.gain)bars+=`<rect x="${(cx-bw-1).toFixed(1)}" y="${Y(b.gain).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.gain)).toFixed(1)}" rx="2" fill="var(--green)" fill-opacity="0.85"/>`;
     if(b.loss)bars+=`<rect x="${(cx+1).toFixed(1)}" y="${Y(b.loss).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.loss)).toFixed(1)}" rx="2" fill="var(--red)" fill-opacity="0.85"/>`;
-    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-l="${tipLab(b.key)}" data-g="${b.gain}" data-s="${b.loss}" data-n="${b.net}" onmousemove="pnlTip(event,this)" onmouseleave="pnlTip(null)"><title>${tipLab(b.key)} · Profit ${fmtMoney(b.gain)} · Loss ${fmtMoney(-b.loss)} · Net ${fmtMoney(b.net)}</title></rect>`;
+    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-l="${tipLab(b.key)}" data-g="${b.gain}" data-s="${b.loss}" data-n="${b.net}" onmousemove="pnlTip(event,this)" onmouseleave="pnlTip(null)"><title>${tipLab(b.key)} · Premium collected ${fmtMoney(b.gain)} · Loss ${fmtMoney(-b.loss)} · Net ${fmtMoney(b.net)}</title></rect>`;
     if(i%every===0)bars+=`<text x="${cx.toFixed(1)}" y="${H-10}" text-anchor="middle" fill="var(--text3)" font-size="10">${lab(b.key)}</text>`;});
   const col=B.net<0?'var(--red)':'var(--green)';
   const btn=(k,on,fn)=>`<button type="button" class="pc-r${on?' on':''}" onclick="${fn}('${k}')">${k}</button>`;
-  return`<div class="pc-head"><div class="a-chart-title" style="margin:0">Realised P&amp;L ${ii('Realised only: closed trades, on the day they closed. Green = profit (premium collected from options that closed, expired or were assigned, PMCC call credits, share sales and LEAPs closed above cost, dividends). Red = loss (buybacks, share sales and LEAPs closed below cost). Open positions are not included. Hover a bar for that period.')}</div>
-    <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span><span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> profit · <span class="r">${fmtMoney(-B.loss)}</span> loss</span>
+  return`<div class="pc-head"><div class="a-chart-title" style="margin:0">Options P&amp;L ${ii('Options only, realised, matching the Monthly P&L table: wheel puts and calls plus PMCC short calls, on the day they closed, expired or were assigned. Green = premium collected, red = buyback costs. Share sales, dividends and closed LEAPs are in Positions P&L. Open options are not included. Hover a bar for that period.'')}</div>
+    <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span><span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> collected · <span class="r">${fmtMoney(-B.loss)}</span> loss</span>
     <div class="pc-btns">${PNL_RANGES.map(([k])=>btn(k,k===pnlRange,'setPnlRange')).join('')}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
     <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg><div class="pc-tip" id="pc-tip"></div></div>
-    <div class="a-chart-legend"><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Profit</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div></div>`;
+    <div class="a-chart-legend"><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Premium collected</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div></div>`;
 }
 function pnlTip(e,el){const t=document.getElementById('pc-tip');if(!t)return;if(!e){t.style.display='none';return;}
   const box=t.parentElement.getBoundingClientRect();
-  t.innerHTML=`<b>${el.dataset.l}</b><div>Profit <span class="g">${fmtMoney(+el.dataset.g)}</span></div><div>Loss <span class="r">${fmtMoney(-el.dataset.s)}</span></div><div>Net <span class="${+el.dataset.n<0?'r':'g'}">${fmtMoney(+el.dataset.n)}</span></div>`;
+  t.innerHTML=`<b>${el.dataset.l}</b><div>Premium collected <span class="g">${fmtMoney(+el.dataset.g)}</span></div><div>Loss <span class="r">${fmtMoney(-el.dataset.s)}</span></div><div>Net <span class="${+el.dataset.n<0?'r':'g'}">${fmtMoney(+el.dataset.n)}</span></div>`;
   t.style.display='block';const x=e.clientX-box.left+14;t.style.left=Math.min(x,box.width-170)+'px';t.style.top=Math.max(0,e.clientY-box.top-70)+'px';}
 function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.innerHTML=pnlCurveHtml();}
 function setPnlRange(k){pnlRange=k;_pnlRedraw();}

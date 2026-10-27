@@ -19,14 +19,14 @@ const legs = [
   L({ id: 'c2', parentLeapId: 'leap', side: 'short', expiry: '2026-10-17', entryPrice: 1, entryDate: '2026-09-22', status: 'closed', closePrice: 1.5, closeDate: '2026-10-10' }),
 ];
 
-test('bars: All range profit - loss equals all-time Realised P&L (incl. PMCC + LEAP)', () => {
+test('options chart: All-time net equals Monthly P&L all-time Profit (wheel + PMCC; no shares/LEAP/divs)', () => {
   const O = S.optsMonthly(legs);
-  const all = S.calcMonthlyRealised(tr, [{ key: 'leaps', byMonth: O.byMonth, gain: O.gain, loss: O.loss, lgain: O.lgain, lloss: O.lloss }], TODAY).reduce((a, r) => a + r.total, 0);
+  const all = S.calcMonthlyRealised(tr, [{ key: 'leaps', byMonth: O.byMonth, gain: O.gain, loss: O.loss, lgain: O.lgain, lloss: O.lloss }], TODAY).reduce((a, r) => a + r.profit, 0);
   const B = S.pnlBuckets(S.realisedDaily(tr, legs, TODAY), 'All', null, TODAY);
   assert.strictEqual(B.gran, 'Month');
   assert.ok(Math.abs(B.net - all) < 1e-6, B.net + ' vs ' + all);
   const oct = B.buckets.find(b => b.key === '2026-10-01');
-  assert.strictEqual(Math.round(oct.loss), 200 + 150); // share loss + PMCC buyback
+  assert.strictEqual(Math.round(oct.loss), 150); // PMCC buyback only; share loss is Positions P&L
   assert.ok(!S.realisedDaily(tr, legs, TODAY).some(d => d.gain === 150));
 });
 
@@ -35,7 +35,7 @@ test('granularity defaults per range, override works, empty buckets kept', () =>
   const w = S.pnlBuckets(D, '1W', null, TODAY);
   assert.strictEqual(w.gran, 'Day');
   assert.strictEqual(w.buckets.length, 7);
-  assert.strictEqual(w.net, 20); // 21–27 Oct: the 20 Oct share sale is outside the week
+  assert.strictEqual(w.net, 0); // 21–27 Oct: only a dividend (excluded) and an open CSP
   assert.strictEqual(S.pnlBuckets(D, '3M', null, TODAY).gran, 'Week');
   const wk = S.pnlBuckets(D, '1M', 'Week', TODAY);
   assert.ok(wk.buckets.every(b => new Date(b.key + 'T12:00:00').getUTCDay() === 1));
