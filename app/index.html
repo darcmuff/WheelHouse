@@ -2365,16 +2365,21 @@ function pmccLegToTrade(c,today){
   return{id:c.id,action:'STO',entered:c.entryDate||'',expiry:c.expiry||'',strike:+c.strike||0,premium:+c.entryPrice||0,shares:qty*100,total:cash,fees:+c.fees||0,days,rollId:null,expiredWorthless:false,ticker:c.underlying};
 }
 // Open short call on the LEAP card face — same trade-body / thead / trow / rot-actions as the wheel.
+// Shared trade-table header. lastCol defaults to AROC% (wheel); LEAP open face passes "Captured".
+function tradeTableHead(lastCol){
+  lastCol=lastCol||'AROC%';
+  return`<div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>${esc(lastCol)}</span><span></span></div>`;
+}
 function renderPmccOpenFace(leap,today,spot){
   const P=pmccStats(leap,db.opts||[],today);
-  const head=`<div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span></div>`;
+  const head=tradeTableHead('Captured');
   if(!P.cur){
     return`<div class="trade-body open pmcc-open"><div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3);display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">No short call open.${leap.status==='open'?` <button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Sell call</button>`:''}</span></div></div>`;
   }
   const c=P.cur,t=pmccLegToTrade(c,today);
   const lb=pmccLabels(c,spot,today);
   const labelsHtml=lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('');
-  // AROC% column → % of premium captured (mark vs sold). Same 40% take-profit threshold as the green label.
+  // Captured column → % of premium captured (mark vs sold). Same 40% take-profit threshold as the green label.
   const sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
   let rocHtml='—',rocColor='var(--text3)';
   if(mark!=null&&sold>0){const cap=Math.round((sold-mark)/sold*100);rocHtml=cap+'%';rocColor=cap>=40?'var(--green)':cap>=0?'var(--text2)':'var(--red)';}
@@ -3563,7 +3568,7 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open">
-      <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span></div>`;
+      ${tradeTableHead()}`;
     [...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{expandedHtml+=renderTradeRow(t,m.trades);});
     expandedHtml+=`<div class="rot-actions">
       <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}');event.stopPropagation()">•••</button>
@@ -3995,7 +4000,7 @@ function renderStatsOverview(){
       <span style="display:flex;gap:0.75rem;align-items:center">${health.length?healthBadge:`<span style="color:var(--green);font-size:0.6875rem;font-weight:600">✓ All clear</span>`}</span>
     </div>
     ${health.length?`<div class="d-panel-body">
-      <div class="thead-row">${'<span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span>'}</div>
+      ${tradeTableHead()}
       ${healthRows}
     </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades verified — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
   </div>`;

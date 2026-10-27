@@ -24,7 +24,7 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','renderPmccOpenFace','renderPmccTradeRow','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','tradeTableHead','renderPmccOpenFace','renderPmccTradeRow','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
   `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccLabels,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,renderPmccOpenFace,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
@@ -97,7 +97,7 @@ check('events newest-first with BTO present', (()=>{const ev=S.pmccTradeEvents(l
 check('no wheel data touched by rendering', S.db.wheels.length === 1 && S.db.trades.length === 1 && S.writes.length === 0);
 const face = S.renderPmccOpenFace(leap, today, 205);
 check('open face: same trade-body/thead/trow as wheel, STO pill, shares=qty×100, no grey strip', /trade-body open pmcc-open/.test(face) && /thead-row/.test(face) && /ab-STO/.test(face) && /rot-actions/.test(face) && /Buy back/.test(face) && /✕ Delete/.test(face) && !/lc-short|Short call 2×/.test(face) && /200/.test(face) /* 2×100 shares */);
-check('open face: AROC column shows % captured (not wheel AROC)', /52%/.test(face) || /pmcc-lb/.test(face));
+check('open face: Captured header (not AROC%) and % value', /Captured/.test(face) && !/>AROC%</.test(face) && (/52%/.test(face) || /pmcc-lb/.test(face)));
 check('open face empty state when no shorts', /No short call open/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)) && /Sell call/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)));
 check('pmccLegToTrade maps to STO with shares×100', (()=>{const tr=S.pmccLegToTrade(c, today);return tr.action==='STO'&&tr.shares===200&&tr.premium===6.4;})());
 const csv = S.optsToCSV(legs);
