@@ -4278,39 +4278,47 @@ function calcAllUnrealised(wheels,trades,priceOf,legs){
 function calcMonthlyRealised(trades,extras,today){
   extras=extras||[];
   const mo={};
-  const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{},collected:0,loss:0,shareGain:0});
+  const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{},collected:0,loss:0,shareGain:0,shareLoss:0});
   trades.forEach(t=>{
     if(!t.entered)return;const ym=t.entered.slice(0,7),v=t.total||0;
-    if(t.action==='DIV'){const r=row(ym);r.divs+=v;if(v>=0)r.collected+=v;else r.loss-=v;}
+    if(t.action==='DIV'){const r=row(ym);r.divs+=v;}
   });
   realisedPremium(trades,today).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.premium+=e.amount;if(e.amount>=0)r.collected+=e.amount;else r.loss-=e.amount;});
-  shareRealisations(trades).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.shares+=e.pnl;if(e.pnl>=0)r.shareGain+=e.pnl;else r.loss-=e.pnl;});
+  shareRealisations(trades).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.shares+=e.pnl;if(e.pnl>=0)r.shareGain+=e.pnl;else r.shareLoss-=e.pnl;r.shareSales=(r.shareSales||0)+1;});
   extras.forEach(x=>Object.entries(x.byMonth||{}).forEach(([ym,v])=>{const r=row(ym);r.extra[x.key]=(r.extra[x.key]||0)+v;
     if(x.gain||x.loss){r.collected+=(x.gain||{})[ym]||0;r.loss+=(x.loss||{})[ym]||0;}else if(v>=0)r.collected+=v;else r.loss-=v;}));
   return Object.values(mo).sort((a,b)=>b.ym.localeCompare(a.ym)).map(r=>({...r,
     total:r.premium+r.shares+r.divs+Object.values(r.extra).reduce((a,v)=>a+v,0),
-    profit:r.collected-r.loss+r.shareGain}));
+    profit:r.collected-r.loss}));
 }
 
 function renderMonthlyRealised(){
   const extras=monthlyExtraSources();
-  const rows=calcMonthlyRealised(db.trades,extras);
-  if(!rows.length)return '';
+  const all=calcMonthlyRealised(db.trades,extras);
+  if(!all.length)return '';
   const yr=String(new Date().getFullYear());
-  const sum=list=>{const o={collected:0,loss:0,shareGain:0,profit:0};list.forEach(r=>{o.collected+=r.collected;o.loss+=r.loss;o.shareGain+=r.shareGain;o.profit+=r.profit;});return o;};
+  const sum=(list,keys)=>{const o={};keys.forEach(k=>o[k]=list.reduce((a,r)=>a+(r[k]||0),0));return o;};
+  const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
   const cell=(v,cls)=>`<td class="num ${v?cls:'m'}">${v?fmtMoney(v):'—'}</td>`;
   const pcell=v=>`<td class="num ${v?colorN(v):'m'}" style="font-weight:600">${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
-  const line=(label,r,cls)=>`<tr class="${cls||''}"><td>${label}</td>${cell(r.collected,'')}${cell(r.loss?-r.loss:0,'r')}${pcell(r.profit)}</tr>`;
-  const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
-  return`<div class="d-panel">
-      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L ${ii(`Realised only, booked in the month a trade closed, expired or was assigned/called away; open positions are excluded. Premium collected = credits of options that ended that month, sell-to-close credits, profitable LEAP & call closes and dividends. Loss = buyback costs, losing share sales (first in, first out) and losing LEAP & call closes. Profit = Premium collected minus Loss, plus any gain on shares sold that month.`)}</span><span class="d-panel-count">Realised</span></div>
+  const panel=(title,tip,heads,rows,keys,line)=>`<div class="d-panel">
+      <div class="d-panel-hdr"><span class="d-panel-title">${title} ${ii(tip)}</span><span class="d-panel-count">Realised</span></div>
       <div class="d-panel-body">
-        <table class="a-table mpl-table"><thead><tr><th>Month</th><th class="num">Premium collected</th><th class="num">Loss</th><th class="num">Profit</th></tr></thead>
+        <table class="a-table mpl-table"><thead><tr><th>Month</th>${heads.map(h=>`<th class="num">${h}</th>`).join('')}</tr></thead>
         <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
-        ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr))),'mpl-sum')}
-        ${line('All time',sum(rows),'mpl-sum')}</tbody></table>
+        ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr)),keys),'mpl-sum')}
+        ${line('All time',sum(rows,keys),'mpl-sum')}</tbody></table>
       </div>
     </div>`;
+  const tr=(label,cls,cells)=>`<tr class="${cls||''}"><td>${label}</td>${cells}</tr>`;
+  const opt=all.filter(r=>r.collected||r.loss);
+  let html=opt.length?panel('Monthly P&amp;L',`Options only, realised: booked in the month an option closed, expired or was assigned/called away; open options are excluded. Premium collected = credits of wheel puts and calls that ended that month, sell-to-close credits and profitable LEAP & call closes. Loss = buyback costs and losing LEAP & call closes. Profit = Premium collected minus Loss. Share sales are in Shares P&L below.`,
+    ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'')+cell(r.loss?-r.loss:0,'r')+pcell(r.profit))):'';
+  const sh=all.filter(r=>r.shareSales||r.divs);
+  const showDiv=sh.some(r=>r.divs);
+  if(sh.length)html+=panel('Shares P&amp;L',`Realised only. Each share sale (called away or sold) is matched against what those shares cost in the same rotation, first in, first out, in the month of the sale. Gains = sales above cost, Losses = sales below cost.${showDiv?' Dividends are shown in their own column and included in Net.':''} Shares still held are in Unrealised.`,
+    ['Gains','Losses',...(showDiv?['Dividends']:[]),'Net'],sh,['shareGain','shareLoss','divs','shares'],(l,r,c)=>tr(l,c,cell(r.shareGain,'g')+cell(r.shareLoss?-r.shareLoss:0,'r')+(showDiv?cell(r.divs,'g'):'')+pcell((r.shares||0)+(showDiv?r.divs||0:0))));
+  return html;
 }
 
 function renderDashChart(){
