@@ -459,6 +459,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .a-stat-lbl{font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
 .a-stat-sub{font-size:0.625rem;color:var(--text3);margin-top:0.25rem}
 .a-chart-box{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:1.125rem 1.25rem;margin-bottom:0.75rem}
+.pc-head{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem}.pc-net{font-weight:600;font-size:0.875rem}.pc-btns{margin-left:auto;display:flex;gap:0.25rem}.pc-r{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:0.375rem;padding:0.1875rem 0.5rem;font-size:0.6875rem;font-weight:600;cursor:pointer}.pc-r:hover{color:var(--text)}.pc-r.on{background:var(--text);color:var(--bg);border-color:var(--text)}.pc-fs{margin-left:0.375rem}.pc-full{position:fixed;inset:0;z-index:1000;margin:0!important;border-radius:0;background:var(--bg2);padding:1.5rem 2.5rem;overflow:auto}body.pc-lock{overflow:hidden}
 .mpl-table .num{text-align:right}.mpl-table .mpl-sum td{font-weight:600;border-top:1px solid var(--border)}.mpl-note{font-size:0.6875rem;color:var(--text3);padding:0.625rem 0.75rem}
 .t3{color:var(--text3)}.t3-xs{color:var(--text3);font-size:0.625rem}.t3-s{color:var(--text3);font-size:0.6875rem}.t2-nw{color:var(--text2);white-space:nowrap}.fw5{font-weight:600}.fs-sm{font-size:0.75rem}.sq-20{width:1.25rem;height:1.25rem}.row-sb{display:flex;justify-content:space-between;align-items:center;padding:0.3125rem 0}.mini-lbl{font-size:0.5625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:0.1875rem;font-weight:600}
 @media (max-width:1100px){.d-panel-body{overflow-x:auto}.d-panel-body>.d-table-hdr,.d-panel-body>.d-table-row{min-width:43.75rem}}
@@ -5242,6 +5243,55 @@ function doImport(){
   if(skipped>0)parts.push(`${skipped} invalid skipped`);
   alert(`Import complete: ${parts.join(', ')}.`);
 }
+// ── Realised P&L curve (READ-ONLY). Cumulative by day from closed trades only, booked on their close date:
+// option premium events, buybacks, share sales (FIFO), dividends, closed LEAP & call legs. Open positions never appear.
+function realisedDaily(trades,legs,today){
+  const d={};const add=(dt,v)=>{if(!dt||!v)return;dt=dt.slice(0,10);d[dt]=(d[dt]||0)+v;};
+  realisedPremium(trades,today).events.forEach(e=>add(e.date,e.amount));
+  shareRealisations(trades).events.forEach(e=>add(e.date,e.pnl));
+  (trades||[]).forEach(t=>{if(t.action==='DIV')add(t.entered,t.total||0);});
+  (legs||[]).forEach(l=>{if(l.status==='open')return;add(l.closeDate||l.expiry,OPTS.legPnL(l).realized);});
+  return Object.keys(d).sort().map(k=>({date:k,amount:Math.round(d[k]*100)/100}));
+}
+const PNL_RANGES=[['1W',7],['1M',30],['3M',91],['6M',182],['1Y',365],['All',0]];
+// Points for a range: cumulative from 0 at the range start, one point per day with a close, plus start and today.
+function pnlCurveSeries(daily,range,today){
+  const r=PNL_RANGES.find(x=>x[0]===range)||PNL_RANGES[5];
+  const start=r[1]?new Date(new Date(today+'T12:00:00')-r[1]*864e5).toISOString().slice(0,10):(daily[0]?daily[0].date:today);
+  let cum=0;const pts=[{date:start,val:0}];
+  daily.forEach(e=>{if(e.date<start||e.date>today)return;cum+=e.amount;pts.push({date:e.date,val:Math.round(cum*100)/100});});
+  if(pts[pts.length-1].date<today)pts.push({date:today,val:Math.round(cum*100)/100});
+  return{start,end:today,pts,net:Math.round(cum*100)/100};
+}
+let pnlRange='All',pnlFull=false;
+function pnlCurveHtml(){
+  const today=new Date().toISOString().slice(0,10);
+  const S=pnlCurveSeries(realisedDaily(db.trades,db.opts||[],today),pnlRange,today);
+  const W=pnlFull?Math.max(600,window.innerWidth-96):720,H=pnlFull?Math.max(300,window.innerHeight-190):200;
+  const PL=56,PR=14,PT=12,PB=28,cw=W-PL-PR,ch=H-PT-PB;
+  const t0=new Date(S.start+'T12:00:00').getTime(),t1=Math.max(t0+864e5,new Date(S.end+'T12:00:00').getTime());
+  const vals=S.pts.map(p=>p.val),mx=Math.max(...vals,1),mn=Math.min(...vals,0),rg=Math.max(mx-mn,1);
+  const X=dt=>PL+(new Date(dt+'T12:00:00').getTime()-t0)/(t1-t0)*cw,Y=v=>PT+ch-(v-mn)/rg*ch;
+  let path='';S.pts.forEach((p,i)=>{const x=X(p.date).toFixed(1);path+=(i?` H${x} V${Y(p.val).toFixed(1)}`:`M${x},${Y(p.val).toFixed(1)}`);}); // steps: P&L moves only when a trade closes
+  const area=`${path} V${Y(0).toFixed(1)} H${X(S.pts[0].date).toFixed(1)} Z`;
+  const step=(()=>{const raw=rg/4,m=Math.pow(10,Math.floor(Math.log10(raw)));return [1,2,5,10].map(k=>k*m).find(k=>k>=raw)||m*10;})();
+  let grid='';for(let v=Math.ceil(mn/step)*step;v<=mx+1e-9;v+=step){const y=Y(v).toFixed(1);grid+=`<line x1="${PL}" x2="${W-PR}" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width="1"${v===0?' stroke-dasharray="3 3"':''}/><text x="${PL-6}" y="${+y+3}" text-anchor="end" fill="var(--text3)" font-size="10">${v<0?'-':''}$${Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1)+'k':Math.abs(v)}</text>`;}
+  const nx=pnlFull?8:5;let xl='';for(let i=0;i<=nx;i++){const t=t0+(t1-t0)*i/nx,dt=new Date(t);xl+=`<text x="${(PL+cw*i/nx).toFixed(1)}" y="${H-8}" text-anchor="${i===0?'start':i===nx?'end':'middle'}" fill="var(--text3)" font-size="10">${dt.toLocaleDateString('en-GB',(t1-t0)>200*864e5?{month:'short',year:'2-digit'}:{day:'numeric',month:'short'})}</text>`;}
+  const col=S.net<0?'var(--red)':'var(--green)';
+  const btns=PNL_RANGES.map(([k])=>`<button type="button" class="pc-r${k===pnlRange?' on':''}" onclick="setPnlRange('${k}')">${k}</button>`).join('');
+  return`<div class="pc-head"><div class="a-chart-title" style="margin:0">Realised P&amp;L ${ii('Realised only: closed, expired or assigned options, buybacks, share sales (first in, first out), dividends and closed LEAPs & calls, added up day by day on the date they closed. Open positions are not included. Each range starts at zero.')}</div>
+    <span class="pc-net" style="color:${col}">${S.net>0?'+':''}${fmtMoney(S.net)}</span>
+    <div class="pc-btns">${btns}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;max-width:100%;height:auto">${grid}
+      <path d="${area}" fill="${col}" fill-opacity="0.08"/><path d="${path}" fill="none" stroke="${col}" stroke-width="2"/>${xl}</svg>`;
+}
+function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.innerHTML=pnlCurveHtml();}
+function setPnlRange(k){pnlRange=k;_pnlRedraw();}
+function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=document.getElementById('pnl-curve');if(el)el.classList.toggle('pc-full',pnlFull);document.body.classList.toggle('pc-lock',pnlFull);_pnlRedraw();}
+window.setPnlRange=setPnlRange;window.togglePnlFull=togglePnlFull;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
+window.addEventListener('resize',()=>{if(pnlFull)_pnlRedraw();});
+
 function renderAnalytics(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();
   const timing=calcTimingStats();const bw=calcBestWorst();const cap=calcCapitalStats();
@@ -5500,13 +5550,7 @@ function renderAnalytics(){
     </div>
 
     <div class="a-section">${sec('Performance','Realised P&L, premium, returns & records',true)}${perfStats}
-      <div class="a-chart-box" style="margin-top:0.75rem">
-        <div class="a-chart-title">Cumulative Premium Curve</div>
-        ${eqSvg}
-        <div class="a-chart-legend">
-          <div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--orange)"></div>Cumulative net premium</div>
-        </div>
-      </div>
+      <div class="a-chart-box pc-box" style="margin-top:0.75rem" id="pnl-curve">${pnlCurveHtml()}</div>
     
       <div style="margin-top:0.75rem">${recordStats}</div>
     ${secEnd}</div>
