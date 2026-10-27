@@ -4192,13 +4192,12 @@ function renderStatsOverview(){
 // ═══ HOME (Direction A) — read-only figures built from the Monthly P&L rows ═══
 // Pure: rows from calcMonthlyRealised; returns this month (wheel vs LEAPs) and this year.
 function homeFigures(rows,today){
-  const ym=today.slice(0,7),yr=today.slice(0,4);
-  const wheelOf=r=>r.premium+r.shares+r.divs,leapsOf=r=>Object.values(r.extra||{}).reduce((a,v)=>a+v,0);
-  const m=rows.find(r=>r.ym===ym)||{premium:0,shares:0,divs:0,extra:{},total:0};
-  const y=rows.filter(r=>r.ym.startsWith(yr));
-  const rd=n=>Math.round(n*100)/100;
-  return{month:{wheel:rd(wheelOf(m)),leaps:rd(leapsOf(m)),total:rd(m.total||0)},
-    year:{wheel:rd(y.reduce((a,r)=>a+wheelOf(r),0)),leaps:rd(y.reduce((a,r)=>a+leapsOf(r),0)),total:rd(y.reduce((a,r)=>a+r.total,0))}};
+  // Options only — same figures as the Monthly P&L table: wheel premium + PMCC short calls (collected − loss). No shares, dividends or LEAPs.
+  const ym=today.slice(0,7),yr=today.slice(0,4),rd=n=>Math.round(n*100)/100;
+  const prof=r=>(r.collected||0)-(r.loss||0),wheelOf=r=>r.premium||0;
+  const m=rows.find(r=>r.ym===ym),y=rows.filter(r=>r.ym.startsWith(yr));
+  const f=list=>{const t=list.reduce((a,r)=>a+prof(r),0),w=list.reduce((a,r)=>a+wheelOf(r),0);return{wheel:rd(w),pmcc:rd(t-w),total:rd(t)};};
+  return{month:f(m?[m]:[]),year:f(y)};
 }
 // Pure: soonest open expiry across wheel legs [{ticker,strike,type,expiry}] and open option legs.
 function nextExpiry(wheelLegs,legs,today){
@@ -4239,9 +4238,9 @@ function renderHome(){
   return`<div class="home">
   <div class="home-head"><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div>
   <div class="hk-grid">
-    <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Realised only: premium from options closed, expired or assigned + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, in ${mName}.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
-      <div class="hk-s">Wheel ${sgn(F.month.wheel)} · LEAPs &amp; calls ${sgn(F.month.leaps)}</div></div>
-    <div class="hk"><div class="hk-l">This year ${ii(`Realised only, since 1 January. Open options are in Unrealised.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · LEAPs ${sgn(F.year.leaps)}</div></div>
+    <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Realised only, options only: premium collected minus buyback losses on wheel options and PMCC short calls closed, expired or assigned in ${mName}. Shares and LEAPs are in Shares &amp; LEAPs P&amp;L.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
+      <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
+    <div class="hk"><div class="hk-l">This year ${ii(`Options P&amp;L since 1 January, realised only. Same as the Monthly P&amp;L year to date. Shares and LEAPs not included.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · PMCC calls ${sgn(F.year.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price minus cost, plus premium on open wheel puts &amp; calls (at the credit received — no live option price)${un.unpriced?` · ${un.unpriced} without a price`:''}.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Open premium ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}</div></div>
     <div class="hk"><div class="hk-l">Capital at work ${ii(`Wheel money tied up now: open put collateral (strike × shares) + what your open shares cost. LEAPs at what you paid, shown separately.`)}</div><div class="hk-v">${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Puts ${fmtMoney(caw.puts).replace(/\.\d\d$/,'')} · Shares ${fmtMoney(caw.shares).replace(/\.\d\d$/,'')}${caw.leaps?` · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')} separate`:''}</div></div>
     <div class="hk"><div class="hk-l">Win rate ${ii(`Closed option trades only. A win is a put or call that expired worthless, was assigned or called away (premium kept), or was bought back for less than you sold it. A loss is one bought back for more. Open options don't count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
