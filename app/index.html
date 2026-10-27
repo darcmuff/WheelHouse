@@ -2250,8 +2250,7 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
   <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;flex-wrap:wrap">
     <span style="font-size:0.8125rem;font-weight:400;color:var(--silver)">Options</span>
     <span class="toolbar-spacer"></span>
-    <span style="font-size:0.6875rem;color:var(--text3)">${esc(_optMarkStatus)}</span>
-    <button class="btn btn-ghost" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="fetchOptionMarks(true)">↻ Marks</button>
+    ${_optMarkStatus?`<span style="font-size:0.6875rem;color:var(--text3)">${esc(_optMarkStatus)}</span>`:''}
     <button class="btn ${optDemo?'btn-primary':'btn-ghost'}" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="setOptDemo(${!optDemo})">${optDemo?'Hide demo positions':'Show demo positions'}</button>
     <button class="btn btn-ghost" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="exportOptsCSV()">Export</button>
     <button class="btn btn-primary" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="openOptAdd()">+ Position</button>
@@ -2557,7 +2556,6 @@ function renderOptions(){
     <span class="toolbar-spacer" style="flex:1"></span>
     ${_optMarkStatus?`<span style="font-size:0.625rem;color:var(--text3);max-width:11.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(_optMarkStatus)}">${esc(_optMarkStatus)}</span>`:''}
     <span class="leap-seg"><button class="${leapStatus==='open'?'on':''}" onclick="setLeapStatus('open')">Open</button><button class="${leapStatus!=='open'?'on':''}" onclick="setLeapStatus('closed')">Closed</button></span>
-    <button class="btn btn-ghost" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="fetchOptionMarks(true)" title="Cboe delayed → Finnhub → manual${_optMarkStatus?' · '+esc(_optMarkStatus):''}">↻ Marks</button>
     <button class="btn btn-primary" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="openLeapAdd()">+ LEAP</button>
   </div>
   ${sumH}<div class="leap-grid">${cards}</div>${otherH}${healthH}

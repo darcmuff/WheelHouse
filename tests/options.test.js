@@ -115,6 +115,8 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   check('render: no multi-leg builder / tenor / side filter chips', !/Any expiry|Long &amp; short|Long & short|\+ Position/.test(h) && /\+ LEAP/.test(h));
   check('render: ITM badge, intrinsic/time split, breakeven, days-left bar, Roll/Close', /leap-badge itm/.test(h) && /<span>Intrinsic<\/span><b class="">\$25\.00/.test(h) && /<span>Time value<\/span><b class="">\$15\.00/.test(h) && /<span>Breakeven<\/span><b class="">\$210\.00/.test(h) && /days left/.test(h) && /'roll'/.test(h) && /'close'/.test(h));
   check('calm card: value now vs cost after calls, payback bar, Roll/Close actions; trimmed More numbers grid, no old metric bars', /class="lc-hero"/.test(h) && /Cost after calls/.test(h) && /lc-bar/.test(h) && /'roll'/.test(h) && /'close'/.test(h) && /<details class="wl-more">[\s\S]*<div class="mn-grid">/.test(h) && !/rmb-col|leap-row/.test(h));
+  check('LEAPs toolbar has no Marks button (auto-refresh still runs)', !/↻ Marks|fetchOptionMarks\(true\)/.test(h));
+
   const S1 = R.stats(LC({}), 205, TODAY);
   check('stats: value, cost incl fees, P&L, BE %, delta-as-shares>0, theta<0', S1.value === 8000 && S1.cost === 6001.3 && Math.abs(S1.pl - 1998.7) < 0.01 && Math.abs(S1.beDist - (210 / 205 * 100 - 100)) < 1e-9 && S1.dsh > 0 && S1.dsh < 200 && S1.thd < 0, S1);
   R.setDb([LC({ id: 'w', expiry: '2027-03-19', reviewDate: '2026-11-01' })]);
