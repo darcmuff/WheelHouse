@@ -1725,15 +1725,17 @@ function _priceOf(w){return (typeof quotes!=='undefined'&&quotes[w.ticker]?.pric
 // ── All options, by month (READ-ONLY: reads db.trades via calcMonthlyPnL and db.opts; writes nothing) ──
 // Options realised P&L by close date (expired → expiry if no close date). Open legs only feed the "open, not yet banked" line.
 function optsMonthly(legs){
-  const mo={},gain={},loss={};let openPl=0,unmarked=0,openN=0;
+  const mo={},gain={},loss={},lgain={},lloss={};let openPl=0,unmarked=0,openN=0;
   (legs||[]).forEach(l=>{
     const p=OPTS.legPnL(l);
     if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;return;}
     const d=l.closeDate||l.expiry;if(!d)return;const ym=d.slice(0,7);mo[ym]=(mo[ym]||0)+p.realized;
-    if(p.realized>=0)gain[ym]=(gain[ym]||0)+p.realized;else loss[ym]=(loss[ym]||0)-p.realized;
+    const G=v=>{if(v>=0)gain[ym]=(gain[ym]||0)+v;else loss[ym]=(loss[ym]||0)-v;};
+    if(l.side==='short'){G(p.openCash);G(p.realized-p.openCash);} // short calls (PMCC) like wheel options: credit collected, buyback cost as loss
+    else{const v=p.realized;if(v>=0)lgain[ym]=(lgain[ym]||0)+v;else lloss[ym]=(lloss[ym]||0)-v;} // long LEAPs: kept out of option income, own table
   });
   Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);
-  return{byMonth:mo,gain,loss,openPl:Math.round(openPl*100)/100,unmarked,openN};
+  return{byMonth:mo,gain,loss,lgain,lloss,openPl:Math.round(openPl*100)/100,unmarked,openN};
 }
 function allOptionsByMonth(wheelMonthly,legs,today){
   const W={};(wheelMonthly||[]).forEach(m=>W[m.ym]=m.pNet);
@@ -4264,7 +4266,7 @@ function renderHome(){
 function monthlyExtraSources(legs){
   legs=legs===undefined?(typeof db!=='undefined'?db.opts:[]):legs;
   if(!legs||!legs.length)return [];
-  const O=optsMonthly(legs);return [{key:'leaps',label:'LEAPs &amp; calls',byMonth:O.byMonth,gain:O.gain,loss:O.loss}];
+  const O=optsMonthly(legs);return [{key:'leaps',label:'LEAPs &amp; calls',byMonth:O.byMonth,gain:O.gain,loss:O.loss,lgain:O.lgain,lloss:O.lloss}];
 }
 // Unrealised = open wheel shares (price minus FIFO cost) + open LEAPs & short calls at their marks. Read-only.
 function calcAllUnrealised(wheels,trades,priceOf,legs){
@@ -4279,7 +4281,7 @@ function calcAllUnrealised(wheels,trades,priceOf,legs){
 function calcMonthlyRealised(trades,extras,today){
   extras=extras||[];
   const mo={};
-  const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{},collected:0,loss:0,shareGain:0,shareLoss:0});
+  const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{},collected:0,loss:0,shareGain:0,shareLoss:0,leapGain:0,leapLoss:0});
   trades.forEach(t=>{
     if(!t.entered)return;const ym=t.entered.slice(0,7),v=t.total||0;
     if(t.action==='DIV'){const r=row(ym);r.divs+=v;}
@@ -4287,10 +4289,10 @@ function calcMonthlyRealised(trades,extras,today){
   realisedPremium(trades,today).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.premium+=e.amount;if(e.amount>=0)r.collected+=e.amount;else r.loss-=e.amount;});
   shareRealisations(trades).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.shares+=e.pnl;if(e.pnl>=0)r.shareGain+=e.pnl;else r.shareLoss-=e.pnl;r.shareSales=(r.shareSales||0)+1;});
   extras.forEach(x=>Object.entries(x.byMonth||{}).forEach(([ym,v])=>{const r=row(ym);r.extra[x.key]=(r.extra[x.key]||0)+v;
-    if(x.gain||x.loss){r.collected+=(x.gain||{})[ym]||0;r.loss+=(x.loss||{})[ym]||0;}else if(v>=0)r.collected+=v;else r.loss-=v;}));
+    if(x.gain||x.loss){r.collected+=(x.gain||{})[ym]||0;r.loss+=(x.loss||{})[ym]||0;r.leapGain+=(x.lgain||{})[ym]||0;r.leapLoss+=(x.lloss||{})[ym]||0;}else if(v>=0)r.collected+=v;else r.loss-=v;}));
   return Object.values(mo).sort((a,b)=>b.ym.localeCompare(a.ym)).map(r=>({...r,
     total:r.premium+r.shares+r.divs+Object.values(r.extra).reduce((a,v)=>a+v,0),
-    profit:r.collected-r.loss}));
+    profit:r.collected-r.loss,leapNet:r.leapGain-r.leapLoss}));
 }
 
 function renderMonthlyRealised(){
@@ -4313,12 +4315,15 @@ function renderMonthlyRealised(){
     </div>`;
   const tr=(label,cls,cells)=>`<tr class="${cls||''}"><td>${label}</td>${cells}</tr>`;
   const opt=all.filter(r=>r.collected||r.loss);
-  let html=opt.length?panel('Monthly P&amp;L',`Options only, realised: booked in the month an option closed, expired or was assigned/called away; open options are excluded. Premium collected = credits of wheel puts and calls that ended that month, sell-to-close credits and profitable LEAP & call closes. Loss = buyback costs and losing LEAP & call closes. Profit = Premium collected minus Loss. Share sales are in Shares P&L below.`,
+  let html=opt.length?panel('Monthly P&amp;L',`Options only, realised: booked in the month an option closed, expired or was assigned/called away; open options are excluded. Premium collected = credits of wheel puts and calls that ended that month, sell-to-close credits and credits of PMCC short calls. Loss = buyback costs on wheel options and PMCC calls. Profit = Premium collected minus Loss. Share sales and closed LEAPs are in Positions P&L below.`,
     ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'')+cell(r.loss?-r.loss:0,'r')+pcell(r.profit))):'';
-  const sh=all.filter(r=>r.shareSales||r.divs);
+  // Positions: FIFO share sales + closed long LEAPs (+ dividends), one table
+  const sh=all.filter(r=>r.shareSales||r.divs||r.leapGain||r.leapLoss);
   const showDiv=sh.some(r=>r.divs);
-  if(sh.length)html+=panel('Shares P&amp;L',`Realised only. Each share sale (called away or sold) is matched against what those shares cost in the same rotation, first in, first out, in the month of the sale. Gains = sales above cost, Losses = sales below cost.${showDiv?' Dividends are shown in their own column and included in Net.':''} Shares still held are in Unrealised.`,
-    ['Gains','Losses',...(showDiv?['Dividends']:[]),'Net'],sh,['shareGain','shareLoss','divs','shares'],(l,r,c)=>tr(l,c,cell(r.shareGain,'g')+cell(r.shareLoss?-r.shareLoss:0,'r')+(showDiv?cell(r.divs,'g'):'')+pcell((r.shares||0)+(showDiv?r.divs||0:0))));
+  const pg=r=>(r.shareGain||0)+(r.leapGain||0),pl=r=>(r.shareLoss||0)+(r.leapLoss||0);
+  const posRows=sh.map(r=>({...r,posGain:pg(r),posLoss:pl(r),posNet:(r.shares||0)+(r.leapNet||0)+(r.divs||0)}));
+  if(sh.length)html+=panel('Positions P&amp;L',`Realised only, covering shares and LEAPs. Each share sale (called away or sold) is matched against what those shares cost in the same rotation, first in, first out; each long LEAP counts when it is sold or expires. Booked in the month it closed. Gains = closed above cost, Losses = closed below cost.${showDiv?' Dividends have their own column and are included in Net.':''} Shares and LEAPs still held are in Unrealised. PMCC short calls are in Monthly P&L above.`,
+    ['Gains','Losses',...(showDiv?['Dividends']:[]),'Net'],posRows,['posGain','posLoss','divs','posNet'],(l,r,c)=>tr(l,c,cell(r.posGain,'g')+cell(r.posLoss?-r.posLoss:0,'r')+(showDiv?cell(r.divs,'g'):'')+pcell(r.posNet)));
   return html;
 }
 

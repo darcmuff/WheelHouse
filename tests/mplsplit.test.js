@@ -20,7 +20,24 @@ test('options Profit + shares Net + divs equals the old Realised P&L total', () 
   assert.deepStrictEqual([feb.collected, feb.loss], [250 + 150, 400 + 50]);
   assert.strictEqual(apr.shareGain, 300);
   assert.deepStrictEqual([feb.shareLoss, feb.divs], [200, 20]);
-  rows.forEach(r => assert.ok(Math.abs(r.profit + r.shareGain - r.shareLoss + r.divs - r.total) < 1e-9, r.ym));
-  const all = rows.reduce((a, r) => a + r.profit + r.shares + r.divs, 0), old = rows.reduce((a, r) => a + r.total, 0);
+  rows.forEach(r => assert.ok(Math.abs(r.profit + r.shareGain - r.shareLoss + r.divs + r.leapNet - r.total) < 1e-9, r.ym));
+  const all = rows.reduce((a, r) => a + r.profit + r.shares + r.divs + r.leapNet, 0), old = rows.reduce((a, r) => a + r.total, 0);
   assert.ok(Math.abs(all - old) < 1e-9);
+});
+
+test('PMCC short calls: credit into Premium collected, buyback into Loss; long LEAP in its own table; nets reconcile', () => {
+  const L = (x) => ({ underlying: 'SOFI', qty: 1, fees: 0, closeFees: 0, ...x });
+  const legs = [
+    L({ id: 'leap', side: 'long', type: 'C', strike: 10, expiry: '2027-12-17', entryPrice: 5, entryDate: '2026-01-02', status: 'closed', closePrice: 4, closeDate: '2026-09-15' }),
+    L({ id: 'c1', parentLeapId: 'leap', side: 'short', type: 'C', strike: 20, expiry: '2026-09-19', entryPrice: 1.2, entryDate: '2026-09-01', status: 'expired', closePrice: 0, closeDate: '2026-09-19' }),
+    L({ id: 'c2', parentLeapId: 'leap', side: 'short', type: 'C', strike: 20, expiry: '2026-09-26', entryPrice: 1, entryDate: '2026-09-02', status: 'closed', closePrice: 1.5, closeDate: '2026-09-12' }),
+  ];
+  const O = S.optsMonthly(legs);
+  const rows = S.calcMonthlyRealised([], [{ key: 'leaps', byMonth: O.byMonth, gain: O.gain, loss: O.loss, lgain: O.lgain, lloss: O.lloss }], '2026-10-27');
+  const sep = rows.find(r => r.ym === '2026-09');
+  assert.strictEqual(Math.round(sep.collected), 120 + 100);
+  assert.strictEqual(Math.round(sep.loss), 150);
+  assert.strictEqual(Math.round(sep.leapNet), -100);
+  assert.ok(Math.abs(sep.profit + sep.leapNet - sep.total) < 1e-9);
+  assert.strictEqual(Math.round(sep.total), 120 - 50 - 100);
 });
