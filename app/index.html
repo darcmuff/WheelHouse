@@ -667,7 +667,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .lc-short{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;background:var(--bg3);border-radius:0.75rem;padding:0.45rem 0.75rem;margin-top:0.75rem;font-size:0.65rem}
 .lc-short.none{color:var(--text3)}.lc-sr{display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap}
 .lc-short .lc-sl{display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;min-width:0}
-.leap-card .pmcc-trades{margin:0.75rem 0 0}
+.leap-card .pmcc-trades,.leap-card .pmcc-open{margin:0.75rem 0 0}
+.leap-card .pmcc-open .trow-empty{border-top:0}
+.leap-card .pmcc-open .pmcc-lb{margin-left:0.25rem}
 .lc-lbl{font-size:0.55rem;padding:0.1rem 0.45rem;border-radius:1rem;margin-left:0.25rem;font-weight:600}.lc-lbl.r{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}.lc-lbl.a{background:color-mix(in srgb,var(--yellow) 14%,transparent);color:var(--yellow)}.lc-lbl.g{background:var(--orangeL);color:var(--green)}
 .lc-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.625rem}
 .lc .wl-more{padding:0.5rem 0 0}
@@ -1362,7 +1364,7 @@ function saveDB(){
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
-const CREDITS=new Set(['CSP','STOC','STC','OUT','DIV']); // STC receives cash
+const CREDITS=new Set(['CSP','STOC','STO','STC','OUT','DIV']); // STC receives cash; STO = PMCC short call
 const OPTIONS=new Set(['CSP','BTC','STOC','STC']);
 const STOCKS=new Set(['IN','OUT']);
 function isCredit(a){return CREDITS.has(a);}
@@ -2354,6 +2356,43 @@ function pmccTradeEvents(leap,legs){
   ev.sort((a,b)=>{const dc=(b.entered||'').localeCompare(a.entered||'');if(dc)return dc;return closer(a.action)-closer(b.action);});
   return ev;
 }
+// Map a PMCC short call optleg → a wheel-shaped trade so renderTradeRow can draw it identically.
+function pmccLegToTrade(c,today){
+  const qty=+c.qty||0, cash=OPTS.legPnL(c).openCash;
+  // Days held (entry → today) for PPD, matching "per day held" on the open face
+  let held=null;if(c.entryDate&&today){held=OPTS.dte(today,c.entryDate);if(held!=null)held=Math.max(0,held);}
+  const days=held!=null?(held||1):null; // 0-day-old still shows a PPD using 1d
+  return{id:c.id,action:'STO',entered:c.entryDate||'',expiry:c.expiry||'',strike:+c.strike||0,premium:+c.entryPrice||0,shares:qty*100,total:cash,fees:+c.fees||0,days,rollId:null,expiredWorthless:false,ticker:c.underlying};
+}
+// Open short call on the LEAP card face — same trade-body / thead / trow / rot-actions as the wheel.
+function renderPmccOpenFace(leap,today,spot){
+  const P=pmccStats(leap,db.opts||[],today);
+  const head=`<div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>AROC%</span><span></span></div>`;
+  if(!P.cur){
+    return`<div class="trade-body open pmcc-open"><div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3);display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">No short call open.${leap.status==='open'?` <button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Sell call</button>`:''}</span></div></div>`;
+  }
+  const c=P.cur,t=pmccLegToTrade(c,today);
+  const lb=pmccLabels(c,spot,today);
+  const labelsHtml=lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('');
+  // AROC% column → % of premium captured (mark vs sold). Same 40% take-profit threshold as the green label.
+  const sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
+  let rocHtml='—',rocColor='var(--text3)';
+  if(mark!=null&&sold>0){const cap=Math.round((sold-mark)/sold*100);rocHtml=cap+'%';rocColor=cap>=40?'var(--green)':cap>=0?'var(--text2)':'var(--red)';}
+  const row=renderTradeRow(t,null,{labelsHtml,rocHtml,rocColor,editOnclick:`openOptEdit('${esc(c.groupId||c.id)}')`});
+  const acts=`<div class="rot-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openOptEdit('${esc(c.groupId||c.id)}');event.stopPropagation()">•••</button>
+      <button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','close');event.stopPropagation()">Buy back</button>
+      <button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','roll');event.stopPropagation()">Roll</button>
+      <button class="btn btn-warn btn-sm" onclick="pmccExpire('${esc(c.id)}');event.stopPropagation()">Expired</button>
+      <button class="btn btn-danger btn-sm" onclick="pmccDeleteShort('${esc(c.id)}');event.stopPropagation()">✕ Delete</button>
+    </div>`;
+  return`<div class="trade-body open pmcc-open">${head}${row}${acts}</div>`;
+}
+function pmccDeleteShort(id){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  if(!confirm(`Delete short call ${l.underlying} $${fmt2(l.strike)}C ${l.expiry||''}? This cannot be undone.`))return;
+  _deleteOptDoc(id);db.opts=(db.opts||[]).filter(x=>x.id!==id);render();
+}
 function renderPmccTradeRow(e,spot,today){
   const rollBadge=e.rolledFrom&&e.action==='STO'?'<span class="roll-badge">↻</span>':'';
   const expBadge=e.action==='EXP'?'<span class="exp-badge">EXP</span>':'';
@@ -2432,14 +2471,9 @@ function renderLeapCard(l,spot,today){
   if(open){
     const P=pmccStats(l,db.opts||[],today),pb=leapPayback(P.cost,P.net);
     const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
-    const c=P.cur,lb=c?pmccLabels(c,spot,today):[];
-    const lbH=lb.map(x=>`<span class="lc-lbl ${x.c}">${esc(x.t)}</span>`).join('');
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=expandedLeaps.has(l.id);
-    const shortRow=c?`<div class="lc-short"><div class="lc-sl"><b>Short call</b> ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} · ${_fdShort(c.expiry)} · ${P.curDte}d ${lbH}</div>
-        <div class="lc-sr"><span class="${P.curPnl==null?'m':colorN(P.curPnl)}">${P.curPnl==null?'no mark':(P.curPnl>=0?'+':'')+m0(P.curPnl)+' so far'}</span>
-        <button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','close')">Buy back</button><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','roll')">Roll</button><button class="btn btn-ghost btn-sm" onclick="pmccExpire('${esc(c.id)}')">Expired</button></div></div>`
-      :(P.shorts.length?`<div class="lc-short none"><span>No short call open · ${P.past.length} past</span></div>`:`<div class="lc-short none"><span>No call sold against this LEAP right now.</span><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(l.id)}')">Sell call</button></div>`);
+    const shortRow=renderPmccOpenFace(l,today,spot);
     return`<div class="leap-card lc${warn?" warn":""}" data-leap="${esc(l.id)}">
   <div class="lc-h"><div><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}</div>
   ${note?`<div class="lc-note">${note}</div>`:''}
@@ -3572,7 +3606,9 @@ function calcTradeROC(t){
   if(!dte)return null;
   return((t.total/collateral)*(365/dte)*100);
 }
-function renderTradeRow(t,wheelTrades){
+function renderTradeRow(t,wheelTrades,opts){
+  // opts (optional): {labelsHtml, rocHtml, rocColor, editOnclick} — used by PMCC open face so the same row never drifts from the wheel
+  opts=opts||{};
   // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
   let chainHtml='';
   if(wheelTrades&&t.rollId&&isChainTip(wheelTrades,t)){
@@ -3588,16 +3624,19 @@ function renderTradeRow(t,wheelTrades){
     }
   }
   const roc=calcTradeROC(t);
-  const rocDisplay=roc!==null?roc.toFixed(1)+'%':'—';
-  // PPD — income velocity: net dollars per day of contract life. Credit opens only.
-  const isOpenLeg=t.action==='CSP'||t.action==='STOC';
+  const rocDisplay=opts.rocHtml!=null?opts.rocHtml:(roc!==null?roc.toFixed(1)+'%':'—');
+  const rocColor=opts.rocColor!=null?opts.rocColor:(roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)');
+  // PPD — income velocity: net dollars per day. Credit opens (incl. PMCC STO).
+  const isOpenLeg=t.action==='CSP'||t.action==='STOC'||t.action==='STO';
   const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
   const ppdDisplay=ppd!==null?`$${fmt2(ppd)}<span style="color:var(--text3);font-weight:normal">/d (${t.days}d)</span>`:'—';
   const rowCls=[t.rollId?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
   const rollBadge=t.rollId?'<span class="roll-badge">↻</span>':'';
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
+  const labels=opts.labelsHtml||'';
+  const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   return`<div class="trow ${rowCls}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
-    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
+    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}${labels}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?'$'+fmt2(t.strike):'—'}</span>
@@ -3606,9 +3645,9 @@ function renderTradeRow(t,wheelTrades){
     <span class="${isCredit(t.action)?'g':'r'}">${fmtMoney(t.total)}</span>
     <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
     <span style="white-space:nowrap">${ppdDisplay}</span>
-    <span style="color:${roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${rocDisplay}</span>
+    <span style="color:${rocColor}">${rocDisplay}</span>
     <span style="display:flex;gap:0.1875rem;justify-content:flex-end">
-      <button class="btn btn-ghost btn-icon" onclick="openEditTrade('${t.id}');event.stopPropagation()">•••</button>
+      <button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>
     </span>
   </div>${chainHtml}`;
 }
@@ -6289,7 +6328,7 @@ window.setOptDemo = setOptDemo;
 window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;
 window.openOptAdd = openOptAdd;
-window.openPmccSell=openPmccSell;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.savePmcc=savePmcc;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;
+window.openPmccSell=openPmccSell;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.savePmcc=savePmcc;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;window.pmccDeleteShort=pmccDeleteShort;
 window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
 window.openOptEdit = openOptEdit;
 window.optAddLeg = optAddLeg;

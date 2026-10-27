@@ -101,9 +101,9 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
 {
   const stubs = `const localStorage={getItem:()=>null,setItem(){}};const esc=s=>String(s??'');const fmt2=n=>Number(n).toFixed(2);
   const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);let quotes={AAPL:{price:205}};let view='options';let _optsLoadError='';let optDemo=false;const DEMO_SPOTS={};
-  let db={wheels:[{id:'w1',ticker:'AAPL',label:'Rotation 1',status:'open'}],trades:[],opts:[]};let expandedLeaps=new Set();let dateFmt='uk';`;
+  let db={wheels:[{id:'w1',ticker:'AAPL',label:'Rotation 1',status:'open'}],trades:[],opts:[]};let expandedLeaps=new Set();let dateFmt='uk';let _focusTid=null;function openEditTrade(){}function openOptEdit(){}function pmccClose(){}function pmccExpire(){}function pmccDeleteShort(){}function openPmccSell(){}function isChainTip(){return false;}function buildRollChain(){return null;};`;
   const R = new Function(stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-    ['setOptFilter','_optSpots','_legLine','renderOptions','renderOptionsLegacy','splitLeapLegs','leapStats','_fdShort','renderLeapCard','colorN','leapPayback','pmccLabels','leapFormLeg','pmccShortsFor','pmccStats','pmccTradeEvents','renderPmccTradeRow','renderPmcc','ii','_mn','fmtDateFull','fmtPrem'].map(extractFn).join('\n') +
+    ['setOptFilter','_optSpots','_legLine','renderOptions','renderOptionsLegacy','splitLeapLegs','leapStats','_fdShort','renderLeapCard','colorN','leapPayback','pmccLabels','leapFormLeg','pmccShortsFor','pmccStats','pmccTradeEvents','pmccLegToTrade','renderPmccOpenFace','renderPmccTradeRow','renderPmcc','renderTradeRow','calcTradeROC','isCredit','ii','_mn','fmtDateFull','fmtPrem'].map(extractFn).join('\n') +
     `\nlet optFilter={status:'open',tenor:'all',side:'all'};let _optMarkStatus='';let leapStatus='open';\nreturn {render:renderOptions,legacy:renderOptionsLegacy,split:splitLeapLegs,stats:leapStats,form:leapFormLeg,setDb:d=>{db.opts=d;},setStatus:v=>{leapStatus=v;}};`)();
   check('render: LEAPs empty state', /No open LEAPs/.test(R.render()) && !/Other options/.test(R.render()));
   const LC = (o) => L({ type: 'C', side: 'long', strike: 180, expiry: '2028-01-21', entryDate: '2026-01-02', entryPrice: 30, mark: 40, iv: 0.3, qty: 2, fees: 1.3, ...o });
