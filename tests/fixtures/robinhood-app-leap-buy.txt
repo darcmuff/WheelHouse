@@ -1,0 +1,30 @@
+Buy TSLA $310 Call Mar 19, 2027
+Individual · Jul 23
+$17,550.00
+3 contracts at $58.50
+Type
+Limit buy
+Position effect
+Open
+Time in force
+Good for day
+Submitted
+Jul 23, 4:49 PM GMT+1
+Quantity
+3
+Account
+Individual
+Status
+Filled
+Filled quantity
+3 contracts at $58.50
+Filled
+Jul 23, 4:49 PM GMT+1
+Limit price
+$58.55
+Est cost
+$17,551.71
+Est regulatory fees
+$0.21
+Contract fee
+$1.50
