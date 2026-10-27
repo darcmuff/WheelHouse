@@ -1724,14 +1724,15 @@ function _priceOf(w){return (typeof quotes!=='undefined'&&quotes[w.ticker]?.pric
 // ── All options, by month (READ-ONLY: reads db.trades via calcMonthlyPnL and db.opts; writes nothing) ──
 // Options realised P&L by close date (expired → expiry if no close date). Open legs only feed the "open, not yet banked" line.
 function optsMonthly(legs){
-  const mo={};let openPl=0,unmarked=0,openN=0;
+  const mo={},gain={},loss={};let openPl=0,unmarked=0,openN=0;
   (legs||[]).forEach(l=>{
     const p=OPTS.legPnL(l);
     if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;return;}
     const d=l.closeDate||l.expiry;if(!d)return;const ym=d.slice(0,7);mo[ym]=(mo[ym]||0)+p.realized;
+    if(p.realized>=0)gain[ym]=(gain[ym]||0)+p.realized;else loss[ym]=(loss[ym]||0)-p.realized;
   });
   Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);
-  return{byMonth:mo,openPl:Math.round(openPl*100)/100,unmarked,openN};
+  return{byMonth:mo,gain,loss,openPl:Math.round(openPl*100)/100,unmarked,openN};
 }
 function allOptionsByMonth(wheelMonthly,legs,today){
   const W={};(wheelMonthly||[]).forEach(m=>W[m.ym]=m.pNet);
@@ -4262,7 +4263,7 @@ function renderHome(){
 function monthlyExtraSources(legs){
   legs=legs===undefined?(typeof db!=='undefined'?db.opts:[]):legs;
   if(!legs||!legs.length)return [];
-  return [{key:'leaps',label:'LEAPs &amp; calls',byMonth:optsMonthly(legs).byMonth}];
+  const O=optsMonthly(legs);return [{key:'leaps',label:'LEAPs &amp; calls',byMonth:O.byMonth,gain:O.gain,loss:O.loss}];
 }
 // Unrealised = open wheel shares (price minus FIFO cost) + open LEAPs & short calls at their marks. Read-only.
 function calcAllUnrealised(wheels,trades,priceOf,legs){
@@ -4277,16 +4278,18 @@ function calcAllUnrealised(wheels,trades,priceOf,legs){
 function calcMonthlyRealised(trades,extras,today){
   extras=extras||[];
   const mo={};
-  const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{}});
+  const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{},collected:0,loss:0,shareGain:0});
   trades.forEach(t=>{
     if(!t.entered)return;const ym=t.entered.slice(0,7),v=t.total||0;
-    if(t.action==='DIV')row(ym).divs+=v;
+    if(t.action==='DIV'){const r=row(ym);r.divs+=v;if(v>=0)r.collected+=v;else r.loss-=v;}
   });
-  realisedPremium(trades,today).events.forEach(e=>{if(e.date)row(e.date.slice(0,7)).premium+=e.amount;});
-  shareRealisations(trades).events.forEach(e=>{if(e.date)row(e.date.slice(0,7)).shares+=e.pnl;});
-  extras.forEach(x=>Object.entries(x.byMonth||{}).forEach(([ym,v])=>{const r=row(ym);r.extra[x.key]=(r.extra[x.key]||0)+v;}));
+  realisedPremium(trades,today).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.premium+=e.amount;if(e.amount>=0)r.collected+=e.amount;else r.loss-=e.amount;});
+  shareRealisations(trades).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.shares+=e.pnl;if(e.pnl>=0)r.shareGain+=e.pnl;else r.loss-=e.pnl;});
+  extras.forEach(x=>Object.entries(x.byMonth||{}).forEach(([ym,v])=>{const r=row(ym);r.extra[x.key]=(r.extra[x.key]||0)+v;
+    if(x.gain||x.loss){r.collected+=(x.gain||{})[ym]||0;r.loss+=(x.loss||{})[ym]||0;}else if(v>=0)r.collected+=v;else r.loss-=v;}));
   return Object.values(mo).sort((a,b)=>b.ym.localeCompare(a.ym)).map(r=>({...r,
-    total:r.premium+r.shares+r.divs+Object.values(r.extra).reduce((a,v)=>a+v,0)}));
+    total:r.premium+r.shares+r.divs+Object.values(r.extra).reduce((a,v)=>a+v,0),
+    profit:r.collected-r.loss+r.shareGain}));
 }
 
 function renderMonthlyRealised(){
@@ -4294,15 +4297,15 @@ function renderMonthlyRealised(){
   const rows=calcMonthlyRealised(db.trades,extras);
   if(!rows.length)return '';
   const yr=String(new Date().getFullYear());
-  const showDiv=rows.some(r=>r.divs!==0);
-  const sum=list=>{const o={premium:0,shares:0,divs:0,extra:{},total:0};list.forEach(r=>{o.premium+=r.premium;o.shares+=r.shares;o.divs+=r.divs;o.total+=r.total;extras.forEach(x=>{o.extra[x.key]=(o.extra[x.key]||0)+(r.extra[x.key]||0);});});return o;};
-  const cell=v=>`<td class="num ${v?colorN(v):'m'}">${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
-  const line=(label,r,cls)=>`<tr class="${cls||''}"><td>${label}</td>${cell(r.premium)}${cell(r.shares)}${showDiv?cell(r.divs):''}${extras.map(x=>cell(r.extra[x.key]||0)).join('')}${cell(r.total)}</tr>`;
+  const sum=list=>{const o={collected:0,loss:0,shareGain:0,profit:0};list.forEach(r=>{o.collected+=r.collected;o.loss+=r.loss;o.shareGain+=r.shareGain;o.profit+=r.profit;});return o;};
+  const cell=(v,cls)=>`<td class="num ${v?cls:'m'}">${v?fmtMoney(v):'—'}</td>`;
+  const pcell=v=>`<td class="num ${v?colorN(v):'m'}" style="font-weight:600">${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
+  const line=(label,r,cls)=>`<tr class="${cls||''}"><td>${label}</td>${cell(r.collected,'')}${cell(r.loss?-r.loss:0,'r')}${pcell(r.profit)}</tr>`;
   const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
   return`<div class="d-panel">
-      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L ${ii(`Realised only. Premium = credit of options that closed, expired or were assigned/called away, minus buybacks, in the month they ended (open options excluded). Shares P&amp;L = each share sale against its rotation's cost (first in, first out). LEAPs &amp; calls = closed and expired legs, by the month they closed. Unrealised moves are not included.`)}</span><span class="d-panel-count">Realised</span></div>
+      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L ${ii(`Realised only, booked in the month a trade closed, expired or was assigned/called away; open positions are excluded. Premium collected = credits of options that ended that month, sell-to-close credits, profitable LEAP & call closes and dividends. Loss = buyback costs, losing share sales (first in, first out) and losing LEAP & call closes. Profit = Premium collected minus Loss, plus any gain on shares sold that month.`)}</span><span class="d-panel-count">Realised</span></div>
       <div class="d-panel-body">
-        <table class="a-table mpl-table"><thead><tr><th>Month</th><th class="num">Premium</th><th class="num">Shares P&amp;L</th>${showDiv?'<th class="num">Dividends</th>':''}${extras.map(x=>`<th class="num">${x.label}</th>`).join('')}<th class="num">Realised P&amp;L</th></tr></thead>
+        <table class="a-table mpl-table"><thead><tr><th>Month</th><th class="num">Premium collected</th><th class="num">Loss</th><th class="num">Profit</th></tr></thead>
         <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
         ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr))),'mpl-sum')}
         ${line('All time',sum(rows),'mpl-sum')}</tbody></table>
