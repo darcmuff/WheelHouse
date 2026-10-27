@@ -4297,7 +4297,7 @@ function renderMonthlyRealised(){
   const cell=(v,cls)=>`<td class="num ${v?cls:'m'}">${v?fmtMoney(v):'—'}</td>`;
   const pcell=v=>`<td class="num ${v?colorN(v):'m'}" style="font-weight:600">${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
   const panel=(title,tip,heads,rows,keys,line)=>`<div class="d-panel">
-      <div class="d-panel-hdr"><span class="d-panel-title">${title} ${ii(tip)}</span><span class="d-panel-count">Realised</span></div>
+      <div class="d-panel-hdr"><span class="d-panel-title">${title} ${ii(tip)}</span></div>
       <div class="d-panel-body">
         <table class="a-table mpl-table"><thead><tr><th>Month</th>${heads.map(h=>`<th class="num">${h}</th>`).join('')}</tr></thead>
         <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
