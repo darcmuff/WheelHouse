@@ -39,7 +39,7 @@ test('closed wheel: total result $3,609.20 and add buttons hidden', () => {
   assert.strictEqual(s.total, 3609.2); assert.strictEqual(s.showAddButtons, false); assert.strictEqual(s.held, false);
 });
 test('card markup: breakeven box first, memo with tip, no Last action / Cycle return / Open leg boxes', () => {
-  assert.ok(SRC.includes('<div class="wl-facts">${_f2}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>'));
+  assert.ok(SRC.includes('<div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>'));
   assert.ok(SRC.includes('<span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>'));
   assert.ok(SRC.includes('Your breakeven after all premium and dividends. Calls struck above this lock in a profit if called away.'));
   assert.ok(!SRC.includes("_fact('Last action',lastAct)"));
