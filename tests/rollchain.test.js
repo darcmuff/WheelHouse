@@ -7,6 +7,11 @@ const { buildRollChain, isChainTip } = load([
   { kind: 'const', name: 'CREDITS' },
   { kind: 'fn', name: 'isCredit' },
   { kind: 'fn', name: 'walkLegPairs' },
+  { kind: 'fn', name: 'strikeStep' },
+  { kind: 'fn', name: 'nearStrike' },
+  { kind: 'fn', name: 'exactSubset' },
+  { kind: 'const', name: '_effRollCache' },
+  { kind: 'fn', name: 'withInferredRolls' },
   { kind: 'fn', name: 'buildRollChain' },
   { kind: 'fn', name: 'isChainTip' },
 ]);

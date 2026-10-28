@@ -2424,21 +2424,45 @@ function pmccDeleteShort(id){
   if(!confirm(`Delete short call ${l.underlying} $${fmt2(l.strike)}C ${l.expiry||''}? This cannot be undone.`))return;
   _deleteOptDoc(id);db.opts=(db.opts||[]).filter(x=>x.id!==id);render();
 }
-// PMCC: legId → chain index for every short leg in a rolledFrom chain of 2+ legs.
+// PMCC roll parents (read-time only): stored rolledFrom plus Marc's rule — short call(s) bought
+// back the same day a new short call opens, at the same or next strike, whose contracts add up.
+function pmccRollParents(legs){
+  const sh=(legs||[]).filter(l=>l&&l.side==='short'&&l.type==='C');
+  const byId={};sh.forEach(l=>{byId[l.id]=l;});
+  const par={},used=new Set();
+  sh.forEach(l=>{if(l.rolledFrom&&byId[l.rolledFrom]){par[l.id]=[l.rolledFrom];used.add(l.rolledFrom);}});
+  [...sh].sort((a,b)=>(a.entryDate||'').localeCompare(b.entryDate||'')).forEach(l=>{
+    const have=(par[l.id]||[]).reduce((x,id)=>x+(+byId[id].qty||0),0);
+    const need=(+l.qty||0)-have;
+    if(need<=0||!l.entryDate)return;
+    const cands=sh.filter(c=>c.id!==l.id&&!used.has(c.id)&&c.status==='closed'&&c.closeDate===l.entryDate
+      &&(c.underlying||'')===(l.underlying||'')&&nearStrike(c.strike,l.strike));
+    const pick=exactSubset(cands,c=>+c.qty||0,need);
+    if(!pick)return;
+    par[l.id]=(par[l.id]||[]).concat(pick.map(c=>c.id));pick.forEach(c=>used.add(c.id));
+  });
+  return par;
+}
+// PMCC: legId → chain index for every short leg in a roll chain of 2+ legs.
 function pmccChainMap(ev){
   const legs=[];ev.forEach(e=>{if(e.kind==='short'&&e.leg&&!legs.includes(e.leg))legs.push(e.leg);});
-  const byId={};legs.forEach(l=>{byId[l.id]=l;});
-  const rootOf=l=>{let cur=l,n=0;while(cur.rolledFrom&&byId[cur.rolledFrom]&&n++<50)cur=byId[cur.rolledFrom];return cur.id;};
+  const par=pmccRollParents(legs);
+  const up={};legs.forEach(l=>{up[l.id]=l.id;});
+  const find=x=>{while(up[x]!==x)x=up[x]=up[up[x]];return x;};
+  Object.entries(par).forEach(([c,ps])=>ps.forEach(p=>{if(up[p]!=null)up[find(c)]=find(p);}));
   const groups={},order=[];
-  ev.forEach(e=>{if(e.kind!=='short'||!e.leg)return;const r=rootOf(e.leg);if(!groups[r]){groups[r]=new Set();order.push(r);}groups[r].add(e.leg.id);});
+  ev.forEach(e=>{if(e.kind!=='short'||!e.leg)return;const r=find(e.leg.id);if(!groups[r]){groups[r]=new Set();order.push(r);}groups[r].add(e.leg.id);});
   const map={};let k=0;
   order.forEach(r=>{if(groups[r].size<2)return;groups[r].forEach(id=>{map[id]=k;});k++;});
+  Object.defineProperty(map,'_parents',{value:par});
   return map;
 }
 function renderPmccTradeRow(e,spot,today,cmap,chainOut){
   const cIdx=cmap&&e.kind==='short'?cmap[e.legId]:undefined;
   const cCls=cIdx!=null?' chain-tint':'';
-  const rollBadge=e.rolledFrom&&e.action==='STO'?'<span class="roll-badge">↻</span>':'';
+  const par=cmap&&cmap._parents?cmap._parents:pmccRollParents(db.opts||[]);
+  const rolled=e.kind==='short'&&!!(par[e.legId]&&par[e.legId].length);
+  const rollBadge=rolled&&e.action==='STO'?'<span class="roll-badge">↻</span>':'';
   const expBadge=e.action==='EXP'?'<span class="exp-badge">EXP</span>':'';
   let acts='';
   if(e.open&&e.kind==='short'&&e.leg){
@@ -2446,17 +2470,19 @@ function renderPmccTradeRow(e,spot,today,cmap,chainOut){
   }
   const totCls=e.total>=0?'g':'r';
   const netH=e.net==null?'—':`<span class="${colorN(e.net)}">${e.net>=0?'+':''}${fmtMoney(e.net)}</span>`;
-  const rowCls=e.rolledFrom&&e.action==='STO'?'roll-trade':(e.action==='EXP'?'expired-trade':'');
+  const rowCls=rolled&&e.action==='STO'?'roll-trade':(e.action==='EXP'?'expired-trade':'');
   // chain tip: a STO that has no later short rolled from it, but itself has rolledFrom — show chain net under it
   let chainHtml='';
-  if(e.action==='STO'&&e.rolledFrom&&e.leg){
-    // walk rolledFrom chain for net of completed legs + this open
-    const legs=db.opts||[];const chain=[];let cur=e.leg,n=0;
-    while(cur&&n++<20){chain.push(cur);cur=cur.rolledFrom?legs.find(x=>x.id===cur.rolledFrom):null;}
+  const isTip=rolled&&!Object.values(par).some(ps=>ps.includes(e.legId)); // nothing rolled onward from it
+  if(e.action==='STO'&&rolled&&isTip&&e.leg){
+    // walk every roll parent (merge rolls have several) for net of completed legs + this open
+    const legs=db.opts||[];const chain=[],seen=new Set();let rolls=0;
+    const visit=l=>{if(!l||seen.has(l.id))return;seen.add(l.id);chain.push(l);const ps=par[l.id]||[];if(ps.length)rolls++;ps.forEach(id=>visit(legs.find(x=>x.id===id)));};
+    visit(e.leg);
     if(chain.length>1){
       let net=0;chain.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?(p.unrealized!=null?p.unrealized:p.openCash):p.realized;});
       net=Math.round(net*100)/100;
-      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${chain.length-1} roll${chain.length-1>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;
+      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${rolls} roll${rolls>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;
     }
   }
   if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
@@ -3396,22 +3422,68 @@ function openOptionLegs(wheelTrades){
 // original fresh entry. Chains can MERGE — one 8-lot closer consuming two 4-lot legs —
 // so ancestry is a tree walked with a seen-set, not a simple linked list.
 // Returns {trades, rolls, net, live, breakeven} or null if the leg isn't part of a chain.
+// ── Roll inference (read-time only, never writes) ──
+// Marc's rule: buyback(s) and a sell-to-open on the SAME day, same put/call side, at the
+// same strike or the next one, whose shares add up exactly, are one roll — even when it
+// takes two buybacks to make the shares (a merge roll). Stored rollIds are kept and topped up.
+function strikeStep(k){k=Math.abs(+k)||0;return k<25?1:k<200?5:10;}
+function nearStrike(a,b){a=+a;b=+b;if(!(a>0&&b>0))return a===b;return Math.abs(a-b)<=Math.max(strikeStep(a),strikeStep(b))+1e-9;}
+// Smallest subset of items whose sizes add to exactly target (first 12 candidates), else null.
+function exactSubset(items,size,target){
+  const n=Math.min(items.length,12);let best=null;
+  for(let m=1;m<(1<<n);m++){let sum=0;const c=[];for(let i=0;i<n;i++)if(m&(1<<i)){sum+=size(items[i]);c.push(items[i]);}
+    if(Math.abs(sum-target)<1e-9&&(!best||c.length<best.length))best=c;}
+  return best;
+}
+const _effRollCache=new WeakMap();
+// Returns copies of wheelTrades carrying their effective rollId (stored or inferred); ._rid maps id → rollId.
+function withInferredRolls(wheelTrades){
+  if(_effRollCache.has(wheelTrades))return _effRollCache.get(wheelTrades);
+  const{pairs}=walkLegPairs(wheelTrades);
+  const byId={};wheelTrades.forEach(t=>{byId[t.id]=t;});
+  const isCl=t=>t.action==='BTC'||t.action==='STC';
+  const side=t=>{
+    if(t.action==='CSP')return'P';if(t.action==='STOC')return'C';
+    const a=(pairs[t.id]||[]).map(p=>byId[p.legId]&&byId[p.legId].action);
+    if(a.length&&a.every(x=>x==='CSP'))return'P';if(a.length&&a.every(x=>x==='STOC'))return'C';return null;
+  };
+  const rid={};wheelTrades.forEach(t=>{if(t.rollId)rid[t.id]=t.rollId;});
+  const used=new Set();
+  wheelTrades.filter(t=>t.action==='CSP'||t.action==='STOC')
+    .sort((a,b)=>(a.entered||'').localeCompare(b.entered||'')).forEach(o=>{
+    const have=o.rollId?wheelTrades.filter(t=>isCl(t)&&t.rollId===o.rollId).reduce((x,t)=>x+(+t.shares||0),0):0;
+    const need=(+o.shares||0)-have;
+    if(need<=0)return;
+    const k=side(o);
+    const cands=wheelTrades.filter(t=>isCl(t)&&!t.rollId&&!used.has(t.id)&&t.entered&&t.entered===o.entered&&side(t)===k&&nearStrike(t.strike,o.strike));
+    const pick=exactSubset(cands,t=>+t.shares||0,need);
+    if(!pick)return;
+    const key=o.rollId||('inf_'+o.id);
+    rid[o.id]=key;pick.forEach(t=>{rid[t.id]=key;used.add(t.id);});
+  });
+  const out=wheelTrades.map(t=>(rid[t.id]||null)!==(t.rollId||null)?{...t,rollId:rid[t.id]}:t);
+  out._rid=rid;
+  _effRollCache.set(wheelTrades,out);
+  return out;
+}
 function buildRollChain(wheelTrades,tipId){
+  wheelTrades=withInferredRolls(wheelTrades);
   const byId={};wheelTrades.forEach(t=>{byId[t.id]=t;});
   const tip=byId[tipId];
   if(!tip||!tip.rollId||!(tip.action==='CSP'||tip.action==='STOC'))return null;
   const{open,pairs}=walkLegPairs(wheelTrades);
-  const closerByRoll={}; // rollId → the closer half of the pair
-  wheelTrades.forEach(t=>{if(t.rollId&&(t.action==='BTC'||t.action==='STC'))closerByRoll[t.rollId]=t;});
+  const closersByRoll={}; // rollId → every closer in that roll (merge rolls have several)
+  wheelTrades.forEach(t=>{if(t.rollId&&(t.action==='BTC'||t.action==='STC'))(closersByRoll[t.rollId]=closersByRoll[t.rollId]||[]).push(t);});
   const seen=new Set(),chain=[];let rolls=0;
   const visit=opener=>{
     if(!opener||seen.has(opener.id))return;
     seen.add(opener.id);chain.push(opener);
     if(!opener.rollId)return; // root — the original fresh entry
-    const closer=closerByRoll[opener.rollId];
-    if(!closer||seen.has(closer.id))return;
-    seen.add(closer.id);chain.push(closer);rolls++;
-    (pairs[closer.id]||[]).forEach(p=>visit(byId[p.legId])); // branches on merged chains
+    const cl=(closersByRoll[opener.rollId]||[]).filter(c=>!seen.has(c.id));
+    if(!cl.length)return;
+    rolls++;
+    cl.forEach(c=>{seen.add(c.id);chain.push(c);});
+    cl.forEach(c=>(pairs[c.id]||[]).forEach(p=>visit(byId[p.legId]))); // branches on merged chains
   };
   visit(tip);
   if(rolls===0)return null; // rollId present but pair incomplete — nothing to sum
@@ -3437,7 +3509,7 @@ const _chainMapCache=new WeakMap();
 function wheelChainMap(wheelTrades){
   if(_chainMapCache.has(wheelTrades))return _chainMapCache.get(wheelTrades);
   const map={};let k=0;
-  [...wheelTrades].sort((a,b)=>(b.entered||'').localeCompare(a.entered||'')).forEach(t=>{
+  [...withInferredRolls(wheelTrades)].sort((a,b)=>(b.entered||'').localeCompare(a.entered||'')).forEach(t=>{
     if(!t.rollId||!isChainTip(wheelTrades,t))return;
     const c=buildRollChain(wheelTrades,t.id);if(!c)return;
     c.trades.forEach(x=>{if(map[x.id]==null)map[x.id]=k;});k++;
@@ -3452,6 +3524,8 @@ function hoistChainLines(idxs,rowHtml,chainOut){
   return out;
 }
 function isChainTip(wheelTrades,leg){
+  wheelTrades=withInferredRolls(wheelTrades);
+  leg=wheelTrades.find(x=>x.id===leg.id)||leg;
   if(!leg.rollId||!(leg.action==='CSP'||leg.action==='STOC'))return false;
   const{pairs}=walkLegPairs(wheelTrades);
   for(const t of wheelTrades){
@@ -3856,7 +3930,8 @@ function renderTradeRow(t,wheelTrades,opts){
   let chainHtml='';
   const cIdx=wheelTrades?wheelChainMap(wheelTrades)[t.id]:undefined;
   const cCls=cIdx!=null?' chain-tint':'';
-  if(wheelTrades&&t.rollId&&isChainTip(wheelTrades,t)){
+  const effRid=wheelTrades?withInferredRolls(wheelTrades)._rid[t.id]:t.rollId;
+  if(wheelTrades&&effRid&&isChainTip(wheelTrades,t)){
     const c=buildRollChain(wheelTrades,t.id);
     if(c){
       const netCls=c.net>=0?'g':'r';
@@ -3875,8 +3950,8 @@ function renderTradeRow(t,wheelTrades,opts){
   const isOpenLeg=t.action==='CSP'||t.action==='STOC'||t.action==='STO';
   const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
   const ppdDisplay=ppd!==null?`$${fmt2(ppd)}<span style="color:var(--text3);font-weight:normal">/d (${t.days}d)</span>`:'—';
-  const rowCls=[t.rollId?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
-  const rollBadge=t.rollId?'<span class="roll-badge">↻</span>':'';
+  const rowCls=[effRid?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
+  const rollBadge=effRid?'<span class="roll-badge">↻</span>':'';
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
