@@ -2435,7 +2435,7 @@ function pmccChainMap(ev){
   order.forEach(r=>{if(groups[r].size<2)return;groups[r].forEach(id=>{map[id]=k;});k++;});
   return map;
 }
-function renderPmccTradeRow(e,spot,today,cmap){
+function renderPmccTradeRow(e,spot,today,cmap,chainOut){
   const cIdx=cmap&&e.kind==='short'?cmap[e.legId]:undefined;
   const cCls=cIdx!=null?' chain-tint':'';
   const rollBadge=e.rolledFrom&&e.action==='STO'?'<span class="roll-badge">↻</span>':'';
@@ -2459,6 +2459,7 @@ function renderPmccTradeRow(e,spot,today,cmap){
       chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${chain.length-1} roll${chain.length-1>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;
     }
   }
+  if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
   return`${chainHtml}<div class="trow ${rowCls}${cCls}" data-pmid="${esc(e.id)}">
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${e.action}">${e.action}</span>${expBadge}</span>
     <span>${fmtDateFull(e.entered)}</span>
@@ -2479,7 +2480,9 @@ function renderPmcc(leap,today,spot){
   // No short calls yet → empty (Sell call lives on the card face). Still show when the LEAP itself has a close/expiry event.
   if(!P.shorts.length&&leap.status==='open')return'';
   const cmap=pmccChainMap(ev);
-  const rows=ev.map(e=>renderPmccTradeRow(e,spot,today,cmap)).join('');
+  // Chain line goes above the chain's topmost displayed row, as a header for the whole chain
+  const chainOut={},rowHtml=ev.map(e=>renderPmccTradeRow(e,spot,today,cmap,chainOut));
+  const rows=hoistChainLines(ev.map(e=>e.kind==='short'?cmap[e.legId]:undefined),rowHtml,chainOut);
   return`<div class="trade-body open pmcc-trades">
     <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Price</span><span>Qty</span><span>Total</span><span>Fees</span><span>Net</span><span></span></div>
     ${rows||'<div class="trow"><span style="grid-column:1/-1;color:var(--text3)">No trades yet</span></div>'}
@@ -3442,6 +3445,12 @@ function wheelChainMap(wheelTrades){
   _chainMapCache.set(wheelTrades,map);
   return map;
 }
+// Join rendered rows, putting each chain's summary line above that chain's first displayed row.
+function hoistChainLines(idxs,rowHtml,chainOut){
+  const done=new Set();let out='';
+  rowHtml.forEach((h,i)=>{const k=idxs[i];if(k!=null&&!done.has(k)){done.add(k);out+=chainOut[k]||'';}out+=h;});
+  return out;
+}
 function isChainTip(wheelTrades,leg){
   if(!leg.rollId||!(leg.action==='CSP'||leg.action==='STOC'))return false;
   const{pairs}=walkLegPairs(wheelTrades);
@@ -3799,7 +3808,8 @@ function renderRotationWindow(wheel){
   if(exp){
     expandedHtml=`<div class="trade-body open">
       ${tradeTableHead()}`;
-    [...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{expandedHtml+=renderTradeRow(t,m.trades);});
+    const _ord=[];[...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{_ord.push(t);});
+    {const cm=wheelChainMap(m.trades),chainOut={};const rh=_ord.map(t=>renderTradeRow(t,m.trades,{chainOut}));expandedHtml+=hoistChainLines(_ord.map(t=>cm[t.id]),rh,chainOut);}
     expandedHtml+=`<div class="rot-actions">
       <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}');event.stopPropagation()">•••</button>
 
@@ -3870,6 +3880,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
+  if(opts.chainOut&&chainHtml&&cIdx!=null){opts.chainOut[cIdx]=chainHtml;chainHtml='';}
   return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>

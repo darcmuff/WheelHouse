@@ -24,7 +24,7 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','renderPmccTradeRow','pmccChainMap','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','renderPmccTradeRow','pmccChainMap','hoistChainLines','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
   `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmccOpenFace,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
