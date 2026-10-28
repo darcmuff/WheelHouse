@@ -2419,7 +2419,7 @@ function renderPmccOpenFace(leap,today,spot){
     return`<div class="trade-body open pmcc-open"><div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3);display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">No short call open.${leap.status==='open'?` <button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Sell call</button>`:''}</span></div></div>`;
   }
   const c=P.cur,t=pmccLegToTrade(c,today);
-  const lb=pmccLabels(c,spot,today);
+  const lb=pmccLabels(c,spot,today).filter(x=>!/^Take profit/.test(x.t));
   const labelsHtml=lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('');
   // Captured column → % of premium captured (mark vs sold). Same 40% take-profit threshold as the green label.
   const sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
@@ -2446,7 +2446,7 @@ function renderPmccTradeRow(e,spot,today){
   const expBadge=e.action==='EXP'?'<span class="exp-badge">EXP</span>':'';
   let labels='';let acts='';
   if(e.open&&e.kind==='short'&&e.leg){
-    const lb=pmccLabels(e.leg,spot,today);
+    const lb=pmccLabels(e.leg,spot,today).filter(x=>!/^Take profit/.test(x.t));
     labels=lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('');
     acts=`<span class="pmcc-row-acts"><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(e.legId)}','close')">Buy back</button><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(e.legId)}','roll')">Roll</button><button class="btn btn-ghost btn-sm" onclick="pmccExpire('${esc(e.legId)}')">Expired</button></span>`;
   }
