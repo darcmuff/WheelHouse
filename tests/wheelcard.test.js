@@ -54,3 +54,9 @@ test('wheel card: no More numbers disclosure; premium collected and days in cycl
   assert.ok(SRC.includes("_fact('Premium collected'") && SRC.includes("_fact('Days in cycle'"));
   assert.ok(card.includes('${_fPrem}${_fDays}'));
 });
+
+test('metrics row: equal-width cells whatever the count (flex, not a fixed 4-column grid)', () => {
+  assert.ok(SRC.includes('.wl-facts{display:flex;gap:0.75rem}.wl-facts>.wl-f{flex:1 1 0;min-width:0}'));
+  assert.ok(!/\.wl-facts\{display:grid;grid-template-columns:repeat\(4/.test(SRC));
+  assert.ok(SRC.includes('.lc-hero>div{flex:1 1 0;min-width:0}'));
+});
