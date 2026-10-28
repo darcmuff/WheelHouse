@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { load } = require('./extract');
-const { wheelChainMap, pmccChainMap } = load([
+const { wheelChainMap, pmccChainMap, hoistChainLines } = load([
   { kind: 'const', name: 'CREDITS' },
   { kind: 'fn', name: 'isCredit' },
   { kind: 'fn', name: 'walkLegPairs' },
@@ -11,6 +11,7 @@ const { wheelChainMap, pmccChainMap } = load([
   { kind: 'const', name: '_chainMapCache' },
   { kind: 'fn', name: 'wheelChainMap' },
   { kind: 'fn', name: 'pmccChainMap' },
+  { kind: 'fn', name: 'hoistChainLines' },
 ]);
 
 test('wheel: two chains get distinct indices, plain trades none', () => {
@@ -44,6 +45,10 @@ test('render: one teal tint class, chain line sits above the tip row', () => {
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
   assert.ok(!/chain-c\d/.test(src), 'no multi-colour palette classes');
   assert.ok(/\.trow\.chain-tint,\.chain-row\.chain-tint\{background:rgba\(8,145,178/.test(src));
-  assert.equal((src.match(/return`\$\{chainHtml\}<div class="trow /g) || []).length, 2);
   assert.ok(!/<\/div>\$\{chainHtml\}`/.test(src));
+});
+
+test('chain line hoists above the first displayed member, even when interleaved', () => {
+  const out = hoistChainLines([0, undefined, 0, 1, 1], ['A', 'x', 'B', 'C', 'D'], { 0: '[c0]', 1: '[c1]' });
+  assert.equal(out, '[c0]AxB[c1]CD');
 });
