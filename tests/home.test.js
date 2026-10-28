@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn } = require('./extract');
-const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + ['homeFigures', 'nextExpiry', 'needsYou', 'pmccLabels'].map(extractFn).join('\n') + '\nreturn {homeFigures,nextExpiry,needsYou};')();
+const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + ['homeFigures', 'nextExpiry'].map(extractFn).join('\n') + '\nreturn {homeFigures,nextExpiry};')();
 const rows = [
   { ym: '2026-10', premium: 237, collected: 300, loss: 40, shares: 500, divs: 0, extra: { leaps: 547 }, total: 1284 },
   { ym: '2026-09', premium: 332, collected: 400, loss: 0, shares: 0, divs: 10, extra: { leaps: 2846 }, total: 3188 },
@@ -38,11 +38,11 @@ test('next expiry picks the soonest open leg across wheel and LEAPs', () => {
     [{ status: 'open', side: 'short', und: 'NVDA', strike: 190, expiry: '2026-10-31' }, { status: 'closed', expiry: '2026-10-24' }], '2026-10-23');
   assert.strictEqual(nx.ticker, 'NVDA'); assert.strictEqual(nx.dte, 8);
 });
-test('needs you lists status labels, red first', () => {
-  const ny = S.needsYou([{ id: 'c1', status: 'open', side: 'short', underlying: 'AAPL', strike: 240, expiry: '2026-11-20', entryPrice: 5, mark: 2 },
-    { id: 'c2', status: 'open', side: 'short', underlying: 'NVDA', strike: 180, expiry: '2026-10-23', entryPrice: 3, mark: 3 }], { AAPL: 200, NVDA: 185 }, '2026-10-23', []);
-  assert.strictEqual(ny[0].c, 'r');
-  assert.ok(ny.some(n => /Take profit/.test(n.text)));
+test('no trade warnings anywhere: Needs you is data health only', () => {
+  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  assert.ok(!/function needsYou|function pmccLabels|function buildDashAlerts/.test(H));
+  assert.ok(!/Take profit|Expiring soon|Near the money|Under 9 months left|is below breakeven|wl-memo warn|leap-badge \$\{|_itmTag/.test(H));
+  assert.ok(/✓ All clear/.test(H) && /allDataHealth\(\)/.test(H));
 });
 test('LEAP payback bar is the share of cost won back by calls, 0–100', () => {
   const { leapPayback } = new Function(require('./extract').extractFn('leapPayback') + 'return {leapPayback};')();

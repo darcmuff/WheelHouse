@@ -24,8 +24,8 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','renderPmccTradeRow','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
-  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccLabels,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmccOpenFace,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','renderPmccTradeRow','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
+  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmccOpenFace,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2028-06-16', qty: 2, entryPrice: 72, fees: 1.30, entryDate: '2026-06-01', status: 'open' };
@@ -65,21 +65,10 @@ check('risky short still saves (no blocking)', !!S.pmccFormLeg({ strike: '120', 
 const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
 check('no PMCC risk copy anywhere in the app', !/pmccWarnings|pmcc-warn|pcc-warn|would be naked|risk a loss if called away|lock in a loss/.test(html));
 // ── status labels (open short only) ──
-const T = s => S.pmccLabels(s.c, s.spot, today).map(l => l.t + '/' + l.c).join('|');
 const o = (x) => ({ status: 'open', strike: 245, expiry: '2026-11-20', entryPrice: 6.40, mark: 5, ...x });
-check('no labels when nothing applies', T({ c: o({}), spot: 200 }) === '');
-check('Expiring soon amber at 7 DTE', T({ c: o({ expiry: '2026-10-28' }), spot: 200 }) === 'Expiring soon/a');
-check('8 DTE → no expiry label', T({ c: o({ expiry: '2026-10-29' }), spot: 200 }) === '');
-check('Expires today red at DTE 0', T({ c: o({ expiry: today }), spot: 200 }) === 'Expires today/r');
-check('Near the money amber within 5% below strike', T({ c: o({}), spot: 233 }) === 'Near the money/a' && T({ c: o({}), spot: 232 }) === '');
-check('At the strike = near, not ITM', T({ c: o({}), spot: 245 }) === 'Near the money/a');
-check('In the money red above strike', T({ c: o({}), spot: 246 }) === 'In the money/r');
-check('Take profit green ≥40% captured with %', T({ c: o({ mark: 3.84 }), spot: 200 }) === 'Take profit · 40%/g' && T({ c: o({ mark: 3.45 }), spot: 200 }) === 'Take profit · 46%/g' && T({ c: o({ mark: 3.90 }), spot: 200 }) === '');
-check('no price → no price-based labels (expiry still shown)', T({ c: o({ mark: null, expiry: '2026-10-25' }), spot: undefined }) === 'Expiring soon/a');
-check('closed short → no labels', T({ c: o({ status: 'closed', mark: 0.1 }), spot: 300 }) === '');
 S.setOpts(legs);
-check('no Take profit badge on trade rows (open face)', !/Take profit/.test(S.renderPmccOpenFace(leap, today, 205)) && /In the money/.test(S.renderPmccOpenFace(leap, today, 300)));
-check('no spot → no money-ness labels on the open face', !/the money/.test(S.renderPmccOpenFace(leap, today, undefined)) && /In the money/.test(S.renderPmccOpenFace(leap, today, 300)));
+check('no Take profit badge on trade rows (open face)', !/Take profit/.test(S.renderPmccOpenFace(leap, today, 205)) && !/the money|Expiring soon|Expires today|pmcc-lb/.test(S.renderPmccOpenFace(leap, today, 300)));
+check('no spot → no money-ness labels on the open face', !/the money/.test(S.renderPmccOpenFace(leap, today, undefined)) && !/the money|Expiring soon|Expires today|pmcc-lb/.test(S.renderPmccOpenFace(leap, today, 300)));
 
 // ── form leg ──
 const f = S.pmccFormLeg({ strike: '245', expiry: '2026-11-20', qty: '2', price: '6.40', date: '2026-10-09', fees: '1.30', notes: '', newId: 'n1' }, leap);
@@ -104,9 +93,9 @@ check('pmccLegToTrade maps to STO with shares×100', (()=>{const tr=S.pmccLegToT
 const ts = (spot, K) => S.toStrike(spot, K);
 check('toStrike: no price → dash', ts(null, 245).text === '—' && ts(0, 245).text === '—' && ts(200, 0).cls === 'm');
 check('toStrike: below strike shows +% and $ to rise', (()=>{const r=ts(200, 245);return r.cls==='m' && Math.abs(r.pct-22.5)<0.01 && /\+22\.5% · \$45\.00/.test(r.text);})());
-check('toStrike: within 5% of strike → amber (same as Near the money)', ts(245*0.95, 245).cls === 'a' && ts(245*0.95-0.01, 245).cls === 'm');
-check('toStrike: at strike → amber (0%, near)', ts(245, 245).cls === 'a' && /\+0\.0%/.test(ts(245, 245).text));
-check('toStrike: above strike (ITM) → red negative', (()=>{const r=ts(260, 245);return r.cls==='r' && r.pct<0 && /-/.test(r.text);})());
+check('toStrike: within 5% of strike → neutral', ts(245*0.95, 245).cls === 'm');
+check('toStrike: at strike → neutral (0%)', ts(245, 245).cls === 'm' && /\+0\.0%/.test(ts(245, 245).text));
+check('toStrike: above strike → neutral negative', (()=>{const r=ts(260, 245);return r.cls==='m' && r.pct<0 && /-/.test(r.text);})());
 check('open face includes To strike header and cell', /To strike/.test(S.renderPmccOpenFace(leap, today, 205)) && /to-strike/.test(S.renderPmccOpenFace(leap, today, 205)));
 check('wheel header has no To strike', !/To strike/.test(S.tradeTableHead()) && /AROC%/.test(S.tradeTableHead()));
 const csv = S.optsToCSV(legs);
