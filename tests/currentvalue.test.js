@@ -49,3 +49,43 @@ test('Profit $ = premium received - buy-back cost, signed', () => {
   assert.strictEqual(wheelCurrentProfit(o, null), null);
   assert.strictEqual(wheelCurrentProfit({ ...o, premium: null }, 100), null);
 });
+
+// ── chain-aware Profit ──
+const RC = load([
+  { kind: 'const', name: 'CREDITS' },
+  { kind: 'fn', name: 'isCredit' },
+  { kind: 'fn', name: 'walkLegPairs' },
+  { kind: 'fn', name: 'strikeStep' },
+  { kind: 'fn', name: 'nearStrike' },
+  { kind: 'fn', name: 'exactSubset' },
+  { kind: 'const', name: '_effRollCache' },
+  { kind: 'fn', name: 'withInferredRolls' },
+  { kind: 'fn', name: 'buildRollChain' },
+  { kind: 'fn', name: 'openOptionLegs' },
+  { kind: 'fn', name: 'wheelCurrentOption' },
+  { kind: 'fn', name: 'wheelCurrentValue' },
+  { kind: 'fn', name: 'wheelCurrentProfit' },
+  { kind: 'fn', name: 'wheelChainProfit' },
+]);
+test('rolled chain: open leg in profit but chain net negative -> negative Profit', () => {
+  const tr = [
+    { id: 'c1', action: 'CSP', entered: d(-40), expiry: d(-20), strike: 20, premium: 0.5, shares: 400, total: 200 },
+    { id: 'c2', action: 'BTC', entered: d(-20), strike: 20, premium: 1.5, shares: 400, total: 600, rollId: 'r1' },
+    { id: 'c3', action: 'CSP', entered: d(-20), expiry: d(20), strike: 19, premium: 0.75, shares: 400, total: 300, rollId: 'r1' },
+  ];
+  const o = RC.wheelCurrentOption('SOFI', tr);
+  assert.strictEqual(o.id, 'c3');
+  const cur = RC.wheelCurrentValue(o, 0.25); // $100 to buy back
+  assert.strictEqual(RC.wheelCurrentProfit(o, cur), 200); // open leg alone looks +$200
+  const cp = RC.wheelChainProfit(tr, o, cur);
+  assert.strictEqual(cp.net, -100); // 200 - 600 + 300 = chain heading net
+  assert.strictEqual(cp.profit, -200); // chain net - buyback
+  assert.strictEqual(cp.profit, RC.buildRollChain(tr, 'c3').net - cur);
+  assert.strictEqual(Math.round(cp.pct), -40); // -200 / 500 received
+});
+test('non-chain open leg: chain profit is null so Profit stays premium - buyback', () => {
+  const tr = [{ id: 'n', action: 'CSP', entered: d(-5), expiry: d(20), strike: 19, premium: 0.5, shares: 400, total: 200 }];
+  const o = RC.wheelCurrentOption('SOFI', tr);
+  assert.strictEqual(RC.wheelChainProfit(tr, o, 108), null);
+  assert.strictEqual(RC.wheelCurrentProfit(o, 108), 92);
+});
