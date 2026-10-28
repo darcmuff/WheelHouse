@@ -2165,7 +2165,7 @@ function render(){
   _saveUIState();
   renderSidebar();
   const c=document.getElementById('content');
-  if(view==='positions')c.innerHTML=renderPositions();
+  if(view==='positions'){c.innerHTML=renderPositions();fetchWheelMarks(false);}
   if(view==='log')c.innerHTML=renderActivityHead()+renderLog();
   if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
@@ -3090,6 +3090,22 @@ function saveOptClose(){
   }
   closeModal('mOptClose');render();
 }
+// ── Wheel card "Current value": live mid of each wheel's open short option via the same optchain proxy. Display-only, never saved. ──
+const _wheelMarks={};let _wheelMarksAt=0;
+async function fetchWheelMarks(force){
+  if(!force&&Date.now()-_wheelMarksAt<5*60e3)return;_wheelMarksAt=Date.now();
+  const byU={};
+  (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const o=wheelCurrentOption(w.ticker,db.trades.filter(t=>t.wheelId===w.id));if(o)(byU[String(w.ticker).toUpperCase()]=byU[String(w.ticker).toUpperCase()]||new Set()).add(o.occ);});
+  let changed=false;
+  for(const[u,set]of Object.entries(byU)){
+    try{
+      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${[...set].join(',')}`,{signal:AbortSignal.timeout(15000)});
+      if(!r.ok)continue;const j=await r.json();
+      set.forEach(k=>{const c=j.contracts&&j.contracts[k];const mid=c?(c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last>0?c.last:null)):null;if(mid!=null){_wheelMarks[k]=mid;changed=true;}});
+    }catch(e){console.warn('Wheel marks:',u,e.message);}
+  }
+  if(changed&&view==='positions')render();
+}
 // ── Live marks: CBOE delayed chain via Netlify proxy; graceful fallback to manual marks + local BS greeks ──
 let _optMarksAt=0;
 async function fetchOptionMarks(force){
@@ -3543,6 +3559,18 @@ function buildOpenPosition(trades){
   return{action:t.action,strike:t.strike,expiry:t.expiry,shares:t.shares,dte:dteDays(t.expiry)};
 }
 
+// Pure (READ-ONLY): the wheel's most recent OPEN short option (latest entered; ties → later in the list), with its OCC symbol.
+function wheelCurrentOption(ticker,trades){
+  const legs=openOptionLegs(trades).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry&&t.shares>0);
+  if(!legs.length)return null;
+  let t=legs[0];legs.forEach(x=>{if(String(x.entered||'')>=String(t.entered||''))t=x;});
+  const type=t.action==='CSP'?'P':'C',contracts=t.shares/100;
+  const occ=`${String(ticker||'').toUpperCase()}${String(t.expiry).replace(/-/g,'').slice(2)}${type}${String(Math.round((+t.strike)*1000)).padStart(8,'0')}`;
+  return{id:t.id,action:t.action,type,strike:t.strike,expiry:t.expiry,contracts,occ};
+}
+// Pure: live buy-back cost = mid per share × 100 × contracts; null without a live mid
+function wheelCurrentValue(opt,mid){return opt&&mid!=null&&mid>=0?Math.round(mid*100*opt.contracts*100)/100:null;}
+
 // Pure: wheel step 0 Put · 1 Assigned · 2 Call · 3 Called away.
 // Pure (READ-ONLY): cost-basis summary for a wheel card. Breakeven comes from calcWheel (m.breakeven) — no new maths here.
 function wheelCardSummary(o){
@@ -3817,6 +3845,8 @@ function renderRotationWindow(wheel){
   const _f2=_cs.held
     ?`<div class="wl-f wl-be"><span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>${_cs.assignedAt!=null?`<small>Assigned at $${fmt2(_cs.assignedAt)}</small>`:''}</div>`
     :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
+  const _curOpt=isOpen?wheelCurrentOption(wheel.ticker,m.trades):null,_curVal=_curOpt?wheelCurrentValue(_curOpt,_wheelMarks[_curOpt.occ]):null;
+  const _fCur=_curVal!=null?_fact('Current value',fmtMoney(_curVal)):'';
   const _f3=m.sharesHeld>0
     ?_fact('Unrealised',_rss.unrealised==null?'no price':fmtMoney(_rss.unrealised),_rss.unrealised==null?'m':colorN(_rss.unrealised))
     :'';
@@ -3832,7 +3862,7 @@ function renderRotationWindow(wheel){
   const wheelCardBody=`<div class="wl-body">
     <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span>${ii(`Realised only. Premium = credit of options that closed, expired or were assigned/called away, minus buybacks, in the month they ended (open options excluded). Shares P&amp;L and Unrealised use each share's actual cost (first in, first out). Cycle return = premium + share P&amp;L + dividends${_cr&&_cr.incUnrealised?' + unrealised':''}, ÷ capital tied up (biggest put collateral, or share cost), annualised over ${_cr?_cr.days:0} day${_cr&&_cr.days===1?'':'s'}${_cr&&_cr.ann==null?' (under 7 days: not annualised)':''}.${_cap!=null?' If called = (strike − share cost) × shares + premium.':''}`)}</div>
     ${_steps}${_memo}
-    <div class="wl-facts">${_f2}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
+    <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
     <div class="wl-acts" onclick="event.stopPropagation()">
       ${_cs.showAddButtons?`<button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">+ Paste fill</button>
       <button class="btn btn-ghost btn-sm" onclick="openAddTrade('${wheel.id}')">Add trade</button>`:''}
