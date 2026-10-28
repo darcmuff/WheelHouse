@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn, extractConst } = require('./extract');
-const F = new Function(['shareRealisations', 'breakevenSteps', 'chartMarkers', 'priceChartSVG', 'earningsDays', 'calcWheel'].map(extractFn).join('\n') + '\n' + extractConst('CHART_KINDS') +
-  '\nconst esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]));let db;\nreturn {breakevenSteps,chartMarkers,priceChartSVG,earningsDays,calcWheel,setDb:d=>db=d};')();
+const F = new Function(['shareRealisations', 'breakevenSteps', 'chartMarkers', 'priceChartSVG', 'chartWindow', 'stackTags', 'wheelEndDate', 'earningsDays', 'calcWheel'].map(extractFn).join('\n') + '\n' + extractConst('CHART_KINDS') +
+  '\nconst esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]));let db;\nreturn {breakevenSteps,chartMarkers,priceChartSVG,chartWindow,stackTags,wheelEndDate,earningsDays,calcWheel,setDb:d=>db=d};')();
 const opt = (i, a, ent, exp, k, p, ew) => { const g = p * 400, tot = Math.round((['CSP', 'STOC', 'STC'].includes(a) ? g - 1.08 : g + 1.08) * 100) / 100;
   return { id: 't' + i, wheelId: 'w1', action: a, entered: ent, expiry: exp, strike: k, premium: p, fees: 1.08, shares: 400, total: tot, ...(ew ? { expiredWorthless: true } : {}) }; };
 const T = [opt(1, 'CSP', '2026-01-02', '2026-01-16', 52, 1.00, 1), opt(2, 'CSP', '2026-01-20', '2026-02-20', 50, 1.20), opt(3, 'BTC', '2026-02-18', '2026-02-20', 50, 2.10),
@@ -59,4 +59,31 @@ test('earnings function: Finnhub first, Nasdaq fallback scanning days', async ()
   assert.ok(calls[0].includes('finnhub'));
   const none = await e.nextEarnings('SOFI', '2026-10-28', { fetchImpl: async () => ({ ok: true, json: async () => ({ data: { rows: [] } }) }) });
   assert.strictEqual(none.date, null);
+});
+const daily = (a, b, px = 20) => { const o = []; for (let d = new Date(a + 'T12:00:00Z'); d <= new Date(b + 'T12:00:00Z'); d = new Date(d.getTime() + 864e5)) o.push({ date: d.toISOString().slice(0, 10), close: px }); return o; };
+test('closed wheel ranges count back from the wheel end date, open wheels from the latest price', () => {
+  const cs = daily('2025-01-01', '2026-10-27');
+  assert.deepStrictEqual(F.chartWindow(cs, '1M', '2026-03-02', '2026-06-30'), { from: '2026-05-30', end: '2026-06-30' });
+  assert.deepStrictEqual(F.chartWindow(cs, '3M', '2026-03-02', null), { from: '2026-07-27', end: '2026-10-27' });
+  assert.strictEqual(F.chartWindow(cs, 'All', '2026-03-02', '2026-06-30').from, '2026-03-02');
+  assert.strictEqual(F.wheelEndDate([{ entered: '2026-06-01', expiry: '2026-06-30' }, { entered: '2026-06-20' }]), '2026-06-30');
+  const trades = [{ action: 'CSP', entered: '2026-05-01', expiry: '2026-06-30', strike: 20, total: 50, shares: 100 }];
+  const svg = F.priceChartSVG(cs, F.chartMarkers(trades, []), [], null, '1M', '2026-05-01', '2026-06-30');
+  assert.strictEqual((svg.match(/class="ii pc-mk"/g) || []).length, 0); // marker 01/05 is outside 1M before end
+  assert.ok(svg.includes('<polyline'));
+});
+test('assignment / call-away rows stored as share buys/sells (no strike) still get markers at the share price', () => {
+  const t = [{ action: 'IN', entered: '2026-06-12', strike: null, premium: 16, shares: 400, total: 6400 },
+    { action: 'OUT', entered: '2026-09-18', strike: '', premium: 0, shares: 400, total: 7200 }];
+  const mk = F.chartMarkers(t, []);
+  assert.deepStrictEqual(mk.map(m => [m.kind, m.strike]), [['in', 16], ['out', 18]]);
+  assert.ok(mk[0].tip.startsWith('Assigned · At $16.00'));
+});
+test('no always-on marker text; right-edge tags never overlap; markers have a big hit area', () => {
+  const cs = daily('2026-09-01', '2026-10-27', 130.2);
+  const svg = F.priceChartSVG(cs, F.chartMarkers([{ action: 'CSP', entered: '2026-10-23', expiry: '2026-11-13', strike: 130, total: 666.92, shares: 400 }], []), [], 130, 'All', '2026-10-23');
+  assert.ok(!svg.includes('pc-ml'));
+  assert.ok(svg.includes('width="28" height="28" fill="transparent"'));
+  const ys = F.stackTags([{ y: 100 }, { y: 104 }, { y: 101 }], 18, 10, 250).map(t => t.y).sort((a, b) => a - b);
+  assert.ok(ys[1] - ys[0] >= 18 && ys[2] - ys[1] >= 18);
 });

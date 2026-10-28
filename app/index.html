@@ -3496,11 +3496,12 @@ function chartMarkers(trades,steps){
   const beAt=d=>{let v=null;(steps||[]).forEach(s=>{if(s.date<=d)v=s.value;});return v;};
   const dm=s=>s?s.slice(8,10)+'/'+s.slice(5,7):'';
   const money=n=>(n<0?'−':'+')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  return (trades||[]).filter(t=>CHART_KINDS[t.action]&&t.entered&&Number(t.strike)>0).slice().sort((a,b)=>a.entered.localeCompare(b.entered)).map(t=>{
-    const K=CHART_KINDS[t.action],d=t.entered.slice(0,10),k=Number(t.strike),be=beAt(d);
+  const yOf=t=>Number(t.strike)>0?Number(t.strike):(t.action==='IN'||t.action==='OUT')?(Number(t.premium)>0?Number(t.premium):(t.shares>0&&t.total>0?t.total/t.shares:0)):0; // assignments/call-aways are stored as share buys/sells (price in premium, often no strike)
+  return (trades||[]).filter(t=>CHART_KINDS[t.action]&&t.entered&&yOf(t)>0).slice().sort((a,b)=>a.entered.localeCompare(b.entered)).map(t=>{
+    const K=CHART_KINDS[t.action],d=t.entered.slice(0,10),k=yOf(t),be=beAt(d);
     const net=t.action==='BTC'||t.action==='IN'?-(t.total||0):(t.total||0);
     const name=t.action==='STOC'?'CC':t.action==='CSP'?'CSP':K.l;
-    const parts=[name,'Strike $'+k.toFixed(2),(t.shares||0)+' sh'];
+    const parts=[name,(t.action==='IN'||t.action==='OUT'?'At $':'Strike $')+k.toFixed(2),(t.shares||0)+' sh'];
     if(t.expiry&&(t.action==='CSP'||t.action==='STOC'))parts.push(dm(d)+'→'+dm(t.expiry));else parts.push(dm(d));
     if(t.action!=='IN'&&t.action!=='OUT')parts.push('Net '+money(net));
     if(t.expiredWorthless)parts.push('Expired');
@@ -3509,35 +3510,54 @@ function chartMarkers(trades,steps){
   });
 }
 // Pure: SVG for the chart. candles [{date,close}], range '1M'|'3M'|'6M'|'All' (All = from first trade).
-function priceChartSVG(candles,markers,steps,openStrike,range,firstDate){
-  const W=1180,H=280,L=8,R=62,T=14,B=24;
-  const last=candles.length?candles[candles.length-1].date:null;if(!last)return'';
+// Pure: chart window for a range. Open wheels count back from the latest price; closed wheels from their end date.
+function chartWindow(candles,range,firstDate,endDate){
+  if(!candles.length)return null;
+  const lastC=candles[candles.length-1].date;
+  const end=endDate&&endDate<lastC?endDate:lastC;
   const back={'1M':31,'3M':92,'6M':183}[range];
-  const minAll=new Date(Date.parse(last+'T12:00:00Z')-92*864e5).toISOString().slice(0,10); // 'All' shows at least ~3 months of context
-  let from=back?new Date(Date.parse(last+'T12:00:00Z')-back*864e5).toISOString().slice(0,10):[firstDate||candles[0].date,minAll].sort()[0];
-  const cs=candles.filter(c=>c.date>=from);if(cs.length<2)return'';
-  from=cs[0].date;
+  const minus=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')-n*864e5).toISOString().slice(0,10);
+  const from=back?minus(end,back):[firstDate||candles[0].date,minus(end,92)].sort()[0];
+  return{from,end};
+}
+// Pure: SVG for the chart. No always-on marker text (legend + hover tips instead); right-edge tags stacked so they never overlap.
+function priceChartSVG(candles,markers,steps,openStrike,range,firstDate,endDate){
+  const W=1180,H=280,L=16,R=62,T=14,B=24,PR=W-R-10;
+  const win=chartWindow(candles,range,firstDate,endDate);if(!win)return'';
+  const cs=candles.filter(c=>c.date>=win.from&&c.date<=win.end);if(cs.length<2)return'';
+  const from=cs[0].date,last=cs[cs.length-1].date;
   const ms=markers.filter(m=>m.date>=from&&m.date<=last);
-  const vals=[...cs.map(c=>c.close),...ms.map(m=>m.strike),...steps.filter(s=>s.value!=null).map(s=>s.value),...(openStrike?[openStrike]:[])];
-  let lo=Math.min(...vals),hi=Math.max(...vals);const pad=(hi-lo)*0.08||1;lo-=pad;hi+=pad;
-  const t0=Date.parse(from+'T12:00:00Z'),t1=Date.parse(last+'T12:00:00Z')||t0+1;
-  const X=d=>L+(Date.parse(d+'T12:00:00Z')-t0)/Math.max(1,t1-t0)*(W-L-R),Y=p=>T+(hi-p)/(hi-lo)*(H-T-B);
+  const st=steps.filter(x=>x.date<=last);
+  const beNow=st.length?st[st.length-1].value:null;
+  const vals=[...cs.map(c=>c.close),...ms.map(m=>m.strike),...st.filter(x=>x.value!=null).map(x=>x.value),...(openStrike?[openStrike]:[])];
+  let lo=Math.min(...vals),hi=Math.max(...vals);const pad=(hi-lo)*0.1||1;lo-=pad;hi+=pad;
+  const t0=Date.parse(from+'T12:00:00Z'),t1=Date.parse(last+'T12:00:00Z');
+  const X=d=>L+(Date.parse(d+'T12:00:00Z')-t0)/Math.max(1,t1-t0)*(PR-L),Y=p=>T+(hi-p)/(hi-lo)*(H-T-B);
   const f=n=>n.toFixed(1);let s=`<svg class="pc-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Price chart">`;
   const step=(hi-lo)/5;for(let i=0;i<=5;i++){const p=lo+step*i;s+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(p))}" y2="${f(Y(p))}" stroke="var(--border)"/><text x="${W-R+6}" y="${f(Y(p)+3)}" class="pc-ax">${p.toFixed(2)}</text>`;}
   const mons=[];let d=new Date(t0);d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1);while(d.getTime()<=t1){mons.push(d.toISOString().slice(0,10));d.setUTCMonth(d.getUTCMonth()+1);}
-  mons.forEach(m=>{s+=`<text x="${f(X(m))}" y="${H-7}" class="pc-ax" text-anchor="middle">${new Date(m+'T12:00:00Z').toLocaleDateString('en-GB',{month:'short'})}</text>`;});
+  if(mons.length<2){d=new Date(t0);while(d.getTime()<=t1){if(d.getUTCDay()===1)mons.push('w'+d.toISOString().slice(0,10));d=new Date(d.getTime()+864e5);}}
+  mons.forEach(m=>{const w=m[0]==='w',dd=w?m.slice(1):m;s+=`<text x="${f(X(dd))}" y="${H-7}" class="pc-ax" text-anchor="middle">${w?dd.slice(8,10)+'/'+dd.slice(5,7):new Date(dd+'T12:00:00Z').toLocaleDateString('en-GB',{month:'short'})}</text>`;});
   const pts=cs.map(c=>f(X(c.date))+','+f(Y(c.close))).join(' ');
-  s+=`<polygon points="${f(X(cs[0].date))},${f(H-B)} ${pts} ${f(X(last))},${f(H-B)}" fill="var(--blue)" opacity="0.08"/><polyline points="${pts}" fill="none" stroke="var(--blue)" stroke-width="1.8"/>`;
-  const st=steps.filter(x=>x.date<=last);
-  st.forEach((x,i)=>{if(x.value==null)return;const a=X(x.date<from?from:x.date),b=i+1<st.length?X(st[i+1].date<from?from:st[i+1].date):X(last);if(b<=a&&i+1<st.length)return;
-    s+=`<line x1="${f(a)}" x2="${f(Math.max(a,b))}" y1="${f(Y(x.value))}" y2="${f(Y(x.value))}" stroke="#d4900f" stroke-width="1.6" stroke-dasharray="5 4"/>`;
-    if(i+1<st.length&&st[i+1].value!=null)s+=`<line x1="${f(b)}" x2="${f(b)}" y1="${f(Y(x.value))}" y2="${f(Y(st[i+1].value))}" stroke="#d4900f" stroke-dasharray="2 3"/>`;});
-  const beNow=st.length?st[st.length-1].value:null;
-  if(beNow!=null)s+=`<rect x="${W-R-118}" y="${f(Y(beNow)+4)}" width="116" height="16" rx="4" fill="#d4900f"/><text x="${W-R-60}" y="${f(Y(beNow)+15.5)}" class="pc-tag" text-anchor="middle">Breakeven $${beNow.toFixed(2)}</text>`;
-  if(openStrike){s+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(openStrike))}" y2="${f(Y(openStrike))}" stroke="var(--green)" stroke-width="1.3" stroke-dasharray="6 4"/><rect x="${W-R-100}" y="${f(Y(openStrike)-20)}" width="98" height="16" rx="4" fill="var(--green)"/><text x="${W-R-51}" y="${f(Y(openStrike)-8.5)}" class="pc-tag" text-anchor="middle">Open strike $${(+openStrike).toFixed(2).replace(/\.00$/,'')}</text>`;}
-  const lc=cs[cs.length-1].close;s+=`<rect x="${W-R+2}" y="${f(Y(lc)-8)}" width="52" height="16" rx="3" fill="var(--blue)"/><text x="${W-R+28}" y="${f(Y(lc)+3.5)}" class="pc-tag" text-anchor="middle">${lc.toFixed(2)}</text>`;
-  ms.forEach(m=>{const x=X(m.date),y=Y(m.strike);s+=`<g class="ii pc-mk" tabindex="0" data-tip="${esc(m.tip)}"><rect x="${f(x-6)}" y="${f(y-6)}" width="12" height="12" rx="2" fill="${m.color}" stroke="var(--bg2)" stroke-width="1.5"/><text x="${f(x)}" y="${f(y-10)}" class="pc-ml" fill="${m.color}" text-anchor="middle">${esc(m.label)}</text></g>`;});
+  s+=`<polygon points="${f(X(from))},${f(H-B)} ${pts} ${f(X(last))},${f(H-B)}" fill="var(--blue)" opacity="0.08"/><polyline points="${pts}" fill="none" stroke="var(--blue)" stroke-width="1.8"/>`;
+  st.forEach((x,i)=>{if(x.value==null)return;const nx=i+1<st.length?st[i+1].date:null;if(nx&&nx<from)return;const a=X(x.date<from?from:x.date),b=nx?X(nx):X(last);
+    s+=`<line x1="${f(a)}" x2="${f(b)}" y1="${f(Y(x.value))}" y2="${f(Y(x.value))}" stroke="#d4900f" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+    if(nx&&st[i+1].value!=null)s+=`<line x1="${f(b)}" x2="${f(b)}" y1="${f(Y(x.value))}" y2="${f(Y(st[i+1].value))}" stroke="#d4900f" stroke-dasharray="2 3"/>`;});
+  if(openStrike)s+=`<line x1="${L}" x2="${PR}" y1="${f(Y(openStrike))}" y2="${f(Y(openStrike))}" stroke="var(--green)" stroke-width="1.3" stroke-dasharray="6 4"/>`;
+  ms.forEach(m=>{const x=X(m.date),y=Y(m.strike);s+=`<g class="ii pc-mk" tabindex="0" data-tip="${esc(m.tip)}"><rect x="${f(x-14)}" y="${f(y-14)}" width="28" height="28" fill="transparent"/><rect x="${f(x-5.5)}" y="${f(y-5.5)}" width="11" height="11" rx="2" fill="${m.color}" stroke="var(--bg2)" stroke-width="1.5"/></g>`;});
+  // Right-edge tags (price, breakeven, open strike): sorted by height and pushed apart so none overlap.
+  const lc=cs[cs.length-1].close,tags=[{y:Y(lc),t:lc.toFixed(2),c:'var(--blue)',w:50}];
+  if(beNow!=null)tags.push({y:Y(beNow),t:'Breakeven $'+beNow.toFixed(2),c:'#d4900f',w:118});
+  if(openStrike)tags.push({y:Y(openStrike),t:'Open strike $'+(+openStrike).toFixed(2).replace(/\.00$/,''),c:'var(--green)',w:104});
+  stackTags(tags,18,T+8,H-B-8).forEach(g=>{s+=`<rect x="${f(PR-g.w)}" y="${f(g.y-8)}" width="${g.w}" height="16" rx="4" fill="${g.c}"/><text x="${f(PR-g.w/2)}" y="${f(g.y+3.5)}" class="pc-tag" text-anchor="middle">${g.t}</text>`;});
   return s+'</svg>';
+}
+// Pure: spread label centres (y) at least gap apart, kept within [top,bottom].
+function stackTags(tags,gap,top,bottom){
+  const a=tags.map(t=>({...t})).sort((p,q)=>p.y-q.y);
+  for(let i=0;i<a.length;i++){a[i].y=Math.max(a[i].y,top);if(i&&a[i].y-a[i-1].y<gap)a[i].y=a[i-1].y+gap;}
+  for(let i=a.length-1;i>=0;i--){if(a[i].y>bottom)a[i].y=bottom;if(i<a.length-1&&a[i+1].y-a[i].y<gap)a[i].y=a[i+1].y-gap;}
+  return a;
 }
 const _candles={},_candlesData={},_pcRange={},_pcOpen={};
 // Pure: any stored date shape → 'YYYY-MM-DD' (ISO string, Firestore Timestamp {seconds}/toDate(), Date, 'DD/MM/YYYY'). null if unknown.
@@ -3563,12 +3583,15 @@ function loadCandles(sym,from){
   return _candles[sym];
 }
 // Builds the chart HTML for a wheel from cached candles (or null if not loaded yet).
+// Pure: a closed wheel's end = its latest trade date or option expiry, whichever is later.
+function wheelEndDate(trades){return (trades||[]).flatMap(t=>[t.entered,t.expiry]).filter(Boolean).map(String).map(x=>x.slice(0,10)).sort().pop()||null;}
 function wheelChartHtml(w,cs){
   const trades=chartTrades(calcWheel(w).trades);
   if(!cs||!cs.length)return'<div class="pc-empty">No price history for this ticker yet</div>';
   const first=(trades.map(t=>t.entered).sort()[0]||cs[0].date);
   const steps=breakevenSteps(trades),mk=chartMarkers(trades,steps),op=w.status==='open'?buildOpenPosition(calcWheel(w).trades):null;
-  return priceChartSVG(cs,mk,steps,op?op.strike:null,_pcRange[w.id]||'All',first<cs[0].date?cs[0].date:first)||'<div class="pc-empty">Not enough price history for this range</div>';
+  const end=w.status==='open'?null:wheelEndDate(trades);
+  return priceChartSVG(cs,mk,steps,op?op.strike:null,_pcRange[w.id]||'All',first<cs[0].date?cs[0].date:first,end)||'<div class="pc-empty">Not enough price history for this range</div>';
 }
 // Loads (if needed) and draws into the LIVE element for this wheel — re-queried by id, so cards re-rendered meanwhile still update.
 function drawWheelChart(wid){
