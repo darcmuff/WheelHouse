@@ -27,3 +27,13 @@ test('Home tile ⓘ flips the tile in place (no popup), tile size fixed', () => 
   assert.ok(SRC.includes("t.classList.add('hk-flipped')"));
   assert.ok(SRC.includes("!b.closest('.hk')"), 'no hover popup on tile icons');
 });
+test('every Home tile tip is short enough to fit in the tile', () => {
+  const a = SRC.indexOf('function renderHome'), h = SRC.slice(a, SRC.indexOf('\n}\n', a));
+  const tips = [...h.matchAll(/hk-l">[^$]*\$\{ii\(`([^`]*)`\)/g)].map(m => m[1].replace(/\$\{mName\}/g, 'September').replace(/&amp;/g, '&'));
+  assert.ok(tips.length >= 8, 'found ' + tips.length);
+  tips.forEach(t => assert.ok(t.length <= 120, t.length + ': ' + t));
+});
+test('moving the mouse off a flipped tile flips it back', () => {
+  assert.ok(/addEventListener\('mouseout',e=>\{const t=e\.target\.closest&&e\.target\.closest\('\.hk\.hk-flipped'\);if\(t&&!\(e\.relatedTarget&&t\.contains\(e\.relatedTarget\)\)\)unflip\(\);\}\)/.test(SRC));
+  assert.ok(!/\.hk-back\{[^}]*overflow-y:auto/.test(SRC), 'no scroll on flipped tiles');
+});
