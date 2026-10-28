@@ -690,6 +690,11 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .trow.roll-trade,.trow.expired-trade{border-left:0;padding-left:0.875rem;background:transparent}
 .chain-row{border-left:0;background:var(--bg);color:var(--text2);padding:0.4rem 0.875rem;font-size:0.65rem}
 .chain-row .chain-tag{color:var(--orange);text-transform:none;letter-spacing:0;font-size:0.6rem}
+/* Roll chains: every row in a chain (and its ⛓ Chain line) gets a permanent tint; one colour per chain */
+.trow.chain-c0,.chain-row.chain-c0{background:rgba(8,145,178,0.09)}
+.trow.chain-c1,.chain-row.chain-c1{background:rgba(124,92,214,0.09)}
+.trow.chain-c2,.chain-row.chain-c2{background:rgba(212,144,15,0.10)}
+.trow.chain-c3,.chain-row.chain-c3{background:rgba(219,39,119,0.08)}
 .roll-badge{color:var(--orange)}
 .ab{border:0!important;border-radius:1rem;padding:0.15rem 0.55rem;font-size:0.6rem;letter-spacing:0;font-weight:600}
 .ab-CSP,.ab-OUT,.ab-DIV{background:color-mix(in srgb,var(--green) 12%,transparent);color:var(--green)}
@@ -2422,7 +2427,20 @@ function pmccDeleteShort(id){
   if(!confirm(`Delete short call ${l.underlying} $${fmt2(l.strike)}C ${l.expiry||''}? This cannot be undone.`))return;
   _deleteOptDoc(id);db.opts=(db.opts||[]).filter(x=>x.id!==id);render();
 }
-function renderPmccTradeRow(e,spot,today){
+// PMCC: legId → chain index for every short leg in a rolledFrom chain of 2+ legs.
+function pmccChainMap(ev){
+  const legs=[];ev.forEach(e=>{if(e.kind==='short'&&e.leg&&!legs.includes(e.leg))legs.push(e.leg);});
+  const byId={};legs.forEach(l=>{byId[l.id]=l;});
+  const rootOf=l=>{let cur=l,n=0;while(cur.rolledFrom&&byId[cur.rolledFrom]&&n++<50)cur=byId[cur.rolledFrom];return cur.id;};
+  const groups={},order=[];
+  ev.forEach(e=>{if(e.kind!=='short'||!e.leg)return;const r=rootOf(e.leg);if(!groups[r]){groups[r]=new Set();order.push(r);}groups[r].add(e.leg.id);});
+  const map={};let k=0;
+  order.forEach(r=>{if(groups[r].size<2)return;groups[r].forEach(id=>{map[id]=k;});k++;});
+  return map;
+}
+function renderPmccTradeRow(e,spot,today,cmap){
+  const cIdx=cmap&&e.kind==='short'?cmap[e.legId]:undefined;
+  const cCls=cIdx!=null?' chain-c'+(cIdx%4):'';
   const rollBadge=e.rolledFrom&&e.action==='STO'?'<span class="roll-badge">↻</span>':'';
   const expBadge=e.action==='EXP'?'<span class="exp-badge">EXP</span>':'';
   let acts='';
@@ -2441,10 +2459,10 @@ function renderPmccTradeRow(e,spot,today){
     if(chain.length>1){
       let net=0;chain.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?(p.unrealized!=null?p.unrealized:p.openCash):p.realized;});
       net=Math.round(net*100)/100;
-      chainHtml=`<div class="chain-row"><span class="chain-tag">⛓ Chain</span><span>${chain.length-1} roll${chain.length-1>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;
+      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${chain.length-1} roll${chain.length-1>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;
     }
   }
-  return`<div class="trow ${rowCls}" data-pmid="${esc(e.id)}">
+  return`<div class="trow ${rowCls}${cCls}" data-pmid="${esc(e.id)}">
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${e.action}">${e.action}</span>${expBadge}</span>
     <span>${fmtDateFull(e.entered)}</span>
     <span>${(e.action==='BTC'||e.action==='EXP'||e.action==='ASN')?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
@@ -2463,7 +2481,8 @@ function renderPmcc(leap,today,spot){
   const ev=pmccTradeEvents(leap,db.opts||[]);
   // No short calls yet → empty (Sell call lives on the card face). Still show when the LEAP itself has a close/expiry event.
   if(!P.shorts.length&&leap.status==='open')return'';
-  const rows=ev.map(e=>renderPmccTradeRow(e,spot,today)).join('');
+  const cmap=pmccChainMap(ev);
+  const rows=ev.map(e=>renderPmccTradeRow(e,spot,today,cmap)).join('');
   return`<div class="trade-body open pmcc-trades">
     <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Price</span><span>Qty</span><span>Total</span><span>Fees</span><span>Net</span><span></span></div>
     ${rows||'<div class="trow"><span style="grid-column:1/-1;color:var(--text3)">No trades yet</span></div>'}
@@ -3413,6 +3432,19 @@ function buildRollChain(wheelTrades,tipId){
 
 // A leg is a chain TIP when nothing rolled onward from it: it's either still open, or it
 // was closed by a plain (non-roll) closer. Only tips display the chain summary line.
+// Wheel: trade id → chain index for every trade in a roll chain, in list order of the tips.
+const _chainMapCache=new WeakMap();
+function wheelChainMap(wheelTrades){
+  if(_chainMapCache.has(wheelTrades))return _chainMapCache.get(wheelTrades);
+  const map={};let k=0;
+  [...wheelTrades].sort((a,b)=>(b.entered||'').localeCompare(a.entered||'')).forEach(t=>{
+    if(!t.rollId||!isChainTip(wheelTrades,t))return;
+    const c=buildRollChain(wheelTrades,t.id);if(!c)return;
+    c.trades.forEach(x=>{if(map[x.id]==null)map[x.id]=k;});k++;
+  });
+  _chainMapCache.set(wheelTrades,map);
+  return map;
+}
 function isChainTip(wheelTrades,leg){
   if(!leg.rollId||!(leg.action==='CSP'||leg.action==='STOC'))return false;
   const{pairs}=walkLegPairs(wheelTrades);
@@ -3815,6 +3847,8 @@ function renderTradeRow(t,wheelTrades,opts){
   opts=opts||{};
   // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
   let chainHtml='';
+  const cIdx=wheelTrades?wheelChainMap(wheelTrades)[t.id]:undefined;
+  const cCls=cIdx!=null?' chain-c'+(cIdx%4):'';
   if(wheelTrades&&t.rollId&&isChainTip(wheelTrades,t)){
     const c=buildRollChain(wheelTrades,t.id);
     if(c){
@@ -3824,7 +3858,7 @@ function renderTradeRow(t,wheelTrades,opts){
           ?`<span class="chain-be">breakeven buyback ≤ $${fmtPrem(c.breakeven)} — close cheaper and the whole chain is green</span>`
           :`<span class="chain-be">chain is underwater — no green buyback exists at any price</span>`)
         :`<span class="chain-be">chain complete</span>`;
-      chainHtml=`<div class="chain-row"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span><span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
+      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span><span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
     }
   }
   const roc=calcTradeROC(t);
@@ -3839,7 +3873,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
-  return`<div class="trow ${rowCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
+  return`<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>

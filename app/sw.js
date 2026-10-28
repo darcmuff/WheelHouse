@@ -1,5 +1,5 @@
 // WheelHouse service worker. Bump CACHE on every release.
-const CACHE = 'wheelhouse-v75';
+const CACHE = 'wheelhouse-v76';
 const STATIC = ['./', './manifest.json', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
