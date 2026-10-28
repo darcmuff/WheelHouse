@@ -728,6 +728,15 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .btn-danger:hover{background:color-mix(in srgb,var(--red) 10%,transparent)}
 [data-theme="dark"] #topnav .nav-item.active{background:var(--bg3);color:var(--text)}
 [data-theme="dark"] #topnav{background:color-mix(in srgb,var(--bg) 92%,transparent)}
+
+/* ── Phone portrait: trade tables scroll sideways at natural column widths instead of crushing ── */
+@media(max-width:640px){
+  .trade-body.open,#health-panel .d-panel-body{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .trade-body .thead-row,.trade-body .trow,.trow-health,#health-panel .thead-row{min-width:46rem}
+  .pmcc-trades .thead-row,.pmcc-trades .trow{min-width:52rem}
+  .trade-body .thead-row>*,.trade-body .trow>*,.trow-health>*,#health-panel .thead-row>*{white-space:nowrap}
+  .trade-body .chain-row{position:sticky;left:0;box-sizing:border-box;width:var(--tb-w,calc(100vw - 4rem));flex-wrap:wrap;row-gap:0.125rem}
+}
 </style>
 </head>
 <body>
