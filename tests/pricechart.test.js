@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn, extractConst } = require('./extract');
-const F = new Function(['shareRealisations', 'breakevenSteps', 'chartMarkers', 'priceChartSVG', 'chartWindow', 'stackTags', 'wheelEndDate', 'earningsDays', 'calcWheel'].map(extractFn).join('\n') + '\n' + extractConst('CHART_KINDS') +
-  '\nconst esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]));let db;\nreturn {breakevenSteps,chartMarkers,priceChartSVG,chartWindow,stackTags,wheelEndDate,earningsDays,calcWheel,setDb:d=>db=d};')();
+const F = new Function(['shareRealisations', 'breakevenSteps', 'chartMarkers', 'priceChartSVG', 'chartWindow', 'stackTags', 'snapMarkers', 'wheelEndDate', 'earningsDays', 'calcWheel'].map(extractFn).join('\n') + '\n' + extractConst('CHART_KINDS') +
+  '\nconst esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]));let db;\nreturn {breakevenSteps,chartMarkers,priceChartSVG,chartWindow,stackTags,snapMarkers,wheelEndDate,earningsDays,calcWheel,setDb:d=>db=d};')();
 const opt = (i, a, ent, exp, k, p, ew) => { const g = p * 400, tot = Math.round((['CSP', 'STOC', 'STC'].includes(a) ? g - 1.08 : g + 1.08) * 100) / 100;
   return { id: 't' + i, wheelId: 'w1', action: a, entered: ent, expiry: exp, strike: k, premium: p, fees: 1.08, shares: 400, total: tot, ...(ew ? { expiredWorthless: true } : {}) }; };
 const T = [opt(1, 'CSP', '2026-01-02', '2026-01-16', 52, 1.00, 1), opt(2, 'CSP', '2026-01-20', '2026-02-20', 50, 1.20), opt(3, 'BTC', '2026-02-18', '2026-02-20', 50, 2.10),
@@ -86,4 +86,31 @@ test('no always-on marker text; right-edge tags never overlap; markers have a bi
   assert.ok(svg.includes('width="28" height="28" fill="transparent"'));
   const ys = F.stackTags([{ y: 100 }, { y: 104 }, { y: 101 }], 18, 10, 250).map(t => t.y).sort((a, b) => a - b);
   assert.ok(ys[1] - ys[0] >= 18 && ys[2] - ys[1] >= 18);
+});
+const weekdays = (a, b, px = 27) => daily(a, b, px).filter(c => { const w = new Date(c.date + 'T12:00:00Z').getUTCDay(); return w > 0 && w < 6; });
+test('closed wheel: called-away row dated on a Saturday still gets a marker (snapped to Friday)', () => {
+  const cs = weekdays('2025-08-01', '2026-10-27');
+  const trades = [{ action: 'CSP', entered: '2025-09-15', expiry: '2025-10-03', strike: 28, total: 200, shares: 400 },
+    { action: 'IN', entered: '2025-10-03', premium: 28, shares: 400, total: 11200 },
+    { action: 'STOC', entered: '2025-11-21', expiry: '2025-11-28', strike: 27, total: 100, shares: 400 },
+    { action: 'OUT', entered: '2025-11-29', premium: 27, shares: 400, total: 10800 }];
+  const end = F.wheelEndDate(trades); assert.strictEqual(end, '2025-11-29');
+  const mk = F.chartMarkers(trades, []);
+  const svg = F.priceChartSVG(cs, mk, [], null, 'All', '2025-09-15', end);
+  assert.strictEqual((svg.match(/class="ii pc-mk"/g) || []).length, 4);
+  assert.ok(svg.includes('Called away · At $27.00'));
+  const snapped = F.snapMarkers(mk, cs.filter(c => c.date <= '2025-11-29'), end);
+  assert.strictEqual(snapped.find(m => m.kind === 'out').date, '2025-11-28');
+});
+test('duplicate share rows (two 200-share assignments same day/price) merge into one 400-share marker', () => {
+  const mk = F.chartMarkers([{ action: 'IN', entered: '2025-10-03', premium: 28, shares: 200, total: 5600 }, { action: 'IN', entered: '2025-10-03', premium: 28, shares: 200, total: 5600 }], []);
+  assert.strictEqual(mk.length, 1); assert.ok(mk[0].tip.startsWith('Assigned · At $28.00 · 400 sh · 03/10'));
+});
+test('open wheel: range always contains a recent marker, even when the last candle is before the trade', () => {
+  const cs = weekdays('2026-06-12', '2026-10-22', 148);
+  const mk = F.chartMarkers([{ action: 'CSP', entered: '2026-10-23', expiry: '2026-11-13', strike: 130, total: 666.92, shares: 400 }], []);
+  for (const r of ['1M', '3M', '6M', 'All']) {
+    const svg = F.priceChartSVG(cs, mk, [], 130, r, '2026-10-23', null);
+    assert.strictEqual((svg.match(/class="ii pc-mk"/g) || []).length, 1, r);
+  }
 });

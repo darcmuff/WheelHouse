@@ -3497,7 +3497,12 @@ function chartMarkers(trades,steps){
   const dm=s=>s?s.slice(8,10)+'/'+s.slice(5,7):'';
   const money=n=>(n<0?'−':'+')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const yOf=t=>Number(t.strike)>0?Number(t.strike):(t.action==='IN'||t.action==='OUT')?(Number(t.premium)>0?Number(t.premium):(t.shares>0&&t.total>0?t.total/t.shares:0)):0; // assignments/call-aways are stored as share buys/sells (price in premium, often no strike)
-  return (trades||[]).filter(t=>CHART_KINDS[t.action]&&t.entered&&yOf(t)>0).slice().sort((a,b)=>a.entered.localeCompare(b.entered)).map(t=>{
+  const merged={};(trades||[]).filter(t=>CHART_KINDS[t.action]&&t.entered&&yOf(t)>0).forEach(t=>{
+    const k=[t.action,String(t.entered).slice(0,10),yOf(t).toFixed(4),t.expiry||''].join('|');
+    if(merged[k]){merged[k]={...merged[k],shares:(merged[k].shares||0)+(t.shares||0),total:(merged[k].total||0)+(t.total||0),expiredWorthless:merged[k].expiredWorthless&&t.expiredWorthless};}
+    else merged[k]={...t,strike:Number(t.strike)>0?t.strike:yOf(t)};
+  });
+  return Object.values(merged).sort((a,b)=>a.entered.localeCompare(b.entered)).map(t=>{
     const K=CHART_KINDS[t.action],d=t.entered.slice(0,10),k=yOf(t),be=beAt(d);
     const net=t.action==='BTC'||t.action==='IN'?-(t.total||0):(t.total||0);
     const name=t.action==='STOC'?'CC':t.action==='CSP'?'CSP':K.l;
@@ -3514,7 +3519,7 @@ function chartMarkers(trades,steps){
 function chartWindow(candles,range,firstDate,endDate){
   if(!candles.length)return null;
   const lastC=candles[candles.length-1].date;
-  const end=endDate&&endDate<lastC?endDate:lastC;
+  const end=endDate&&endDate<lastC?endDate:lastC; // closed wheels: end on their last row (incl. share rows)
   const back={'1M':31,'3M':92,'6M':183}[range];
   const minus=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')-n*864e5).toISOString().slice(0,10);
   const from=back?minus(end,back):[firstDate||candles[0].date,minus(end,92)].sort()[0];
@@ -3522,12 +3527,12 @@ function chartWindow(candles,range,firstDate,endDate){
 }
 // Pure: SVG for the chart. No always-on marker text (legend + hover tips instead); right-edge tags stacked so they never overlap.
 function priceChartSVG(candles,markers,steps,openStrike,range,firstDate,endDate){
-  const W=1180,H=280,L=16,R=62,T=14,B=24,PR=W-R-10;
+  const W=1180,H=280,L=16,R=62,T=14,B=24,TAGW=124,PR=W-R-TAGW; // plot stops before the label column
   const win=chartWindow(candles,range,firstDate,endDate);if(!win)return'';
   const cs=candles.filter(c=>c.date>=win.from&&c.date<=win.end);if(cs.length<2)return'';
   const from=cs[0].date,last=cs[cs.length-1].date;
-  const ms=markers.filter(m=>m.date>=from&&m.date<=last);
-  const st=steps.filter(x=>x.date<=last);
+  const ms=snapMarkers(markers,cs,endDate||'9999-12-31'); // open wheels: anything after the last candle snaps to it
+  const st=steps.filter(x=>x.date<=(endDate&&endDate>last?endDate:last)); // closed: include the call-away step even if it falls on a non-trading day
   const beNow=st.length?st[st.length-1].value:null;
   const vals=[...cs.map(c=>c.close),...ms.map(m=>m.strike),...st.filter(x=>x.value!=null).map(x=>x.value),...(openStrike?[openStrike]:[])];
   let lo=Math.min(...vals),hi=Math.max(...vals);const pad=(hi-lo)*0.1||1;lo-=pad;hi+=pad;
@@ -3549,8 +3554,16 @@ function priceChartSVG(candles,markers,steps,openStrike,range,firstDate,endDate)
   const lc=cs[cs.length-1].close,tags=[{y:Y(lc),t:lc.toFixed(2),c:'var(--blue)',w:50}];
   if(beNow!=null)tags.push({y:Y(beNow),t:'Breakeven $'+beNow.toFixed(2),c:'#d4900f',w:118});
   if(openStrike)tags.push({y:Y(openStrike),t:'Open strike $'+(+openStrike).toFixed(2).replace(/\.00$/,''),c:'var(--green)',w:104});
-  stackTags(tags,18,T+8,H-B-8).forEach(g=>{s+=`<rect x="${f(PR-g.w)}" y="${f(g.y-8)}" width="${g.w}" height="16" rx="4" fill="${g.c}"/><text x="${f(PR-g.w/2)}" y="${f(g.y+3.5)}" class="pc-tag" text-anchor="middle">${g.t}</text>`;});
+  stackTags(tags,18,T+8,H-B-8).forEach(g=>{s+=`<rect x="${f(PR+4)}" y="${f(g.y-8)}" width="${g.w}" height="16" rx="4" fill="${g.c}"/><text x="${f(PR+4+g.w/2)}" y="${f(g.y+3.5)}" class="pc-tag" text-anchor="middle">${g.t}</text>`;});
   return s+'</svg>';
+}
+// Pure: place markers on trading days — a weekend/holiday date snaps to the last candle on or before it; dates after the
+// last candle (up to the window end) snap to the last candle. Markers before the window are left out.
+function snapMarkers(markers,cs,end){
+  if(!cs.length)return[];const first=cs[0].date,last=cs[cs.length-1].date,ds=cs.map(c=>c.date);
+  const limit=end&&end>last?end:last;
+  return (markers||[]).filter(m=>m.date>=first&&m.date<=limit).map(m=>{let lo=0,hi=ds.length-1,at=ds[0];
+    while(lo<=hi){const mid=(lo+hi)>>1;if(ds[mid]<=m.date){at=ds[mid];lo=mid+1;}else hi=mid-1;}return{...m,date:at,origDate:m.date};});
 }
 // Pure: spread label centres (y) at least gap apart, kept within [top,bottom].
 function stackTags(tags,gap,top,bottom){
@@ -3603,7 +3616,8 @@ function drawWheelChart(wid){
   document.getElementById('pc-'+wid).querySelectorAll('.pc-rg button').forEach(b=>b.classList.toggle('on',b.dataset.r===(_pcRange[wid]||'All')));
   if(_candlesData[sym]){b0.innerHTML=wheelChartHtml(w,_candlesData[sym]);return;}
   b0.innerHTML='<div class="pc-empty">Loading price history…</div>';
-  const first=chartTrades(calcWheel(w).trades).map(t=>t.entered).sort()[0]||new Date().toISOString().slice(0,10);
+  // One fetch window per ticker (earliest trade on ANY wheel of this ticker), so every card of the ticker gets the same history.
+  const first=chartTrades((db.trades||[]).filter(t=>String(t.ticker||(db.wheels.find(x=>x.id===t.wheelId)||{}).ticker||'').trim().toUpperCase()===sym)).map(t=>t.entered).sort()[0]||new Date().toISOString().slice(0,10);
   const from=new Date(Date.parse(first+'T12:00:00Z')-120*864e5).toISOString().slice(0,10);
   loadCandles(sym,from).then(cs=>{const b=live();if(b)b.innerHTML=wheelChartHtml(w,cs);})
     .catch(()=>{const b=live();if(b)b.innerHTML=`<div class="pc-empty">Price history unavailable · <a href="#" onclick="event.preventDefault();event.stopPropagation();drawWheelChart('${wid}')">Retry</a></div>`;});
