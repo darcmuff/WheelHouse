@@ -308,7 +308,6 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
   grid-template-columns:minmax(0,110fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,52fr) minmax(0,78fr) minmax(0,48fr) minmax(0,72fr) minmax(0,140fr);
 }
 .pmcc-trades .trow .pmcc-row-acts{display:flex;gap:0.25rem;flex-wrap:wrap;justify-content:flex-end}
-.pmcc-trades .trow .pmcc-lb{margin-left:0.25rem}
 .rot-actions{
   padding:0.5625rem 1rem;border-top:1px solid var(--border);
   background:var(--bg3);display:flex;gap:0.375rem;flex-wrap:wrap;align-items:center;
@@ -527,12 +526,10 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .leap-sc .v{font-size:1.25rem;font-weight:600;margin-top:0.1875rem;white-space:nowrap}.leap-sc .s{font-size:0.6875rem;color:var(--text3);margin-top:2px}
 .leap-grid{display:flex;flex-direction:column;gap:0.625rem}
 .leap-card{background:var(--bg2);border:1px solid var(--border);border-left:0.25rem solid var(--orange);border-radius:0.5rem;overflow:hidden;transition:border-color .2s}
-.leap-card:hover{border-color:var(--border2)}.leap-card.warn{border-left-color:var(--yellow)}.leap-card.cn{border-left-color:var(--border2)}
+.leap-card:hover{border-color:var(--border2)}.leap-card.cn{border-left-color:var(--border2)}
 .leap-ch{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem}
 .leap-ct{font-size:0.75rem;color:var(--silver);font-weight:400;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .leap-badge{padding:2px 0.5rem;border-radius:1.25rem;font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
-.leap-badge.itm{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.4)}
-.leap-badge.otm{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}
 .leap-badge.cl{background:var(--bg3);color:var(--text3);border:1px solid var(--border2)}
 .leap-row{display:grid;grid-template-columns:minmax(14.375rem,1.5fr) minmax(13.75rem,2fr) repeat(3,minmax(5.9375rem,1fr));border-top:1px solid var(--border);background:var(--bg3)}
 .leap-row .rmb-col{padding:0.5rem 0.75rem;display:flex;flex-direction:column;justify-content:center}
@@ -562,8 +559,6 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .pmcc-tag{font-size:0.5rem;font-weight:600;letter-spacing:.6px;color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.35);padding:0 0.3125rem;border-radius:1.25rem;margin-right:0.3125rem;vertical-align:1px}
 .pmcc-t{display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap;font-size:0.8125rem;font-weight:600;line-height:1.3}
 .pmcc-btns{display:flex;gap:0.375rem;margin-left:auto;flex-shrink:0}.pmcc-btns .btn{padding:0.25rem 0.625rem;font-size:0.6875rem}
-.pmcc-lb{padding:1px 0.375rem;border-radius:1.25rem;font-size:0.5312rem;font-weight:600;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;line-height:1.5}
-.pmcc-lb.g{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.4)}.pmcc-lb.a{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.35)}.pmcc-lb.r{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.4)}
 .pmcc-row .rmb-val{font-weight:600}
 .mo-pnl .d-table-row,.mo-pnl .d-table-hdr{white-space:nowrap}.mo-pnl .ls{display:none}.mo-pnl .d-table-row>span{overflow:hidden;text-overflow:ellipsis}
 @media(max-width:640px){.mo-pnl .d-table-row,.mo-pnl .d-table-hdr{padding-left:0.625rem;padding-right:0.625rem;gap:0.375rem}.mo-pnl .d-table-row{font-size:0.6875rem}.mo-pnl .d-panel-count{display:none}.mo-pnl .lf{display:none}.mo-pnl .ls{display:inline}}
@@ -651,7 +646,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .wl-st:before{content:'';position:absolute;top:0.25rem;left:-50%;width:100%;height:2px;background:var(--border)}.wl-st:first-child:before{display:none}
 .wl-st b{width:0.625rem;height:0.625rem;border-radius:50%;background:var(--border);z-index:1;margin-bottom:0.25rem}
 .wl-st.d b,.wl-st.d:before,.wl-st.n:before{background:var(--orange)}.wl-st.n{color:var(--text);font-weight:600}.wl-st.n b{background:var(--orange);box-shadow:0 0 0 0.25rem var(--orangeL)}
-.wl-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.75rem}.wl-leg{font-size:0.72rem;font-weight:600;color:var(--text2);margin-top:0.2rem;white-space:nowrap}.wl-f.wl-be b{font-size:1.25rem}.wl-be small{display:block;color:var(--text3);font-size:0.6rem;margin-top:0.1rem}.wl-memo{font-size:0.72rem;color:var(--text2);margin:0 0 0.625rem;text-align:center}.wl-memo b{color:var(--text)}.wl-memo.warn{color:var(--red);font-weight:600}.wl-f span{display:block;color:var(--text3);font-size:0.575rem}.wl-f b{font-weight:600;font-size:0.75rem}
+.wl-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.75rem}.wl-leg{font-size:0.72rem;font-weight:600;color:var(--text2);margin-top:0.2rem;white-space:nowrap}.wl-f.wl-be b{font-size:1.25rem}.wl-be small{display:block;color:var(--text3);font-size:0.6rem;margin-top:0.1rem}.wl-memo{font-size:0.72rem;color:var(--text2);margin:0 0 0.625rem;text-align:center}.wl-memo b{color:var(--text)}.wl-f span{display:block;color:var(--text3);font-size:0.575rem}.wl-f b{font-weight:600;font-size:0.75rem}
 .tk-pnl{margin-top:1rem}.tk-row{display:grid;grid-template-columns:1fr 8rem 8rem;padding:0.4rem 0;border-top:1px solid var(--border);font-size:0.75rem}.tk-row>span+span{text-align:right}.tk-row.tk-hd{color:var(--text3);font-size:0.625rem;border-top:0}.tk-row .pos{color:var(--green)}.tk-row .neg{color:var(--red)}
 .wl-how{color:var(--text3);font-size:0.55rem;margin-top:0.5rem}
 .wl-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.75rem}
@@ -662,7 +657,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 /* ── LEAP cards ── */
 .lc{padding:1rem 1.125rem;margin-bottom:0.75rem}
 .lc-h{display:flex;justify-content:space-between;align-items:center}.lc-tk{font-weight:600;font-size:0.9375rem;margin-right:0.5rem}.lc-ct{color:var(--text2);font-size:0.65rem}
-.lc-note{color:var(--yellow);font-size:0.6rem;margin-top:0.25rem}
+.lc-note{color:var(--text3);font-size:0.6rem;margin-top:0.25rem}
 .lc-hero{display:flex;gap:1.75rem;margin-top:0.75rem;flex-wrap:wrap}.lc-k{color:var(--text3);font-size:0.6rem}.lc-v{font-size:1.25rem;font-weight:600}.lc-v.sm{font-size:0.95rem;margin-top:0.25rem}.lc-mut{color:var(--text2)}
 .lc-bar{height:0.3rem;background:var(--bg3);border-radius:1rem;margin:0.75rem 0 0.375rem;overflow:hidden}.lc-bar i{display:block;height:100%;background:var(--orange)}
 .mn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:0.75rem 1.25rem;padding:0.75rem 0 0.25rem}.mn span{display:block;color:var(--text3);font-size:0.625rem}.mn b{display:block;font-weight:550;font-size:0.8125rem;color:var(--text);margin-top:0.125rem}.mn b.g{color:var(--green)}.mn b.r{color:var(--red)}.mn i{display:block;font-style:normal;color:var(--text3);font-size:0.6rem;margin-top:0.0625rem}.mn-hist{margin-top:0.75rem}.mn-ht{color:var(--text3);font-size:0.625rem;margin-bottom:0.25rem}.mn-hr{display:grid;grid-template-columns:11rem 1fr auto;gap:0.75rem;font-size:0.6875rem;padding:0.3125rem 0;border-top:1px solid var(--border);color:var(--text2)}.mn-hr .t3{color:var(--text3)}.mn-hr b{font-weight:550}.mn-hr b.g{color:var(--green)}.mn-hr b.r{color:var(--red)}
@@ -673,7 +668,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .lc-short .lc-sl{display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;min-width:0}
 .leap-card .pmcc-trades,.leap-card .pmcc-open{margin:0.75rem 0 0}
 .leap-card .pmcc-open .trow-empty{border-top:0}
-.leap-card .pmcc-open .pmcc-lb{margin-left:0.25rem}
 .pmcc-open .thead-row.has-to-strike,.pmcc-open .trow.has-to-strike{
   grid-template-columns:minmax(0,52fr) minmax(0,70fr) minmax(0,70fr) minmax(0,52fr) minmax(0,92fr) minmax(0,52fr) minmax(0,44fr) minmax(0,72fr) minmax(0,42fr) minmax(0,72fr) minmax(0,48fr) minmax(0,36fr);
 }
@@ -2345,15 +2339,6 @@ function pmccStats(leap,legs,today){
   const curPnl=cur?OPTS.legPnL(cur).unrealized:null;
   return{shorts:sh,open,past,cur,curPnl,curDte:cur?OPTS.dte(cur.expiry,today):null,net,cost,adj,adjPerSh};
 }
-// Status labels for an OPEN short call (card only; informational, never block anything). No price → no price-based labels.
-function pmccLabels(c,spot,today){
-  if(!c||c.status!=='open')return[];
-  const out=[],d=OPTS.dte(c.expiry,today),K=+c.strike,sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
-  if(d!=null&&d<=0)out.push({t:'Expires today',c:'r'});else if(d!=null&&d<=7)out.push({t:'Expiring soon',c:'a'});
-  if(spot>0&&K>0){if(spot>K)out.push({t:'In the money',c:'r'});else if(spot>=K*0.95)out.push({t:'Near the money',c:'a'});}
-  if(mark!=null&&sold>0){const cap=(sold-mark)/sold;if(cap>=0.4)out.push({t:`Take profit · ${Math.round(cap*100)}%`,c:'g'});}
-  return out;
-}
 // Build chronological trade events for a LEAP + its poor man's covered calls (newest first, like the wheel).
 // Pure: never writes. Events mirror wheel trade rows: BTO (LEAP), STO/BTC/EXP/ASN (short calls).
 function pmccTradeEvents(leap,legs){
@@ -2395,12 +2380,10 @@ function pmccLegToTrade(c,today){
 // Open short call on the LEAP card face — same trade-body / thead / trow / rot-actions as the wheel.
 // Distance from live underlying price to the short call strike.
 // Positive = price must rise to reach strike; negative = already in the money.
-// Colour matches status labels: muted normally, amber within 5%, red when ITM.
 function toStrike(spot,strike){
   if(!(spot>0)||!(strike>0))return{text:'—',cls:'m',pct:null,dollars:null};
   const dollars=strike-spot,pct=dollars/spot*100;
-  // Colour matches pmccLabels: red ITM (spot>strike), amber near (within 5% below strike), else muted
-  const cls=spot>strike?'r':spot>=strike*0.95?'a':'m';
+  const cls='m'; // neutral: no warning colours
   const sign=pct>=0?'+':'';
   return{text:`${sign}${pct.toFixed(1)}% · $${Math.abs(dollars).toFixed(2)}`,cls,pct,dollars};
 }
@@ -2419,14 +2402,12 @@ function renderPmccOpenFace(leap,today,spot){
     return`<div class="trade-body open pmcc-open"><div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3);display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">No short call open.${leap.status==='open'?` <button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Sell call</button>`:''}</span></div></div>`;
   }
   const c=P.cur,t=pmccLegToTrade(c,today);
-  const lb=pmccLabels(c,spot,today).filter(x=>!/^Take profit/.test(x.t));
-  const labelsHtml=lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('');
   // Captured column → % of premium captured (mark vs sold). Same 40% take-profit threshold as the green label.
   const sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
   let rocHtml='—',rocColor='var(--text3)';
   if(mark!=null&&sold>0){const cap=Math.round((sold-mark)/sold*100);rocHtml=cap+'%';rocColor=cap>=40?'var(--green)':cap>=0?'var(--text2)':'var(--red)';}
   const ts=toStrike(spot,+c.strike);
-  const row=renderTradeRow(t,null,{labelsHtml,rocHtml,rocColor,editOnclick:`openOptEdit('${esc(c.groupId||c.id)}')`,extraAfterStrike:`<span class="to-strike ${ts.cls}">${esc(ts.text)}</span>`});
+  const row=renderTradeRow(t,null,{rocHtml,rocColor,editOnclick:`openOptEdit('${esc(c.groupId||c.id)}')`,extraAfterStrike:`<span class="to-strike ${ts.cls}">${esc(ts.text)}</span>`});
   const acts=`<div class="rot-actions">
       <button class="btn btn-ghost btn-sm" onclick="openOptEdit('${esc(c.groupId||c.id)}');event.stopPropagation()">•••</button>
       <button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(c.id)}','close');event.stopPropagation()">Buy back</button>
@@ -2444,10 +2425,8 @@ function pmccDeleteShort(id){
 function renderPmccTradeRow(e,spot,today){
   const rollBadge=e.rolledFrom&&e.action==='STO'?'<span class="roll-badge">↻</span>':'';
   const expBadge=e.action==='EXP'?'<span class="exp-badge">EXP</span>':'';
-  let labels='';let acts='';
+  let acts='';
   if(e.open&&e.kind==='short'&&e.leg){
-    const lb=pmccLabels(e.leg,spot,today).filter(x=>!/^Take profit/.test(x.t));
-    labels=lb.map(x=>`<span class="pmcc-lb ${x.c}">${esc(x.t)}</span>`).join('');
     acts=`<span class="pmcc-row-acts"><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(e.legId)}','close')">Buy back</button><button class="btn btn-ghost btn-sm" onclick="pmccClose('${esc(e.legId)}','roll')">Roll</button><button class="btn btn-ghost btn-sm" onclick="pmccExpire('${esc(e.legId)}')">Expired</button></span>`;
   }
   const totCls=e.total>=0?'g':'r';
@@ -2466,7 +2445,7 @@ function renderPmccTradeRow(e,spot,today){
     }
   }
   return`<div class="trow ${rowCls}" data-pmid="${esc(e.id)}">
-    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${e.action}">${e.action}</span>${expBadge}${labels}</span>
+    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${e.action}">${e.action}</span>${expBadge}</span>
     <span>${fmtDateFull(e.entered)}</span>
     <span>${(e.action==='BTC'||e.action==='EXP'||e.action==='ASN')?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
     <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
@@ -2496,10 +2475,9 @@ function leapPayback(cost,net){return{pct:cost>0?Math.max(0,Math.min(100,Math.ro
 function renderLeapCard(l,spot,today){
   const S=leapStats(l,spot,today),open=l.status==='open';
   const plH=S.pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${S.pl>=0?'g':'r'}">${S.pl>=0?'+':''}${fmtMoney(S.pl).replace(/\.\d\d$/,'')}${S.cost>0?` <small>(${S.pl>=0?'+':''}${(S.pl/S.cost*100).toFixed(1)}%)</small>`:''}</span>`;
-  const warn=open&&S.left!=null&&S.left<270;
   const rev=open&&l.reviewDate?(l.reviewDate<=today?`Review date ${_fdShort(l.reviewDate)} reached`:`Review ${_fdShort(l.reviewDate)}`):'';
-  const note=warn?`● Under 9 months left — review/roll window${rev?' · '+rev:''}`:rev?`◷ ${rev}`:'';
-  const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:S.intr==null?'':`<span class="leap-badge ${S.intr>0?'itm':'otm'}">${S.intr>0?'ITM':'OTM'}</span>`;
+  const note=rev?`◷ ${rev}`:'';
+  const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:'';
   const gid=l.groupId||l.id;
   const btns=`${open?`<button class="btn btn-ghost" title="Sell a covered call against this LEAP (poor man's covered call)" onclick="openPmccSell('${esc(l.id)}')">Sell call</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
   let row;
@@ -2522,7 +2500,7 @@ function renderLeapCard(l,spot,today){
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=expandedLeaps.has(l.id);
     const shortRow=renderPmccOpenFace(l,today,spot);
-    return`<div class="leap-card lc${warn?" warn":""}" data-leap="${esc(l.id)}">
+    return`<div class="leap-card lc" data-leap="${esc(l.id)}">
   <div class="lc-h"><div><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}</div>
   ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
@@ -2539,7 +2517,7 @@ function renderLeapCard(l,spot,today){
     ${_mn('Intrinsic',S.intr!=null?'$'+S.intr.toFixed(2):'—','per share')}
     ${_mn('Time value',S.tv!=null?'$'+S.tv.toFixed(2):'—','per share')}</div></details></div>`;
   }
-  return`<div class="leap-card ${!open?'cn':warn?'warn':''}" data-leap="${esc(l.id)}">
+  return`<div class="leap-card ${!open?'cn':''}" data-leap="${esc(l.id)}">
   <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
   <div class="leap-row">${row}</div>${renderPmcc(l,today,spot)}</div>`;
 }
@@ -3177,8 +3155,7 @@ function renderRotationMini(wheel){
   const chgSign=chg!=null&&chg>=0?'+':'';
   const chgColor=chg!=null?(chg>=0?'var(--green)':'var(--red)'):'var(--text3)';
   const openPos=buildOpenPosition(m.trades);
-  const _dteCl=openPos?dteCls(openPos.dte):'g';
-  const _dteColor=_dteCl==='r'?'var(--red)':_dteCl==='o'?'var(--orange)':'var(--green)';
+  const _dteColor='var(--silver)';
   const isHidden=hidden.has(wheel.id);
 
   // Grid cells — always 10 cells: logo, ticker, price, change, pnl, leg, dte, spacer, badge, hide
@@ -3674,13 +3651,8 @@ function renderRotationWindow(wheel){
   const _strike=openLegForDTE?.strike;
   const _pctToStrike=rawP!=null&&_strike?((_strike-rawP)/rawP*100):null; // move needed from current price to reach strike
   const _pctCol='var(--silver)'; // neutral — sign shows which side of the strike; red/green was misleading for CCs
-  // Leg-type-aware ITM check: CSP is ITM when price is below strike; covered call when above
-  const _legAction=openLegForDTE?.action;
-  const _itm=rawP!=null&&_strike?(_legAction==='CSP'?rawP<_strike:_legAction==='STOC'?rawP>_strike:false):false;
-  const _itmTag=_itm?`<span style="font-size:0.5625rem;font-weight:600;color:var(--red);border:1px solid var(--red);border-radius:0.25rem;padding:1px 0.25rem;margin-left:0.25rem;vertical-align:1px">ITM</span>`:'';
-  const _pctHtml=_pctToStrike!==null?`<span style="font-size:0.6875rem;font-weight:400"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:0.75rem;font-weight:400;color:var(--silver)">To Strike</span>${_itmTag}</span>`:'';
-  const _dteCl=activeDTE!==null?dteCls(activeDTE):'g';
-  const _dteColor=_dteCl==='r'?'var(--red)':_dteCl==='o'?'var(--orange)':'var(--green)';
+  const _pctHtml=_pctToStrike!==null?`<span style="font-size:0.6875rem;font-weight:400"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:0.75rem;font-weight:400;color:var(--silver)">To Strike</span></span>`:'';
+  const _dteColor='var(--silver)';
   const dteBadge=activeDTE!==null
     ?`<span class="rot-dte-badge" style="color:${_dteColor};border-color:${_dteColor}">${activeDTEExpiry?fmtDateShort(activeDTEExpiry):''} (${activeDTE}d)</span>`
     :'';
@@ -3738,9 +3710,7 @@ function renderRotationWindow(wheel){
     :'';
   const _fTot=_cs.total!=null?_fact('Total result',(_cs.total>=0?'+':'')+fmtMoney(_cs.total),colorN(_cs.total)):'';
   const _fAroc=aroc?_fact(aroc.aroc!=null?'AROC':'ROC',(aroc.aroc!=null?aroc.aroc:aroc.roc).toFixed(1)+'%',colorN(aroc.aroc!=null?aroc.aroc:aroc.roc)):'';
-  const _memo=_cs.held?(_cs.below
-    ?`<div class="wl-memo warn">Call $${fmt2(_cs.callStrike).replace(/\.00$/,'')} is below breakeven $${fmt2(_cs.breakeven)}</div>`
-    :`<div class="wl-memo">Sell calls above <b>$${fmt2(_cs.sellAbove)}</b> ${ii(`Your breakeven after all premium and dividends. Calls struck above this lock in a profit if called away.`)}</div>`):'';
+  const _memo=_cs.held?`<div class="wl-memo">Sell calls above <b>$${fmt2(_cs.sellAbove)}</b> ${ii(`Your breakeven after all premium and dividends. Calls struck above this lock in a profit if called away.`)}</div>`:'';
   const _cr=cycleReturn(wheel,m,_rss,m.trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0));
   const _fRet=_cr?_fact(_cr.ann!=null?'Cycle return / yr'+(_cr.incUnrealised?' (incl. unrealised)':''):'Cycle return ('+_cr.days+'d)',(_cr.ann!=null?_cr.ann:_cr.raw).toFixed(1)+'%',colorN(_cr.raw)):'';
   const _cap=(m.sharesHeld>0&&openPos&&openPos.action==='STOC'&&_rss.openShares>0)?calledAwayProfit(openPos.strike,_rss.openShares,_rss.openCost,m.premiumNet,_rss.realised):null;
@@ -3841,7 +3811,7 @@ function calcTradeROC(t){
   return((t.total/collateral)*(365/dte)*100);
 }
 function renderTradeRow(t,wheelTrades,opts){
-  // opts (optional): {labelsHtml, rocHtml, rocColor, editOnclick, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
+  // opts (optional): {rocHtml, rocColor, editOnclick, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
   opts=opts||{};
   // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
   let chainHtml='';
@@ -3867,11 +3837,10 @@ function renderTradeRow(t,wheelTrades,opts){
   const rowCls=[t.rollId?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
   const rollBadge=t.rollId?'<span class="roll-badge">↻</span>':'';
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
-  const labels=opts.labelsHtml||'';
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
   return`<div class="trow ${rowCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
-    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}${labels}</span>
+    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?'$'+fmt2(t.strike):'—'}</span>
@@ -4142,30 +4111,6 @@ function getWheelPhase(wheel){
   return hasCSP?{phase:'CSP',label:'Cash-Secured Put',cls:'d-phase-csp'}:{phase:'IDLE',label:'No Open Leg',cls:'d-phase-idle'};
 }
 
-function buildDashAlerts(){
-  const alerts=[];
-  db.wheels.forEach(w=>{
-    openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).forEach(t=>{
-    const dte=dteDays(t.expiry);
-    const price=(quotes[t.ticker]?.price)||(w?.lastPrice)||null;
-    const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
-    if(dte!==null&&dte<=7){
-      const diff=price!=null&&t.strike?Math.abs(price-t.strike).toFixed(2):'';
-      alerts.push({type:itm?'danger':'warn',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} expires in ${dte}d${itm?' — ITM by $'+diff:''}`});
-    }
-    if(itm&&dte>7){
-      alerts.push({type:'danger',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} $${fmt2(t.strike)} is ITM — assignment risk`});
-    }
-    // Profit target check (50%+ of credit captured via time decay)
-    if(!itm&&t.total>0&&price!=null&&dte>3){
-      // Rough theta capture: if >50% of DTE has passed, suggest management
-      const origDTE=t.days||30;const elapsed=origDTE-dte;
-      if(elapsed/origDTE>=0.5&&dte>=3) alerts.push({type:'info',wheelId:w.id,tradeId:t.id,text:`${esc(t.ticker)} ${t.action} at ${Math.round(elapsed/origDTE*100)}% of DTE — consider closing`});
-    }
-    });
-  });
-  return alerts.slice(0,6);
-}
 
 function buildMiniCal(){
   const today=new Date();const y=today.getFullYear(),m=today.getMonth();
@@ -4203,7 +4148,6 @@ function renderStatsOverview(){
   const openWheels=db.wheels.filter(w=>w.status==='open').sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
   const liveOpts=db.wheels.flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id))).sort((a,b)=>a.expiry.localeCompare(b.expiry));
   const recentTrades=[...db.trades].sort((a,b)=>b.entered.localeCompare(a.entered)).slice(0,8);
-  const alerts=buildDashAlerts();
 
   // ── Data Health panel ──
   const health=allDataHealth();
@@ -4276,26 +4220,6 @@ function renderStatsOverview(){
   const avgArocVal=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
   const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average Annualised Return on Capital across your currently open rotations. Calculated as (net premium ÷ capital at risk) × (365 ÷ days held).');
 
-  // ── Alert strip ──
-  const aDanger=alerts.filter(a=>a.type==='danger').length;
-  const aWarn=alerts.filter(a=>a.type==='warn').length;
-  const aBadge=[aDanger?`<span style="color:var(--red);font-size:0.6875rem;font-weight:600">${aDanger} urgent</span>`:'',
-    aWarn?`<span style="color:var(--yellow);font-size:0.6875rem;font-weight:600">${aWarn} expiring</span>`:''].filter(Boolean).join('');
-  const alertHtml=alerts.length?`<div class="d-panel">
-    <div class="d-panel-hdr">
-      <span class="d-panel-title">Alerts</span>
-      <span style="display:flex;gap:0.75rem;align-items:center">${aBadge}</span>
-    </div>
-    <div class="d-panel-body">${alerts.map(a=>{
-      const dotCol=a.type==='danger'?'var(--red)':a.type==='warn'?'var(--yellow)':'var(--orange)';
-      const click=a.tradeId?` onclick="goToTrade('${a.wheelId}','${a.tradeId}')" title="Go to trade"`:'';
-      return`<div class="d-table-row"${click} style="grid-template-columns:0.875rem 1fr auto;gap:0.625rem;align-items:center${a.tradeId?';cursor:pointer':''}">
-        <span class="d-alert-dot" style="background:${dotCol}"></span>
-        <span style="font-size:0.75rem;color:var(--text2);line-height:1.5">${a.text}</span>
-        ${a.tradeId?`<span class="t3-xs">→</span>`:'<span></span>'}
-      </div>`;
-    }).join('')}</div>
-  </div>`:'';
 
   // ── Positions table ──
   const posCols='minmax(4.375rem,0.8fr) minmax(6.875rem,1.2fr) minmax(6.875rem,1.2fr) minmax(5rem,0.9fr) minmax(4.6875rem,0.8fr) minmax(5.625rem,1fr) minmax(5.3125rem,0.9fr) minmax(5rem,1fr)';
@@ -4368,7 +4292,6 @@ function renderStatsOverview(){
     <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div>
 
     <!-- Alert strip -->
-    ${alertHtml}
 
     <!-- Data Health -->
     ${healthPanel}
@@ -4405,13 +4328,6 @@ function nextExpiry(wheelLegs,legs,today){
   const d=Math.round((new Date(all[0].expiry+'T12:00:00')-new Date(today+'T12:00:00'))/864e5);
   return{...all[0],dte:d};
 }
-// Pure: 'Needs you' list from the status labels on open short calls (+ wheel legs expiring within 7 days).
-function needsYou(shorts,spots,today,wheelLegs){
-  const out=[];
-  (shorts||[]).forEach(c=>{const tk=c.underlying||c.und||c.ticker||'';pmccLabels(c,spots[tk],today).forEach(l=>out.push({c:l.c,text:`${tk} $${+c.strike}C · ${l.t}`,legId:c.id}));});
-  (wheelLegs||[]).forEach(l=>{const d=Math.round((new Date(l.expiry+'T12:00:00')-new Date(today+'T12:00:00'))/864e5);if(d>=0&&d<=7)out.push({c:d<=0?'r':'a',text:`${l.ticker} ${l.action==='CSP'?'put':'call'} $${+l.strike} · ${d<=0?'Expires today':'Expiring soon · '+d+'d'}`,wheelId:l.wheelId});});
-  const rank={r:0,a:1,g:2};return out.sort((a,b)=>rank[a.c]-rank[b.c]);
-}
 function renderHome(){
   const today=new Date().toISOString().slice(0,10);
   const legs=db.opts||[];
@@ -4420,8 +4336,6 @@ function renderHome(){
   const un=calcAllUnrealised(db.wheels,db.trades,_priceOf,legs);
   const wheelLegs=db.wheels.filter(w=>w.status==='open').flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).map(l=>({...l,ticker:l.ticker||w.ticker,wheelId:w.id})));
   const nx=nextExpiry(wheelLegs,legs,today);
-  const shorts=legs.filter(l=>l.side==='short'&&l.status==='open');
-  const ny=needsYou(shorts,_optSpots(),today,wheelLegs);
   const health=allDataHealth();
   const mName=new Date().toLocaleDateString('en-GB',{month:'long'});
   const _sr=shareRealisations(db.trades);
@@ -4431,7 +4345,6 @@ function renderHome(){
   const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
-  const nyHtml=ny.length?ny.slice(0,5).map(n=>`<div class="ny-row"><span class="ny-dot ${n.c}"></span><span>${esc(n.text)}</span>${n.wheelId?`<a onclick="goToWheel('${n.wheelId}')">Open</a>`:`<a onclick="switchView('options')">Open</a>`}</div>`).join(''):`<div class="ny-none">Nothing needs you right now.</div>`;
   return`<div class="home">
   <div class="home-head"><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div>
   <div class="hk-grid">
@@ -4444,10 +4357,10 @@ function renderHome(){
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="hk-grid hk-row2">
-    <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p)p.hidden=!p.hidden"><div class="hk-l">Needs you ${ii(`Options expiring this week, PMCC calls needing a decision, and data issues. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':(ny.length+health.length)?'y':'g'}">${(ny.length+health.length)?(ny.length+health.length)+' item'+((ny.length+health.length)>1?'s':''):'✓ All clear'}</div><div class="hk-s">${(ny.length+health.length)?[ny.length?ny.length+' to act on':'',health.length?health.length+' data issue'+(health.length>1?'s':''):''].filter(Boolean).join(' · '):'nothing to do'}</div></div>
+    <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p)p.hidden=!p.hidden"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':''):'nothing to do'}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
-  <div class="hcard ny-panel" id="ny-panel" hidden><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="document.getElementById('ny-panel').hidden=true">Close</a></span></div>${ny.length||!health.length?nyHtml:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(i=>`<div class="ny-row"><span class="ny-dot ${i.sev==='red'?'r':i.sev==='amber'?'a':'g'}"></span><span>${i.text}</span><a onclick="goToHealth()">Open</a></div>`).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
+  <div class="hcard ny-panel" id="ny-panel" hidden><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(i=>`<div class="ny-row"><span class="ny-dot ${i.sev==='red'?'r':i.sev==='amber'?'a':'g'}"></span><span>${i.text}</span><a onclick="goToHealth()">Open</a></div>`).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
   <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
   ${renderMonthlyRealised()}
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
