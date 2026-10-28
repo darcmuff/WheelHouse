@@ -39,3 +39,11 @@ test('pmcc: rolledFrom chains indexed, lone short untinted', () => {
   assert.equal(m.s1, m.s2); assert.equal(m.s3, m.s4);
   assert.notEqual(m.s1, m.s3); assert.equal(m.s5, undefined);
 });
+
+test('render: one teal tint class, chain line sits above the tip row', () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  assert.ok(!/chain-c\d/.test(src), 'no multi-colour palette classes');
+  assert.ok(/\.trow\.chain-tint,\.chain-row\.chain-tint\{background:rgba\(8,145,178/.test(src));
+  assert.equal((src.match(/return`\$\{chainHtml\}<div class="trow /g) || []).length, 2);
+  assert.ok(!/<\/div>\$\{chainHtml\}`/.test(src));
+});
