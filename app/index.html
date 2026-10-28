@@ -3513,7 +3513,8 @@ function priceChartSVG(candles,markers,steps,openStrike,range,firstDate){
   const W=1180,H=280,L=8,R=62,T=14,B=24;
   const last=candles.length?candles[candles.length-1].date:null;if(!last)return'';
   const back={'1M':31,'3M':92,'6M':183}[range];
-  let from=back?new Date(Date.parse(last+'T12:00:00Z')-back*864e5).toISOString().slice(0,10):(firstDate||candles[0].date);
+  const minAll=new Date(Date.parse(last+'T12:00:00Z')-92*864e5).toISOString().slice(0,10); // 'All' shows at least ~3 months of context
+  let from=back?new Date(Date.parse(last+'T12:00:00Z')-back*864e5).toISOString().slice(0,10):[firstDate||candles[0].date,minAll].sort()[0];
   const cs=candles.filter(c=>c.date>=from);if(cs.length<2)return'';
   from=cs[0].date;
   const ms=markers.filter(m=>m.date>=from&&m.date<=last);
@@ -3538,37 +3539,55 @@ function priceChartSVG(candles,markers,steps,openStrike,range,firstDate){
   ms.forEach(m=>{const x=X(m.date),y=Y(m.strike);s+=`<g class="ii pc-mk" tabindex="0" data-tip="${esc(m.tip)}"><rect x="${f(x-6)}" y="${f(y-6)}" width="12" height="12" rx="2" fill="${m.color}" stroke="var(--bg2)" stroke-width="1.5"/><text x="${f(x)}" y="${f(y-10)}" class="pc-ml" fill="${m.color}" text-anchor="middle">${esc(m.label)}</text></g>`;});
   return s+'</svg>';
 }
-const _candles={};
+const _candles={},_candlesData={},_pcRange={},_pcOpen={};
+// Pure: any stored date shape → 'YYYY-MM-DD' (ISO string, Firestore Timestamp {seconds}/toDate(), Date, 'DD/MM/YYYY'). null if unknown.
+function isoDay(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='string'){const m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];const u=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);if(u){const y=u[3].length===2?'20'+u[3]:u[3];return`${y}-${u[2].padStart(2,'0')}-${u[1].padStart(2,'0')}`;}const t=Date.parse(v);return isNaN(t)?null:new Date(t).toISOString().slice(0,10);}
+  if(typeof v.toDate==='function'){try{return v.toDate().toISOString().slice(0,10);}catch(e){return null;}}
+  if(typeof v.seconds==='number')return new Date(v.seconds*1000).toISOString().slice(0,10);
+  if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);
+  return null;
+}
+function chartTrades(trades){return (trades||[]).map(t=>({...t,entered:isoDay(t.entered),expiry:isoDay(t.expiry)})).filter(t=>t.entered);}
 function loadCandles(sym,from){
-  if(!_candles[sym])_candles[sym]=fetch(`/.netlify/functions/candles?symbol=${encodeURIComponent(sym)}&from=${from}`,{signal:AbortSignal.timeout(15000)})
-    .then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(j=>(j.candles||[]).filter(c=>c.close>0))
-    .catch(e=>{delete _candles[sym];throw e;});
+  sym=String(sym||'').trim().toUpperCase();
+  if(!_candles[sym]){
+    const ctl=typeof AbortController!=='undefined'?new AbortController():null;
+    const to=setTimeout(()=>ctl&&ctl.abort(),15000);
+    _candles[sym]=Promise.race([
+      fetch(`/.netlify/functions/candles?symbol=${encodeURIComponent(sym)}&from=${from}`,ctl?{signal:ctl.signal}:{}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(j=>(j.candles||[]).filter(c=>c&&c.close>0)),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),15500))
+    ]).then(cs=>{clearTimeout(to);_candlesData[sym]=cs;return cs;}).catch(e=>{clearTimeout(to);delete _candles[sym];throw e;});
+  }
   return _candles[sym];
 }
-function drawWheelChart(el){
-  const w=db.wheels.find(x=>x.id===el.dataset.wid);if(!w)return;
-  const body=el.querySelector('.pc-body'),m=calcWheel(w),trades=m.trades;
-  const first=(trades.map(t=>t.entered).filter(Boolean).sort()[0]||new Date().toISOString()).slice(0,10);
-  const from=new Date(Date.parse(first+'T12:00:00Z')-14*864e5).toISOString().slice(0,10);
-  const range=el.dataset.range||'All';
-  el.querySelectorAll('.pc-rg button').forEach(b=>b.classList.toggle('on',b.dataset.r===range));
-  loadCandles(w.ticker,from).then(cs=>{
-    if(!cs.length){body.innerHTML='<div class="pc-empty">Price history unavailable</div>';return;}
-    const steps=breakevenSteps(trades),mk=chartMarkers(trades,steps),op=w.status==='open'?buildOpenPosition(trades):null;
-    const svg=priceChartSVG(cs,mk,steps,op?op.strike:null,range,first);
-    body.innerHTML=svg||'<div class="pc-empty">Not enough price history for this range</div>';
-  }).catch(()=>{body.innerHTML='<div class="pc-empty">Price history unavailable</div>';});
+// Builds the chart HTML for a wheel from cached candles (or null if not loaded yet).
+function wheelChartHtml(w,cs){
+  const trades=chartTrades(calcWheel(w).trades);
+  if(!cs||!cs.length)return'<div class="pc-empty">No price history for this ticker yet</div>';
+  const first=(trades.map(t=>t.entered).sort()[0]||cs[0].date);
+  const steps=breakevenSteps(trades),mk=chartMarkers(trades,steps),op=w.status==='open'?buildOpenPosition(calcWheel(w).trades):null;
+  return priceChartSVG(cs,mk,steps,op?op.strike:null,_pcRange[w.id]||'All',first<cs[0].date?cs[0].date:first)||'<div class="pc-empty">Not enough price history for this range</div>';
 }
-let _pcObs=null;
-function wlChartToggle(el){
-  if(!el.open)return;
-  if(el.dataset.loaded){return;}
-  const go=()=>{el.dataset.loaded='1';drawWheelChart(el);};
-  if(typeof IntersectionObserver==='undefined')return go();
-  if(!_pcObs)_pcObs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){_pcObs.unobserve(e.target);e.target._go&&e.target._go();}}),{rootMargin:'200px'});
-  el._go=go;_pcObs.observe(el);
+// Loads (if needed) and draws into the LIVE element for this wheel — re-queried by id, so cards re-rendered meanwhile still update.
+function drawWheelChart(wid){
+  if(wid&&wid.dataset)wid=wid.dataset.wid;
+  const w=db.wheels.find(x=>x.id===wid);if(!w)return;
+  const sym=String(w.ticker||'').trim().toUpperCase();
+  const live=()=>{const el=document.getElementById('pc-'+wid);return el&&el.open?el.querySelector('.pc-body'):null;};
+  const b0=live();if(!b0)return;
+  document.getElementById('pc-'+wid).querySelectorAll('.pc-rg button').forEach(b=>b.classList.toggle('on',b.dataset.r===(_pcRange[wid]||'All')));
+  if(_candlesData[sym]){b0.innerHTML=wheelChartHtml(w,_candlesData[sym]);return;}
+  b0.innerHTML='<div class="pc-empty">Loading price history…</div>';
+  const first=chartTrades(calcWheel(w).trades).map(t=>t.entered).sort()[0]||new Date().toISOString().slice(0,10);
+  const from=new Date(Date.parse(first+'T12:00:00Z')-120*864e5).toISOString().slice(0,10);
+  loadCandles(sym,from).then(cs=>{const b=live();if(b)b.innerHTML=wheelChartHtml(w,cs);})
+    .catch(()=>{const b=live();if(b)b.innerHTML=`<div class="pc-empty">Price history unavailable · <a href="#" onclick="event.preventDefault();event.stopPropagation();drawWheelChart('${wid}')">Retry</a></div>`;});
 }
-function wlChartRange(btn){const el=btn.closest('.wl-chart');el.dataset.range=btn.dataset.r;drawWheelChart(el);}
+function wlChartToggle(el){const wid=el.dataset.wid;_pcOpen[wid]=el.open;if(el.open)drawWheelChart(wid);}
+function wlChartRange(btn){const el=btn.closest('.wl-chart');_pcRange[el.dataset.wid]=btn.dataset.r;drawWheelChart(el.dataset.wid);}
+window.wlChartToggle=wlChartToggle;window.wlChartRange=wlChartRange;window.drawWheelChart=drawWheelChart;
 // Earnings badge: next earnings date per ticker (cached per session; shown only if within 14 days on open wheels).
 const _earn={};
 function earningsDays(date,today){if(!date)return null;return Math.round((Date.parse(date+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5);}
@@ -3772,7 +3791,7 @@ function renderRotationWindow(wheel){
       ${_mn('Premium collected',fmtMoney(m.premiumCredits).replace(/\.00$/,''),m.premiumDebits?`${fmtMoney(m.premiumDebits).replace(/\.00$/,'')} bought back`:'credits before buybacks')}
       ${aroc?_mn(aroc.aroc!=null?'AROC':'ROC',(aroc.aroc!=null?aroc.aroc:aroc.roc).toFixed(1)+'%',aroc.aroc!=null?'premium only, annualised':'too early to annualise',colorN(aroc.aroc!=null?aroc.aroc:aroc.roc)):''}
       ${_cr?_mn('Days in cycle',String(_cr.days),'first trade to '+(isOpen?'today':'close')):''}</div></details>
-    <details class="wl-chart" data-wid="${wheel.id}" ${isOpen?'open':''} ontoggle="wlChartToggle(this)" onclick="event.stopPropagation()"><summary>Price chart</summary><div class="pc-top"><span class="pc-leg"><i style="background:#7c5cd6"></i>Put<i style="background:var(--green)"></i>Call<i style="background:var(--red)"></i>Buyback<i style="background:#d4900f"></i>Assigned<i style="background:var(--blue)"></i>Called away<span class="pc-dash" style="color:#d4900f">┅ Breakeven</span><span class="pc-dash" style="color:var(--green)">┅ Open strike</span></span><span class="pc-rg">${['1M','3M','6M','All'].map(r=>`<button type="button" class="btn btn-ghost btn-sm${r==='All'?' on':''}" data-r="${r}" onclick="wlChartRange(this)">${r}</button>`).join('')}</span></div><div class="pc-body"><div class="pc-empty">Loading price history…</div></div></details>
+    <details class="wl-chart" id="pc-${wheel.id}" data-wid="${wheel.id}" ${(_pcOpen[wheel.id]!=null?_pcOpen[wheel.id]:isOpen)?'open':''} ontoggle="wlChartToggle(this)" onclick="event.stopPropagation()"><summary>Price chart</summary><div class="pc-top"><span class="pc-leg"><i style="background:#7c5cd6"></i>Put<i style="background:var(--green)"></i>Call<i style="background:var(--red)"></i>Buyback<i style="background:#d4900f"></i>Assigned<i style="background:var(--blue)"></i>Called away<span class="pc-dash" style="color:#d4900f">┅ Breakeven</span><span class="pc-dash" style="color:var(--green)">┅ Open strike</span></span><span class="pc-rg">${['1M','3M','6M','All'].map(r=>`<button type="button" class="btn btn-ghost btn-sm${r===(_pcRange[wheel.id]||'All')?' on':''}" data-r="${r}" onclick="wlChartRange(this)">${r}</button>`).join('')}</span></div><div class="pc-body">${_candlesData[String(wheel.ticker||'').trim().toUpperCase()]?wheelChartHtml(wheel,_candlesData[String(wheel.ticker||'').trim().toUpperCase()]):'<div class="pc-empty">Loading price history…</div>'}</div></details>
     ${expandedHtml}
   </div>`;
 }
