@@ -623,6 +623,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .hk-l{color:var(--text3);font-size:0.6875rem}.hk-v{font-size:1.375rem;font-weight:600;margin-top:0.25rem;letter-spacing:-0.01em}.hk.big .hk-v{font-size:2.125rem}
 .hk-s{color:var(--text2);font-size:0.65rem;margin-top:0.125rem}.hk-how{color:var(--text3);font-size:0.575rem;margin-top:0.5rem;line-height:1.4}
 .hk-wl{margin-top:0.375rem;display:flex;flex-direction:column;gap:0.125rem}.hk-wl>div{display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;white-space:nowrap}.hk-wl span{color:var(--text2);font-size:0.6875rem}.hk-wl b{font-size:1.0625rem;font-weight:600;letter-spacing:-0.01em}
+.wl-chart{margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;padding:0.5rem 0.75rem}.wl-chart summary{color:var(--text2);font-size:0.65rem;font-weight:600;cursor:pointer}.pc-top{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin:0.4rem 0}.pc-leg{font-size:0.6rem;color:var(--text2);display:flex;align-items:center;flex-wrap:wrap;gap:0.25rem 0.5rem}.pc-leg i{display:inline-block;width:0.55rem;height:0.55rem;border-radius:2px;margin-right:-0.25rem}.pc-rg{display:flex;gap:0.25rem}.pc-rg .on{background:var(--bg3);font-weight:600}.pc-svg{width:100%;height:auto;display:block}.pc-ax{font-size:10px;fill:var(--text3)}.pc-tag{font-size:10.5px;font-weight:600;fill:#fff}.pc-ml{font-size:9.5px;font-weight:600}.ii.pc-mk{cursor:pointer;outline:none;opacity:1}.pc-empty{padding:2rem;text-align:center;color:var(--text3);font-size:0.7rem}.rot-earn{font-size:0.6rem;font-weight:600;border:1px solid var(--border);border-radius:1rem;padding:0.1rem 0.5rem;color:var(--text2);white-space:nowrap}
 .pos{color:var(--green)}.neg{color:var(--red)}
 .home-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:0.75rem}
 .hcard{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
@@ -3468,6 +3469,121 @@ function wheelStage(sharesHeld,openAction,hasOut){
   if(openAction==='CSP')return 0;
   return hasOut?3:0;
 }
+// ── Wheel price chart (READ-ONLY: reads trades + /.netlify/functions/candles; writes nothing) ──
+// Pure: breakeven per share as of each trade date, from assignment on. Same formula as calcWheel
+// ((open-share cost − net premium − dividends) / shares held), using ONLY trades entered on or before that date.
+function breakevenSteps(trades){
+  const ts=(trades||[]).filter(t=>t.entered).slice().sort((a,b)=>a.entered.localeCompare(b.entered));
+  const dates=[...new Set(ts.map(t=>t.entered.slice(0,10)))];
+  const out=[];
+  dates.forEach(d=>{
+    const upTo=ts.filter(t=>t.entered.slice(0,10)<=d);
+    let prem=0,divs=0,held=0;
+    upTo.forEach(t=>{const v=t.total||0;
+      if(t.action==='CSP'||t.action==='STOC'||t.action==='STC')prem+=v;else if(t.action==='BTC')prem-=v;
+      else if(t.action==='DIV')divs+=v;else if(t.action==='IN')held+=(t.shares||0);else if(t.action==='OUT')held-=(t.shares||0);});
+    let v=null;
+    if(held>0){const k='__be';const lots=(shareRealisations(upTo.map(t=>({...t,wheelId:k}))).open[k])||{cost:0};v=Math.round((lots.cost-prem-divs)/held*1e4)/1e4;}
+    const last=out.length?out[out.length-1].value:undefined;
+    if(v!==last)out.push({date:d,value:v});
+  });
+  while(out.length&&out[0].value==null)out.shift();
+  return out;
+}
+const CHART_KINDS={CSP:{k:'put',c:'#7c5cd6',l:'Put'},STOC:{k:'call',c:'var(--green)',l:'Call'},BTC:{k:'btc',c:'var(--red)',l:'Buyback'},STC:{k:'btc',c:'var(--red)',l:'Sold to close'},IN:{k:'in',c:'#d4900f',l:'Assigned'},OUT:{k:'out',c:'var(--blue)',l:'Called away'}};
+// Pure: trades → chart markers (entry date, strike), with plain tooltip text incl. 'vs breakeven' where shares were held.
+function chartMarkers(trades,steps){
+  const beAt=d=>{let v=null;(steps||[]).forEach(s=>{if(s.date<=d)v=s.value;});return v;};
+  const dm=s=>s?s.slice(8,10)+'/'+s.slice(5,7):'';
+  const money=n=>(n<0?'−':'+')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (trades||[]).filter(t=>CHART_KINDS[t.action]&&t.entered&&Number(t.strike)>0).slice().sort((a,b)=>a.entered.localeCompare(b.entered)).map(t=>{
+    const K=CHART_KINDS[t.action],d=t.entered.slice(0,10),k=Number(t.strike),be=beAt(d);
+    const net=t.action==='BTC'||t.action==='IN'?-(t.total||0):(t.total||0);
+    const name=t.action==='STOC'?'CC':t.action==='CSP'?'CSP':K.l;
+    const parts=[name,'Strike $'+k.toFixed(2),(t.shares||0)+' sh'];
+    if(t.expiry&&(t.action==='CSP'||t.action==='STOC'))parts.push(dm(d)+'→'+dm(t.expiry));else parts.push(dm(d));
+    if(t.action!=='IN'&&t.action!=='OUT')parts.push('Net '+money(net));
+    if(t.expiredWorthless)parts.push('Expired');
+    if(be!=null&&t.action!=='IN')parts.push('vs breakeven '+(k-be>=0?'+':'−')+'$'+Math.abs(k-be).toFixed(2));
+    return{date:d,strike:k,kind:K.k,color:K.c,label:name,tip:parts.join(' · ')};
+  });
+}
+// Pure: SVG for the chart. candles [{date,close}], range '1M'|'3M'|'6M'|'All' (All = from first trade).
+function priceChartSVG(candles,markers,steps,openStrike,range,firstDate){
+  const W=1180,H=280,L=8,R=62,T=14,B=24;
+  const last=candles.length?candles[candles.length-1].date:null;if(!last)return'';
+  const back={'1M':31,'3M':92,'6M':183}[range];
+  let from=back?new Date(Date.parse(last+'T12:00:00Z')-back*864e5).toISOString().slice(0,10):(firstDate||candles[0].date);
+  const cs=candles.filter(c=>c.date>=from);if(cs.length<2)return'';
+  from=cs[0].date;
+  const ms=markers.filter(m=>m.date>=from&&m.date<=last);
+  const vals=[...cs.map(c=>c.close),...ms.map(m=>m.strike),...steps.filter(s=>s.value!=null).map(s=>s.value),...(openStrike?[openStrike]:[])];
+  let lo=Math.min(...vals),hi=Math.max(...vals);const pad=(hi-lo)*0.08||1;lo-=pad;hi+=pad;
+  const t0=Date.parse(from+'T12:00:00Z'),t1=Date.parse(last+'T12:00:00Z')||t0+1;
+  const X=d=>L+(Date.parse(d+'T12:00:00Z')-t0)/Math.max(1,t1-t0)*(W-L-R),Y=p=>T+(hi-p)/(hi-lo)*(H-T-B);
+  const f=n=>n.toFixed(1);let s=`<svg class="pc-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Price chart">`;
+  const step=(hi-lo)/5;for(let i=0;i<=5;i++){const p=lo+step*i;s+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(p))}" y2="${f(Y(p))}" stroke="var(--border)"/><text x="${W-R+6}" y="${f(Y(p)+3)}" class="pc-ax">${p.toFixed(2)}</text>`;}
+  const mons=[];let d=new Date(t0);d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1);while(d.getTime()<=t1){mons.push(d.toISOString().slice(0,10));d.setUTCMonth(d.getUTCMonth()+1);}
+  mons.forEach(m=>{s+=`<text x="${f(X(m))}" y="${H-7}" class="pc-ax" text-anchor="middle">${new Date(m+'T12:00:00Z').toLocaleDateString('en-GB',{month:'short'})}</text>`;});
+  const pts=cs.map(c=>f(X(c.date))+','+f(Y(c.close))).join(' ');
+  s+=`<polygon points="${f(X(cs[0].date))},${f(H-B)} ${pts} ${f(X(last))},${f(H-B)}" fill="var(--blue)" opacity="0.08"/><polyline points="${pts}" fill="none" stroke="var(--blue)" stroke-width="1.8"/>`;
+  const st=steps.filter(x=>x.date<=last);
+  st.forEach((x,i)=>{if(x.value==null)return;const a=X(x.date<from?from:x.date),b=i+1<st.length?X(st[i+1].date<from?from:st[i+1].date):X(last);if(b<=a&&i+1<st.length)return;
+    s+=`<line x1="${f(a)}" x2="${f(Math.max(a,b))}" y1="${f(Y(x.value))}" y2="${f(Y(x.value))}" stroke="#d4900f" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+    if(i+1<st.length&&st[i+1].value!=null)s+=`<line x1="${f(b)}" x2="${f(b)}" y1="${f(Y(x.value))}" y2="${f(Y(st[i+1].value))}" stroke="#d4900f" stroke-dasharray="2 3"/>`;});
+  const beNow=st.length?st[st.length-1].value:null;
+  if(beNow!=null)s+=`<rect x="${W-R-118}" y="${f(Y(beNow)+4)}" width="116" height="16" rx="4" fill="#d4900f"/><text x="${W-R-60}" y="${f(Y(beNow)+15.5)}" class="pc-tag" text-anchor="middle">Breakeven $${beNow.toFixed(2)}</text>`;
+  if(openStrike){s+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(openStrike))}" y2="${f(Y(openStrike))}" stroke="var(--green)" stroke-width="1.3" stroke-dasharray="6 4"/><rect x="${W-R-100}" y="${f(Y(openStrike)-20)}" width="98" height="16" rx="4" fill="var(--green)"/><text x="${W-R-51}" y="${f(Y(openStrike)-8.5)}" class="pc-tag" text-anchor="middle">Open strike $${(+openStrike).toFixed(2).replace(/\.00$/,'')}</text>`;}
+  const lc=cs[cs.length-1].close;s+=`<rect x="${W-R+2}" y="${f(Y(lc)-8)}" width="52" height="16" rx="3" fill="var(--blue)"/><text x="${W-R+28}" y="${f(Y(lc)+3.5)}" class="pc-tag" text-anchor="middle">${lc.toFixed(2)}</text>`;
+  ms.forEach(m=>{const x=X(m.date),y=Y(m.strike);s+=`<g class="ii pc-mk" tabindex="0" data-tip="${esc(m.tip)}"><rect x="${f(x-6)}" y="${f(y-6)}" width="12" height="12" rx="2" fill="${m.color}" stroke="var(--bg2)" stroke-width="1.5"/><text x="${f(x)}" y="${f(y-10)}" class="pc-ml" fill="${m.color}" text-anchor="middle">${esc(m.label)}</text></g>`;});
+  return s+'</svg>';
+}
+const _candles={};
+function loadCandles(sym,from){
+  if(!_candles[sym])_candles[sym]=fetch(`/.netlify/functions/candles?symbol=${encodeURIComponent(sym)}&from=${from}`,{signal:AbortSignal.timeout(15000)})
+    .then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(j=>(j.candles||[]).filter(c=>c.close>0))
+    .catch(e=>{delete _candles[sym];throw e;});
+  return _candles[sym];
+}
+function drawWheelChart(el){
+  const w=db.wheels.find(x=>x.id===el.dataset.wid);if(!w)return;
+  const body=el.querySelector('.pc-body'),m=calcWheel(w),trades=m.trades;
+  const first=(trades.map(t=>t.entered).filter(Boolean).sort()[0]||new Date().toISOString()).slice(0,10);
+  const from=new Date(Date.parse(first+'T12:00:00Z')-14*864e5).toISOString().slice(0,10);
+  const range=el.dataset.range||'All';
+  el.querySelectorAll('.pc-rg button').forEach(b=>b.classList.toggle('on',b.dataset.r===range));
+  loadCandles(w.ticker,from).then(cs=>{
+    if(!cs.length){body.innerHTML='<div class="pc-empty">Price history unavailable</div>';return;}
+    const steps=breakevenSteps(trades),mk=chartMarkers(trades,steps),op=w.status==='open'?buildOpenPosition(trades):null;
+    const svg=priceChartSVG(cs,mk,steps,op?op.strike:null,range,first);
+    body.innerHTML=svg||'<div class="pc-empty">Not enough price history for this range</div>';
+  }).catch(()=>{body.innerHTML='<div class="pc-empty">Price history unavailable</div>';});
+}
+let _pcObs=null;
+function wlChartToggle(el){
+  if(!el.open)return;
+  if(el.dataset.loaded){return;}
+  const go=()=>{el.dataset.loaded='1';drawWheelChart(el);};
+  if(typeof IntersectionObserver==='undefined')return go();
+  if(!_pcObs)_pcObs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){_pcObs.unobserve(e.target);e.target._go&&e.target._go();}}),{rootMargin:'200px'});
+  el._go=go;_pcObs.observe(el);
+}
+function wlChartRange(btn){const el=btn.closest('.wl-chart');el.dataset.range=btn.dataset.r;drawWheelChart(el);}
+// Earnings badge: next earnings date per ticker (cached per session; shown only if within 14 days on open wheels).
+const _earn={};
+function earningsDays(date,today){if(!date)return null;return Math.round((Date.parse(date+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5);}
+function earningsBadge(sym){
+  const e=_earn[sym];if(!e||e.date===undefined)return'';
+  const n=earningsDays(e.date,new Date().toISOString().slice(0,10));
+  if(n==null||n<0||n>14)return'';
+  return`<span class="rot-earn" title="Next earnings ${e.date}">● Earnings ${n===0?'today':n===1?'tomorrow':'in '+n+'d'}</span>`;
+}
+function queueEarnings(sym){
+  if(!sym||_earn[sym])return;_earn[sym]={};
+  fetch(`/.netlify/functions/earnings?symbol=${encodeURIComponent(sym)}`,{signal:AbortSignal.timeout(30000)}).then(r=>r.ok?r.json():null)
+    .then(j=>{_earn[sym]={date:j&&j.date||null};document.querySelectorAll(`.rot-earn-slot[data-sym="${CSS.escape(sym)}"]`).forEach(x=>x.innerHTML=earningsBadge(sym));})
+    .catch(()=>{_earn[sym]={date:null};});
+}
 function renderRotationWindow(wheel){
   const m=calcWheel(wheel);
   const exp=expanded.has(wheel.id);
@@ -3642,6 +3758,7 @@ function renderRotationWindow(wheel){
       <span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span>
       ${headerPriceHtml}
       <span class="rot-label">${_dateSpan}</span>
+      ${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}">${earningsBadge(wheel.ticker)}</span>`):''}
       <span class="rot-shares">${shares}</span>
       ${_pctHtml}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
@@ -3655,6 +3772,7 @@ function renderRotationWindow(wheel){
       ${_mn('Premium collected',fmtMoney(m.premiumCredits).replace(/\.00$/,''),m.premiumDebits?`${fmtMoney(m.premiumDebits).replace(/\.00$/,'')} bought back`:'credits before buybacks')}
       ${aroc?_mn(aroc.aroc!=null?'AROC':'ROC',(aroc.aroc!=null?aroc.aroc:aroc.roc).toFixed(1)+'%',aroc.aroc!=null?'premium only, annualised':'too early to annualise',colorN(aroc.aroc!=null?aroc.aroc:aroc.roc)):''}
       ${_cr?_mn('Days in cycle',String(_cr.days),'first trade to '+(isOpen?'today':'close')):''}</div></details>
+    <details class="wl-chart" data-wid="${wheel.id}" ${isOpen?'open':''} ontoggle="wlChartToggle(this)" onclick="event.stopPropagation()"><summary>Price chart</summary><div class="pc-top"><span class="pc-leg"><i style="background:#7c5cd6"></i>Put<i style="background:var(--green)"></i>Call<i style="background:var(--red)"></i>Buyback<i style="background:#d4900f"></i>Assigned<i style="background:var(--blue)"></i>Called away<span class="pc-dash" style="color:#d4900f">┅ Breakeven</span><span class="pc-dash" style="color:var(--green)">┅ Open strike</span></span><span class="pc-rg">${['1M','3M','6M','All'].map(r=>`<button type="button" class="btn btn-ghost btn-sm${r==='All'?' on':''}" data-r="${r}" onclick="wlChartRange(this)">${r}</button>`).join('')}</span></div><div class="pc-body"><div class="pc-empty">Loading price history…</div></div></details>
     ${expandedHtml}
   </div>`;
 }
