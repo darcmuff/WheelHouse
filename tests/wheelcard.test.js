@@ -56,8 +56,8 @@ test('wheel card: no More numbers disclosure; premium collected and days in cycl
 });
 
 test('metrics rows: space-between, first flush left, last flush right, single row', () => {
-  assert.ok(SRC.includes('.wl-facts{display:flex;justify-content:space-between;gap:0.75rem;flex-wrap:nowrap}.wl-facts>.wl-f{flex:0 1 auto;min-width:0}'));
-  assert.ok(SRC.includes('.lc-hero{display:flex;justify-content:space-between;gap:1.75rem;margin-top:0.75rem;flex-wrap:nowrap}'));
+  assert.ok(SRC.includes('.wl-facts{display:flex;justify-content:space-between;gap:0.75rem;flex-wrap:nowrap;padding-inline:3rem}.wl-facts>.wl-f{flex:0 1 auto;min-width:0}'));
+  assert.ok(SRC.includes('.lc-hero{display:flex;justify-content:space-between;gap:1.75rem;margin-top:0.75rem;flex-wrap:nowrap;padding-inline:3rem}'));
   assert.ok(!/\.wl-facts>\.wl-f\{flex:1 1 0/.test(SRC));
   assert.ok(SRC.includes('.wl-facts>.wl-f:last-child:not(:first-child){text-align:right}'));
 });
