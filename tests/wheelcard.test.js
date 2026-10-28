@@ -67,3 +67,8 @@ test('wheel card: open-option cell is labelled Profit with signed $ and % undern
   assert.ok(!SRC.includes("<span>Current value</span>"));
   assert.ok(SRC.includes("${_curPft>=0?'+':'-'}${fmtMoney(Math.abs(_curPft))}"));
 });
+
+test('wheel card Profit is chain-aware', () => {
+  assert.ok(SRC.includes('const _curChain=wheelChainProfit(m.trades,_curOpt,_curVal);'));
+  assert.ok(SRC.includes('const _curPft=_curChain?_curChain.profit:wheelCurrentProfit(_curOpt,_curVal);'));
+});
