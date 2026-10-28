@@ -78,7 +78,7 @@ check('Take profit green ≥40% captured with %', T({ c: o({ mark: 3.84 }), spot
 check('no price → no price-based labels (expiry still shown)', T({ c: o({ mark: null, expiry: '2026-10-25' }), spot: undefined }) === 'Expiring soon/a');
 check('closed short → no labels', T({ c: o({ status: 'closed', mark: 0.1 }), spot: 300 }) === '');
 S.setOpts(legs);
-check('labels render on the open face STO row', /pmcc-lb g">Take profit · 52%/.test(S.renderPmccOpenFace(leap, today, 205)));
+check('no Take profit badge on trade rows (open face)', !/Take profit/.test(S.renderPmccOpenFace(leap, today, 205)) && /In the money/.test(S.renderPmccOpenFace(leap, today, 300)));
 check('no spot → no money-ness labels on the open face', !/the money/.test(S.renderPmccOpenFace(leap, today, undefined)) && /In the money/.test(S.renderPmccOpenFace(leap, today, 300)));
 
 // ── form leg ──
