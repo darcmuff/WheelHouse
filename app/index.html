@@ -3090,7 +3090,7 @@ function saveOptClose(){
   }
   closeModal('mOptClose');render();
 }
-// ── Wheel card "Current value": live mid of each wheel's open short option via the same optchain proxy. Display-only, never saved. ──
+// ── Wheel card "Profit": live mid of each wheel's open short option via the same optchain proxy. Display-only, never saved. ──
 const _wheelMarks={};let _wheelMarksAt=0;
 async function fetchWheelMarks(force){
   if(!force&&Date.now()-_wheelMarksAt<5*60e3)return;_wheelMarksAt=Date.now();
@@ -3571,6 +3571,8 @@ function wheelCurrentOption(ticker,trades){
 // Pure: live buy-back cost = mid per share × 100 × contracts; null without a live mid
 function wheelCurrentValue(opt,mid){return opt&&mid!=null&&mid>=0?Math.round(mid*100*opt.contracts*100)/100:null;}
 // Pure: % of the sold premium still kept = (premium received − current value) ÷ premium received × 100. + = cheaper to buy back.
+// Pure: open-option profit now = premium received − live buy-back cost; null without premium or quote.
+function wheelCurrentProfit(opt,curVal){if(!opt||!(opt.premium>0)||curVal==null)return null;return Math.round((opt.premium*100*opt.contracts-curVal)*100)/100;}
 function wheelCurrentPct(opt,curVal){if(!opt||!(opt.premium>0)||curVal==null)return null;const rec=opt.premium*100*opt.contracts;return (rec-curVal)/rec*100;}
 
 // Pure: wheel step 0 Put · 1 Assigned · 2 Call · 3 Called away.
@@ -3849,7 +3851,8 @@ function renderRotationWindow(wheel){
     :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
   const _curOpt=isOpen?wheelCurrentOption(wheel.ticker,m.trades):null,_curVal=_curOpt?wheelCurrentValue(_curOpt,_wheelMarks[_curOpt.occ]):null;
   const _curPct=wheelCurrentPct(_curOpt,_curVal);
-  const _fCur=_curVal!=null?`<div class="wl-f wl-cur"><span>Current value</span><b>${fmtMoney(_curVal)}</b>${_curPct!=null?`<small class="${_curPct>=0?'g':'r'}">${_curPct>=0?'+':'-'}${Math.round(Math.abs(_curPct))}%</small>`:''}</div>`:'';
+  const _curPft=wheelCurrentProfit(_curOpt,_curVal);
+  const _fCur=_curPft!=null&&_curPct!=null?`<div class="wl-f wl-cur"><span>Profit</span><b class="${_curPft>=0?'g':'r'}">${_curPft>=0?'+':'-'}${fmtMoney(Math.abs(_curPft))}</b><small class="${_curPct>=0?'g':'r'}">${_curPct>=0?'+':'-'}${Math.round(Math.abs(_curPct))}%</small></div>`:'';
   const _f3=m.sharesHeld>0
     ?_fact('Unrealised',_rss.unrealised==null?'no price':fmtMoney(_rss.unrealised),_rss.unrealised==null?'m':colorN(_rss.unrealised))
     :'';
