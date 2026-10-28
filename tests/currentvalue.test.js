@@ -1,12 +1,13 @@
-// currentvalue.test.js — wheel card "Current value": picks the most recent OPEN short option and prices it.
+// currentvalue.test.js — wheel card "Profit": picks the most recent OPEN short option and prices it.
 const test = require('node:test');
 const assert = require('node:assert');
 const { load } = require('./extract');
-const { wheelCurrentOption, wheelCurrentValue, wheelCurrentPct } = load([
+const { wheelCurrentOption, wheelCurrentValue, wheelCurrentProfit, wheelCurrentPct } = load([
   { kind: 'fn', name: 'walkLegPairs' },
   { kind: 'fn', name: 'openOptionLegs' },
   { kind: 'fn', name: 'wheelCurrentOption' },
   { kind: 'fn', name: 'wheelCurrentValue' },
+  { kind: 'fn', name: 'wheelCurrentProfit' },
   { kind: 'fn', name: 'wheelCurrentPct' },
 ]);
 const d = o => { const x = new Date(); x.setDate(x.getDate() + o); return x.toISOString().slice(0, 10); };
@@ -39,4 +40,12 @@ test('% vs premium received: + when cheaper to buy back, - when dearer', () => {
   assert.strictEqual(wheelCurrentPct(o, wheelCurrentValue(o, 0.6)), -20);   // 240 → -20%
   assert.strictEqual(wheelCurrentPct(o, null), null);
   assert.strictEqual(wheelCurrentPct({ ...o, premium: null }, 100), null);
+});
+
+test('Profit $ = premium received - buy-back cost, signed', () => {
+  const o = wheelCurrentOption('SOFI', [{ id: 'p', action: 'CSP', entered: d(-5), expiry: d(20), strike: 19, premium: 0.5, shares: 400, total: 200 }]);
+  assert.strictEqual(wheelCurrentProfit(o, wheelCurrentValue(o, 0.27)), 92);
+  assert.strictEqual(wheelCurrentProfit(o, wheelCurrentValue(o, 0.6)), -40);
+  assert.strictEqual(wheelCurrentProfit(o, null), null);
+  assert.strictEqual(wheelCurrentProfit({ ...o, premium: null }, 100), null);
 });

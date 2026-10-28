@@ -61,3 +61,9 @@ test('metrics rows: space-between, first flush left, last flush right, single ro
   assert.ok(!/\.wl-facts>\.wl-f\{flex:1 1 0/.test(SRC));
   assert.ok(SRC.includes('.wl-facts>.wl-f:last-child:not(:first-child){text-align:right}'));
 });
+
+test('wheel card: open-option cell is labelled Profit with signed $ and % underneath', () => {
+  assert.ok(SRC.includes('<span>Profit</span>'));
+  assert.ok(!SRC.includes("<span>Current value</span>"));
+  assert.ok(SRC.includes("${_curPft>=0?'+':'-'}${fmtMoney(Math.abs(_curPft))}"));
+});
