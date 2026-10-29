@@ -2397,6 +2397,10 @@ function tradeTableHead(opts){
   const extra=opts.toStrike?'<span>To strike</span>':'';
   return`<div class="thead-row${opts.toStrike?' has-to-strike':''}"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span>${extra}<span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>${esc(last)}</span><span></span></div>`;
 }
+// Pure: PMCC open short call Profit = premium received (entry × 100 × qty) + realised net of earlier roll-chain legs − live buy-back (mark × 100 × qty).
+function pmccShortProfit(c,mark,priorNet){if(!c||mark==null||!(+c.entryPrice>0))return null;const q=+c.qty||0;return Math.round(((+c.entryPrice)*100*q+(priorNet||0)-mark*100*q)*100)/100;}
+// Realised net of the closed legs this open short was rolled from (whole chain, merge rolls included). 0 when not in a chain.
+function pmccChainPriorNet(c,legs){const par=pmccRollParents(legs);const seen=new Set([c.id]);let net=0;const visit=id=>{if(seen.has(id))return;seen.add(id);const l=legs.find(x=>x.id===id);if(!l)return;net+=OPTS.legPnL(l).realized||0;(par[id]||[]).forEach(visit);};(par[c.id]||[]).forEach(visit);return Math.round(net*100)/100;}
 function renderPmccOpenFace(leap,today,spot){
   const P=pmccStats(leap,db.opts||[],today);
   const head=tradeTableHead({lastCol:'Captured',toStrike:true});
@@ -2407,7 +2411,9 @@ function renderPmccOpenFace(leap,today,spot){
   // Captured column → % of premium captured (mark vs sold). Same 40% take-profit threshold as the green label.
   const sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
   let rocHtml='—',rocColor='var(--text3)';
-  if(mark!=null&&sold>0){const cap=Math.round((sold-mark)/sold*100);rocHtml=cap+'%';rocColor=cap>=40?'var(--green)':cap>=0?'var(--text2)':'var(--red)';}
+  if(mark!=null&&sold>0){const cap=Math.round((sold-mark)/sold*100);rocHtml=cap+'%';rocColor=cap>=40?'var(--green)':cap>=0?'var(--text2)':'var(--red)';
+    const pf=pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[]));
+    if(pf!=null)rocHtml+=` <span class="${pf>=0?'g':'r'}">${pf>=0?'+':'-'}${fmtMoney(Math.abs(pf))}</span>`;}
   const ts=toStrike(spot,+c.strike);
   const row=renderTradeRow(t,null,{rocHtml,rocColor,editOnclick:`openOptEdit('${esc(c.groupId||c.id)}')`,extraAfterStrike:`<span class="to-strike ${ts.cls}">${esc(ts.text)}</span>`});
   const acts=`<div class="rot-actions">
