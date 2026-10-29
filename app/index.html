@@ -1880,6 +1880,13 @@ function calcWinLoss(){
       else openOpts++;
     }
   });
+  // Sold options outside the wheel (PMCC short calls etc. in db.opts). Long legs (LEAPs) never count. Read-only.
+  (db.opts||[]).forEach(l=>{
+    if(!l||l.side!=='short'||l.demo)return;
+    if(l.status==='open'){openOpts++;return;}
+    const r=OPTS.legPnL(l).realized; // sell − buyback, fees included; expired = premium kept
+    r>=0?W(r):L(-r);
+  });
   const tot=wins+losses;
   const rd=n=>Math.round(n*100)/100;
   return{wins,losses,openOpts,avgWin:wins?rd(winAmt/wins):null,avgLoss:losses?rd(lossAmt/losses):null,wr:tot>0?((wins/tot)*100).toFixed(1):null};
@@ -4754,7 +4761,7 @@ function renderHome(){
     <div class="hk"><div class="hk-l">This year ${ii(`Same as this month, since 1 January. Realised options only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · PMCC calls ${sgn(F.year.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price, plus premium on open wheel options.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Open premium ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}</div></div>
     <div class="hk"><div class="hk-l">Capital at work ${ii(`Money tied up in open put collateral and open shares. LEAPs shown separately.`)}</div><div class="hk-v">${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Puts ${fmtMoney(caw.puts).replace(/\.\d\d$/,'')} · Shares ${fmtMoney(caw.shares).replace(/\.\d\d$/,'')}${caw.leaps?` · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')} separate`:''}</div></div>
-    <div class="hk"><div class="hk-l">Win rate ${ii(`Closed option trades only. A win kept the premium or was bought back cheaper. Open options don’t count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
+    <div class="hk"><div class="hk-l">Win rate ${ii(`Closed sold options only, incl. PMCC calls. A win kept the premium or was bought back cheaper. Open options don’t count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="hk-grid hk-row2">
