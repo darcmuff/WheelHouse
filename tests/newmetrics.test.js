@@ -31,3 +31,15 @@ test('capital at work keeps LEAPs separate; % only with account size', () => {
   assert.strictEqual(c.wheel, 45000); assert.strictEqual(c.leaps, 5000); assert.strictEqual(c.pct, null);
   assert.strictEqual(L.capitalAtWork(30000, 20000, [], 100000).pct, 50);
 });
+const R = new Function(extractFn('monthReturnPct') + '\nreturn monthReturnPct;')();
+test('capital at work total includes open non-demo LEAP cost', () => {
+  const legs = [{ status: 'open', side: 'long', entryPrice: 50, qty: 1 }, { status: 'open', side: 'long', entryPrice: 50, qty: 1, demo: true }, { status: 'closed', side: 'long', entryPrice: 50, qty: 1 }];
+  const c = L.capitalAtWork(10000, 20000, legs, null);
+  assert.strictEqual(c.leaps, 5000); assert.strictEqual(c.total, 35000);
+});
+test('month return % with 2% target boundary', () => {
+  assert.strictEqual(R(100, 0), null);
+  assert.deepStrictEqual(R(800, 40000), { pct: 2, ok: true });
+  const r = R(790, 40000); assert.ok(Math.abs(r.pct - 1.975) < 1e-9); assert.strictEqual(r.ok, false);
+  assert.strictEqual(R(-100, 10000).ok, false);
+});
