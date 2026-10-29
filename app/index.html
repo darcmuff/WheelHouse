@@ -3070,8 +3070,8 @@ function leapFuzzy(s,B,today){
   if(!date){const r=/(?:·|\bfilled|\bsubmitted|\bexecuted)\s*(?:(\d{1,3})\s*(?:m|min|mins|minutes?|h|hr|hrs|hours?|s|sec|secs)\b(?:\s+ago)?|(today|just now)|(yesterday))/i.exec(s);
     if(r){const t=new Date(today+'T12:00:00Z');if(r[3])t.setUTCDate(t.getUTCDate()-1);date=t.toISOString().slice(0,10);}}
   if(!date){const d=dates.filter(d=>notExp(d)&&d.iso<=today&&!/settle/i.test(s.slice(Math.max(0,d.i-16),d.i))).sort((a,b)=>a.i-b.i)[0];if(d){date=d.iso;low.push('date');}else low.push('date');}
-  // yearless expiry → next occurrence on/after the trade date (or today); always flagged for checking
-  if(best.yl){const base=date||today;let y=+base.slice(0,4);const md=`${pad(best.yl.mo)}-${pad(best.yl.d)}`;if(`${y}-${md}`<base)y++;best.expiry=`${y}-${md}`;low.push('expiry');}
+  // yearless expiry → next occurrence on/after the trade date (or today); confident (year is unambiguous)
+  if(best.yl){const base=date||today;let y=+base.slice(0,4);const md=`${pad(best.yl.mo)}-${pad(best.yl.d)}`;if(`${y}-${md}`<base)y++;best.expiry=`${y}-${md}`;}
   // ── contracts ──
   let qty=null,qsrc='';const ca=[...s.matchAll(/\b(\d{1,4})\s+(?:contracts?\s+)?(?:at|@)\s*\$?(\d[\d,]*(?:\.\d{1,4})?)(?![:\d])/gi)].filter(m=>!inDate(m.index,m.index+m[1].length)).pop(); // not the year of a date
   if(ca){qty=+ca[1];qsrc='at';}
