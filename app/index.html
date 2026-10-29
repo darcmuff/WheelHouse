@@ -3877,7 +3877,7 @@ function renderRotationWindow(wheel){
   const _fPrem=_fact('Premium collected',fmtMoney(m.premiumCredits).replace(/\.00$/,''));
   const _fDays=_cr?_fact('Days in cycle',String(_cr.days)):'';
   const wheelCardBody=`<div class="wl-body">
-    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span>${ii(`Realised only. Premium = credit of options that closed, expired or were assigned/called away, minus buybacks, in the month they ended (open options excluded). Shares P&amp;L and Unrealised use each share's actual cost (first in, first out). Cycle return = premium + share P&amp;L + dividends${_cr&&_cr.incUnrealised?' + unrealised':''}, ÷ capital tied up (biggest put collateral, or share cost), annualised over ${_cr?_cr.days:0} day${_cr&&_cr.days===1?'':'s'}${_cr&&_cr.ann==null?' (under 7 days: not annualised)':''}.${_cap!=null?' If called = (strike − share cost) × shares + premium.':''}`)}</div>
+    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span></div>
     ${_steps}${_memo}
     <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
     <div class="wl-acts" onclick="event.stopPropagation()">
