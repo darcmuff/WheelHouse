@@ -903,7 +903,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <div class="tn-brand"><span class="tn-mark"></span>WheelHouse</div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
     <div class="tn-right">
-      <button class="btn btn-primary tn-paste" onclick="pasteFill()" title="Paste a broker fill or screenshot — SmartScan reads it">+ Paste fill</button>
+      <button class="btn btn-primary tn-paste" onclick="pasteFill()" title="Add a trade — SmartScan or Manual Entry">+ Add trade</button>
       <button class="tn-gear" onclick="openSettings()" title="Settings" aria-label="Settings"><svg viewBox="0 0 256 256" width="20" height="20" fill="currentColor"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Z"/></svg></button>
     </div>
   </header>
@@ -928,7 +928,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld s2 wf-edit-only"><label>Notes</label><textarea id="wf-notes" rows="2"></textarea></div>
     </div>
     <input type="hidden" id="wf-id">
-    <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mWheel')">Cancel</button><button class="btn btn-primary" onclick="saveWheel()">Save</button></div>
+    <div class="mfoot"><button class="btn btn-danger wf-edit-only" style="margin-right:auto" onclick="const i=document.getElementById('wf-id').value;if(i){closeModal('mWheel');deleteWheel(i);}">Delete rotation</button><button class="btn btn-ghost" onclick="closeModal('mWheel')">Cancel</button><button class="btn btn-primary" onclick="saveWheel()">Save</button></div>
   </div>
 </div>
 
@@ -986,7 +986,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 <!-- MODAL: Paste Trade -->
 <div class="mb" id="mPaste">
   <div class="mbox" style="width:37.5rem">
-    <div class="mtitle" style="margin-bottom:0.75rem"><span>✦ SmartScan</span><span class="mx" onclick="closeModal('mPaste')">✕</span></div>
+    <div class="mtitle" style="margin-bottom:0.75rem;font-size:0.9375rem"><span>Add trade</span><span class="mx" onclick="closeModal('mPaste')">✕</span></div>
     <input type="hidden" id="paste-wheelId">
     <!-- Tab switcher -->
     <div style="display:flex;gap:0;border:1px solid var(--border2);border-radius:0.4375rem;overflow:hidden;margin-bottom:0.875rem">
@@ -2147,6 +2147,7 @@ function buildSpark(prices,isUp,w=52,h=20){
 // ════════════════════════════════════════════════════════
 let view='positions'; // every app open/reload lands on the Wheel tab (saved tab ignored at startup)
 let expanded=new Set(JSON.parse(localStorage.getItem('wh-expanded')||'[]'));
+let collapsedWheels=new Set(JSON.parse(localStorage.getItem('wh-collapsedWheels')||'[]')); // wheel cards default to expanded, like LEAP cards
 let collapsedLeaps=new Set(JSON.parse(localStorage.getItem('wh-collapsedLeaps')||'[]')); // LEAP cards default to expanded; only an explicit ▾ tap collapses
 let minimised=new Set(JSON.parse(localStorage.getItem('wh-minimised')||'[]'));
 let hidden=new Set(JSON.parse(localStorage.getItem('wh-hidden')||'[]'));
@@ -2197,6 +2198,7 @@ function switchView(v){
 function _saveUIState(){
   localStorage.setItem('wh-view',view);
   localStorage.setItem('wh-expanded',JSON.stringify([...expanded]));
+  localStorage.setItem('wh-collapsedWheels',JSON.stringify([...collapsedWheels]));
   localStorage.setItem('wh-collapsedLeaps',JSON.stringify([...collapsedLeaps]));
   localStorage.setItem('wh-minimised',JSON.stringify([...minimised]));
   localStorage.setItem('wh-hidden',JSON.stringify([...hidden]));
@@ -4000,7 +4002,7 @@ function queueEarnings(sym){
 }
 function renderRotationWindow(wheel){
   const m=calcWheel(wheel);
-  const exp=expanded.has(wheel.id);
+  const exp=!collapsedWheels.has(wheel.id);
   const isOpen=wheel.status==='open';
 
   // Active option DTE
@@ -4108,12 +4110,6 @@ function renderRotationWindow(wheel){
     <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span></div>
     ${_steps}${_memo}
     <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
-    <div class="wl-acts" onclick="event.stopPropagation()">
-      ${_cs.showAddButtons?`<button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">+ Paste fill</button>
-      <button class="btn btn-ghost btn-sm" onclick="openAddTrade('${wheel.id}')">Add trade</button>`:''}
-      <button class="btn btn-ghost btn-sm" onclick="toggleExpand('${wheel.id}')">${exp?'Hide trades':'Trades ('+m.trades.length+')'}</button>
-      <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button>
-    </div>
   </div>`;
   const metricsBar=`<div class="rot-metrics-bar">
     <div class="rmb-col">
@@ -4161,18 +4157,13 @@ function renderRotationWindow(wheel){
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
     const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
     {const cm=wheelChainMap(m.trades),chainOut={};const rh=_ord.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_ord.map(t=>cm[t.id]),rh,chainOut);}
-    expandedHtml+=`<div class="rot-actions">
-      <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}');event.stopPropagation()">•••</button>
-
-      <button class="btn btn-warn btn-sm" onclick="toggleStatus('${wheel.id}');event.stopPropagation()">${isOpen?'✓ Close':'↺ Reopen'}</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteWheel('${wheel.id}');event.stopPropagation()">✕ Delete</button>
-    </div></div>`;
+    expandedHtml+=`${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}</div>`;
   }
 
   return`
   <div class="rotation-window ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" style="${hidden.has(wheel.id)?'opacity:.5':''}">
     <div class="rot-header" onclick="toggleExpand('${wheel.id}')">
-      ${rotNumHtml(wheel,isOpen)}
+      <span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${exp?'▾':'▸'}</span>${rotNumHtml(wheel,isOpen)}
       <span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span>
       ${headerPriceHtml}
       <span class="rot-label">${_dateSpan}</span>
@@ -4180,6 +4171,7 @@ function renderRotationWindow(wheel){
       <span class="rot-shares">${shares}</span>
       ${_pctHtml}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
+      <span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span>
       ${posSortBy==='manual'?`<button class="rot-header-btn" onclick="event.stopPropagation();moveWheel('${wheel.id}',-1)" title="Move up"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" transform="rotate(180 128 128)"/></svg></button>
       <button class="rot-header-btn" onclick="event.stopPropagation();moveWheel('${wheel.id}',1)" title="Move down"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></button>`:``}
       <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>
@@ -4200,6 +4192,7 @@ function calcTradeROC(t){
   if(!dte)return null;
   return((t.total/collateral)*(365/dte)*100);
 }
+// Shared list formats (wheel + LEAP): strike trims .00 ($170, $19.5, $142.50); debit totals show with a minus (display only).
 // Shared trade-list cells (wheel + LEAP cards). Captured: % kept, with profit $ beside it.
 function capturedCellHtml(pct,dollars,open){
   if(pct==null)return{html:'—',color:'var(--text3)'};
@@ -4259,6 +4252,7 @@ function wheelListCells(t,L){
 function renderTradeRow(t,wheelTrades,opts){
   // opts (optional): {rocHtml, rocColor, editOnclick, noEdit, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
   opts=opts||{};
+  const fmtStrike=k=>'$'+fmt2(k).replace(/\.00$/,''),fmtRowTotal=t=>{const v=+t.total||0;return isCredit(t.action)?fmtMoney(v):fmtMoney(-Math.abs(v));};
   // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
   let chainHtml='';
   const cIdx=wheelTrades?wheelChainMap(wheelTrades)[t.id]:undefined;
@@ -4294,11 +4288,11 @@ function renderTradeRow(t,wheelTrades,opts){
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
-    <span>${t.strike?'$'+fmt2(t.strike):'—'}</span>
+    <span>${t.strike?fmtStrike(t.strike):'—'}</span>
     ${hasExtra?opts.extraAfterStrike:''}
     <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
     <span>${t.shares||'—'}</span>
-    <span class="${isCredit(t.action)?'g':'r'}">${fmtMoney(t.total)}</span>
+    <span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>
     <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
     <span style="white-space:nowrap">${ppdDisplay}</span>
     <span style="color:${rocColor}">${rocDisplay}</span>
@@ -4311,7 +4305,7 @@ function renderTradeRow(t,wheelTrades,opts){
 // ── LOG ──
 function renderActivityHead(){
   return`<div class="act-head"><div><h1>Activity</h1><p>Every trade, plus getting trades in and out.</p></div>
-    <div class="act-btns"><button class="btn btn-primary" onclick="openPasteTrade()">+ Paste fill</button>
+    <div class="act-btns"><button class="btn btn-primary" onclick="openPasteTrade()">+ Add trade</button>
     <button class="btn btn-ghost" onclick="openImport()">Import CSV / PDF</button>
     <button class="btn btn-ghost" onclick="exportCSV()">Export trades CSV</button>
     <button class="btn btn-ghost" onclick="exportOptsCSV()">Export LEAPs CSV</button>
@@ -4972,7 +4966,7 @@ function renderDashChart(){
 // ════════════════════════════════════════════════════════
 // INTERACTIONS
 // ════════════════════════════════════════════════════════
-function toggleExpand(id){expanded.has(id)?expanded.delete(id):expanded.add(id);_saveUIState();render();}
+function toggleExpand(id){collapsedWheels.has(id)?collapsedWheels.delete(id):collapsedWheels.add(id);_saveUIState();render();}
 function toggleLeapExpand(id){collapsedLeaps.has(id)?collapsedLeaps.delete(id):collapsedLeaps.add(id);_saveUIState();render();}
 function toggleMinimise(id){
   if(minimised.has(id)){minimised.delete(id);}
@@ -6872,7 +6866,7 @@ function toggleTheme(isLight){
   if(knob)knob.style.left=isLight?'18px':'2px';
 }
 function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls are harmless)
-// "+ Paste fill": SmartScan for whatever you're looking at — LEAP/short-call fills on LEAPs, wheel fills everywhere else.
+// "+ Add trade": SmartScan for whatever you're looking at — LEAP/short-call fills on LEAPs, wheel fills everywhere else.
 function pasteFill(){ if(view==='options'&&typeof openLeapAdd==='function')openLeapAdd(); else openPasteTrade(); }
 async function doSignOut(){
   try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
