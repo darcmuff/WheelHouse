@@ -2422,7 +2422,7 @@ function renderPmccOpenFace(leap,today,spot){
     const pf=pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[]));
     if(pf!=null)rocHtml+=` <span class="${pf>=0?'g':'r'}">${pf>=0?'+':'-'}${fmtMoney(Math.abs(pf))}</span>`;}
   const ts=toStrike(spot,+c.strike);
-  const row=renderTradeRow(t,null,{rocHtml,rocColor,editOnclick:`openOptEdit('${esc(c.groupId||c.id)}')`,extraAfterStrike:`<span class="to-strike ${ts.cls}">${esc(ts.text)}</span>`});
+  const row=renderTradeRow(t,null,{rocHtml,rocColor,noEdit:true,extraAfterStrike:`<span class="to-strike ${ts.cls}">${esc(ts.text)}</span>`});
   return`<div class="trade-body open pmcc-open">${head}${row}</div>`;
 }
 function pmccDeleteShort(id){
@@ -2622,7 +2622,7 @@ function openLeapAdd(){
 function leapEditActs(l,legs,today){
   if(!l||l.status!=='open')return'';
   const c=pmccStats(l,legs,today).cur;const b=(fn,t,cls)=>`<button class="btn ${cls||'btn-ghost'} btn-sm" onclick="closeModal('mLeap');${fn}">${t}</button>`;
-  return(c?b(`pmccExpire('${esc(c.id)}')`,'Mark expired')+b(`pmccDeleteShort('${esc(c.id)}')`,'Delete short call','btn-danger'):'')+b(`openOptClose('${esc(l.groupId||l.id)}','close')`,'Close LEAP');
+  return(c?b(`openOptEdit('${esc(c.groupId||c.id)}')`,'Edit short call')+b(`pmccExpire('${esc(c.id)}')`,'Mark expired')+b(`pmccDeleteShort('${esc(c.id)}')`,'Delete short call','btn-danger'):'')+b(`openOptClose('${esc(l.groupId||l.id)}','close')`,'Close LEAP');
 }
 function openLeapEdit(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
@@ -4011,7 +4011,7 @@ function calcTradeROC(t){
   return((t.total/collateral)*(365/dte)*100);
 }
 function renderTradeRow(t,wheelTrades,opts){
-  // opts (optional): {rocHtml, rocColor, editOnclick, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
+  // opts (optional): {rocHtml, rocColor, editOnclick, noEdit, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
   opts=opts||{};
   // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
   let chainHtml='';
@@ -4056,7 +4056,7 @@ function renderTradeRow(t,wheelTrades,opts){
     <span style="white-space:nowrap">${ppdDisplay}</span>
     <span style="color:${rocColor}">${rocDisplay}</span>
     <span style="display:flex;gap:0.1875rem;justify-content:flex-end">
-      <button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>
+      ${opts.noEdit?'':`<button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>`}
     </span>
   </div>`;
 }
