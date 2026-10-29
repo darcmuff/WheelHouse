@@ -2383,7 +2383,7 @@ function pmccShortsFor(leap,legs){
 }
 function pmccStats(leap,legs,today){
   const sh=pmccShortsFor(leap,legs),q=+leap.qty||0;
-  let net=0;sh.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?p.openCash:p.realized;});net=Math.round(net*100)/100;
+  let net=0;sh.forEach(l=>{const p=OPTS.legPnL(l);if(l.status!=='open')net+=p.realized;});net=Math.round(net*100)/100;
   const cost=(+leap.entryPrice||0)*100*q+(+leap.fees||0),adj=cost-net,adjPerSh=q?adj/(100*q):0;
   const open=sh.filter(l=>l.status==='open').sort((a,b)=>(a.expiry||'').localeCompare(b.expiry||''));
   const past=sh.filter(l=>l.status!=='open').sort((a,b)=>(b.closeDate||b.expiry||'').localeCompare(a.closeDate||a.expiry||''));
@@ -2608,7 +2608,7 @@ function renderLeapCard(l,spot,today){
   <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
-    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls sold against it.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
+    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
     <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
@@ -2643,7 +2643,7 @@ function renderOptions(){
   const sumH=T.n?`<div class="leap-sum">
     ${sc(`LEAP cost ${ii('What you paid for your open LEAPs, fees included.')}`,m0(T.cost),nL)}
     ${sc(`Value now ${ii('What your open LEAPs are worth at today\'s prices. LEAPs with no price are left out.')}`,T.priced?m0(T.value):'—',T.noPrice?`${T.noPrice} without a price`:nL)}
-    ${sc(`Calls collected ${ii('Net from calls sold against your open LEAPs, after buy backs and fees.')}`,m0(T.calls),'from calls sold',T.calls>0?'g':'')}
+    ${sc(`Calls collected ${ii('Net from calls closed or expired on your open LEAPs, after buy backs and fees. Open calls not counted.')}`,m0(T.calls),'from closed calls',T.calls>0?'g':'')}
     ${sc(`Cost after calls ${ii('LEAP cost minus calls collected.')}`,m0(T.adj),nL)}</div>`:'';
   const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${leapStatus==='open'?'No open LEAPs. Add one with <b>+ LEAP</b>, or import a broker file with buy-to-open call fills.':'No closed LEAPs yet.'}</div>`;
   // non-long-call legs never vanish silently
