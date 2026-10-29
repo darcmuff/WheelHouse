@@ -2398,9 +2398,19 @@ function pmccTradeEvents(leap,legs){
       ev.push({id:l.id+':'+act.toLowerCase(),legId:l.id,action:act,entered:l.closeDate||l.expiry||'',expiry:l.expiry||'',strike:+l.strike||0,premium:0,qty:+l.qty||0,fees:+l.closeFees||0,total:cashClose(l),net:p.realized,open:false,kind:'short',rolledFrom:l.rolledFrom||null,status:l.status,leg:l});
     }
   });
-  // newest first (wheel table order); same-day: closers before openers
-  const closer=a=>(a==='BTC'||a==='EXP'||a==='ASN')?0:1;
-  ev.sort((a,b)=>{const dc=(b.entered||'').localeCompare(a.entered||'');if(dc)return dc;return closer(a.action)-closer(b.action);});
+  // same day: newest on top by entry time (ts on opens, closeTs on closes) when both known;
+  // else a leg's close sits above its own open, and another leg's open sits above a close (sell after buy back).
+  function pmccEvTime(e){const l=e.leg;if(!l)return null;return e.action==='STO'?(l.ts||null):(l.closeTs||null);}
+  function pmccSameDayCmp(a,b){
+    const dc=(b.entered||'').localeCompare(a.entered||'');if(dc)return dc;
+    const cl=a=>(a==='BTC'||a==='EXP'||a==='ASN')?0:1;
+    if(a.legId===b.legId)return cl(a.action)-cl(b.action);
+    const ta=pmccEvTime(a),tb=pmccEvTime(b);
+    if(ta&&tb&&ta!==tb)return tb.localeCompare(ta);
+    if(cl(a.action)!==cl(b.action))return cl(b.action)-cl(a.action);
+    return 0;
+  }
+  ev.sort((a,b)=>pmccSameDayCmp(a,b));
   return ev;
 }
 // Map a PMCC short call optleg → a wheel-shaped trade so renderTradeRow can draw it identically.
@@ -2455,23 +2465,13 @@ function pmccDeleteShort(id){
   if(!confirm(`Delete short call ${l.underlying} $${fmt2(l.strike)}C ${l.expiry||''}? This cannot be undone.`))return;
   _deleteOptDoc(id);db.opts=pmccDeleteLegFrom(db.opts,id);closeModal('mPmccLeg');render();
 }
-// PMCC roll parents (read-time only): stored rolledFrom plus Marc's rule — short call(s) bought
-// back the same day a new short call opens, at the same or next strike, whose contracts add up.
+// PMCC roll parents (read-time only): ONLY the stored rolledFrom, which is written solely by an explicit
+// roll save (pmccRollApply / OPTS.rollLeg). A separate buy back and a separate sell are never linked.
 function pmccRollParents(legs){
   const sh=(legs||[]).filter(l=>l&&l.side==='short'&&l.type==='C');
   const byId={};sh.forEach(l=>{byId[l.id]=l;});
-  const par={},used=new Set();
-  sh.forEach(l=>{if(l.rolledFrom&&byId[l.rolledFrom]){par[l.id]=[l.rolledFrom];used.add(l.rolledFrom);}});
-  [...sh].sort((a,b)=>(a.entryDate||'').localeCompare(b.entryDate||'')).forEach(l=>{
-    const have=(par[l.id]||[]).reduce((x,id)=>x+(+byId[id].qty||0),0);
-    const need=(+l.qty||0)-have;
-    if(need<=0||!l.entryDate)return;
-    const cands=sh.filter(c=>c.id!==l.id&&!used.has(c.id)&&c.status==='closed'&&c.closeDate===l.entryDate
-      &&(c.underlying||'')===(l.underlying||'')&&nearStrike(c.strike,l.strike));
-    const pick=exactSubset(cands,c=>+c.qty||0,need);
-    if(!pick)return;
-    par[l.id]=(par[l.id]||[]).concat(pick.map(c=>c.id));pick.forEach(c=>used.add(c.id));
-  });
+  const par={};
+  sh.forEach(l=>{if(l.rolledFrom&&byId[l.rolledFrom])par[l.id]=[l.rolledFrom];});
   return par;
 }
 // PMCC: legId → chain index for every short leg in a roll chain of 2+ legs.
@@ -2894,7 +2894,7 @@ function pmccRollApply(r,leap,legs,newId){
   if(r.kind==='short'){
     const b=pmccBuyBack(r.close,leap,legs);if(b.err)return{err:b.err};
     const n=pmccFormLeg({...r.open,newId},leap);if(n.err)return{err:n.err};
-    n.leg.rolledFrom=b.leg.id;
+    n.leg.rolledFrom=b.leg.id;const now=new Date().toISOString();b.leg.closeTs=now;n.leg.ts=now;
     return{save:[b.leg,n.leg]};
   }
   if(leap.status!=='open')return{err:'This LEAP is already closed.'};
@@ -2968,13 +2968,13 @@ function savePmcc(){
   if(g('pcc-side')==='btc'){
     const r=pmccBuyBack(f,L,db.opts||[]);
     if(r.err){e.textContent=r.err;e.style.display='block';return;}
-    const i=db.opts.findIndex(x=>x.id===r.leg.id);db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmcc');render();return;
+    r.leg.closeTs=new Date().toISOString();const i=db.opts.findIndex(x=>x.id===r.leg.id);db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmcc');render();return;
   }
   const r=pmccFormLeg(f,L);
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
   const d=pmccDupOf(r.leg,db.opts);
   if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
-  db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
+  r.leg.ts=new Date().toISOString();db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
 }
 function pmccClose(id,mode){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
