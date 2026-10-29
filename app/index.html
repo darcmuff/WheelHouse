@@ -2551,18 +2551,16 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
     const sold=+c.entryPrice||0;
     if(e.open){
       ts=toStrike(spot,+c.strike).text;
-      const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=`$${fmt2(t.total/t.days)}<span style="color:var(--text3);font-weight:normal">/d (${t.days}d)</span>`;
+      const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=ppdCellHtml(t.total/t.days,t.days);
       const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
-      if(mark!=null&&sold>0){const k=Math.round((sold-mark)/sold*100);cap=k+'%';capColor=k>=40?'var(--green)':k>=0?'var(--text2)':'var(--red)';
-        const pf=pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[]));
-        if(pf!=null)cap+=` <span class="${pf>=0?'g':'r'}">${pf>=0?'+':'-'}${fmtMoney(Math.abs(pf))}</span>`;}
+      if(mark!=null&&sold>0){const cc=capturedCellHtml(Math.round((sold-mark)/sold*100),pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),true);cap=cc.html;capColor=cc.color;}
     }else{
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
-      if(d&&net!=null)ppd=`$${fmt2(net/d)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`;
+      if(d&&net!=null)ppd=ppdCellHtml(net/d,d);
       const closeP=c.status==='closed'?(+c.closePrice||0):0;
-      if(sold>0){const k=Math.round((sold-closeP)/sold*100);cap=k+'%';capColor=k>=0?'var(--text2)':'var(--red)';}
-      if(net!=null)cap+=` <span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span>`;
+      if(sold>0){const cc=capturedCellHtml(Math.round((sold-closeP)/sold*100),net,false);cap=cc.html;capColor=cc.color;}
+      else if(net!=null)cap=capturedCellHtml(0,net,false).html.replace(/^0% /,'');
     }
   }
   let chainHtml='';
@@ -3321,7 +3319,7 @@ const _wheelMarks={};let _wheelMarksAt=0;
 async function fetchWheelMarks(force){
   if(!force&&Date.now()-_wheelMarksAt<5*60e3)return;_wheelMarksAt=Date.now();
   const byU={};
-  (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const o=wheelCurrentOption(w.ticker,db.trades.filter(t=>t.wheelId===w.id));if(o)(byU[String(w.ticker).toUpperCase()]=byU[String(w.ticker).toUpperCase()]||new Set()).add(o.occ);});
+  (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const u=String(w.ticker).toUpperCase();openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry).forEach(t=>{(byU[u]=byU[u]||new Set()).add(wheelLegOcc(w.ticker,t));});});
   let changed=false;
   for(const[u,set]of Object.entries(byU)){
     try{
@@ -3788,12 +3786,14 @@ function buildOpenPosition(trades){
 }
 
 // Pure (READ-ONLY): the wheel's most recent OPEN short option (latest entered; ties → later in the list), with its OCC symbol.
+// Pure: OCC symbol for a wheel CSP/STOC trade.
+function wheelLegOcc(ticker,t){return`${String(ticker||'').toUpperCase()}${String(t.expiry||'').replace(/-/g,'').slice(2)}${t.action==='CSP'?'P':'C'}${String(Math.round((+t.strike)*1000)).padStart(8,'0')}`;}
 function wheelCurrentOption(ticker,trades){
   const legs=openOptionLegs(trades).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry&&t.shares>0);
   if(!legs.length)return null;
   let t=legs[0];legs.forEach(x=>{if(String(x.entered||'')>=String(t.entered||''))t=x;});
   const type=t.action==='CSP'?'P':'C',contracts=t.shares/100;
-  const occ=`${String(ticker||'').toUpperCase()}${String(t.expiry).replace(/-/g,'').slice(2)}${type}${String(Math.round((+t.strike)*1000)).padStart(8,'0')}`;
+  const occ=`${String(ticker||'').toUpperCase()}${String(t.expiry).replace(/-/g,'').slice(2)}${type}${String(Math.round((+t.strike)*1000)).padStart(8,'0')}`; // same as wheelLegOcc
   return{id:t.id,action:t.action,type,strike:t.strike,expiry:t.expiry,contracts,occ,premium:+t.premium||null};
 }
 // Pure: live buy-back cost = mid per share × 100 × contracts; null without a live mid
@@ -4155,10 +4155,12 @@ function renderRotationWindow(wheel){
   // Expanded trade table
   let expandedHtml='';
   if(exp){
-    expandedHtml=`<div class="trade-body open">
-      ${tradeTableHead()}`;
-    const _ord=[];[...m.trades].sort((a,b)=>{const dc=b.entered.localeCompare(a.entered);if(dc!==0)return dc;return db.trades.indexOf(b)-db.trades.indexOf(a);}).forEach(t=>{_ord.push(t);});
-    {const cm=wheelChainMap(m.trades),chainOut={};const rh=_ord.map(t=>renderTradeRow(t,m.trades,{chainOut}));expandedHtml+=hoistChainLines(_ord.map(t=>cm[t.id]),rh,chainOut);}
+    expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
+      ${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
+    const _wp=walkLegPairs(m.trades).pairs;
+    const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
+    const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
+    {const cm=wheelChainMap(m.trades),chainOut={};const rh=_ord.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_ord.map(t=>cm[t.id]),rh,chainOut);}
     expandedHtml+=`<div class="rot-actions">
       <button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}');event.stopPropagation()">•••</button>
 
@@ -4198,6 +4200,62 @@ function calcTradeROC(t){
   if(!dte)return null;
   return((t.total/collateral)*(365/dte)*100);
 }
+// Shared trade-list cells (wheel + LEAP cards). Captured: % kept, with profit $ beside it.
+function capturedCellHtml(pct,dollars,open){
+  if(pct==null)return{html:'—',color:'var(--text3)'};
+  const color=open?(pct>=40?'var(--green)':pct>=0?'var(--text2)':'var(--red)'):(pct>=0?'var(--text2)':'var(--red)');
+  let html=pct+'%';if(dollars!=null)html+=` <span class="${dollars>=0?'g':'r'}">${dollars>=0?'+':'-'}${fmtMoney(Math.abs(dollars))}</span>`;
+  return{html,color};
+}
+function ppdCellHtml(v,d){return v!=null&&d>0?`$${fmt2(v)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`:'—';}
+// Pure (READ-ONLY): closed wheel sells (CSP/STOC) → {kept %, realised net $, end date}. Open or part-closed sells are absent.
+// Bought back: net = sell total − buy-back total; expired / assigned / called away: whole premium kept.
+function wheelSellOutcomes(trades){
+  const{pairs}=walkLegPairs(trades);const byId={};trades.forEach(t=>{byId[t.id]=t;});const acc={},out={};
+  for(const[cid,ps]of Object.entries(pairs)){const c=byId[cid];if(!c)continue;
+    ps.forEach(p=>{const s=byId[p.legId];if(!s||s.expiredWorthless)return;const o=acc[s.id]||(acc[s.id]={cost:0,pxSh:0,sh:0,end:''});
+      const frac=+c.shares>0?p.shares/(+c.shares):1;
+      if(c.action==='BTC'||c.action==='STC'){o.cost+=(+c.total||0)*frac;o.pxSh+=(+c.premium||0)*(p.shares||0);}
+      o.sh+=p.shares||0;if((c.entered||'')>o.end)o.end=c.entered||'';});}
+  trades.forEach(s=>{
+    if(s.action!=='CSP'&&s.action!=='STOC')return;const prem=+s.premium||0;
+    if(s.expiredWorthless){out[s.id]={kept:prem>0?100:null,net:Math.round((+s.total||0)*100)/100,end:s.expiry||''};return;}
+    const o=acc[s.id];if(!o)return;if(+s.shares&&o.sh<+s.shares)return;
+    const px=o.sh?o.pxSh/o.sh:0;
+    out[s.id]={kept:prem>0?Math.round((prem-px)/prem*100):null,net:Math.round(((+s.total||0)-o.cost)*100)/100,end:o.end};
+  });
+  return out;
+}
+// Same-day order for wheel trade lists, newest on top (LEAP rule): timestamps when both known;
+// a leg's own close sits above its open; otherwise an open sits above another leg's close; then later-saved first.
+function wheelListCmp(a,b,pairs,idx){
+  const dc=(b.entered||'').localeCompare(a.entered||'');if(dc)return dc;
+  if(a.ts&&b.ts&&a.ts!==b.ts)return String(b.ts).localeCompare(String(a.ts));
+  const ate=(c,o)=>(pairs[c.id]||[]).some(p=>p.legId===o.id);
+  if(ate(a,b))return -1;if(ate(b,a))return 1;
+  const cl=x=>['BTC','STC','IN','OUT','EXP'].includes(x.action)?0:1;
+  if(cl(a)!==cl(b))return cl(b)-cl(a);
+  return (idx(b))-(idx(a));
+}
+// Wheel trade-list cells (To strike, PPD, Captured) — same meaning as the LEAP card's short-call list.
+function wheelListCells(t,L){
+  const r={ts:'—',ppd:'—',cap:'—',capColor:'var(--text3)'};
+  if(t.action!=='CSP'&&t.action!=='STOC')return r;
+  const prem=+t.premium||0,dd=(a,b)=>{if(!a||!b)return null;const d=Math.round((Date.parse(a)-Date.parse(b))/864e5);return isNaN(d)?null:Math.max(1,d);};
+  if(L.openIds.has(t.id)){
+    r.ts=toStrike(L.spot,+t.strike).text;
+    const d=dd(L.today,t.entered);if(d&&t.total)r.ppd=ppdCellHtml(t.total/d,d);
+    const mark=L.marks?L.marks[wheelLegOcc(L.ticker,t)]:null;
+    if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:(+t.shares||0)/100};const cv=wheelCurrentValue(opt,mark);
+      const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
+      const c=capturedCellHtml(Math.round((prem-mark)/prem*100),pf,true);r.cap=c.html;r.capColor=c.color;}
+    return r;
+  }
+  const o=L.outcomes[t.id];if(!o)return r;
+  const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
+  const c=capturedCellHtml(o.kept,o.net,false);r.cap=c.html;r.capColor=c.color;
+  return r;
+}
 function renderTradeRow(t,wheelTrades,opts){
   // opts (optional): {rocHtml, rocColor, editOnclick, noEdit, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
   opts=opts||{};
@@ -4218,13 +4276,14 @@ function renderTradeRow(t,wheelTrades,opts){
       chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span><span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
     }
   }
+  if(opts.list){const lc=wheelListCells(t,opts.list);opts={...opts,rocHtml:lc.cap,rocColor:lc.capColor,ppdHtml:lc.ppd,extraAfterStrike:`<span class="to-strike m">${esc(lc.ts)}</span>`,editBtn:true};}
   const roc=calcTradeROC(t);
   const rocDisplay=opts.rocHtml!=null?opts.rocHtml:(roc!==null?roc.toFixed(1)+'%':'—');
   const rocColor=opts.rocColor!=null?opts.rocColor:(roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)');
   // PPD — income velocity: net dollars per day. Credit opens (incl. PMCC STO).
   const isOpenLeg=t.action==='CSP'||t.action==='STOC'||t.action==='STO';
   const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
-  const ppdDisplay=ppd!==null?`$${fmt2(ppd)}<span style="color:var(--text3);font-weight:normal">/d (${t.days}d)</span>`:'—';
+  const ppdDisplay=opts.ppdHtml!=null?opts.ppdHtml:ppd!==null?`$${fmt2(ppd)}<span style="color:var(--text3);font-weight:normal">/d (${t.days}d)</span>`:'—';
   const rowCls=[effRid?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
   const rollBadge=effRid?'<span class="roll-badge">↻</span>':'';
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
@@ -4244,7 +4303,7 @@ function renderTradeRow(t,wheelTrades,opts){
     <span style="white-space:nowrap">${ppdDisplay}</span>
     <span style="color:${rocColor}">${rocDisplay}</span>
     <span style="display:flex;gap:0.1875rem;justify-content:flex-end">
-      ${opts.noEdit?'':`<button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>`}
+      ${opts.noEdit?'':opts.editBtn?`<button class="btn btn-ghost btn-sm" onclick="${editOn};event.stopPropagation()">Edit</button>`:`<button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>`}
     </span>
   </div>`;
 }
