@@ -24,7 +24,7 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','leapEditActs','pmccShortProfit','pmccChainPriorNet','renderPmccTradeRow','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','leapEditActs','pmccShortProfit','pmccChainPriorNet','renderPmccTradeRow','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','pmccShortEvents','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
   `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmccOpenFace,leapEditActs,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
@@ -79,8 +79,8 @@ check('form validation: strike required', /strike/.test(S.pmccFormLeg({ strike: 
 // ── render ──
 S.setOpts(legs);
 const h = S.renderPmcc(leap, today);
-check('trade table: BTO + STO/BTC/EXP rows, no row action buttons', /pmcc-trades/.test(h) && /ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && !/pmcc-row-acts|Buy back|>Expired</.test(h) && /\$245/.test(h));
-check('LEAP with no short calls still renders the trade list (its own buy row) — trades never hidden', (()=>{const h=S.renderPmcc({ ...leap, id: 'none' }, today);return /pmcc-trades/.test(h)&&/BTO/.test(h);})());
+check('trade list: short calls only (STO/BTC/EXP, no LEAP BTO), Edit on every row', /pmcc-trades/.test(h) && !/ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && (h.match(/class="trow /g)||[]).length===(h.match(/openPmccLegEdit\(/g)||[]).length && /To strike/.test(h) && /Captured/.test(h));
+check('LEAP with no short calls shows "No short calls yet." row', (()=>{const h=S.renderPmcc({ ...leap, id: 'none' }, today);return /pmcc-trades/.test(h)&&/No short calls yet\./.test(h)&&!/BTO/.test(h);})());
 check('roll chain tip shows chain row', /chain-row/.test(h) && /Chain/.test(h));
 check('events newest-first with BTO present', (()=>{const ev=S.pmccTradeEvents(leap,legs);return ev[0].entered>=ev[ev.length-1].entered && ev.some(e=>e.action==='BTO') && ev.filter(e=>e.action==='STO').length===3;})());
 check('no wheel data touched by rendering', S.db.wheels.length === 1 && S.db.trades.length === 1 && S.writes.length === 0);
