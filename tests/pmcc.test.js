@@ -87,7 +87,7 @@ check('no wheel data touched by rendering', S.db.wheels.length === 1 && S.db.tra
 const face = S.renderPmccOpenFace(leap, today, 205);
 check('open face: same trade-body/thead/trow as wheel, STO pill, shares=qty×100, no grey strip', /trade-body open pmcc-open/.test(face) && /thead-row/.test(face) && /ab-STO/.test(face) && /rot-actions/.test(face) && /Buy back/.test(face) && /✕ Delete/.test(face) && !/lc-short|Short call 2×/.test(face) && /200/.test(face) /* 2×100 shares */);
 check('open face: Captured header (not AROC%) and % value', /Captured/.test(face) && !/>AROC%</.test(face) && (/52%/.test(face) || /pmcc-lb/.test(face)) && /To strike/.test(face));
-check('open face empty state when no shorts', /No short call open/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)) && /Sell call/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)));
+check('open face empty state when no shorts', /No short call open/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)) && /Add trade/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)));
 check('pmccLegToTrade maps to STO with shares×100', (()=>{const tr=S.pmccLegToTrade(c, today);return tr.action==='STO'&&tr.shares===200&&tr.premium===6.4;})());
 // ── To strike (LEAP open face only) ──
 const ts = (spot, K) => S.toStrike(spot, K);
@@ -120,7 +120,8 @@ want('IBKR statement line (negative qty = sold)', `SPCX 20NOV26 245 C  2026-10-0
 want('garbled one-liner "sold 2 spcx 245c 11/20/26 @6.40"', `sold to open 2 SPCX 245c 11/20/2026 @ 6.40 on 10/09/2026`, { ticker: 'SPCX', strike: 245, expiry: '2026-11-20', qty: 2, price: 6.4 });
 const rj = (name, text, re) => { const r = S.scan(text); check(name, r.calls.length === 0 && re.test(r.error), r.error); };
 rj('bought call refused → points to + LEAP', `Buy to open SPCX 06/16/2028 150 C 2 @ 72.00 on 06/01/2026`, /\+ LEAP/);
-rj('buy-to-close refused → points to Buy back', `Buy to close SPCX 11/20/2026 245 C 2 @ 1.10 on 10/19/2026`, /Buy back/);
+const bb = S.scan(`Buy to close SPCX 11/20/2026 245 C 2 @ 1.10 on 10/19/2026`);
+check('buy-to-close now accepted as btc', bb.calls.length === 1 && bb.calls[0].action === 'btc', bb);
 rj('put refused', `Sell to open SPCX 11/20/2026 180 P 1 @ 3.00 on 10/09/2026`, /put/i);
 rj('empty paste', `  `, /Paste/);
 const nos = S.scan(`SPCX 20NOV26 245 C qty 2 price 6.40 date 2026-10-09`);
@@ -141,7 +142,7 @@ yl('"Yesterday" → trade date = day before', 'Sell SPCX $170 Call Nov 13\nIndiv
 const lb = S.leapAt('Buy SPCX $170 Call Jan 15\nIndividual · 30m\n$501.00\n3 contracts at $1.67\nPosition effect\nOpen', '2026-10-23');
 check('+ LEAP form: yearless Robinhood buy also parses (expiry flagged)', lb.calls.length === 1 && lb.calls[0].expiry === '2027-01-15' && lb.calls[0].low.includes('expiry') && lb.calls[0].price === 1.67, lb);
 const ls = S.leapAt(rh + 'Open', '2026-10-23');
-check('+ LEAP form: yearless sold call refused, points to Sell call', !ls.calls.length && /Sell call/.test(ls.error), ls.error);
+check('+ LEAP form: yearless sold call refused, points to Add trade', !ls.calls.length && /Add trade/.test(ls.error), ls.error);
 
 console.log(`\n${pass} pass / ${fail} fail`);
 if (fail) process.exit(1);
