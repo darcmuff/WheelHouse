@@ -13,7 +13,7 @@ const stubs = [
   "const fmtDateFull=d=>d||'-';",
   "const esc=s=>String(s==null?'':s);",
   "function colorN(n){return n==null?'m':(n>=0?'g':'r');}",
-  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let expandedLeaps=new Set();let _focusTid=null;",
+  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let collapsedLeaps=new Set();let _focusTid=null;",
   "function openEditTrade(){}",
   "function openOptEdit(){}",
   "function pmccClose(){}",
@@ -80,7 +80,7 @@ check('form validation: strike required', /strike/.test(S.pmccFormLeg({ strike: 
 S.setOpts(legs);
 const h = S.renderPmcc(leap, today);
 check('trade table: BTO + STO/BTC/EXP rows, no row action buttons', /pmcc-trades/.test(h) && /ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && !/pmcc-row-acts|Buy back|>Expired</.test(h) && /\$245/.test(h));
-check('LEAP with no short calls renders no table (Sell call lives on the card)', S.renderPmcc({ ...leap, id: 'none' }, today) === '');
+check('LEAP with no short calls still renders the trade list (its own buy row) — trades never hidden', (()=>{const h=S.renderPmcc({ ...leap, id: 'none' }, today);return /pmcc-trades/.test(h)&&/BTO/.test(h);})());
 check('roll chain tip shows chain row', /chain-row/.test(h) && /Chain/.test(h));
 check('events newest-first with BTO present', (()=>{const ev=S.pmccTradeEvents(leap,legs);return ev[0].entered>=ev[ev.length-1].entered && ev.some(e=>e.action==='BTO') && ev.filter(e=>e.action==='STO').length===3;})());
 check('no wheel data touched by rendering', S.db.wheels.length === 1 && S.db.trades.length === 1 && S.writes.length === 0);
@@ -88,8 +88,8 @@ const face = S.renderPmccOpenFace(leap, today, 205);
 check('open face: same trade-body/thead/trow as wheel, STO pill, shares=qty×100, no grey strip', /trade-body open pmcc-open/.test(face) && /thead-row/.test(face) && /ab-STO/.test(face) && !/rot-actions|Buy back|✕ Delete|•••/.test(face) && !/lc-short|Short call 2×/.test(face) && /200/.test(face) /* 2×100 shares */);
 check('open face: Captured header (not AROC%) and % value', /Captured/.test(face) && !/>AROC%</.test(face) && (/52%/.test(face) || /pmcc-lb/.test(face)) && /To strike/.test(face));
 check('open face empty state when no shorts', /No short call open/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)) && !/Add trade/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)));
-check('Edit actions: open short → Mark expired + Delete short call (reuse pmccExpire/pmccDeleteShort) + Close LEAP', (()=>{const x=S.leapEditActs(leap,legs,today);return /Edit short call/.test(x)&&/pmccExpire\('c'\)/.test(x)&&/Mark expired/.test(x)&&/pmccDeleteShort\('c'\)/.test(x)&&/openOptClose\('L1','close'\)/.test(x)&&/Close LEAP/.test(x);})());
-check('Edit actions: no open short → only Close LEAP; closed LEAP → none', (()=>{const x=S.leapEditActs({...leap,id:'none'},legs,today);return /Close LEAP/.test(x)&&!/Mark expired/.test(x)&&S.leapEditActs({...leap,status:'closed'},legs,today)==='';})());
+check('Edit actions: open short → Mark expired + Delete short call (reuse pmccExpire/pmccDeleteShort) — no Close LEAP (lives top right)', (()=>{const x=S.leapEditActs(leap,legs,today);return /Edit short call/.test(x)&&/pmccExpire\('c'\)/.test(x)&&/Mark expired/.test(x)&&/pmccDeleteShort\('c'\)/.test(x)&&!/Close LEAP|openOptClose/.test(x);})());
+check('Edit actions: no open short → nothing; closed LEAP → none', (()=>{const x=S.leapEditActs({...leap,id:'none'},legs,today);return x===''&&S.leapEditActs({...leap,status:'closed'},legs,today)==='';})());
 check('pmccLegToTrade maps to STO with shares×100', (()=>{const tr=S.pmccLegToTrade(c, today);return tr.action==='STO'&&tr.shares===200&&tr.premium===6.4;})());
 // ── To strike (LEAP open face only) ──
 const ts = (spot, K) => S.toStrike(spot, K);

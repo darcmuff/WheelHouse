@@ -13,7 +13,7 @@ const stubs = [
   "const fmtDateFull=d=>d||'-';",
   "const esc=s=>String(s==null?'':s);",
   "function colorN(n){return n==null?'m':(n>=0?'g':'r');}",
-  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let expandedLeaps=new Set();let _focusTid=null;",
+  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let collapsedLeaps=new Set();let _focusTid=null;",
   "function openEditTrade(){}",
   "function openOptEdit(){}",
   "function pmccClose(){}",
