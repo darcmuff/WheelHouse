@@ -133,7 +133,7 @@ check('side unknown → accepted but flagged low-confidence', nos.calls.length =
 // ── Robinhood app: yearless expiry ("Nov 13") + relative time ("· 30m") — Marc's real-world paste layout, fake figures ──
 const rh = 'Sell SPCX $170 Call Nov 13\nIndividual · 30m\n$501.00\n3 contracts at $1.67\nType\nLimit sell\nPosition effect\n';
 const yl = (name, text, d, exp) => { const r = S.scanAt(text, d); const x = r.calls[0] || {};
-  const ok = r.calls.length === 1 && Object.entries(exp).every(([k, v]) => typeof v === 'number' ? Math.abs(x[k] - v) < 0.006 : x[k] === v) && x.low.includes('expiry');
+  const ok = r.calls.length === 1 && Object.entries(exp).every(([k, v]) => typeof v === 'number' ? Math.abs(x[k] - v) < 0.006 : x[k] === v) && !x.low.includes('expiry');
   check(name, ok, r.calls.length ? x : r.error); };
 yl('RH yearless, cut off after "Position effect"', rh + '...', '2026-10-23', { ticker: 'SPCX', strike: 170, expiry: '2026-11-13', side: 'sell', qty: 3, price: 1.67, date: '2026-10-23' });
 yl('RH yearless, full tail (Open, Filled, fees, Total)', rh + 'Open\nFilled\nOct 23, 3:58 PM\n3 contracts at $1.67\nRegulatory fees\n$0.06\nContract fees\n$1.86\nTotal\n$499.08', '2026-10-23', { expiry: '2026-11-13', qty: 3, price: 1.67, fees: 1.92, date: '2026-10-23' });
@@ -141,8 +141,14 @@ yl('RH yearless "2h ago"', rh.replace('30m', '2h ago') + 'Open', '2026-10-23', {
 yl('yearless expiry rolls into next year (Jan 15 sold in Dec)', 'Sell SPCX $170 Call Jan 15\nIndividual · 2h\n3 contracts at $1.67\nPosition effect\nOpen', '2026-12-20', { expiry: '2027-01-15', date: '2026-12-20' });
 yl('yearless expiry on the trade date itself (0DTE) stays this year', 'Sell SPCX $170 Call Oct 23\nIndividual · 30m\n1 contract at $0.40\nPosition effect\nOpen', '2026-10-23', { expiry: '2026-10-23', qty: 1, price: 0.4 });
 yl('"Yesterday" → trade date = day before', 'Sell SPCX $170 Call Nov 13\nIndividual · Yesterday\n3 contracts at $1.67\nPosition effect\nOpen', '2026-10-23', { date: '2026-10-22', expiry: '2026-11-13' });
+
+// yearless expiry is confident: year = first occurrence on/after the fill date (not today)
+yl('Sell SPCX $165 Call Nov 20 filled Oct 29 → 2026-11-20, no flag', 'Sell SPCX $165 Call Nov 20\nIndividual · 30m\n2 contracts at $1.20\nPosition effect\nOpen', '2026-10-29', { expiry: '2026-11-20', strike: 165 });
+yl('old paste: fill Oct 29, 2025 → expiry 2025-11-20 even today', 'Sell SPCX $165 Call Nov 20\nType\nLimit sell\nPosition effect\nOpen\n2 contracts at $1.20\nFilled\nOct 29, 2025, 3:58 PM', '2026-10-29', { expiry: '2025-11-20', date: '2025-10-29' });
+const nx = S.scanAt('Sell SPCX $165 Call\nIndividual · 30m\n2 contracts at $1.20\nPosition effect\nOpen', '2026-10-29');
+check('no expiry at all → still flagged', !nx.calls.length || (nx.calls[0].low || []).includes('expiry') || !nx.calls[0].expiry, nx);
 const lb = S.leapAt('Buy SPCX $170 Call Jan 15\nIndividual · 30m\n$501.00\n3 contracts at $1.67\nPosition effect\nOpen', '2026-10-23');
-check('+ LEAP form: yearless Robinhood buy also parses (expiry flagged)', lb.calls.length === 1 && lb.calls[0].expiry === '2027-01-15' && lb.calls[0].low.includes('expiry') && lb.calls[0].price === 1.67, lb);
+check('+ LEAP form: yearless Robinhood buy also parses (expiry confident)', lb.calls.length === 1 && lb.calls[0].expiry === '2027-01-15' && !lb.calls[0].low.includes('expiry') && lb.calls[0].price === 1.67, lb);
 const ls = S.leapAt(rh + 'Open', '2026-10-23');
 check('+ LEAP form: yearless sold call refused, points to Add trade', !ls.calls.length && /Add trade/.test(ls.error), ls.error);
 
