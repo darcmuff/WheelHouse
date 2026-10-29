@@ -24,3 +24,6 @@ test('demo LEAPs are left out',()=>assert.strictEqual(T.leapTileTotals([{...A,de
 test('old tiles gone, tips short',()=>{const a=SRC.indexOf('function renderOptions('),h=SRC.slice(a,SRC.indexOf('\n}\n',a));
   ['Share equivalent','Time value','combined delta','Market value'].forEach(x=>assert.ok(!h.includes(x),x));
   const tips=[...h.matchAll(/ii\('([^']*(?:\\'[^']*)*)'\)/g)].map(m=>m[1]);assert.strictEqual(tips.length,4);tips.forEach(t=>assert.ok(t.length<=120,t));});
+test('open call premium is never counted (realised only)',()=>{
+  const P=T.pmccStats(A,legs,today);assert.strictEqual(P.net,150+150);assert.strictEqual(P.adj,3001-300);
+  assert.strictEqual(r.calls,300+(100*2-140*2));});
