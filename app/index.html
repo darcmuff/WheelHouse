@@ -1088,6 +1088,31 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     </div>
   </div>
 </div>
+<div class="mb" id="mPmccLeg">
+  <div class="mbox" style="width:30rem;padding:0.875rem">
+    <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mPmccLegTitle">Edit short call</span><span class="mx" onclick="closeModal('mPmccLeg')">✕</span></div>
+    <input type="hidden" id="pe-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem">
+      <div class="fld"><label>Strike</label><input id="pe-strike" type="number" step="0.01"></div>
+      <div class="fld"><label>Expiry</label><input id="pe-expiry" type="date"></div>
+      <div class="fld"><label>Contracts</label><input id="pe-qty" type="number" step="1"></div>
+      <div class="fld"><label>Sell price / sh</label><input id="pe-price" type="number" step="0.01"></div>
+      <div class="fld"><label>Sold on</label><input id="pe-date" type="date"></div>
+      <div class="fld"><label>Fees</label><input id="pe-fees" type="number" step="0.01"></div>
+    </div>
+    <div id="pe-close" style="display:grid;margin-top:0.5rem;grid-template-columns:1fr 1fr 1fr;gap:0.5rem">
+      <div class="fld"><label>Buyback price / sh</label><input id="pe-cprice" type="number" step="0.01"></div>
+      <div class="fld"><label>Bought back on</label><input id="pe-cdate" type="date"></div>
+      <div class="fld"><label>Buyback fees</label><input id="pe-cfees" type="number" step="0.01"></div>
+    </div>
+    <div id="pe-err" class="imp-err" style="display:none;margin-top:0.5rem"></div>
+    <div style="display:flex;gap:0.5rem;margin-top:0.75rem;align-items:center">
+      <button class="btn btn-danger" style="margin-right:auto" onclick="pmccDeleteShort(document.getElementById('pe-id').value)">✕ Delete</button>
+      <button class="btn btn-ghost" id="pe-exp" onclick="pmccExpire(document.getElementById('pe-id').value)">Mark expired</button>
+      <button class="btn btn-primary" onclick="savePmccLeg()">Save</button>
+    </div>
+  </div>
+</div>
 <div class="mb" id="mPmcc">
   <div class="mbox" style="width:32.5rem;padding:0.875rem">
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mPmccTitle">Add trade</span><span class="mx" onclick="closeModal('mPmcc')">✕</span></div>
@@ -2428,7 +2453,7 @@ function renderPmccOpenFace(leap,today,spot){
 function pmccDeleteShort(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
   if(!confirm(`Delete short call ${l.underlying} $${fmt2(l.strike)}C ${l.expiry||''}? This cannot be undone.`))return;
-  _deleteOptDoc(id);db.opts=(db.opts||[]).filter(x=>x.id!==id);render();
+  _deleteOptDoc(id);db.opts=pmccDeleteLegFrom(db.opts,id);closeModal('mPmccLeg');render();
 }
 // PMCC roll parents (read-time only): stored rolledFrom plus Marc's rule — short call(s) bought
 // back the same day a new short call opens, at the same or next strike, whose contracts add up.
@@ -2502,19 +2527,92 @@ function renderPmccTradeRow(e,spot,today,cmap,chainOut){
     <span>${acts}</span>
   </div>`;
 }
-// Expandable PMCC trade list — same rounded panel / soft action pills as the wheel rotation detail.
-function renderPmcc(leap,today,spot){
-  const P=pmccStats(leap,db.opts||[],today);
-  const ev=pmccTradeEvents(leap,db.opts||[]);
-  // Always shown (the LEAP's own buy is the first row), so trades never vanish when no short call is open.
-  const cmap=pmccChainMap(ev);
-  // Chain line goes above the chain's topmost displayed row, as a header for the whole chain
-  const chainOut={},rowHtml=ev.map(e=>renderPmccTradeRow(e,spot,today,cmap,chainOut));
-  const rows=hoistChainLines(ev.map(e=>e.kind==='short'?cmap[e.legId]:undefined),rowHtml,chainOut);
-  return`<div class="trade-body open pmcc-trades">
-    <div class="thead-row"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span><span>Price</span><span>Qty</span><span>Total</span><span>Fees</span><span>Net</span><span></span></div>
-    ${rows||'<div class="trow"><span style="grid-column:1/-1;color:var(--text3)">No trades yet</span></div>'}
+// LEAP card trade list: short calls only (the LEAP itself lives in the header), newest first, one row per trade, Edit on every row.
+function pmccShortEvents(leap,legs){return pmccTradeEvents(leap,legs).filter(e=>e.kind==='short');}
+function renderPmccListRow(e,spot,today,cmap,chainOut){
+  const c=e.leg,par=cmap&&cmap._parents?cmap._parents:{};
+  const cIdx=cmap?cmap[e.legId]:undefined,cCls=cIdx!=null?' chain-tint':'';
+  const isSto=e.action==='STO';
+  const rolled=isSto&&!!(par[e.legId]&&par[e.legId].length);
+  let ts='—',ppd='—',cap='—',capColor='var(--text3)';
+  if(isSto&&c){
+    const sold=+c.entryPrice||0;
+    if(e.open){
+      ts=toStrike(spot,+c.strike).text;
+      const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=`$${fmt2(t.total/t.days)}<span style="color:var(--text3);font-weight:normal">/d (${t.days}d)</span>`;
+      const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
+      if(mark!=null&&sold>0){const k=Math.round((sold-mark)/sold*100);cap=k+'%';capColor=k>=40?'var(--green)':k>=0?'var(--text2)':'var(--red)';
+        const pf=pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[]));
+        if(pf!=null)cap+=` <span class="${pf>=0?'g':'r'}">${pf>=0?'+':'-'}${fmtMoney(Math.abs(pf))}</span>`;}
+    }else{
+      const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
+      const net=OPTS.legPnL(c).realized;
+      if(d&&net!=null)ppd=`$${fmt2(net/d)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`;
+      const closeP=c.status==='closed'?(+c.closePrice||0):0;
+      if(sold>0){const k=Math.round((sold-closeP)/sold*100);cap=k+'%';capColor=k>=0?'var(--text2)':'var(--red)';}
+      if(net!=null)cap+=` <span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span>`;
+    }
+  }
+  let chainHtml='';
+  const isTip=rolled&&!Object.values(par).some(ps=>ps.includes(e.legId));
+  if(rolled&&isTip&&c){
+    const legs=db.opts||[];const chain=[],seen=new Set();let rolls=0;
+    const visit=l=>{if(!l||seen.has(l.id))return;seen.add(l.id);chain.push(l);const ps=par[l.id]||[];if(ps.length)rolls++;ps.forEach(id=>visit(legs.find(x=>x.id===id)));};
+    visit(c);
+    if(chain.length>1){let net=0;chain.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?(p.unrealized!=null?p.unrealized:p.openCash):p.realized;});net=Math.round(net*100)/100;
+      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${rolls} roll${rolls>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;}
+  }
+  if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
+  const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
+  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}" data-pmid="${esc(e.id)}">
+    <span class="action-cell"><span class="roll-slot">${rolled?'<span class="roll-badge">↻</span>':''}</span><span class="ab ab-${e.action}">${e.action}</span></span>
+    <span>${fmtDateFull(e.entered)}</span>
+    <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
+    <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
+    <span class="to-strike m">${esc(ts)}</span>
+    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}</span>
+    <span>${e.qty?e.qty*100:'—'}</span>
+    <span class="${e.total>=0?'g':'r'}">${fmtMoney(e.total)}</span>
+    <span>${e.fees?'$'+fmt2(e.fees):'—'}</span>
+    <span style="white-space:nowrap">${ppd}</span>
+    <span style="color:${capColor}">${cap}</span>
+    <span style="display:flex;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="openPmccLegEdit('${esc(e.legId)}');event.stopPropagation()">Edit</button></span>
   </div>`;
+}
+function renderPmcc(leap,today,spot){
+  const ev=pmccShortEvents(leap,db.opts||[]);
+  const cmap=pmccChainMap(ev);
+  const chainOut={},rowHtml=ev.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
+  const rows=hoistChainLines(ev.map(e=>cmap[e.legId]),rowHtml,chainOut);
+  return`<div class="trade-body open pmcc-open pmcc-trades">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+    ${rows||'<div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3)">No short calls yet.</span></div>'}
+  </div>`;
+}
+// Per-row Edit: one short call leg. Pure helpers never write; UI wrappers save/delete exactly that leg id.
+function pmccDeleteLegFrom(legs,id){return(legs||[]).filter(x=>x.id!==id);}
+function pmccEditLeg(l,f){
+  const strike=parseFloat(f.strike),qty=parseInt(f.qty),price=parseFloat(f.price);
+  if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};if(!(qty>0))return{err:'Enter the contracts'};if(!(price>=0))return{err:'Enter the sell price'};
+  const n={...l,strike,expiry:f.expiry,qty,entryPrice:price,entryDate:f.date||l.entryDate||null,fees:+f.fees||0};
+  if(l.status==='closed'){const cp=parseFloat(f.cprice);if(!(cp>=0))return{err:'Enter the buyback price'};n.closePrice=cp;n.closeDate=f.cdate||l.closeDate;n.closeFees=+f.cfees||0;}
+  return{leg:n};
+}
+function openPmccLegEdit(id){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('pe-id',l.id);v('pe-strike',l.strike);v('pe-expiry',l.expiry);v('pe-qty',l.qty);v('pe-price',l.entryPrice);v('pe-date',l.entryDate);v('pe-fees',l.fees??0);
+  v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);
+  document.getElementById('pe-close').style.display=l.status==='closed'?'grid':'none';
+  document.getElementById('pe-exp').style.display=l.status==='open'?'':'none';
+  document.getElementById('pe-err').style.display='none';
+  document.getElementById('mPmccLegTitle').textContent=`Edit short call · ${l.underlying} $${fmt2(l.strike).replace(/\.00$/,'')} · ${l.status}`;
+  openModal('mPmccLeg');
+}
+function savePmccLeg(){
+  const g=k=>document.getElementById(k).value,i=(db.opts||[]).findIndex(x=>x.id===g('pe-id'));if(i<0)return;
+  const r=pmccEditLeg(db.opts[i],{strike:g('pe-strike'),expiry:g('pe-expiry'),qty:g('pe-qty'),price:g('pe-price'),date:g('pe-date'),fees:g('pe-fees'),cprice:g('pe-cprice'),cdate:g('pe-cdate'),cfees:g('pe-cfees')});
+  const e=document.getElementById('pe-err');if(r.err){e.textContent=r.err;e.style.display='block';return;}
+  db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmccLeg');render();
 }
 function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
 // Pure: share of the LEAP's cost won back by calls sold against it (0–100, whole %).
@@ -2546,17 +2644,15 @@ function renderLeapCard(l,spot,today){
     const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
-    const shortRow=renderPmccOpenFace(l,today,spot);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button></span></div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls sold against it.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
     <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
-  ${shortRow}
-  <div class="lc-acts"><button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Add trade</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></div>
   ${renderPmcc(l,today,spot)}
+  <div class="lc-acts"><button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Add trade</button></div>
   <details class="wl-more"><summary>More numbers</summary><div class="mn-grid">
     ${_mn('Breakeven','$'+S.be.toFixed(2),S.beDist!=null?`${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:'no spot')}
     ${_mn('Share equiv.',S.dsh!=null?Math.round(S.dsh)+' sh':'—',S.dsh!=null&&S.q?`Δ ${(S.dsh/100/S.q).toFixed(2)}`:'no greeks')}
@@ -2630,7 +2726,7 @@ function openLeapEdit(id){
   v('lf-date',l.entryDate);v('lf-fees',l.fees??0);v('lf-review',l.reviewDate);v('lf-notes',l.notes);v('lf-mark',l.mark);
   document.getElementById('mLeapTitle').textContent='Edit LEAP';
   document.getElementById('lf-mark-wrap').style.display=l.status==='open'?'':'none';document.getElementById('lf-del').style.display='';
-  const xa=document.getElementById('lf-xacts');xa.innerHTML=leapEditActs(l,(db.opts||[]),new Date().toISOString().slice(0,10));xa.style.display=xa.innerHTML?'flex':'none';
+  document.getElementById('lf-xacts').style.display='none';
   document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='none';switchLeapTab('manual');
   openModal('mLeap');
 }
@@ -2883,7 +2979,7 @@ function pmccExpire(id){
   const i=(db.opts||[]).findIndex(x=>x.id===id);if(i<0)return;const l=db.opts[i];
   const today=new Date().toISOString().slice(0,10);
   if(!confirm(`Mark ${l.underlying} $${fmt2(l.strike)}C ${l.expiry} as expired worthless?${l.expiry>today?' (It hasn\'t reached expiry yet.)':''}`))return;
-  db.opts[i]=OPTS.expireLeg(l);_saveOpt(db.opts[i]);render();
+  db.opts[i]=OPTS.expireLeg(l);_saveOpt(db.opts[i]);closeModal('mPmccLeg');render();
 }
 function initPmccDrop(){
   const ta=document.getElementById('pcc-paste');if(!ta||ta._wired)return;ta._wired=true;
@@ -6855,7 +6951,7 @@ window.setOptDemo = setOptDemo;
 window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;
 window.openOptAdd = openOptAdd;
-window.openPmccSell=openPmccSell;window.openLeapRoll=openLeapRoll;window.pmccManualTab=pmccManualTab;window.pmccSide=pmccSide;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.savePmcc=savePmcc;window.pmccSaveRoll=pmccSaveRoll;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;window.pmccDeleteShort=pmccDeleteShort;
+window.openPmccSell=openPmccSell;window.openLeapRoll=openLeapRoll;window.pmccManualTab=pmccManualTab;window.pmccSide=pmccSide;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.savePmcc=savePmcc;window.pmccSaveRoll=pmccSaveRoll;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;window.pmccDeleteShort=pmccDeleteShort;window.openPmccLegEdit=openPmccLegEdit;window.savePmccLeg=savePmccLeg;
 window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
 window.openOptEdit = openOptEdit;
 window.optAddLeg = optAddLeg;
