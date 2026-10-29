@@ -3,7 +3,7 @@ const { extractFn } = require('./extract');
 let pass = 0, fail = 0;
 const check = (n, ok, x) => { ok ? pass++ : fail++; console.log((ok ? '  ✓ ' : '  ✗ ') + n + (ok || x === undefined ? '' : '  → ' + JSON.stringify(x))); };
 const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['pmccShortsFor','pmccStats','pmccFormLeg','pmccBuyBack','pmccTradeEvents','pmccDupOf'].map(extractFn).join('\n') +
+  ['pmccShortsFor','pmccStats','pmccFormLeg','pmccBtcMatch','pmccBuyBack','pmccTradeEvents','pmccDupOf'].map(extractFn).join('\n') +
   '\nreturn {OPTS,pmccStats,pmccFormLeg,pmccBuyBack,pmccTradeEvents,pmccDupOf};')();
 const leap = { id: 'L', groupId: 'L', underlying: 'EXMPL', type: 'C', side: 'long', strike: 150, expiry: '2027-12-17', qty: 5, entryPrice: 33.7, entryDate: '2026-10-22', fees: 2.7, status: 'open' };
 const sto = S.pmccFormLeg({ strike: 170, expiry: '2026-11-13', qty: 3, price: 1.67, date: '2026-10-23', fees: 1.62, newId: 's1' }, leap).leg;

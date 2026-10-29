@@ -24,7 +24,7 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','pmccBuyBack','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','pmccShortProfit','pmccChainPriorNet','renderPmccTradeRow','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','pmccShortEvents','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','pmccBtcMatch','pmccBuyBack','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','pmccShortProfit','pmccChainPriorNet','renderPmccTradeRow','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','pmccShortEvents','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
   `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccBuyBack,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmccOpenFace,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 
@@ -57,6 +57,12 @@ check('already closed call is not matched', !r3.leg && r3.err, r3);
 const r4 = S.pmccBuyBack({ strike: '', expiry: '', price: '0.50', date: '2026-10-19' }, leap, [leap, c]);
 check('blank strike/expiry with one open call → closes it', r4.leg && r4.leg.id === 'c', r4);
 check('buy back writes nothing itself', S.writes.length === 0);
+
+// Buy backs: no expiry doubt — expiry comes from the open call it closes.
+const rbY = S.scanAt('Buy SPCX $245 Call Nov 20\nPosition effect\nClose\nFilled Oct 19, 10:31 AM\n2 contracts at $1.10', '2026-10-23').calls[0] || {};
+check('BTC with yearless expiry → no expiry doubt', rbY.action === 'btc' && !(rbY.low || []).includes('expiry'), rbY);
+const r5 = S.pmccBuyBack({ strike: 245, expiry: '', price: 1.1, date: '2026-10-19' }, leap, [leap, { ...c }]);
+check('BTC with strike but no expiry → closes the matching open call', r5.leg && r5.leg.id === 'c' && r5.leg.expiry === '2026-11-20', r5);
 
 console.log(`\n${pass} pass / ${fail} fail`);
 if (fail) process.exit(1);
