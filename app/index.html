@@ -2620,6 +2620,14 @@ function renderLeapCard(l,spot,today){
   <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
   <div class="leap-row">${row}</div>${renderPmcc(l,today,spot)}</div>`;
 }
+// LEAPs tab tiles: sums that make sense across many LEAPs. Calls/adj match each card's "Cost after calls".
+function leapTileTotals(openL,legs,spots,today){
+  let cost=0,value=0,priced=0,noPrice=0,calls=0;
+  (openL||[]).filter(l=>!l.demo).forEach(l=>{const S=leapStats(l,(spots||{})[l.underlying],today),P=pmccStats(l,legs,today);
+    cost+=S.cost;if(S.value==null)noPrice++;else{value+=S.value;priced++;}calls+=P.net;});
+  const r=n=>Math.round(n*100)/100;
+  return{n:priced+noPrice,cost:r(cost),value:r(value),priced,noPrice,calls:r(calls),adj:r(cost-calls)};
+}
 function renderOptions(){
   const legs=db.opts||[];
   const today=new Date().toISOString().slice(0,10),spots=_optSpots();
@@ -2627,18 +2635,16 @@ function renderOptions(){
   const openL=leaps.filter(l=>l.status==='open');
   const shown=(leapStatus==='open'?openL:leaps.filter(l=>l.status!=='open'))
     .sort((a,b)=>leapStatus==='open'?(a.expiry||'').localeCompare(b.expiry||''):(b.closeDate||'').localeCompare(a.closeDate||''));
-  // summary (open LEAPs)
-  let val=0,cost=0,pl=0,dsh=0,thd=0,tv=0,unmarked=0,noG=0;
-  openL.forEach(l=>{const S=leapStats(l,spots[l.underlying],today);cost+=S.cost;
-    if(S.value==null)unmarked++;else{val+=S.value;pl+=S.pl||0;}
-    if(S.tv!=null)tv+=S.tv*100*S.q;if(S.dsh==null)noG++;else{dsh+=S.dsh;thd+=S.thd;}});
+  // summary (open LEAPs) — totals that add up across many LEAPs on different stocks
+  const T=leapTileTotals(openL,legs,spots,today);
   const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
-  const sc=(l,v,sub,cls='')=>`<div class="leap-sc"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="s ${cls}">${sub}</div></div>`;
-  const sumH=openL.length?`<div class="leap-sum">
-    ${sc('Market value',m0(val),`cost ${m0(cost)}${unmarked?` · ${unmarked} unmarked`:''}`)}
-    ${sc('Open P&amp;L',(pl>=0?'+':'')+m0(pl),cost>0?`${pl>=0?'+':''}${(pl/cost*100).toFixed(1)}%`:'',pl>=0?'g':'r')}
-    ${sc('Share equivalent',`${Math.round(dsh)} sh`,noG?`combined delta · ${noG} w/o greeks`:'combined delta')}
-    ${sc('Time value',m0(tv),`decay ≈ ${m0(thd)}/day`)}</div>`:'';
+  const sc=(l,v,sub,cls='')=>`<div class="leap-sc"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="s">${sub}</div></div>`;
+  const nL=`across ${T.n} LEAP${T.n!==1?'s':''}`;
+  const sumH=T.n?`<div class="leap-sum">
+    ${sc(`LEAP cost ${ii('What you paid for your open LEAPs, fees included.')}`,m0(T.cost),nL)}
+    ${sc(`Value now ${ii('What your open LEAPs are worth at today\'s prices. LEAPs with no price are left out.')}`,T.priced?m0(T.value):'—',T.noPrice?`${T.noPrice} without a price`:nL)}
+    ${sc(`Calls collected ${ii('Net from calls sold against your open LEAPs, after buy backs and fees.')}`,m0(T.calls),'from calls sold',T.calls>0?'g':'')}
+    ${sc(`Cost after calls ${ii('LEAP cost minus calls collected.')}`,m0(T.adj),nL)}</div>`:'';
   const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${leapStatus==='open'?'No open LEAPs. Add one with <b>+ LEAP</b>, or import a broker file with buy-to-open call fills.':'No closed LEAPs yet.'}</div>`;
   // non-long-call legs never vanish silently
   const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
