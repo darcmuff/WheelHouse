@@ -13,7 +13,7 @@ const stubs = [
   "const fmtDateFull=d=>d||'-';",
   "const esc=s=>String(s==null?'':s);",
   "function colorN(n){return n==null?'m':(n>=0?'g':'r');}",
-  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let expandedLeaps=new Set();let _focusTid=null;",
+  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let collapsedLeaps=new Set();let _focusTid=null;",
   "function openEditTrade(){}",
   "function openOptEdit(){}",
   "function pmccClose(){}",
@@ -24,8 +24,8 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccLabels','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','renderPmccOpenFace','renderPmccTradeRow','renderPmcc','optsToCSV','calcTradeROC','isCredit','renderTradeRow'].map(extractFn).join('\n') +
-  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccLabels,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmccOpenFace,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','pmccShortEvents','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
+  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2028-06-16', qty: 2, entryPrice: 72, fees: 1.30, entryDate: '2026-06-01', status: 'open' };
@@ -58,28 +58,13 @@ check('history newest first', P.past.map(l => l.id).join() === 'b,a');
 // ── no risk warnings (Marc: "I made the trade myself, I know the risks") ──
 const risky = [leap, sh({ id: 'r', strike: 120, expiry: '2029-01-19', entryPrice: 9, qty: 5 })];
 S.setOpts(risky);
-const rh0 = S.renderPmccOpenFace(leap, today);
-check('risky short (below breakeven, past LEAP expiry, over-sold) renders with no warning text', !/⚠|naked|risk a loss|lock in a loss|uncovered|expires after/i.test(rh0) && !/pmcc-warn|pcc-warn/.test(rh0) && /ab-STO/.test(rh0) && /\$120/.test(rh0), rh0);
 check('stats carry no warnings field', !('warnings' in S.pmccStats(leap, risky, today)));
 check('risky short still saves (no blocking)', !!S.pmccFormLeg({ strike: '120', expiry: '2029-01-19', qty: '5', price: '9', newId: 'z' }, leap).leg);
 const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
 check('no PMCC risk copy anywhere in the app', !/pmccWarnings|pmcc-warn|pcc-warn|would be naked|risk a loss if called away|lock in a loss/.test(html));
 // ── status labels (open short only) ──
-const T = s => S.pmccLabels(s.c, s.spot, today).map(l => l.t + '/' + l.c).join('|');
 const o = (x) => ({ status: 'open', strike: 245, expiry: '2026-11-20', entryPrice: 6.40, mark: 5, ...x });
-check('no labels when nothing applies', T({ c: o({}), spot: 200 }) === '');
-check('Expiring soon amber at 7 DTE', T({ c: o({ expiry: '2026-10-28' }), spot: 200 }) === 'Expiring soon/a');
-check('8 DTE → no expiry label', T({ c: o({ expiry: '2026-10-29' }), spot: 200 }) === '');
-check('Expires today red at DTE 0', T({ c: o({ expiry: today }), spot: 200 }) === 'Expires today/r');
-check('Near the money amber within 5% below strike', T({ c: o({}), spot: 233 }) === 'Near the money/a' && T({ c: o({}), spot: 232 }) === '');
-check('At the strike = near, not ITM', T({ c: o({}), spot: 245 }) === 'Near the money/a');
-check('In the money red above strike', T({ c: o({}), spot: 246 }) === 'In the money/r');
-check('Take profit green ≥40% captured with %', T({ c: o({ mark: 3.84 }), spot: 200 }) === 'Take profit · 40%/g' && T({ c: o({ mark: 3.45 }), spot: 200 }) === 'Take profit · 46%/g' && T({ c: o({ mark: 3.90 }), spot: 200 }) === '');
-check('no price → no price-based labels (expiry still shown)', T({ c: o({ mark: null, expiry: '2026-10-25' }), spot: undefined }) === 'Expiring soon/a');
-check('closed short → no labels', T({ c: o({ status: 'closed', mark: 0.1 }), spot: 300 }) === '');
 S.setOpts(legs);
-check('labels render on the open face STO row', /pmcc-lb g">Take profit · 52%/.test(S.renderPmccOpenFace(leap, today, 205)));
-check('no spot → no money-ness labels on the open face', !/the money/.test(S.renderPmccOpenFace(leap, today, undefined)) && /In the money/.test(S.renderPmccOpenFace(leap, today, 300)));
 
 // ── form leg ──
 const f = S.pmccFormLeg({ strike: '245', expiry: '2026-11-20', qty: '2', price: '6.40', date: '2026-10-09', fees: '1.30', notes: '', newId: 'n1' }, leap);
@@ -90,24 +75,18 @@ check('form validation: strike required', /strike/.test(S.pmccFormLeg({ strike: 
 // ── render ──
 S.setOpts(legs);
 const h = S.renderPmcc(leap, today);
-check('trade table: BTO + STO/BTC/EXP rows, soft action pills, open-row actions', /pmcc-trades/.test(h) && /ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && /Buy back/.test(h) && /Roll/.test(h) && /Expired/.test(h) && /\$245/.test(h));
-check('LEAP with no short calls renders no table (Sell call lives on the card)', S.renderPmcc({ ...leap, id: 'none' }, today) === '');
+check('trade list: short calls only (STO/BTC/EXP, no LEAP BTO), Edit on every row', /pmcc-trades/.test(h) && !/ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && (h.match(/class="trow /g)||[]).length===(h.match(/openPmccLegEdit\(/g)||[]).length && /To strike/.test(h) && /Captured/.test(h));
+check('LEAP with no short calls shows "No short calls yet." row', (()=>{const h=S.renderPmcc({ ...leap, id: 'none' }, today);return /pmcc-trades/.test(h)&&/No short calls yet\./.test(h)&&!/BTO/.test(h);})());
 check('roll chain tip shows chain row', /chain-row/.test(h) && /Chain/.test(h));
 check('events newest-first with BTO present', (()=>{const ev=S.pmccTradeEvents(leap,legs);return ev[0].entered>=ev[ev.length-1].entered && ev.some(e=>e.action==='BTO') && ev.filter(e=>e.action==='STO').length===3;})());
 check('no wheel data touched by rendering', S.db.wheels.length === 1 && S.db.trades.length === 1 && S.writes.length === 0);
-const face = S.renderPmccOpenFace(leap, today, 205);
-check('open face: same trade-body/thead/trow as wheel, STO pill, shares=qty×100, no grey strip', /trade-body open pmcc-open/.test(face) && /thead-row/.test(face) && /ab-STO/.test(face) && /rot-actions/.test(face) && /Buy back/.test(face) && /✕ Delete/.test(face) && !/lc-short|Short call 2×/.test(face) && /200/.test(face) /* 2×100 shares */);
-check('open face: Captured header (not AROC%) and % value', /Captured/.test(face) && !/>AROC%</.test(face) && (/52%/.test(face) || /pmcc-lb/.test(face)) && /To strike/.test(face));
-check('open face empty state when no shorts', /No short call open/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)) && /Sell call/.test(S.renderPmccOpenFace({ ...leap, id: 'none' }, today)));
 check('pmccLegToTrade maps to STO with shares×100', (()=>{const tr=S.pmccLegToTrade(c, today);return tr.action==='STO'&&tr.shares===200&&tr.premium===6.4;})());
-// ── To strike (LEAP open face only) ──
 const ts = (spot, K) => S.toStrike(spot, K);
 check('toStrike: no price → dash', ts(null, 245).text === '—' && ts(0, 245).text === '—' && ts(200, 0).cls === 'm');
 check('toStrike: below strike shows +% and $ to rise', (()=>{const r=ts(200, 245);return r.cls==='m' && Math.abs(r.pct-22.5)<0.01 && /\+22\.5% · \$45\.00/.test(r.text);})());
-check('toStrike: within 5% of strike → amber (same as Near the money)', ts(245*0.95, 245).cls === 'a' && ts(245*0.95-0.01, 245).cls === 'm');
-check('toStrike: at strike → amber (0%, near)', ts(245, 245).cls === 'a' && /\+0\.0%/.test(ts(245, 245).text));
-check('toStrike: above strike (ITM) → red negative', (()=>{const r=ts(260, 245);return r.cls==='r' && r.pct<0 && /-/.test(r.text);})());
-check('open face includes To strike header and cell', /To strike/.test(S.renderPmccOpenFace(leap, today, 205)) && /to-strike/.test(S.renderPmccOpenFace(leap, today, 205)));
+check('toStrike: within 5% of strike → neutral', ts(245*0.95, 245).cls === 'm');
+check('toStrike: at strike → neutral (0%)', ts(245, 245).cls === 'm' && /\+0\.0%/.test(ts(245, 245).text));
+check('toStrike: above strike → neutral negative', (()=>{const r=ts(260, 245);return r.cls==='m' && r.pct<0 && /-/.test(r.text);})());
 check('wheel header has no To strike', !/To strike/.test(S.tradeTableHead()) && /AROC%/.test(S.tradeTableHead()));
 const csv = S.optsToCSV(legs);
 check('Options CSV export carries parentLeapId', csv.split('\n')[0].includes('parentLeapId') && csv.includes(',L1,'));
@@ -131,7 +110,8 @@ want('IBKR statement line (negative qty = sold)', `SPCX 20NOV26 245 C  2026-10-0
 want('garbled one-liner "sold 2 spcx 245c 11/20/26 @6.40"', `sold to open 2 SPCX 245c 11/20/2026 @ 6.40 on 10/09/2026`, { ticker: 'SPCX', strike: 245, expiry: '2026-11-20', qty: 2, price: 6.4 });
 const rj = (name, text, re) => { const r = S.scan(text); check(name, r.calls.length === 0 && re.test(r.error), r.error); };
 rj('bought call refused → points to + LEAP', `Buy to open SPCX 06/16/2028 150 C 2 @ 72.00 on 06/01/2026`, /\+ LEAP/);
-rj('buy-to-close refused → points to Buy back', `Buy to close SPCX 11/20/2026 245 C 2 @ 1.10 on 10/19/2026`, /Buy back/);
+const bb = S.scan(`Buy to close SPCX 11/20/2026 245 C 2 @ 1.10 on 10/19/2026`);
+check('buy-to-close now accepted as btc', bb.calls.length === 1 && bb.calls[0].action === 'btc', bb);
 rj('put refused', `Sell to open SPCX 11/20/2026 180 P 1 @ 3.00 on 10/09/2026`, /put/i);
 rj('empty paste', `  `, /Paste/);
 const nos = S.scan(`SPCX 20NOV26 245 C qty 2 price 6.40 date 2026-10-09`);
@@ -141,7 +121,7 @@ check('side unknown → accepted but flagged low-confidence', nos.calls.length =
 // ── Robinhood app: yearless expiry ("Nov 13") + relative time ("· 30m") — Marc's real-world paste layout, fake figures ──
 const rh = 'Sell SPCX $170 Call Nov 13\nIndividual · 30m\n$501.00\n3 contracts at $1.67\nType\nLimit sell\nPosition effect\n';
 const yl = (name, text, d, exp) => { const r = S.scanAt(text, d); const x = r.calls[0] || {};
-  const ok = r.calls.length === 1 && Object.entries(exp).every(([k, v]) => typeof v === 'number' ? Math.abs(x[k] - v) < 0.006 : x[k] === v) && x.low.includes('expiry');
+  const ok = r.calls.length === 1 && Object.entries(exp).every(([k, v]) => typeof v === 'number' ? Math.abs(x[k] - v) < 0.006 : x[k] === v) && !x.low.includes('expiry');
   check(name, ok, r.calls.length ? x : r.error); };
 yl('RH yearless, cut off after "Position effect"', rh + '...', '2026-10-23', { ticker: 'SPCX', strike: 170, expiry: '2026-11-13', side: 'sell', qty: 3, price: 1.67, date: '2026-10-23' });
 yl('RH yearless, full tail (Open, Filled, fees, Total)', rh + 'Open\nFilled\nOct 23, 3:58 PM\n3 contracts at $1.67\nRegulatory fees\n$0.06\nContract fees\n$1.86\nTotal\n$499.08', '2026-10-23', { expiry: '2026-11-13', qty: 3, price: 1.67, fees: 1.92, date: '2026-10-23' });
@@ -149,10 +129,16 @@ yl('RH yearless "2h ago"', rh.replace('30m', '2h ago') + 'Open', '2026-10-23', {
 yl('yearless expiry rolls into next year (Jan 15 sold in Dec)', 'Sell SPCX $170 Call Jan 15\nIndividual · 2h\n3 contracts at $1.67\nPosition effect\nOpen', '2026-12-20', { expiry: '2027-01-15', date: '2026-12-20' });
 yl('yearless expiry on the trade date itself (0DTE) stays this year', 'Sell SPCX $170 Call Oct 23\nIndividual · 30m\n1 contract at $0.40\nPosition effect\nOpen', '2026-10-23', { expiry: '2026-10-23', qty: 1, price: 0.4 });
 yl('"Yesterday" → trade date = day before', 'Sell SPCX $170 Call Nov 13\nIndividual · Yesterday\n3 contracts at $1.67\nPosition effect\nOpen', '2026-10-23', { date: '2026-10-22', expiry: '2026-11-13' });
+
+// yearless expiry is confident: year = first occurrence on/after the fill date (not today)
+yl('Sell SPCX $165 Call Nov 20 filled Oct 29 → 2026-11-20, no flag', 'Sell SPCX $165 Call Nov 20\nIndividual · 30m\n2 contracts at $1.20\nPosition effect\nOpen', '2026-10-29', { expiry: '2026-11-20', strike: 165 });
+yl('old paste: fill Oct 29, 2025 → expiry 2025-11-20 even today', 'Sell SPCX $165 Call Nov 20\nType\nLimit sell\nPosition effect\nOpen\n2 contracts at $1.20\nFilled\nOct 29, 2025, 3:58 PM', '2026-10-29', { expiry: '2025-11-20', date: '2025-10-29' });
+const nx = S.scanAt('Sell SPCX $165 Call\nIndividual · 30m\n2 contracts at $1.20\nPosition effect\nOpen', '2026-10-29');
+check('no expiry at all → still flagged', !nx.calls.length || (nx.calls[0].low || []).includes('expiry') || !nx.calls[0].expiry, nx);
 const lb = S.leapAt('Buy SPCX $170 Call Jan 15\nIndividual · 30m\n$501.00\n3 contracts at $1.67\nPosition effect\nOpen', '2026-10-23');
-check('+ LEAP form: yearless Robinhood buy also parses (expiry flagged)', lb.calls.length === 1 && lb.calls[0].expiry === '2027-01-15' && lb.calls[0].low.includes('expiry') && lb.calls[0].price === 1.67, lb);
+check('+ LEAP form: yearless Robinhood buy also parses (expiry confident)', lb.calls.length === 1 && lb.calls[0].expiry === '2027-01-15' && !lb.calls[0].low.includes('expiry') && lb.calls[0].price === 1.67, lb);
 const ls = S.leapAt(rh + 'Open', '2026-10-23');
-check('+ LEAP form: yearless sold call refused, points to Sell call', !ls.calls.length && /Sell call/.test(ls.error), ls.error);
+check('+ LEAP form: yearless sold call refused, points to Add trade', !ls.calls.length && /Add trade/.test(ls.error), ls.error);
 
 console.log(`\n${pass} pass / ${fail} fail`);
 if (fail) process.exit(1);
