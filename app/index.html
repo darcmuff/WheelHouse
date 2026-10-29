@@ -4239,22 +4239,43 @@ function renderTradeRow(t,wheelTrades,opts){
 
 // ── LOG ──
 function renderActivityHead(){
-  return`<div class="act-head"><div><h1>Activity</h1><p>Every wheel trade, plus getting trades in and out.</p></div>
+  return`<div class="act-head"><div><h1>Activity</h1><p>Every trade, plus getting trades in and out.</p></div>
     <div class="act-btns"><button class="btn btn-primary" onclick="openPasteTrade()">+ Paste fill</button>
     <button class="btn btn-ghost" onclick="openImport()">Import CSV / PDF</button>
     <button class="btn btn-ghost" onclick="exportCSV()">Export trades CSV</button>
     <button class="btn btn-ghost" onclick="exportOptsCSV()">Export LEAPs CSV</button>
     <button class="btn btn-ghost" onclick="openNewPos()">New rotation</button></div></div>`;
 }
+// Option legs (LEAPs, PMCC short calls, other long/short options) as Activity rows: one open row, plus one close row once closed/expired.
+function optLegLogRows(opts){
+  const out=[];
+  for(const l of opts||[]){
+    if(!l||l.demo)continue;
+    const short=l.side==='short',n=(+l.qty||0)*100,tk=String(l.underlying||'').toUpperCase(),ef=+l.fees||0;
+    const base={ticker:tk,expiry:l.expiry||null,strike:+l.strike||null,shares:n,legId:l.id,opt:true,wheelId:null};
+    if(l.entryDate){const g=(+l.entryPrice||0)*n;out.push({...base,id:l.id+':o',action:short?'STO':'BTO',entered:l.entryDate,premium:+l.entryPrice||0,fees:ef,total:short?g-ef:g+ef,ts:l.ts||null});}
+    if(l.status!=='open'&&l.closeDate){const cp=+l.closePrice||0,cf=+l.closeFees||0,g=cp*n;
+      if(l.status==='expired'||cp===0)out.push({...base,id:l.id+':x',action:'EXP',entered:l.closeDate,premium:0,fees:0,total:0,ts:l.closeTs||null});
+      else out.push({...base,id:l.id+':c',action:short?'BTC':'STC',entered:l.closeDate,premium:cp,fees:cf,total:short?g+cf:g-cf,ts:l.closeTs||null});}
+  }
+  return out;
+}
+// Same-day tie-break, newest on top: timestamps when both have one, else sells/opens above buy backs/closes/expiries.
+function logSameDayCmp(a,b){
+  if(a.ts&&b.ts&&a.ts!==b.ts)return String(b.ts).localeCompare(String(a.ts));
+  const r=x=>({EXP:0,BTC:1,STC:1}[x.action]??2);return r(b)-r(a);
+}
 function renderLog(){
   const q=logQ.toLowerCase();
-  let trades=[...db.trades].filter(t=>{
+  let trades=[...db.trades,...optLegLogRows(db.opts)].filter(t=>{
     if(!q)return true;
     return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
   }).sort((a,b)=>{
     let va=a[logSort.col]??'',vb=b[logSort.col]??'';
     if(typeof va==='number')return logSort.dir==='asc'?va-vb:vb-va;
-    return logSort.dir==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+    const c=logSort.dir==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+    if(c||logSort.col!=='entered')return c;
+    const d=logSameDayCmp(a,b);return logSort.dir==='asc'?-d:d;
   });
   function th(col,lbl){const cls=logSort.col===col?(logSort.dir==='asc'?'sa':'sd'):'';return`<th class="${cls}" onclick="sortLog('${col}')">${lbl}</th>`;}
   const rows=trades.map(t=>{
@@ -4272,7 +4293,7 @@ function renderLog(){
       <td>${t.shares||'—'}</td>
       <td class="${isCredit(t.action)?'g':'r'}">${fmtMoney(t.total)}</td>
       <td>
-        <button class="btn btn-ghost btn-icon" onclick="openEditTrade('${t.id}')">•••</button>
+        ${t.opt?'':`<button class="btn btn-ghost btn-icon" onclick="openEditTrade('${t.id}')">•••</button>`}
       </td>
     </tr>`;
   }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:3.125rem">No trades</td></tr>';
