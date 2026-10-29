@@ -94,14 +94,13 @@ test('no over-linking: different shares, different day or far strike stay separa
   ];
   assert.deepEqual(wheelChainMap(T), {});
 });
-test('pmcc merge roll: two 4-lot calls bought back same day into one 8-lot', () => {
+test('pmcc: same-day buy backs are NOT inferred into a roll; only stored rolledFrom links', () => {
   const B = { side: 'short', type: 'C', underlying: 'SOFI', parentLeapId: 'L' };
   const legs = [
     { ...B, id: 'p1', qty: 4, strike: 17, entryDate: '2026-03-20', status: 'closed', closeDate: '2026-04-01' },
     { ...B, id: 'p2', qty: 4, strike: 17, entryDate: '2026-03-20', status: 'closed', closeDate: '2026-04-01' },
     { ...B, id: 'p3', qty: 8, strike: 18, entryDate: '2026-04-01', status: 'open', rolledFrom: 'p1' },
   ];
-  assert.deepEqual(pmccRollParents(legs).p3.sort(), ['p1', 'p2']);
-  const m = pmccChainMap(legs.map(l => ({ kind: 'short', legId: l.id, leg: l })));
-  assert.ok(m.p1 === 0 && m.p2 === 0 && m.p3 === 0);
+  assert.deepEqual(pmccRollParents(legs).p3, ['p1']);
+  assert.equal(pmccRollParents(legs).p2, undefined);
 });
