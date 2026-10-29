@@ -1367,10 +1367,16 @@ function _saveTrade(trade){
     .catch(e=>console.error('Trade save failed:',e));
 }
 let _optsLoadError='';
+// Live prices (optchain/Cboe/Finnhub marks + greeks) live in memory only — never written to Firestore.
+// Only a mark the user typed (markSrc==='manual') is persisted.
+function _persistableLeg(leg){
+  if(!leg||leg.markSrc==='manual')return leg;
+  const o={...leg};o.mark=null;o.markSrc=null;o.markAt=null;o.delta=null;o.theta=null;o.iv=null;return o;
+}
 function _saveOpt(leg){
   if(optDemo||(leg&&leg.demo)){_demoNotSaved();return;}
   const uid=_currentUid();if(!uid||!leg||!leg.id)return;
-  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(leg))
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(_persistableLeg(leg)))
     .catch(e=>{console.error('Option save failed:',e);toastOptErr(e);});
 }
 function _deleteOptDoc(id){
@@ -1541,7 +1547,8 @@ function optionsLib(){
       if(l.type!=='C'&&l.type!=='P')out.push({sev:'red',legId:l.id,text:`${nm(l)} is neither call nor put`});
       if(l.side!=='long'&&l.side!=='short')out.push({sev:'red',legId:l.id,text:`${nm(l)} has no long/short side`});
       if(l.entryPrice==null||l.entryPrice==='')out.push({sev:'amber',legId:l.id,text:`${nm(l)} has no entry premium`});
-      if(l.status==='open'&&l.expiry&&l.expiry<today)out.push({sev:'amber',legId:l.id,text:`${nm(l)} expired ${l.expiry} but is still open — close, expire or record assignment`});
+      if(l.status==='open'&&l.expiry&&l.expiry<today&&l.side==='long'&&l.type==='C'&&!l.parentLeapId)out.push({sev:'amber',legId:l.id,text:`${l.underlying} LEAP expired — close it`});
+      else if(l.status==='open'&&l.expiry&&l.expiry<today)out.push({sev:'amber',legId:l.id,text:`${nm(l)} expired ${l.expiry} but is still open — close, expire or record assignment`});
       if(l.status==='closed'&&(l.closePrice==null||!l.closeDate))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is closed but has no close price/date`});
       if(l.closeDate&&l.entryDate&&l.closeDate<l.entryDate)out.push({sev:'red',legId:l.id,text:`${nm(l)} closed before it was opened`});
       if(l.entryDate&&l.expiry&&l.entryDate>l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} opened after its expiry`});
@@ -2105,8 +2112,7 @@ async function fetchAllQuotes(){
     if(nOk>0){
       db.wheels.forEach(w=>{
         if(w.status==='open'&&quotes[w.ticker]&&w.lastPrice!==quotes[w.ticker].price){
-          w.lastPrice=quotes[w.ticker].price;
-          _saveWheel(w); // persist only real changes — not every wheel every poll
+          w.lastPrice=quotes[w.ticker].price; // in memory only — live prices are never saved
         }
       });
       render();
@@ -2360,6 +2366,9 @@ function leapStats(l,spot,today){
   const intr=spot>0?Math.max(0,spot-(+l.strike)):null;
   const tv=mark!=null&&intr!=null?Math.max(0,mark-intr):null;
   const p=OPTS.legPnL(l),cost=paid*100*q+(+l.fees||0);
+  const expired=l.status==='open'&&left!=null&&left<0; // past expiry but not closed: value unknown until it's closed
+  if(expired)return{q,mark:null,paid,left,total,prog:1,spot,intr:null,tv:null,value:null,cost,pl:null,expired:true,
+    be:(+l.strike)+paid,beDist:spot>0?((+l.strike)+paid)/spot*100-100:null,dsh:null,thd:null};
   const g=l.status==='open'?OPTS.legGreeks(l,spot,today):null;
   return{q,mark,paid,left,total,prog:left!=null&&total>0?Math.min(1,Math.max(0,1-left/total)):null,spot,intr,tv,
     value:mark!=null?mark*100*q:null,cost,pl:l.status==='open'?p.unrealized:p.realized,
@@ -2580,7 +2589,7 @@ function renderLeapCard(l,spot,today){
   if(open){
     const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
     row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Value</div><div class="val">${S.value!=null?fmtMoney(S.value).replace(/\.\d\d$/,''):'—'}</div></div><div><div class="rmb-lbl">P&amp;L</div><div class="pl">${plH}</div></div></div>
-    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>${S.left!=null?`<b>${S.left}</b> days left`:'—'}</span></div>
+    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>${S.expired?'Expired':S.left!=null?`<b>${S.left}</b> days left`:'—'}</span></div>
       <div class="leap-bar"><i style="width:${S.prog!=null?(S.prog*100).toFixed(0):0}%"></i></div>
       ${S.tv!=null?`<div class="leap-split">${inW>0?`<div class="in" style="width:${Math.max(inW,12)}%">Intrinsic $${S.intr.toFixed(2)}</div>`:''}<div class="tv">Time $${S.tv.toFixed(2)}</div></div>`:''}</div>
     <div class="rmb-col"><div class="rmb-lbl">Breakeven</div><div class="rmb-val">$${S.be.toFixed(2)}</div><div class="rmb-sub">${S.beDist!=null?`${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:'no spot'}</div></div>
@@ -2596,11 +2605,11 @@ function renderLeapCard(l,spot,today){
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls sold against it.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
-    <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div>
+    <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
   ${renderPmcc(l,today,spot)}
@@ -3284,7 +3293,7 @@ async function fetchOptionMarks(force){
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
         Object.assign(l,{mark:Math.round(mid*100)/100,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
-        _saveOpt(l);ok++;
+        ok++; // in memory only — live marks are never saved
       });
     }catch(e){failU.push(u);console.warn('Option marks:',u,e.message);}
   }
@@ -4960,7 +4969,7 @@ function quickAddRotation(inputId){
   render();
   // Fetch price and logo in background
   fetchSymbol(ticker).then(()=>{
-    if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;_saveWheel(wheel);render();}
+    if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;render();}
   }).catch(()=>{});
   fetchLogo(ticker).then(()=>render()).catch(()=>{});
 }
@@ -5026,7 +5035,7 @@ function saveWheel(){
     db.wheels.push(wheel);
     // Auto-fetch price and logo in background
     fetchSymbol(ticker).then(()=>{
-      if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;_saveWheel(wheel);render();}
+      if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;render();}
     }).catch(()=>{});
     fetchLogo(ticker).then(()=>render()).catch(()=>{});
   }
@@ -5727,7 +5736,7 @@ function doImport(){
   newWheelTickers.forEach(ticker=>{
     fetchSymbol(ticker).then(()=>{
       const w=db.wheels.find(x=>x.ticker===ticker&&x.status==='open');
-      if(w&&quotes[ticker]){w.lastPrice=quotes[ticker].price;_saveWheel(w);render();}
+      if(w&&quotes[ticker]){w.lastPrice=quotes[ticker].price;render();}
     }).catch(()=>{});
     fetchLogo(ticker).then(()=>render()).catch(()=>{});
   });
@@ -6901,8 +6910,7 @@ onAuthStateChanged(_auth, async (user) => {
     if (nOk > 0) {
       db.wheels.forEach(w => {
         if (w.status === 'open' && quotes[w.ticker] && w.lastPrice !== quotes[w.ticker].price) {
-          w.lastPrice = quotes[w.ticker].price;
-          _saveWheel(w); // persist only real changes
+          w.lastPrice = quotes[w.ticker].price; // in memory only
         }
       });
     }

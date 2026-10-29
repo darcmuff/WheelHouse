@@ -88,7 +88,8 @@ const H = O.health([
   L({ id: 'h7', entryDate: '2026-03-01' }),                 // opened after expiry
 ], [{ id: 'w1', ticker: 'SOFI' }], TODAY);
 const has = (id, re) => H.some(i => i.legId === id && re.test(i.text));
-check('health: open past expiry', has('h1', /still open/));
+check('health: open LEAP past expiry', has('h1', /^AAPL LEAP expired — close it$/));
+check('health: open short call past expiry', O.health([L({ id: 'h8', side: 'short', expiry: '2026-01-02' })], [], TODAY).some(i => /still open/.test(i.text)));
 check('health: no strike', has('h2', /no strike/));
 check('health: dangling rotation', has('h3', /no longer exists/));
 check('health: wrong underlying', has('h4', /different underlying/));
