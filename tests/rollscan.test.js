@@ -50,7 +50,7 @@ const LONG = SOFI.replace('SOFI Short Call Roll', 'SOFI Long Call Roll').replace
 const PUT = SOFI.replace('Short Call Roll', 'Short Put Roll').replace(/ Call /g, ' Put ');
 const S = new Function("let n=0;const uid=()=>'new'+(++n);const fmt2=n=>(+n).toFixed(2);" +
   ['CREDITS'].map(extractConst).join('\n') +
-  ['isCredit', 'computeTotal', 'detectRollPaste', 'parseRollTrades', 'optionsLib', 'pmccShortsFor', 'pmccBuyBack', 'pmccFormLeg', 'pmccRollScan', 'pmccRollApply', 'pmccRollParents', 'nearStrike', 'strikeStep', 'exactSubset'].map(extractFn).join('\n') +
+  ['isCredit', 'computeTotal', 'detectRollPaste', 'parseRollTrades', 'optionsLib', 'pmccShortsFor', 'pmccBtcMatch','pmccBuyBack', 'pmccFormLeg', 'pmccRollScan', 'pmccRollApply', 'pmccRollParents', 'nearStrike', 'strikeStep', 'exactSubset'].map(extractFn).join('\n') +
   '\nconst OPTS=optionsLib();return{parseRollTrades,pmccRollScan,pmccRollApply,pmccRollParents};')();
 const T = '2026-10-29';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SOFI', type: 'C', side: 'long', strike: 19.5, expiry: '2026-04-24', qty: 4, entryPrice: 3, entryDate: '2026-01-05', status: 'open' };

@@ -2841,7 +2841,7 @@ function pmccTab(tab){
 function pmccScan(text,B,today){
   const r=leapScan(text,B,today),all=[...r.calls,...r.rejected];
   const calls=all.filter(c=>c.type==='C'&&((c.side!=='buy'&&c.effect!=='close')||(c.side==='buy'&&c.effect!=='open'))).map(c=>{
-    const btc=c.side==='buy';const low=[...(c.low||[])];if(!c.side||(btc&&!c.effect))low.push('side');
+    const btc=c.side==='buy';const low=(c.low||[]).filter(k=>!(btc&&k==='expiry'));if(!c.side||(btc&&!c.effect))low.push('side'); // a buy back takes its expiry from the call it closes
     return{...c,action:btc?'btc':'sto',low:[...new Set(low)]};});
   if(calls.length)return{calls,error:''};
   if(!all.length)return{calls:[],error:r.error};
@@ -2859,13 +2859,19 @@ function pmccSide(a){
   document.getElementById('pcc-err').style.display='none';
 }
 // Buy to close: find the open short call on this LEAP (strike + expiry; else the only open one when both are blank) and close it with the same OPTS.closeLeg the Close action uses.
+// The open short call a buy back closes: strike + expiry, else the only one at that strike, else the only open call.
+function pmccBtcMatch(f,open){
+  const k=parseFloat(f.strike);
+  if(k>0&&f.expiry){const m=open.find(x=>+x.strike===k&&x.expiry===f.expiry);if(m)return m;}
+  if(k>0){const m=open.filter(x=>+x.strike===k);return m.length===1?m[0]:null;}
+  return open.length===1?open[0]:null;
+}
 function pmccBuyBack(f,leap,legs){
   if(!leap)return{err:'LEAP not found'};
   const open=pmccShortsFor(leap,legs).filter(l=>l.status==='open');
   const price=parseFloat(f.price);if(!(price>=0)||f.price===''||f.price==null)return{err:'Enter the buyback price per share'};
   const k=parseFloat(f.strike);let l=null;
-  if(k>0&&f.expiry)l=open.find(x=>+x.strike===k&&x.expiry===f.expiry);
-  else if(!(k>0)&&!f.expiry&&open.length===1)l=open[0];
+  l=pmccBtcMatch(f,open);
   if(!l)return{err:`No open short call${k>0?' at $'+k:''}${f.expiry?' expiring '+f.expiry:''} on this LEAP to buy back.`};
   return{leg:OPTS.closeLeg(l,price,f.date||new Date().toISOString().slice(0,10),f.fees)};
 }
@@ -2923,6 +2929,7 @@ function pmccRunScan(){
   _pmccRoll=null;
   if(rr&&rr.error){msg.style.color='var(--red)';msg.textContent=rr.error;msg.style.display='block';return;}
   document.getElementById('pcc-scan-btn').style.display='';
+  if(rr&&rr.kind==='short'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const m=L&&pmccBtcMatch(rr.close,pmccShortsFor(L,db.opts||[]).filter(l=>l.status==='open'));if(m)rr.close.expiry=m.expiry;}
   if(rr){_pmccRoll=rr;msg.style.display='none';pick.innerHTML=pmccRollPreview(rr);document.getElementById('pcc-scan-btn').style.display='none';return;}
   if(_pmccMode==='roll'){msg.style.color='var(--red)';msg.textContent='That isn\'t a roll — paste both legs (sell to close the old LEAP and buy to open the new one), or use Manual Entry.';msg.style.display='block';return;}
   let r;try{r=pmccScan(document.getElementById('pcc-paste').value,BCSV);}catch(e){r={calls:[],error:'Parse error: '+e.message};}
@@ -2933,7 +2940,8 @@ function pmccRunScan(){
   pick.innerHTML=r.calls.map((c,i)=>`<button class="btn btn-ghost" style="display:flex;width:100%;justify-content:space-between;gap:0.5rem;margin-bottom:0.25rem;font-size:0.75rem;padding:0.375rem 0.625rem" onclick="pmccFillFrom(${i})"><span><b style="color:var(--orange2)">${esc(c.ticker)}</b> ${PMCC_SIDE[c.action]} ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} Call · ${esc(_fdShort(c.expiry))}</span><span style="color:var(--text3)">@ ${c.price!=null?fmt2(c.price):'—'} · ${esc(c.date||'no date')}</span></button>`).join('');
 }
 function pmccFillFrom(i){
-  const c=_pmccScan&&_pmccScan.calls[i];if(!c)return;
+  let c=_pmccScan&&_pmccScan.calls[i];if(!c)return;
+  if(c.action==='btc'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const m=L&&pmccBtcMatch(c,pmccShortsFor(L,db.opts).filter(l=>l.status==='open'));c={...c,expiry:m?m.expiry:c.expiry,low:(c.low||[]).filter(k=>k!=='expiry')};}
   const v=(k,x)=>document.getElementById(k).value=x??'',und=document.getElementById('pcc-und').value;
   pmccSide(c.action||'sto');v('pcc-strike',c.strike);v('pcc-expiry',c.expiry);v('pcc-qty',c.qty||1);v('pcc-price',c.price);v('pcc-date',c.date||new Date().toISOString().slice(0,10));v('pcc-fees',c.fees||0);
   const miss=[c.price==null&&'price',!c.date&&'date'].filter(Boolean),low=(c.low||[]).filter(k=>!miss.includes(k));
