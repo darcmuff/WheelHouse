@@ -43,7 +43,7 @@ test('card markup: breakeven box first, memo with tip, no Last action / Cycle re
   assert.ok(SRC.includes('<span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>'));
   assert.ok(SRC.includes('Your breakeven after all premium and dividends. Calls struck above this lock in a profit if called away.'));
   assert.ok(!SRC.includes("_fact('Last action',lastAct)"));
-  assert.ok(SRC.includes('${_cs.showAddButtons?`<button class="btn btn-primary btn-sm" onclick="openPasteTrade'));
+  assert.ok(SRC.includes(`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openPasteTrade('\${wheel.id}')">Add trade</button></div>`));
   assert.ok(SRC.includes('Holding ${m.sharesHeld} shares · no call yet'));
 });
 
@@ -71,4 +71,14 @@ test('wheel card: open-option cell is labelled Profit with signed $ and % undern
 test('wheel card Profit is chain-aware', () => {
   assert.ok(SRC.includes('const _curChain=wheelChainProfit(m.trades,_curOpt,_curVal);'));
   assert.ok(SRC.includes('const _curPft=_curChain?_curChain.profit:wheelCurrentProfit(_curOpt,_curVal);'));
+});
+
+test('v103 continuity: wheel card controls/formats match LEAP card', () => {
+  assert.ok(!SRC.includes('Paste fill'));
+  assert.ok(!SRC.includes('Hide trades'));
+  assert.ok(SRC.includes(`onclick="toggleStatus('\${wheel.id}')">\${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('\${wheel.id}')">Edit</button>`));
+  assert.ok(SRC.includes('const exp=!collapsedWheels.has(wheel.id);'));
+  assert.ok(SRC.includes('Delete rotation'));
+  assert.ok(SRC.includes(`fmtStrike=k=>'$'+fmt2(k).replace(/\\.00$/,'')`));
+  assert.ok(SRC.includes('fmtMoney(-Math.abs(v))'));
 });
