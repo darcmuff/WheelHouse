@@ -2662,16 +2662,12 @@ function renderLeapCard(l,spot,today){
   ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls sold against it.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
-    <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div></div>
+    <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div>
+    <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
   ${renderPmcc(l,today,spot)}
   <div class="lc-acts"><button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Add trade</button></div>
-  <details class="wl-more"><summary>More numbers</summary><div class="mn-grid">
-    ${_mn('Breakeven','$'+S.be.toFixed(2),S.beDist!=null?`${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:'no spot')}
-    ${_mn('Share equiv.',S.dsh!=null?Math.round(S.dsh)+' sh':'—',S.dsh!=null&&S.q?`Δ ${(S.dsh/100/S.q).toFixed(2)}`:'no greeks')}
-    ${_mn('Theta / day',S.thd!=null?fmtMoney(S.thd).replace(/\.\d\d$/,''):'—','',S.thd<0?'r':'')}
-    ${_mn('Intrinsic',S.intr!=null?'$'+S.intr.toFixed(2):'—','per share')}
-    ${_mn('Time value',S.tv!=null?'$'+S.tv.toFixed(2):'—','per share')}</div></details>`:''}</div>`;
+`:''}</div>`;
   }
   return`<div class="leap-card ${!open?'cn':''}" data-leap="${esc(l.id)}">
   <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
