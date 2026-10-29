@@ -2209,6 +2209,7 @@ function _saveUIState(){
 }
 
 function render(){
+  {const b=document.querySelector('.tn-paste');if(b)b.style.display=view==='positions'?'none':'';} // Wheel tab: cards have their own Add trade
   _saveUIState();
   renderSidebar();
   const c=document.getElementById('content');
