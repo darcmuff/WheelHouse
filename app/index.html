@@ -397,7 +397,6 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .chart-legend-item{display:flex;align-items:center;gap:0.375rem;font-size:0.6875rem;color:var(--text2)}
 .chart-legend-dot{width:0.625rem;height:0.625rem;border-radius:2px;flex-shrink:0}
 .analytics-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0.875rem;margin-bottom:1.25rem}
-#chart-tip{position:fixed;pointer-events:none;z-index:300;background:#1a1d22;border:1px solid var(--border2);border-radius:0.5625rem;padding:0.6875rem 0.9375rem;font-size:0.75rem;color:var(--text);box-shadow:0 0.375rem 1.5rem rgba(0,0,0,0.55);display:none;min-width:9.375rem}
 .astat{background:var(--bg2);border:1px solid var(--border);border-radius:0.625rem;padding:0.875rem 1rem}
 .astat-val{font-size:1.25rem;font-weight:600;color:var(--text);margin-bottom:2px}
 .astat-lbl{font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
@@ -651,8 +650,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tk-pnl{margin-top:1rem}.tk-row{display:grid;grid-template-columns:1fr 8rem 8rem;padding:0.4rem 0;border-top:1px solid var(--border);font-size:0.75rem}.tk-row>span+span{text-align:right}.tk-row.tk-hd{color:var(--text3);font-size:0.625rem;border-top:0}.tk-row .pos{color:var(--green)}.tk-row .neg{color:var(--red)}
 .wl-how{color:var(--text3);font-size:0.55rem;margin-top:0.5rem}
 .wl-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.75rem}
-.wl-more{padding:0 1.125rem 0.75rem}.wl-more summary{color:var(--text3);font-size:0.6rem;cursor:pointer}
-.wl-more .rot-metrics-bar{margin-top:0.5rem;border-radius:0.75rem;background:var(--bg3)}
 @media(max-width:700px){.wl-facts{flex-wrap:wrap}.wl-facts>.wl-f{flex:1 1 40%}.rot-header .rot-label,.rot-header .rot-shares{display:none}}
 
 /* ── LEAP cards ── */
@@ -661,7 +658,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .lc-note{color:var(--text3);font-size:0.6rem;margin-top:0.25rem}
 .lc-hero{display:flex;justify-content:space-between;gap:1.75rem;margin-top:0.75rem;flex-wrap:nowrap;padding-inline:3rem}.lc-hero>div{flex:0 1 auto;min-width:0}.lc-hero>div:last-child:not(:first-child){text-align:right}.lc-k{color:var(--text3);font-size:0.6rem}.lc-v{font-size:1.25rem;font-weight:600}.lc-v.sm{font-size:0.95rem;margin-top:0.25rem}.lc-mut{color:var(--text2)}
 .lc-bar{height:0.3rem;background:var(--bg3);border-radius:1rem;margin:0.75rem 0 0.375rem;overflow:hidden}.lc-bar i{display:block;height:100%;background:var(--orange)}
-.mn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:0.75rem 1.25rem;padding:0.75rem 0 0.25rem}.mn span{display:block;color:var(--text3);font-size:0.625rem}.mn b{display:block;font-weight:550;font-size:0.8125rem;color:var(--text);margin-top:0.125rem}.mn b.g{color:var(--green)}.mn b.r{color:var(--red)}.mn i{display:block;font-style:normal;color:var(--text3);font-size:0.6rem;margin-top:0.0625rem}.mn-hist{margin-top:0.75rem}.mn-ht{color:var(--text3);font-size:0.625rem;margin-bottom:0.25rem}.mn-hr{display:grid;grid-template-columns:11rem 1fr auto;gap:0.75rem;font-size:0.6875rem;padding:0.3125rem 0;border-top:1px solid var(--border);color:var(--text2)}.mn-hr .t3{color:var(--text3)}.mn-hr b{font-weight:550}.mn-hr b.g{color:var(--green)}.mn-hr b.r{color:var(--red)}
 .ii{position:relative;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0 0.125rem;margin-left:0.25rem;font:inherit;font-size:0.8em;font-weight:400;line-height:1;color:var(--text3);opacity:.7;cursor:help;vertical-align:baseline;text-transform:none;letter-spacing:0}.ii:hover,.ii:focus{opacity:1;color:var(--text2);outline:none}.ii:focus-visible{outline:1px solid var(--border);border-radius:4px}#ii-pop{position:fixed;z-index:10000;max-width:17rem;width:max-content;padding:0.5rem 0.625rem;border-radius:8px;background:var(--surface,var(--bg2,#fff));color:var(--text2);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:0.6875rem;font-weight:400;line-height:1.45;text-align:left;white-space:normal;pointer-events:none;text-transform:none;letter-spacing:0}#ii-pop[hidden]{display:none}.hk{position:relative}.hk-back{position:absolute;inset:0;background:var(--bg2);border-radius:inherit;padding:0.75rem 1.5rem 0.75rem 0.875rem;overflow:hidden;display:flex;align-items:center;cursor:pointer;animation:hkFlip .18s ease-out}.hk-bt{font-size:0.75rem;line-height:1.4;color:var(--text2)}.hk-x{position:absolute;top:0.375rem;right:0.5rem;font-size:1rem;line-height:1;color:var(--text3)}@keyframes hkFlip{from{opacity:0;transform:rotateY(70deg)}to{opacity:1;transform:none}}
 .lc-how{color:var(--text3);font-size:0.575rem}
 .lc-short{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;background:var(--bg3);border-radius:0.75rem;padding:0.45rem 0.75rem;margin-top:0.75rem;font-size:0.65rem}
@@ -679,7 +675,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 .lc-lbl{font-size:0.55rem;padding:0.1rem 0.45rem;border-radius:1rem;margin-left:0.25rem;font-weight:600}.lc-lbl.r{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}.lc-lbl.a{background:color-mix(in srgb,var(--yellow) 14%,transparent);color:var(--yellow)}.lc-lbl.g{background:var(--orangeL);color:var(--green)}
 .lc-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.625rem}
-.lc .wl-more{padding:0.5rem 0 0}
 
 .act-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin:0.25rem 0 0.875rem}.act-head h1{font-size:1.375rem;font-weight:600}.act-head p{color:var(--text3);font-size:0.7rem}
 .act-btns{display:flex;flex-wrap:wrap;gap:0.375rem}
@@ -915,7 +910,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 </div>
 
-<div id="chart-tip"></div>
 
 <!-- MODAL: Rotation -->
 <div class="mb" id="mWheel">
@@ -2458,23 +2452,6 @@ function tradeTableHead(opts){
 function pmccShortProfit(c,mark,priorNet){if(!c||mark==null||!(+c.entryPrice>0))return null;const q=+c.qty||0;return Math.round(((+c.entryPrice)*100*q+(priorNet||0)-mark*100*q)*100)/100;}
 // Realised net of the closed legs this open short was rolled from (whole chain, merge rolls included). 0 when not in a chain.
 function pmccChainPriorNet(c,legs){const par=pmccRollParents(legs);const seen=new Set([c.id]);let net=0;const visit=id=>{if(seen.has(id))return;seen.add(id);const l=legs.find(x=>x.id===id);if(!l)return;net+=OPTS.legPnL(l).realized||0;(par[id]||[]).forEach(visit);};(par[c.id]||[]).forEach(visit);return Math.round(net*100)/100;}
-function renderPmccOpenFace(leap,today,spot){
-  const P=pmccStats(leap,db.opts||[],today);
-  const head=tradeTableHead({lastCol:'Captured',toStrike:true});
-  if(!P.cur){
-    return`<div class="trade-body open pmcc-open"><div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3);display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">No short call open.</span></div></div>`;
-  }
-  const c=P.cur,t=pmccLegToTrade(c,today);
-  // Captured column → % of premium captured (mark vs sold). Same 40% take-profit threshold as the green label.
-  const sold=+c.entryPrice||0,mark=c.mark!=null&&c.mark!==''?+c.mark:null;
-  let rocHtml='—',rocColor='var(--text3)';
-  if(mark!=null&&sold>0){const cap=Math.round((sold-mark)/sold*100);rocHtml=cap+'%';rocColor=cap>=40?'var(--green)':cap>=0?'var(--text2)':'var(--red)';
-    const pf=pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[]));
-    if(pf!=null)rocHtml+=` <span class="${pf>=0?'g':'r'}">${pf>=0?'+':'-'}${fmtMoney(Math.abs(pf))}</span>`;}
-  const ts=toStrike(spot,+c.strike);
-  const row=renderTradeRow(t,null,{rocHtml,rocColor,noEdit:true,extraAfterStrike:`<span class="to-strike ${ts.cls}">${esc(ts.text)}</span>`});
-  return`<div class="trade-body open pmcc-open">${head}${row}</div>`;
-}
 function pmccDeleteShort(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
   if(!confirm(`Delete short call ${l.underlying} $${fmt2(l.strike)}C ${l.expiry||''}? This cannot be undone.`))return;
@@ -2502,45 +2479,6 @@ function pmccChainMap(ev){
   order.forEach(r=>{if(groups[r].size<2)return;groups[r].forEach(id=>{map[id]=k;});k++;});
   Object.defineProperty(map,'_parents',{value:par});
   return map;
-}
-function renderPmccTradeRow(e,spot,today,cmap,chainOut){
-  const cIdx=cmap&&e.kind==='short'?cmap[e.legId]:undefined;
-  const cCls=cIdx!=null?' chain-tint':'';
-  const par=cmap&&cmap._parents?cmap._parents:pmccRollParents(db.opts||[]);
-  const rolled=e.kind==='short'&&!!(par[e.legId]&&par[e.legId].length);
-  const rollBadge=rolled&&e.action==='STO'?'<span class="roll-badge">↻</span>':'';
-  const expBadge=e.action==='EXP'?'<span class="exp-badge">EXP</span>':'';
-  const acts='';
-  const totCls=e.total>=0?'g':'r';
-  const netH=e.net==null?'—':`<span class="${colorN(e.net)}">${e.net>=0?'+':''}${fmtMoney(e.net)}</span>`;
-  const rowCls=rolled&&e.action==='STO'?'roll-trade':(e.action==='EXP'?'expired-trade':'');
-  // chain tip: a STO that has no later short rolled from it, but itself has rolledFrom — show chain net under it
-  let chainHtml='';
-  const isTip=rolled&&!Object.values(par).some(ps=>ps.includes(e.legId)); // nothing rolled onward from it
-  if(e.action==='STO'&&rolled&&isTip&&e.leg){
-    // walk every roll parent (merge rolls have several) for net of completed legs + this open
-    const legs=db.opts||[];const chain=[],seen=new Set();let rolls=0;
-    const visit=l=>{if(!l||seen.has(l.id))return;seen.add(l.id);chain.push(l);const ps=par[l.id]||[];if(ps.length)rolls++;ps.forEach(id=>visit(legs.find(x=>x.id===id)));};
-    visit(e.leg);
-    if(chain.length>1){
-      let net=0;chain.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?(p.unrealized!=null?p.unrealized:p.openCash):p.realized;});
-      net=Math.round(net*100)/100;
-      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${rolls} roll${rolls>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;
-    }
-  }
-  if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
-  return`${chainHtml}<div class="trow ${rowCls}${cCls}" data-pmid="${esc(e.id)}">
-    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${e.action}">${e.action}</span>${expBadge}</span>
-    <span>${fmtDateFull(e.entered)}</span>
-    <span>${(e.action==='BTC'||e.action==='EXP'||e.action==='ASN')?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
-    <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
-    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}</span>
-    <span>${e.qty||'—'}</span>
-    <span class="${totCls}">${fmtMoney(e.total)}</span>
-    <span>${e.fees?'$'+fmt2(e.fees):'—'}</span>
-    <span>${netH}</span>
-    <span>${acts}</span>
-  </div>`;
 }
 // LEAP card trade list: short calls only (the LEAP itself lives in the header), newest first, one row per trade, Edit on every row.
 function pmccShortEvents(leap,legs){return pmccTradeEvents(leap,legs).filter(e=>e.kind==='short');}
@@ -2721,12 +2659,6 @@ function openLeapAdd(){
   document.getElementById('lf-paste').value='';document.getElementById('lf-pick').innerHTML='';document.getElementById('lf-scan-msg').style.display='none';
   document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='flex';
   switchLeapTab('smartscan');initLeapDrop();openModal('mLeap');
-}
-// Edit → short-call actions: Edit / Mark expired / Delete short call (LEAP Close/Roll live top right of the card). Reuses pmccExpire, pmccDeleteShort, openOptClose.
-function leapEditActs(l,legs,today){
-  if(!l||l.status!=='open')return'';
-  const c=pmccStats(l,legs,today).cur;const b=(fn,t,cls)=>`<button class="btn ${cls||'btn-ghost'} btn-sm" onclick="closeModal('mLeap');${fn}">${t}</button>`;
-  return(c?b(`openOptEdit('${esc(c.groupId||c.id)}')`,'Edit short call')+b(`pmccExpire('${esc(c.id)}')`,'Mark expired')+b(`pmccDeleteShort('${esc(c.id)}')`,'Delete short call','btn-danger'):'');
 }
 function openLeapEdit(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
@@ -3482,23 +3414,6 @@ function fmtMonYear(d){
   return`${mn[parseInt(m,10)-1]} ${y}`;
 }
 
-function showChartTip(evt,label,credits,debits){
-  const tip=document.getElementById('chart-tip');if(!tip)return;
-  const net=credits-debits;
-  tip.innerHTML=`<div style="font-weight:600;margin-bottom:0.5rem;color:var(--silver);font-size:0.8125rem">${label}</div>`
-    +(credits>0?`<div style="display:flex;justify-content:space-between;gap:1.25rem;margin-bottom:0.25rem"><span class="t3">Credits</span><span style="color:var(--green);font-weight:600">+${fmtMoney(credits)}</span></div>`:'')
-    +(debits>0?`<div style="display:flex;justify-content:space-between;gap:1.25rem;margin-bottom:0.25rem"><span class="t3">Debits</span><span style="color:var(--red);font-weight:600">−${fmtMoney(debits)}</span></div>`:'')
-    +`<div style="display:flex;justify-content:space-between;gap:1.25rem;border-top:1px solid var(--border);padding-top:0.375rem;margin-top:0.25rem"><span class="t3">Net</span><span style="font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':''}${fmtMoney(net)}</span></div>`;
-  tip.style.display='block';moveChartTip(evt);
-}
-function moveChartTip(evt){
-  const tip=document.getElementById('chart-tip');if(!tip||tip.style.display==='none')return;
-  const x=evt.clientX+16,y=evt.clientY-10;
-  const tw=tip.offsetWidth,th=tip.offsetHeight;
-  tip.style.left=(x+tw>window.innerWidth-10?evt.clientX-tw-16:x)+'px';
-  tip.style.top=(y+th>window.innerHeight-10?evt.clientY-th-10:y)+'px';
-}
-function hideChartTip(){const tip=document.getElementById('chart-tip');if(tip)tip.style.display='none';}
 
 function buildLastAction(trades){
   if(!trades||!trades.length)return'—';
@@ -6189,7 +6104,6 @@ function renderAnalytics(){
 
 function _iiPos(e){const b=e.target&&e.target.closest&&e.target.closest('.ii');if(!b)return;const r=b.getBoundingClientRect(),w=Math.min(272,innerWidth-24);b.classList.toggle('ii-r',r.left+w/2>innerWidth-12);b.classList.toggle('ii-l',r.left-w/2<12)}
 if(typeof document!=='undefined'){document.addEventListener('mouseover',_iiPos);document.addEventListener('focusin',_iiPos)}
-function _mn(l,v,sub='',c=''){return`<div class="mn"><span>${l}</span><b class="${c}">${v}</b>${sub?`<i>${sub}</i>`:''}</div>`}
 // Pure: where to put a tip box (w×h) for an icon rect r inside a vw×vh viewport — below by default, flips up, kept 8px inside the edges.
 function iiPlace(r,w,h,vw,vh){
   const m=8,g=6;let left=r.left+r.width/2-w/2;left=Math.max(m,Math.min(left,vw-w-m));
