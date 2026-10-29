@@ -2539,11 +2539,26 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
     <span style="display:flex;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="openPmccLegEdit('${esc(e.legId)}');event.stopPropagation()">Edit</button></span>
   </div>`;
 }
+// Long trade lists: show the newest `limit` rows only (no DOM for the rest). Open legs always shown; a roll chain is never split.
+const listShowAll=new Set(); // per card, memory only
+function listCut(n,chainIdx,isOpen,limit,all){
+  const all_=[...Array(n).keys()];if(all||n<=limit)return all_;
+  const keep=new Set(all_.slice(0,limit));all_.forEach(i=>{if(isOpen[i])keep.add(i);});
+  const ch=new Set();keep.forEach(i=>{if(chainIdx[i]!=null)ch.add(chainIdx[i]);});
+  all_.forEach(i=>{if(chainIdx[i]!=null&&ch.has(chainIdx[i]))keep.add(i);});
+  return all_.filter(i=>keep.has(i));
+}
+function listMoreBtn(id,n,shown){
+  if(n<=10)return'';const on=listShowAll.has(id);if(!on&&shown>=n)return'';
+  return`<div class="list-more" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" style="color:var(--text3)" onclick="toggleListAll('${esc(id)}')">${on?'Show less':`Show all (${n})`}</button></div>`;
+}
+function toggleListAll(id){listShowAll.has(id)?listShowAll.delete(id):listShowAll.add(id);render();}
 function renderPmcc(leap,today,spot){
   const ev=pmccShortEvents(leap,db.opts||[]);
   const cmap=pmccChainMap(ev);
-  const chainOut={},rowHtml=ev.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
-  const rows=hoistChainLines(ev.map(e=>cmap[e.legId]),rowHtml,chainOut);
+  const keep=listCut(ev.length,ev.map(e=>cmap[e.legId]!=null?'c'+cmap[e.legId]:'l'+e.legId),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
+  const chainOut={},rowHtml=evS.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
+  const rows=hoistChainLines(evS.map(e=>cmap[e.legId]),rowHtml,chainOut)+listMoreBtn(leap.id,ev.length,keep.length);
   return`<div class="trade-body open pmcc-open pmcc-trades">${tradeTableHead({lastCol:'Captured',toStrike:true})}
     ${rows||'<div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3)">No short calls yet.</span></div>'}
   </div>`;
@@ -4083,7 +4098,7 @@ function renderRotationWindow(wheel){
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
     const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
-    {const cm=wheelChainMap(m.trades),chainOut={};const rh=_ord.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_ord.map(t=>cm[t.id]),rh,chainOut);}
+    {const cm=wheelChainMap(m.trades),chainOut={};const keep=listCut(_ord.length,_ord.map(t=>cm[t.id]),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);const rh=_S.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_S.map(t=>cm[t.id]),rh,chainOut)+listMoreBtn(wheel.id,_ord.length,keep.length);}
     expandedHtml+=`${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}</div>`;
   }
 
@@ -7006,6 +7021,7 @@ window.moveWheel = moveWheel;
 window.deleteWheel = deleteWheel;
 window.toggleExpand = toggleExpand;
 window.toggleLeapExpand = toggleLeapExpand;
+window.toggleListAll = toggleListAll;
 window.toggleMinimise = toggleMinimise;
 window.toggleHide = toggleHide;
 window.toggleMinAll = toggleMinAll;
