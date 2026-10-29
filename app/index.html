@@ -639,6 +639,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .rot-header{background:transparent!important;border-bottom:0!important;padding:0.875rem 1.125rem 0.25rem!important}
 .rot-ticker{font-size:0.9375rem!important;font-weight:600!important;color:var(--text)!important;background:none!important;border:0!important;padding:0!important}
 .rot-badge{font-size:0.575rem!important;border-radius:1rem!important;background:var(--orangeL)!important;color:var(--orange)!important;border:0!important}
+.rot-badge.closed{background:rgba(181,72,61,.12)!important;color:var(--red)!important}
 .wl-body{padding:0.25rem 1.125rem 0.875rem}
 .wl-top{display:flex;justify-content:space-between;align-items:center}.wl-stage{color:var(--text2);font-size:0.7rem}
 .wl-prem{font-size:0.65rem;font-weight:600;background:var(--orangeL);padding:0.15rem 0.6rem;border-radius:1rem}
@@ -4170,7 +4171,7 @@ function renderRotationWindow(wheel){
       ${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}">${earningsBadge(wheel.ticker)}</span>`):''}
       <span class="rot-shares">${shares}</span>
       ${_pctHtml}
-      <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'✓ Closed'}</span>
+      <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span>
       <span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span>
       ${posSortBy==='manual'?`<button class="rot-header-btn" onclick="event.stopPropagation();moveWheel('${wheel.id}',-1)" title="Move up"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" transform="rotate(180 128 128)"/></svg></button>
       <button class="rot-header-btn" onclick="event.stopPropagation();moveWheel('${wheel.id}',1)" title="Move down"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></button>`:``}
@@ -6125,7 +6126,7 @@ function renderAnalytics(){
     return`<tr>
       <td style="font-weight:600;color:var(--orange)">${w.sortOrder||'?'}</td>
       <td>${(w.label||w.ticker).replace(/^Rotation\s+\d+\s*[—–\-]+\s*/i,'')}</td>
-      <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:0.625rem;font-size:0.5625rem">${w.status==='open'?'● Open':'✓ Closed'}</span></td>
+      <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:0.625rem;font-size:0.5625rem">${w.status==='open'?'● Open':'Closed'}</span></td>
       <td>${m.trades.length}</td>
       <td class="g">${fmtMoney(m.premiumCredits)}</td>
       <td class="${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</td>
