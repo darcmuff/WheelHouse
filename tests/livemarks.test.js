@@ -11,7 +11,7 @@ check('fetchOptionMarks does not call _saveOpt', !/_saveOpt\(/.test(fom));
 // run it with a fake fetch and a spy
 const saves = [];
 const run = new Function('db', 'fetch', 'quotes', 'OPTS', '_saveOpt', 'AbortSignal',
-  `let _optMarkStatus='',view='x';const render=()=>{};async ` + fom + `\nreturn fetchOptionMarks(true);`);
+  `let _optMarkStatus='',view='x';const render=()=>{};` + extractFn('adjMark') + `\nasync ` + fom + `\nreturn fetchOptionMarks(true);`);
 const leg = { id: 'a', status: 'open', underlying: 'SPCX', expiry: '2027-12-17', strike: 150, type: 'C', side: 'long', markSrc: 'cboe', mark: 1 };
 run({ opts: [leg] }, async () => ({ ok: true, json: async () => ({ spot: 100, contracts: { K: { bid: 2, ask: 3 } } }) }), {},
   { occ: () => 'K' }, l => saves.push(l), { timeout: () => null }).then(() => {
