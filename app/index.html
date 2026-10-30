@@ -2121,6 +2121,7 @@ async function fetchAllQuotes(){
       if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
     }
     await fetchExtQuotes(allSyms);
+    _applyWheelMarks();
     // Wait for logos to finish too
     await Promise.allSettled(logoPromises);
     const nOk=Object.keys(quotes).length;
@@ -3292,9 +3293,20 @@ function saveOptClose(){
   closeModal('mOptClose');render();
 }
 // ── Wheel card "Profit": live mid of each wheel's open short option via the same optchain proxy. Display-only, never saved. ──
-const _wheelMarks={};let _wheelMarksAt=0;
+const _wheelMarks={},_wheelMarkRaw={};let _wheelMarksAt=0;
+// Cboe's free option quotes run ~15 min behind. Bring a delayed mid up to date with the live stock price using the quote's
+// own delta and gamma: mid + Δ·dS + ½Γ·dS². Pure. Falls back to the raw mid when greeks or prices are missing.
+function adjMark(mid,delta,gamma,quoteSpot,liveSpot){
+  if(mid==null||!(mid>=0))return null;
+  if(!(quoteSpot>0)||!(liveSpot>0)||delta==null||isNaN(+delta))return Math.round(mid*100)/100;
+  const dS=liveSpot-quoteSpot,g=isNaN(+gamma)?0:+gamma;
+  return Math.max(0.01,Math.round((mid+(+delta)*dS+0.5*g*dS*dS)*100)/100);
+}
+function _applyWheelMarks(){Object.entries(_wheelMarkRaw).forEach(([k,r])=>{const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;_wheelMarks[k]=adjMark(r.mid,r.delta,r.gamma,r.spot,live);});}
+function wheelMarkNote(k){const r=_wheelMarkRaw[k];if(!r)return'';const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
+  return live&&r.delta!=null?`Buy-back price $${(+_wheelMarks[k]).toFixed(2)}: 15-min delayed option quote, adjusted to ${r.u} at $${live.toFixed(2)}`:`Buy-back price $${(+_wheelMarks[k]).toFixed(2)}: 15-min delayed option quote`;}
 async function fetchWheelMarks(force){
-  if(!force&&Date.now()-_wheelMarksAt<5*60e3)return;_wheelMarksAt=Date.now();
+  if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
   const byU={};
   (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const u=String(w.ticker).toUpperCase();openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry).forEach(t=>{(byU[u]=byU[u]||new Set()).add(wheelLegOcc(w.ticker,t));});});
   let changed=false;
@@ -3302,9 +3314,10 @@ async function fetchWheelMarks(force){
     try{
       const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${[...set].join(',')}`,{signal:AbortSignal.timeout(15000)});
       if(!r.ok)continue;const j=await r.json();
-      set.forEach(k=>{const c=j.contracts&&j.contracts[k];const mid=c?(c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last>0?c.last:null)):null;if(mid!=null){_wheelMarks[k]=mid;changed=true;}});
+      set.forEach(k=>{const c=j.contracts&&j.contracts[k];const mid=c?(c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last>0?c.last:null)):null;if(mid!=null){_wheelMarkRaw[k]={u,mid,delta:c.delta??null,gamma:c.gamma??null,spot:j.spot>0?j.spot:null};changed=true;}});
     }catch(e){console.warn('Wheel marks:',u,e.message);}
   }
+  _applyWheelMarks();
   if(changed&&view==='positions')render();
 }
 // ── Live marks: CBOE delayed chain via Netlify proxy; graceful fallback to manual marks + local BS greeks ──
@@ -3312,7 +3325,7 @@ let _optMarksAt=0;
 async function fetchOptionMarks(force){
   const open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
   if(!open.length){_optMarkStatus='';return;}
-  if(!force&&Date.now()-_optMarksAt<5*60e3)return;_optMarksAt=Date.now();
+  if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
   const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
   let ok=0,miss=0,failU=[];
   for(const[u,ls]of Object.entries(byU)){
@@ -3329,7 +3342,8 @@ async function fetchOptionMarks(force){
         if(l.markSrc==='manual'&&!force)return; // a manual mark wins until the user refreshes explicitly
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
-        Object.assign(l,{mark:Math.round(mid*100)/100,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
+        const live=quotes[u]&&quotes[u].state!=='DELAYED'?quotes[u].price:null;
+        Object.assign(l,{mark:adjMark(mid,c.delta,c.gamma,j.spot,live),markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
         ok++; // in memory only — live marks are never saved
       });
     }catch(e){failU.push(u);console.warn('Option marks:',u,e.message);}
@@ -4199,7 +4213,7 @@ function wheelListCells(t,L){
     const mark=L.marks?L.marks[wheelLegOcc(L.ticker,t)]:null;
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:(+t.shares||0)/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
-      const c=capturedCellHtml(Math.round((prem-mark)/prem*100),pf,true);r.cap=c.html;r.capColor=c.color;}
+      const c=capturedCellHtml(Math.round((prem-mark)/prem*100),pf,true);r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(wheelLegOcc(L.ticker,t)):'')}">${c.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;r.capColor=c.color;}
     return r;
   }
   const o=L.outcomes[t.id];if(!o)return r;
