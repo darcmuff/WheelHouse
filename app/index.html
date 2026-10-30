@@ -5464,6 +5464,46 @@ function brokerCSVLib(){
     keep.forEach(r=>delete r._pc);
     return{...res,rows:keep,optionFills:(res.optionFills||[]).concat(fills)};
   }
+  // ── Robinhood account activity report (Reports and statements → Account activity report, CSV) ──
+  // Columns: Activity Date, Process Date, Settle Date, Instrument, Description, Trans Code, Quantity, Price, Amount.
+  // Newest first; options described as "SPCX 11/20/2026 Call $170.00"; expiries as "Option Expiration for …";
+  // assignment = OASGN (qty like "2S", no price) plus a separate share Buy/Sell row; fees = gap between price×size and Amount.
+  const RH_SKIP={CDIV:'dividend',MDIV:'dividend',DIV:'dividend',DRIP:'dividend reinvested',ACH:'cash in or out',DCF:'cash in or out',RTP:'cash in or out',WIRE:'cash in or out',ACATI:'transfer from another broker',ACATO:'transfer to another broker',INT:'interest',MINT:'margin interest',GOLD:'Gold subscription',SLIP:'stock lending',GDBP:'cash in or out',FUTSWP:'cash sweep',SPL:'stock split',SPR:'stock split',OCA:'option adjustment',REC:'free stock',SOFF:'spin-off',CIL:'cash in lieu',SXCH:'exchange',DTAX:'tax',DFEE:'fee',AFEE:'fee',GMPC:'gift',TA:'transfer'};
+  function parseRobinhood(rows,hi){
+    const H=rows[hi].map(norm),ix=n=>H.indexOf(n);
+    const C={date:ix('activity date'),ins:ix('instrument'),desc:ix('description'),code:ix('trans code'),qty:ix('quantity'),price:ix('price'),amt:ix('amount')};
+    const ev=[],bad=[],skip=[];
+    const r2=n=>Math.round(n*100)/100;
+    for(let i=hi+1;i<rows.length;i++){
+      const v=rows[i],g=c=>c>-1&&c<v.length?String(v[c]||'').trim():'';
+      const raw=v.join(',').replace(/\s+/g,' ');
+      const code=g(C.code).toUpperCase(),date=pickDate(g(C.date));
+      if(!code&&!date)continue; // blank lines and the disclaimer footer
+      if(norm(v[0])==='activity date')continue;
+      if(!date){bad.push({line:i+1,raw,reason:'no date'});continue;}
+      const desc=g(C.desc),optS=desc.replace(/^option (expiration|assignment|exercise)s? for\s+/i,'').split('\n')[0];
+      const opt=parseOption(optS);
+      const qty=Math.abs(num(g(C.qty).replace(/[A-Za-z]+$/,''))),price=Math.abs(num(g(C.price))),amt=num(g(C.amt));
+      const base={line:i+1,raw,date,code,qty:isNaN(qty)?0:qty,price:isNaN(price)?0:price,amount:isNaN(amt)?0:amt};
+      if(['STO','BTO','BTC','STC','OEXP','OASGN','OEXCS'].includes(code)){
+        if(!opt){bad.push({line:i+1,raw,reason:"couldn't read the option"});continue;}
+        if(!(base.qty>0)){bad.push({line:i+1,raw,reason:'no quantity'});continue;}
+        let fees=0;
+        if(code==='STO'||code==='STC')fees=r2(base.price*base.qty*100-base.amount);
+        else if(code==='BTO'||code==='BTC')fees=r2(-base.amount-base.price*base.qty*100);
+        if(!(fees>0)||fees>50*base.qty)fees=0; // a rebate or an odd row: never invent fees
+        ev.push({...base,kind:'opt',ticker:opt.ticker,pc:opt.pc,strike:opt.strike,expiry:opt.expiry,fees});
+      }else if(code==='BUY'||code==='SELL'){
+        const tk=(g(C.ins)||'').toUpperCase();
+        if(!tk||!(base.qty>0)){bad.push({line:i+1,raw,reason:'share trade with no ticker or quantity'});continue;}
+        if(/dividend reinvest/i.test(desc)){skip.push({line:i+1,raw,reason:'dividend reinvested'});continue;}
+        const fees=code==='BUY'?r2(-base.amount-base.price*base.qty):r2(base.price*base.qty-base.amount);
+        ev.push({...base,kind:'shares',ticker:tk,fees:fees>0&&fees<50?fees:0,assign:/assign|exercise/i.test(desc)});
+      }else skip.push({line:i+1,raw,reason:RH_SKIP[code]||(code?'not a trade ('+code+')':'not a trade')});
+    }
+    if(ev.length>1&&ev[0].date>ev[ev.length-1].date)ev.reverse(); // Robinhood lists newest first; work oldest first
+    return{broker:'Robinhood',rh:ev,rows:[],optionFills:[],unrecognised:bad,skipped:skip};
+  }
   function parseBrokerCSV(text){
     text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
     if(!text)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Empty file'};
@@ -5475,6 +5515,7 @@ function brokerCSVLib(){
     let hdr=ib?rows[hi].slice(2):rows[hi];
     const broker=detectBroker(hdr,ib?'trades':'');
     if(broker==='CoveredWheel'&&hi===0)return parseNative(text);
+    if(broker==='Robinhood'){_dmy=false;return parseRobinhood(rows,hi);}
     const C=mapCols(hdr);
     if(C.date>-1)_dmy=sniffDMY(rows.slice(hi+1).map(r=>(ib?r.slice(2):r)[C.date]||'').join('\n')+(/trading ?212|etoro/i.test(broker)?' etoro':''));
     const out=[],bad=[],skip=[];
@@ -5655,7 +5696,7 @@ function brokerCSVLib(){
     }
     return splitLongs({broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')});
   }
-  return{splitLongs,parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
+  return{splitLongs,parseRobinhood,parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
 }
 const BCSV=brokerCSVLib();
 let _importParsed=null;
@@ -5671,12 +5712,96 @@ function _routeToOpenLongs(p){
   });
   return{...p,rows:keep,optionFills:fills};
 }
+// Robinhood events (oldest first) → what to add, given what's already in WheelHouse. Pure: never writes.
+// Wheel: puts, covered calls on shares you hold, assignments, share buys/sells → db.trades rows.
+// LEAPs: any bought option → its own leg; calls sold on a ticker with an open LEAP (and no wheel shares) → short calls on that LEAP.
+// A buy-back and a new sale on the same day stay two separate trades: the CSV can't show whether it was one roll order.
+function rhPlan(ev,opts,trades,mkId){
+  const legs=(opts||[]).map(l=>({...l})),newLegs=[],changed=new Set(),wheelRows=[],lines=[],bad=[],skip=[];let dupes=0;
+  const r2=n=>Math.round(n*100)/100,D=(a,b)=>Math.round((Date.parse(a)-Date.parse(b))/864e5);
+  const held={};(trades||[]).forEach(t=>{if(t.action==='IN')held[t.ticker]=(held[t.ticker]||0)+(+t.shares||0);if(t.action==='OUT')held[t.ticker]=(held[t.ticker]||0)-(+t.shares||0);});
+  const wheeled=new Set((trades||[]).map(t=>t.ticker));
+  const rank=e=>e.kind==='shares'?1:['STO','BTO'].includes(e.code)?2:0;
+  const E=ev.map((e,i)=>({e,i})).sort((a,b)=>a.e.date.localeCompare(b.e.date)||rank(a.e)-rank(b.e)||a.i-b.i).map(x=>x.e);
+  const same=(l,e,side)=>l.underlying===e.ticker&&l.type===e.pc&&+l.strike===+e.strike&&l.expiry===e.expiry&&l.side===side;
+  const openLeg=(e,side)=>legs.find(l=>l.status==='open'&&same(l,e,side));
+  const dupOpen=(e,side)=>legs.find(l=>same(l,e,side)&&(l.entryDate||'')===e.date&&+l.qty===+e.qty&&Math.abs(+l.entryPrice-e.price)<0.005);
+  const dupClose=(e,side)=>legs.find(l=>l.status!=='open'&&same(l,e,side)&&l.closeDate===e.date);
+  const leapFor=(tk,date)=>legs.filter(l=>l.status==='open'&&l.side==='long'&&l.type==='C'&&!l.parentLeapId&&l.underlying===tk&&l.expiry>date).sort((a,b)=>b.expiry.localeCompare(a.expiry))[0];
+  const c=e=>`${e.qty} ${e.ticker} $${+e.strike} ${e.pc==='C'?'call':'put'}${e.qty>1?'s':''} (${e.expiry})`;
+  const close=(l,e,how)=>{if(+e.qty<+l.qty){const rest={...l,id:mkId(),qty:+l.qty-e.qty,fees:0};legs.push(rest);newLegs.push(rest);l.qty=e.qty;}
+    Object.assign(l,how==='exp'?{status:'expired',closePrice:0,closeDate:e.date,closeFees:0}:{status:'closed',closePrice:e.price,closeDate:e.date,closeFees:e.fees});
+    if(!newLegs.includes(l))changed.add(l.id);};
+  const pend=[];
+  const wheelDup=r=>(trades||[]).some(t=>t.ticker===r.ticker&&t.action===r.action&&t.entered===r.entered&&(+t.strike||0)===(+r.strike||0)&&(+t.shares||0)===(+r.shares||0)&&(!t.expiry||!r.expiry||t.expiry===r.expiry)&&Math.abs((+t.premium||0)-(+r.premium||0))<0.005);
+  const addWheel=(e,action,o)=>{
+    const shares=o.shares,premium=o.premium,fees=o.fees||0;
+    const r={ticker:e.ticker,action,entered:e.date,expiry:o.expiry||null,strike:o.strike||null,premium,fees,shares,total:r2(o.total!=null?o.total:computeTotal(action,premium,shares,fees)),days:(action==='CSP'||action==='STOC')&&o.expiry?Math.max(0,D(o.expiry,e.date)):0,verified:false,comment:'Imported from Robinhood'};
+    if(action==='IN')held[e.ticker]=(held[e.ticker]||0)+shares;if(action==='OUT')held[e.ticker]=(held[e.ticker]||0)-shares;
+    wheeled.add(e.ticker);
+    if(wheelDup(r)){dupes++;return;}
+    wheelRows.push(r);};
+  for(const e of E){
+    if(e.kind==='shares'){
+      const pi=pend.findIndex(p=>p.ticker===e.ticker&&p.side===e.code&&p.shares===e.qty&&e.date>=p.date&&D(e.date,p.date)<=4&&(Math.abs(e.price-p.strike)<0.005||e.assign));
+      if(pi>-1){pend.splice(pi,1);skip.push({line:e.line,raw:e.raw,reason:'shares from the assignment, already counted'});continue;}
+      if(!wheeled.has(e.ticker)){skip.push({line:e.line,raw:e.raw,reason:"share trade on a stock you don't wheel"});continue;}
+      addWheel(e,e.code==='BUY'?'IN':'OUT',{shares:e.qty,premium:e.price,fees:e.fees});continue;
+    }
+    const opt={expiry:e.expiry,strike:e.strike},sh=e.qty*100,amt=Math.abs(e.amount);
+    if(e.code==='BTO'){
+      if(dupOpen(e,'long')){dupes++;continue;}
+      const l={id:mkId(),groupId:null,underlying:e.ticker,type:e.pc,side:'long',strike:+e.strike,expiry:e.expiry,qty:e.qty,entryPrice:e.price,entryDate:e.date,fees:e.fees,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:'Imported from Robinhood'};
+      l.groupId=l.id;legs.push(l);newLegs.push(l);lines.push(`Bought ${c(e)} at $${e.price.toFixed(2)}${e.pc==='C'&&D(e.expiry,e.date)>=270?' — LEAP':''}`);continue;
+    }
+    if(e.code==='STO'&&e.pc==='C'&&!(held[e.ticker]>0)){
+      const L=leapFor(e.ticker,e.date);
+      if(L){
+        if(dupOpen(e,'short')){dupes++;continue;}
+        const l={id:mkId(),groupId:null,parentLeapId:L.id,underlying:e.ticker,type:'C',side:'short',strike:+e.strike,expiry:e.expiry,qty:e.qty,entryPrice:e.price,entryDate:e.date,fees:e.fees,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:'Imported from Robinhood'};
+        l.groupId=l.id;legs.push(l);newLegs.push(l);lines.push(`Sold ${c(e)} against your ${e.ticker} LEAP at $${e.price.toFixed(2)}`);continue;
+      }
+    }
+    if(['BTC','OEXP','OASGN','STC','OEXCS'].includes(e.code)){
+      const side=e.code==='STC'||e.code==='OEXCS'?'long':e.code==='OEXP'?(openLeg(e,'short')?'short':openLeg(e,'long')?'long':'short'):'short';
+      const l=openLeg(e,side);
+      if(l&&(side==='long'||l.parentLeapId)){
+        if(e.code==='OASGN'||e.code==='OEXCS'){bad.push({line:e.line,raw:e.raw,reason:e.code==='OASGN'?'a call sold against your LEAP was assigned — enter this one by hand':'you exercised an option — enter this one by hand'});continue;}
+        close(l,e,e.code==='OEXP'?'exp':'close');
+        lines.push(`${e.code==='OEXP'?'Expired':e.code==='STC'?'Sold back':'Bought back'} ${c(e)}${e.code==='OEXP'?'':' at $'+e.price.toFixed(2)}`);continue;
+      }
+      if(dupClose(e,side)&&(side==='long'||dupClose(e,side).parentLeapId)){dupes++;continue;}
+    }
+    if(e.code==='OEXCS'){bad.push({line:e.line,raw:e.raw,reason:'you exercised an option — enter this one by hand'});continue;}
+    // wheel
+    if(e.code==='STO')addWheel(e,e.pc==='P'?'CSP':'STOC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='BTC')addWheel(e,'BTC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='STC')addWheel(e,'STC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='OEXP')addWheel(e,'EXP',{...opt,shares:sh,premium:0,fees:0,total:0});
+    else if(e.code==='OASGN'){const put=e.pc==='P';addWheel(e,put?'IN':'OUT',{strike:e.strike,expiry:e.expiry,shares:sh,premium:+e.strike,fees:0});pend.push({ticker:e.ticker,date:e.date,side:put?'BUY':'SELL',shares:sh,strike:+e.strike});}
+  }
+  return{wheelRows,newLegs,changedLegs:legs.filter(l=>changed.has(l.id)),lines,dupes,unrecognised:bad,skipped:skip};
+}
 function importPreview(pre){
   const txt=pre?'x':document.getElementById('import-csv').value;
   const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
   if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
   const p=_routeToOpenLongs(pre||BCSV.parseBrokerCSV(txt));_importParsed=p;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
+  if(p.rh){ // Robinhood activity report: plan against what's already here
+    const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;p.rows=P.wheelRows;p.unrecognised=p.unrecognised.concat(P.unrecognised);p.skipped=p.skipped.concat(P.skipped);
+    const why={};p.skipped.forEach(x=>{why[x.reason]=(why[x.reason]||0)+1;});
+    const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
+    const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
+    box.innerHTML=`<div class="imp-broker">Robinhood activity report</div>`+
+      (p.rows.length?`<div class="imp-sub">${p.rows.length} wheel trade${p.rows.length>1?'s':''} to add:</div><div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+
+      (P.lines.length?`<div class="imp-sub">${P.lines.length} LEAP trade${P.lines.length>1?'s':''} to add (LEAPs tab):</div><ul class="imp-bad" style="color:var(--text2)">${P.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
+      (P.dupes?`<div class="imp-sub" style="color:var(--text3)">${P.dupes} already in WheelHouse, skipped</div>`:'')+
+      (p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">${p.skipped.length} row${p.skipped.length>1?'s':''} skipped: ${Object.entries(why).map(([k,n])=>`${esc(k)} (${n})`).join(', ')}</div>`:'')+
+      (p.unrecognised.length?`<div class="imp-sub">Not imported (${p.unrecognised.length}):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'');
+    const n=p.rows.length+P.newLegs.length+P.changedLegs.length;
+    btn.disabled=!n;btn.textContent=n?`Import ${p.rows.length+P.lines.length}`:'Nothing new';return;
+  }
   const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
   const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
   const badH=p.unrecognised.length?`<div class="imp-sub">Couldn't understand ${p.unrecognised.length} row${p.unrecognised.length>1?'s':''} (not imported):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'';
@@ -5720,8 +5845,15 @@ function initImportDrop(){
 }
 function doImport(){
   if(!_importParsed)importPreview();
-  const p=_importParsed;if(!p||!(p.rows.length||(p.optionFills||[]).length))return;
-  if((p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
+  const p=_importParsed;if(!p)return;
+  if(p.plan){
+    const P=p.plan;
+    if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
+    else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(P.newLegs);P.newLegs.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);}
+    if(!p.rows.length){closeModal('mImport');document.getElementById('import-csv').value='';_importParsed=null;importPreview();render();return;}
+  }
+  if(!(p.rows.length||(p.optionFills||[]).length))return;
+  if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
   else if((p.optionFills||[]).length){
     const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
     db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));
@@ -5734,7 +5866,7 @@ function doImport(){
   for(const r of p.rows){
     const{ticker,action,entered,strike,shares}=r;
     const fp=`${ticker}|${action}|${entered}|${strike||''}|${shares||''}`;
-    if(existingFingerprints.has(fp)){dupes++;continue;}
+    if(!p.plan&&existingFingerprints.has(fp)){dupes++;continue;}
     existingFingerprints.add(fp);
     let wheel=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
     if(!wheel){
@@ -5763,7 +5895,7 @@ function doImport(){
   });
   const parts=[`${imported} imported`];
   if(dupes>0)parts.push(`${dupes} duplicates skipped`);
-  if(skipped>0)parts.push(`${skipped} invalid skipped`);
+  if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in WheelHouse`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
   alert(`Import complete: ${parts.join(', ')}.`);
 }
 // ── Realised P&L chart (READ-ONLY). Closed trades only, booked on their close date, split the same way as the
