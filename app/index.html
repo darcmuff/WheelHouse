@@ -641,7 +641,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .rot-badge.closed{background:rgba(181,72,61,.12)!important;color:var(--red)!important}
 .wl-body{padding:0.25rem 1.125rem 0.875rem}
 .wl-top{display:flex;justify-content:space-between;align-items:center}.wl-stage{color:var(--text2);font-size:0.7rem}
-.wl-prem{font-size:0.65rem;font-weight:600;background:var(--orangeL);padding:0.15rem 0.6rem;border-radius:1rem}
 .wl-steps{display:flex;margin:0.75rem 0 0.625rem}.wl-st{flex:1;display:flex;flex-direction:column;align-items:center;font-size:0.575rem;color:var(--text3);position:relative}
 .wl-st:before{content:'';position:absolute;top:0.25rem;left:-50%;width:100%;height:2px;background:var(--border)}.wl-st:first-child:before{display:none}
 .wl-st b{width:0.625rem;height:0.625rem;border-radius:50%;background:var(--border);z-index:1;margin-bottom:0.25rem}
@@ -4074,10 +4073,10 @@ function renderRotationWindow(wheel){
   const _fRet=_cr?_fact(_cr.ann!=null?'Cycle return / yr'+(_cr.incUnrealised?' (incl. unrealised)':''):'Cycle return ('+_cr.days+'d)',(_cr.ann!=null?_cr.ann:_cr.raw).toFixed(1)+'%',colorN(_cr.raw)):'';
   const _cap=(m.sharesHeld>0&&openPos&&openPos.action==='STOC'&&_rss.openShares>0)?calledAwayProfit(openPos.strike,_rss.openShares,_rss.openCost,m.premiumNet,_rss.realised):null;
   const _fCall=_cap!=null?_fact('Profit if called',(_cap>=0?'+':'')+fmtMoney(_cap).replace(/\.00$/,''),colorN(_cap)):'';
-  const _fPrem=_fact('Premium collected',fmtMoney(m.premiumCredits).replace(/\.00$/,''));
+  const _fPrem=_fact('Realised premium',fmtMoney(m.premiumRealised).replace(/\.00$/,''),colorN(m.premiumRealised)); // realised only; was gross 'Premium collected' incl. open sells
   const _fDays=_cr?_fact('Days in cycle',String(_cr.days)):'';
   const wheelCardBody=`<div class="wl-body">
-    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumRealised)}">${m.premiumRealised>=0?'+':''}${fmtMoney(m.premiumRealised).replace(/\.00$/,'')} premium</span></div>
+    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span></div>
     ${_steps}${_memo}
     <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
   </div>`;

@@ -51,7 +51,8 @@ test('wheel card: no More numbers disclosure; premium collected and days in cycl
   const card = SRC.slice(SRC.indexOf('const wheelCardBody='), SRC.indexOf('const metricsBar='));
   const ret = SRC.slice(SRC.indexOf('${wheelCardBody}'), SRC.indexOf('${wheelCardBody}') + 40);
   assert.ok(!/wl-more/.test(ret));
-  assert.ok(SRC.includes("_fact('Premium collected'") && SRC.includes("_fact('Days in cycle'"));
+  assert.ok(SRC.includes("_fact('Realised premium'") && SRC.includes("_fact('Days in cycle'"));
+  assert.ok(!SRC.includes('wl-prem'), 'no premium pill in the stage row');
   assert.ok(card.includes('${_fPrem}${_fDays}'));
 });
 
