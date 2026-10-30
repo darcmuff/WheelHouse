@@ -10,13 +10,13 @@ const LY = `${Y - 1}-11-20`, Y1 = `${Y}-01-15`, Y2 = `${Y}-02-10`;
 function build(trades, wheels) {
   const stubs = `const db={trades:${JSON.stringify(trades)},wheels:${JSON.stringify(wheels)}};`;
   return load([
-    { kind: 'fn', name: 'shareRealisations' },
+    { kind: 'fn', name: 'walkLegPairs' },{ kind: 'fn', name: 'realisedPremium' },{ kind: 'fn', name: 'shareRealisations' },
     { kind: 'fn', name: 'calcWheel' },
     { kind: 'fn', name: 'calcOverall' },
     { kind: 'fn', name: 'calcYTD' },
   ], stubs);
 }
-const T = (wheelId, action, entered, total, shares = 0) => ({ wheelId, ticker: 'TSLA', action, entered, total, shares });
+const T = (wheelId, action, entered, total, shares = 0) => ({ wheelId, ticker: 'TSLA', action, entered, total, shares, strike: 310 });
 
 test('shares bought last year, called away this year: YTD counts only the gain', () => {
   const f = build([

@@ -2,17 +2,17 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn } = require('./extract');
 const L = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + ['walkLegPairs','realisedPremium','shareRealisations','cycleReturn','calledAwayProfit','tickerPnL','capitalAtWork'].map(extractFn).join('\n') + '\nreturn {cycleReturn,calledAwayProfit,tickerPnL,capitalAtWork};')();
-const m = (trades, premiumNet) => ({ trades, premiumNet });
+const m = (trades, premiumRealised, premiumNet = premiumRealised) => ({ trades, premiumRealised, premiumNet });
 test('closed cycle annualised over first trade to last expiry', () => {
   const t = [{ action: 'CSP', strike: 100, shares: 100, entered: '2026-01-01', expiry: '2026-01-31' }];
   const r = L.cycleReturn({ status: 'closed' }, m(t, 500), { realised: 0, openShares: 0 }, 0);
   assert.strictEqual(r.days, 31); assert.strictEqual(r.raw, 5);
   assert.ok(Math.abs(r.ann - 5 * 365 / 31) < 1e-9);
 });
-test('open cycle includes unrealised; under 7 days not annualised', () => {
+test('open cycle: realised only (no unrealised, no open premium); under 7 days not annualised', () => {
   const t = [{ action: 'CSP', strike: 100, shares: 100, entered: '2026-10-20' }];
-  const r = L.cycleReturn({ status: 'open' }, m(t, 200), { realised: 0, openShares: 100, openCost: 10000, unrealised: -100 }, 0, '2026-10-23');
-  assert.strictEqual(r.total, 100); assert.ok(r.incUnrealised); assert.strictEqual(r.ann, null); assert.strictEqual(r.days, 4);
+  const r = L.cycleReturn({ status: 'open' }, m(t, 50, 200), { realised: 0, openShares: 100, openCost: 10000, unrealised: -100 }, 0, '2026-10-23');
+  assert.strictEqual(r.total, 50); assert.ok(!r.incUnrealised); assert.strictEqual(r.ann, null); assert.strictEqual(r.days, 4);
 });
 test('profit if called', () => {
   assert.strictEqual(L.calledAwayProfit(110, 100, 10000, 650, 0), 1650);

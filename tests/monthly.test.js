@@ -7,7 +7,7 @@ let db={wheels:[{id:'w1',ticker:'SOFI',status:'open'}],trades:[
  {id:'t1',wheelId:'w1',action:'CSP',entered:'2026-09-03',total:120},{id:'t2',wheelId:'w1',action:'BTC',entered:'2026-09-20',total:30},
  {id:'t3',wheelId:'w1',action:'STOC',entered:'2026-10-02',total:85},{id:'t4',wheelId:'w1',action:'IN',entered:'2026-09-21',total:2000},
  {id:'t5',wheelId:'w1',action:'CSP',entered:'2025-12-10',total:50}],opts:[]};`;
-const S = new Function(stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + ['calcMonthlyPnL', 'optsMonthly', 'allOptionsByMonth', 'renderAllOptionsByMonth'].map(extractFn).join('\n') +
+const S = new Function(stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + ['walkLegPairs','realisedPremium','shareRealisations','calcMonthlyPnL', 'optsMonthly', 'allOptionsByMonth', 'renderAllOptionsByMonth'].map(extractFn).join('\n') +
   '\nreturn {db,calcMonthlyPnL,optsMonthly,allOptionsByMonth,renderAllOptionsByMonth};')();
 const legs = [
   { id: 'L', side: 'long', type: 'C', qty: 1, entryPrice: 40, fees: 0.65, status: 'closed', closePrice: 55, closeDate: '2026-10-05', closeFees: 0.65 },           // +1500 −1.30
@@ -24,10 +24,10 @@ check('short bought back + expired (no close date → expiry month), net of fees
 check('open legs not in months; open P&L from marks, unmarked counted', O.openPl === 399.35 && O.unmarked === 1 && O.openN === 2, O);
 const wm = S.calcMonthlyPnL();
 const A = S.allOptionsByMonth(wm, legs, '2026-10-23');
-check('wheel column = existing calcMonthlyPnL pNet (premium only; share IN excluded)', A.rows.find(r => r.ym === '2026-09').wheel === 90 && A.rows.find(r => r.ym === '2026-10').wheel === 85);
-check('newest month first, union of wheel and options months', A.rows.map(r => r.ym).join() === '2026-10,2026-09,2025-12');
+check('wheel column = realised premium by banked date (Sep: 120 sold − 30 bought back + 50 assigned; open Oct call not counted)', A.rows.find(r => r.ym === '2026-09').wheel === 140 && A.rows.find(r => r.ym === '2026-10').wheel === 0);
+check('newest month first, union of wheel and options months', A.rows.map(r => r.ym).join() === '2026-10,2026-09');
 check('total = wheel + options', A.rows.every(r => Math.abs(r.total - (r.wheel + r.opts)) < 0.001));
-check('YTD only this year; all-time includes 2025', A.ytd.wheel === 175 && A.all.wheel === 225 && Math.abs(A.ytd.total - (175 + 1498.70 + 1596.10)) < 0.01, A);
+check('YTD and all-time: realised only', A.ytd.wheel === 140 && A.all.wheel === 140 && Math.abs(A.ytd.total - (140 + 1498.70 + 1596.10)) < 0.01, A);
 const h = S.renderAllOptionsByMonth(wm);
 check('renders table, YTD + all-time rows and the open line', /All options, by month/.test(h) && /Year to date 2026/.test(h) && /All time/.test(h) && /Open, not yet banked/.test(h) && /1 without a mark/.test(h));
 check('READ-ONLY: wheels, trades and option legs unchanged after compute + render', JSON.stringify({ w: S.db.wheels, t: S.db.trades, o: S.db.opts }) === before);

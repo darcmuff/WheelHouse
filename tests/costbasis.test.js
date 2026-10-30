@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn } = require('./extract');
-const S = new Function('let db={trades:[]};' + ['shareRealisations', 'calcWheel', 'computeTotal'].map(extractFn).join('\n') +
+const S = new Function('let db={trades:[]};' + ['walkLegPairs','realisedPremium','shareRealisations', 'calcWheel', 'computeTotal'].map(extractFn).join('\n') +
   "\nconst CREDITS=new Set(['CSP','STOC','STO','STC','OUT','DIV']);function isCredit(a){return CREDITS.has(a);}" +
   '\nreturn {run:(tr,id="w")=>{db={trades:tr};return calcWheel({id});},computeTotal};')();
 let n = 0;

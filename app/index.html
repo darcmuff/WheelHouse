@@ -1600,7 +1600,11 @@ function calcWheel(wheel){
   let unrealised=null;
   if(wheel.lastPrice!=null&&sharesHeld>0){unrealised=(wheel.lastPrice*sharesHeld)-netCashOut;}
   const lastTrade=trades.length?trades[trades.length-1]:null;
-  return{credits,debits,netPnL,premiumNet,premiumCredits,premiumDebits,sharesHeld,breakeven,shareCost,unrealised,trades,lastTrade,netCashOut};
+  // Realised only: premium banked when a sell is bought back, expires, or is assigned/called away. Never premium on an open option.
+  const premiumRealised=Math.round(realisedPremium(trades.map(t=>({...t,wheelId:wheel.id}))).events.reduce((a,e)=>a+e.amount,0)*100)/100;
+  const shareRealised=shareRealisations(trades.map(t=>({...t,wheelId:wheel.id}))).events.reduce((a,e)=>a+e.pnl,0);
+  const realisedPnL=Math.round((premiumRealised+shareRealised+divs)*100)/100;
+  return{credits,debits,netPnL,premiumNet,premiumRealised,realisedPnL,premiumCredits,premiumDebits,sharesHeld,breakeven,shareCost,unrealised,trades,lastTrade,netCashOut};
 }
 
 // Annualised Return on Capital — capital at risk = highest CSP strike × shares
@@ -1620,14 +1624,14 @@ function calcAROC(wheel,m){
   }
   last.setHours(0,0,0,0);
   const days=Math.max(1,Math.round((last-first)/86400000)+1);
-  const roc=(m.premiumNet/cap)*100;
+  const roc=((m.premiumRealised||0)/cap)*100; // realised premium only
   if(wheel.status==='open'&&days<14)return{roc,aroc:null,cap,days}; // too young to annualise
   return{roc,aroc:roc*(365/days),cap,days};
 }
 
 
 // ── New metrics (display only, read-only over trades/legs) ──
-// Whole-cycle return: (premium + realised shares + dividends [+ unrealised if open]) ÷ capital (same capital rule as calcAROC).
+// Whole-cycle return: realised only — (realised premium + realised shares + dividends) ÷ capital (same capital rule as calcAROC).
 // Annualised over first trade → end (closed: last trade/expiry; open: today). Under 7 days: raw return only.
 function cycleReturn(wheel,m,rss,divs,today){
   if(!m.trades.length)return null;
@@ -1636,8 +1640,8 @@ function cycleReturn(wheel,m,rss,divs,today){
   if(!cap&&rss&&rss.openShares>0)cap=rss.openCost;
   if(!cap)return null;
   const isOpen=wheel.status==='open';
-  const un=isOpen&&rss&&rss.unrealised!=null?rss.unrealised:0;
-  const realised=m.premiumNet+((rss&&rss.realised)||0)+(divs||0);
+  const un=0; // realised only: open shares/options never count
+  const realised=(m.premiumRealised||0)+((rss&&rss.realised)||0)+(divs||0);
   const total=realised+un;
   const dates=m.trades.map(t=>t.entered).filter(Boolean).sort();
   let end=isOpen?(today||new Date().toISOString().slice(0,10)):dates[dates.length-1];
@@ -1703,22 +1707,12 @@ function monthReturnPct(profit,capital){
 }
 // Monthly P&L — group all trades by YYYY-MM
 function calcMonthlyPnL(){
-  const mo={};
-  db.trades.forEach(t=>{
-    if(!t.entered)return;
-    const ym=t.entered.slice(0,7);
-    if(!mo[ym])mo[ym]={credits:0,debits:0,pCr:0,pDb:0};
-    const v=t.total||0;
-    switch(t.action){
-      case'CSP': mo[ym].credits+=v;mo[ym].pCr+=v;break;
-      case'BTC': mo[ym].debits+=v;mo[ym].pDb+=v;break;
-      case'STOC':mo[ym].credits+=v;mo[ym].pCr+=v;break;
-      case'STC': mo[ym].credits+=v;mo[ym].pCr+=v;break;
-      case'IN':  mo[ym].debits+=v;break;
-      case'OUT': mo[ym].credits+=v;break;
-      case'DIV': mo[ym].credits+=v;break;
-    }
-  });
+  // Realised only, booked on the day it was banked: option premium when bought back / expired / assigned,
+  // share sales (FIFO), dividends. Premium on still-open options never counts.
+  const mo={},M=ym=>mo[ym]=mo[ym]||{credits:0,debits:0,pCr:0,pDb:0};
+  realisedPremium(db.trades).events.forEach(e=>{if(!e.date)return;const r=M(e.date.slice(0,7));if(e.amount>=0){r.pCr+=e.amount;r.credits+=e.amount;}else{r.pDb-=e.amount;r.debits-=e.amount;}});
+  shareRealisations(db.trades).events.forEach(e=>{if(!e.date)return;const r=M(e.date.slice(0,7));if(e.pnl>=0)r.credits+=e.pnl;else r.debits-=e.pnl;});
+  db.trades.forEach(t=>{if(t.action==='DIV'&&t.entered)M(t.entered.slice(0,7)).credits+=t.total||0;});
   return Object.entries(mo).sort(([a],[b])=>a.localeCompare(b)).map(([ym,v])=>({
     ym,
     label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),
@@ -1822,10 +1816,10 @@ function calcOverall(){
     else{
       closed++;
       // Win/loss on option income (premium net) for this rotation
-      if(m.premiumNet>=0)wins++;else losses++;
+      if(m.premiumRealised>=0)wins++;else losses++;
     }
   });
-  const pNet=pc-pd;
+  const pNet=Math.round(db.wheels.reduce((a,w)=>a+calcWheel(w).premiumRealised,0)*100)/100; // realised only
   // totalRealised = everything except currently-open stock positions
   const totalRealised=pNet+stockRealised+divs;
   const tot=wins+losses;
@@ -1916,6 +1910,8 @@ function calcYTD(){
     else if(t.action==='IN')stockIn+=v;
     else if(t.action==='DIV')divs+=v;
   });
+  // realised only: premium banked this year (bought back / expired / assigned), never open sells
+  sc=0;sd=0;realisedPremium(db.trades).events.forEach(e=>{if(!e.date||e.date<start)return;if(e.amount>=0)sc+=e.amount;else sd-=e.amount;});
   const optNet=sc-sd;
   // Share Realised P&L this year: each sale this year against its own rotation's FIFO cost (may be negative)
   const stockIncome=shareRealisations(db.trades).events.filter(e=>e.date>=start).reduce((a,e)=>a+e.pnl,0);
@@ -3377,7 +3373,7 @@ function renderPositions(){
     wheels.sort((a,b)=>lastTrade(b).localeCompare(lastTrade(a)));
   }
   else if(posSortBy==='pnl'){
-    wheels.sort((a,b)=>calcWheel(b).netPnL-calcWheel(a).netPnL);
+    wheels.sort((a,b)=>calcWheel(b).realisedPnL-calcWheel(a).realisedPnL);
   }
   else if(posSortBy==='dte'){
     const nearestDTE=w=>{const op=buildOpenPosition(db.trades.filter(t=>t.wheelId===w.id));return op?op.dte:9999;};
@@ -3453,7 +3449,7 @@ function renderRotationMini(wheel){
       <span class="mini-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
       <span class="mini-price">${cPrice}</span>
       <span class="mini-chg">${cChg}</span>
-      <span class="mini-pnl ${colorN(m.netPnL)}">${fmtMoney(m.netPnL)}</span>
+      <span class="mini-pnl ${colorN(m.realisedPnL)}">${fmtMoney(m.realisedPnL)}</span>
       <span class="mini-leg">${cLeg}</span>
       <span>${cDte}</span>
       <span></span>
@@ -4029,7 +4025,7 @@ function renderRotationWindow(wheel){
   // PPD — net premium divided by total option-days traded
   const optLegs=m.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&(t.days||0)>0);
   const totalOptDays=optLegs.reduce((s,t)=>s+(t.days||0),0);
-  const rotPPD=totalOptDays>0?m.premiumNet/totalOptDays:null;
+  const rotPPD=totalOptDays>0?m.premiumRealised/totalOptDays:null;
   const ppdHtml=rotPPD!=null
     ?`<span class="${colorN(rotPPD)}">${rotPPD>=0?'$'+fmt2(rotPPD):'-$'+fmt2(Math.abs(rotPPD))}</span>`
     :`<span class="m">—</span>`;
@@ -4058,7 +4054,7 @@ function renderRotationWindow(wheel){
   const _steps=`<div class="wl-steps">${_stepNames.map((n,i)=>`<div class="wl-st${i<_stage?' d':i===_stage?' n':''}"><b></b>${n}${i===_stage&&openPos?`<span class="wl-leg">${openPos.action==='CSP'?'Put':'Call'} $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d</span>`:''}</div>`).join('')}</div>`;
   const _fact=(l,v,c='')=>`<div class="wl-f"><span>${l}</span><b class="${c}">${v}</b></div>`;
   const _divs=m.trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0);
-  const _cs=wheelCardSummary({sharesHeld:m.sharesHeld,breakeven:m.breakeven,openShares:_rss.openShares,openCost:_rss.openCost,openPos,premiumNet:m.premiumNet,sharesRealised:_rss.realised,divs:_divs,closed:!isOpen});
+  const _cs=wheelCardSummary({sharesHeld:m.sharesHeld,breakeven:m.breakeven,openShares:_rss.openShares,openCost:_rss.openCost,openPos,premiumNet:m.premiumRealised,sharesRealised:_rss.realised,divs:_divs,closed:!isOpen});
   const _f2=_cs.held
     ?`<div class="wl-f wl-be"><span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>${_cs.assignedAt!=null?`<small>Assigned at $${fmt2(_cs.assignedAt)}</small>`:''}</div>`
     :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
@@ -4081,7 +4077,7 @@ function renderRotationWindow(wheel){
   const _fPrem=_fact('Premium collected',fmtMoney(m.premiumCredits).replace(/\.00$/,''));
   const _fDays=_cr?_fact('Days in cycle',String(_cr.days)):'';
   const wheelCardBody=`<div class="wl-body">
-    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span></div>
+    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumRealised)}">${m.premiumRealised>=0?'+':''}${fmtMoney(m.premiumRealised).replace(/\.00$/,'')} premium</span></div>
     ${_steps}${_memo}
     <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
   </div>`;
@@ -4093,8 +4089,8 @@ function renderRotationWindow(wheel){
       <button class="btn btn-ghost btn-sm" style="margin-top:0.375rem;font-size:0.625rem;padding:0.1875rem 0.5rem;line-height:1;border-color:var(--orange);color:var(--orange)" onclick="openPasteTrade('${wheel.id}');event.stopPropagation()">✦ Add Trade</button>
     </div>
     <div class="rmb-col">
-      <div class="rmb-lbl">Premium</div>
-      <div class="rmb-val ${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</div>
+      <div class="rmb-lbl">Realised premium</div>
+      <div class="rmb-val ${colorN(m.premiumRealised)}">${fmtMoney(m.premiumRealised)}</div>
       <div class="rmb-sub">Shares P&amp;L: <span class="${colorN(_rss.realised)}">${_rss.realised?fmtMoney(_rss.realised):'—'}</span></div>
       <div class="rmb-sub">Unrealised: ${_rss.unrealised==null?'<span class="m">no price</span>':`<span class="${colorN(_rss.unrealised)}">${_rss.openShares>0?fmtMoney(_rss.unrealised):'—'}</span>`}</div>
       ${aroc?`<div class="rmb-sub">${aroc.aroc!=null?`AROC: <span class="${colorN(aroc.aroc)}">${aroc.aroc.toFixed(1)}%</span> &middot; `:''}ROC: <span class="${colorN(aroc.roc)}">${aroc.roc.toFixed(1)}%</span>${aroc.aroc==null?` <span class="t3">(too early to annualise)</span>`:''}</div>`:''}
@@ -4158,13 +4154,13 @@ function renderRotationWindow(wheel){
 }
 
 
-function calcTradeROC(t){
-  // Annualised ROC% for CSP/STOC: (credit / collateral) * (365/DTE) * 100
-  if((t.action!=='CSP'&&t.action!=='STOC')||!t.strike||!t.shares)return null;
+function calcTradeROC(t,net){
+  // Annualised ROC% for a CLOSED CSP/STOC: (realised net / collateral) * (365/DTE) * 100. Open sells (net==null): no ROC.
+  if((t.action!=='CSP'&&t.action!=='STOC')||!t.strike||!t.shares||net==null)return null;
   const collateral=t.strike*t.shares;if(!collateral)return null;
   const dte=t.days>0?t.days:null;
   if(!dte)return null;
-  return((t.total/collateral)*(365/dte)*100);
+  return((net/collateral)*(365/dte)*100);
 }
 // Shared list formats (wheel + LEAP): strike trims .00 ($170, $19.5, $142.50); debit totals show with a minus (display only).
 // Shared trade-list cells (wheel + LEAP cards). Captured: % kept, with profit $ beside it.
@@ -4245,7 +4241,8 @@ function renderTradeRow(t,wheelTrades,opts){
     }
   }
   if(opts.list){const lc=wheelListCells(t,opts.list);opts={...opts,rocHtml:lc.cap,rocColor:lc.capColor,ppdHtml:lc.ppd,extraAfterStrike:`<span class="to-strike m">${esc(lc.ts)}</span>`,editBtn:true};}
-  const roc=calcTradeROC(t);
+  const _o=wheelTrades?wheelSellOutcomes(wheelTrades)[t.id]:null;
+  const roc=calcTradeROC(t,_o?_o.net:null);
   const rocDisplay=opts.rocHtml!=null?opts.rocHtml:(roc!==null?roc.toFixed(1)+'%':'—');
   const rocColor=opts.rocColor!=null?opts.rocColor:(roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)');
   // PPD — income velocity: net dollars per day. Credit opens (incl. PMCC STO).
@@ -4658,7 +4655,7 @@ function renderStatsOverview(){
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
   const avgArocVal=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
-  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average Annualised Return on Capital across your currently open rotations. Calculated as (net premium ÷ capital at risk) × (365 ÷ days held).');
+  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average annualised return on capital across your open rotations, realised only: (premium banked from closed, expired or assigned options ÷ capital at risk) × (365 ÷ days held). Premium on open options is not counted.');
 
 
   // ── Positions table ──
@@ -4682,7 +4679,7 @@ function renderStatsOverview(){
       <span class="t2-nw">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:600;margin-left:0.375rem">/ ${dte}d</span>`:''}</span>
       <span style="color:${pctCol};font-weight:600">${pctToStrike!==null?(pctToStrike>=0?'+':'')+pctToStrike.toFixed(1)+'%':'—'}</span>
       <span style="color:var(--silver);white-space:nowrap">${price!=null?'$'+price.toFixed(2):'—'}${extHtml(w.ticker,'display:block')}</span>
-      <span class="${colorN(m.premiumNet)}" style="white-space:nowrap">${fmtMoney(m.premiumNet)}</span>
+      <span class="${colorN(m.premiumRealised)}" style="white-space:nowrap">${fmtMoney(m.premiumRealised)}</span>
       <span class="t2-nw">${basis}</span>
       ${(()=>{const u=rotationShareStats(w,db.trades,_priceOf).unrealised;return`<span style="text-align:right;white-space:nowrap" class="${u==null?'m':colorN(u)}">${u==null?'no price':u===0&&m.sharesHeld<=0?'—':fmtMoney(u)}</span>`;})()}
     </div>`;
@@ -6049,7 +6046,7 @@ function renderAnalytics(){
   db.wheels.forEach(w=>{
     if(!tickerMap[w.ticker])tickerMap[w.ticker]={ticker:w.ticker,premium:0,cycles:0,trades:0,arocs:[]};
     const m=calcWheel(w);const ar=calcAROC(w,m);
-    tickerMap[w.ticker].premium+=m.premiumNet;
+    tickerMap[w.ticker].premium+=m.premiumRealised;
     tickerMap[w.ticker].trades+=m.trades.length;
     tickerMap[w.ticker].cycles++;
     if(ar&&ar.aroc!=null)tickerMap[w.ticker].arocs.push(ar.aroc);
@@ -6079,14 +6076,14 @@ function renderAnalytics(){
   // ── Section 1: Performance Overview ──
   const perfStats=`<div class="a-stat-grid">
     ${stat(fmtMoney(s.totalRealised),'Wheel Realised P&L','all-time: premium + shares + dividends',s.totalRealised>=0?'var(--green)':'var(--red)','Everything earned from the wheel — option premiums, stock sales, and dividends. Open stock positions excluded.')}
-    ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed rotations','var(--orange)','Average Annualised Return on Capital across closed rotations. Formula: (net premium ÷ capital at risk) × (365 ÷ days held).')}
+    ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed rotations','var(--orange)','Average annualised return on capital across closed rotations, realised only: (realised premium ÷ capital at risk) × (365 ÷ days held).')}
     ${stat(sortinoStr,'Sortino Ratio','risk-adjusted','var(--text)','Risk-adjusted return using only downside volatility. Higher is better. Unlike Sharpe, it does not penalise upside variance — fairer for option-selling strategies.')}
     ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--red)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
   </div>
   <div class="a-stat-grid" style="margin-top:0.625rem">
     ${stat(profitFactorStr,'Profit Factor','gross credits ÷ debits',parseFloat(profitFactorStr)>=1.5?'var(--green)':'var(--text2)','Gross premium credits divided by total buyback debits. Above 1.0 means profitable overall. Above 2.0 is excellent.')}
     ${stat(wl.wr?wl.wr+'%':'—','Win Rate',wl.wins+'W · '+wl.losses+'L',parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)','Percentage of option cycles that ended profitably — expired worthless or closed for a gain.')}
-    ${stat(fmtMoney(s.pNet),'Premium','all-time, net of buybacks',s.pNet>=0?'var(--green)':'var(--red)','Option credits (CSP, STOC, STC) minus buybacks (BTC), all-time.')}
+    ${stat(fmtMoney(s.pNet),'Premium','all-time, net of buybacks',s.pNet>=0?'var(--green)':'var(--red)','Realised option premium, all-time: sells that were bought back, expired or assigned, net of buybacks. Open options not counted.')}
     ${stat(fmtMoney(ytd.yearly),'Annualised Projection','based on YTD pace',ytd.yearly>=0?'var(--green)':'var(--red)','Current YTD daily income rate projected forward to a full year.')}
   </div>`;
 
@@ -6133,12 +6130,14 @@ function renderAnalytics(){
   // ── Section 3: Trade Quality — DTE analysis ──
   const dteBuckets={'1-7d':{min:1,max:7},'8-14d':{min:8,max:14},'15-30d':{min:15,max:30},'31-45d':{min:31,max:45},'45d+':{min:46,max:999}};
   const dteAnalysis={};
+  const _sellOut={};db.wheels.forEach(w=>Object.assign(_sellOut,wheelSellOutcomes(db.trades.filter(t=>t.wheelId===w.id))));
+  const _net=t=>_sellOut[t.id]?_sellOut[t.id].net:null;
   for(const[label,range] of Object.entries(dteBuckets)){
-    const trades=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.days>=range.min&&t.days<=range.max);
+    const trades=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.days>=range.min&&t.days<=range.max&&_net(t)!=null); // closed sells only
     if(!trades.length)continue;
-    const totalPrem=trades.reduce((s,t)=>s+(t.total||0),0);
-    const avgPPD=trades.filter(t=>t.days>0).length?trades.filter(t=>t.days>0).reduce((s,t)=>s+(t.total/t.days),0)/trades.filter(t=>t.days>0).length:0;
-    const rocs=trades.map(t=>calcTradeROC(t)).filter(Boolean);
+    const totalPrem=trades.reduce((s,t)=>s+_net(t),0);
+    const avgPPD=trades.filter(t=>t.days>0).length?trades.filter(t=>t.days>0).reduce((s,t)=>s+(_net(t)/t.days),0)/trades.filter(t=>t.days>0).length:0;
+    const rocs=trades.map(t=>calcTradeROC(t,_net(t))).filter(x=>x!=null);
     const avgROC=rocs.length?rocs.reduce((a,b)=>a+b,0)/rocs.length:null;
     dteAnalysis[label]={count:trades.length,totalPrem,avgPPD,avgROC};
   }
@@ -6151,13 +6150,13 @@ function renderAnalytics(){
   </tr>`).join('');
 
   // Delta analysis
-  const deltaRows2=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.delta!=null);
+  const deltaRows2=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.delta!=null&&_net(t)!=null);
   const deltaBuckets={};
   for(const t of deltaRows2){
     const b=t.delta<=0.15?'≤0.15':t.delta<=0.25?'0.16–0.25':t.delta<=0.35?'0.26–0.35':'≥0.36';
     if(!deltaBuckets[b])deltaBuckets[b]={count:0,totalCr:0,totalROC:0,rocCount:0};
-    deltaBuckets[b].count++;deltaBuckets[b].totalCr+=t.total||0;
-    const roc=calcTradeROC(t);if(roc!=null){deltaBuckets[b].totalROC+=roc;deltaBuckets[b].rocCount++;}
+    deltaBuckets[b].count++;deltaBuckets[b].totalCr+=_net(t);
+    const roc=calcTradeROC(t,_net(t));if(roc!=null){deltaBuckets[b].totalROC+=roc;deltaBuckets[b].rocCount++;}
   }
   const deltaTableRows=['≤0.15','0.16–0.25','0.26–0.35','≥0.36'].filter(k=>deltaBuckets[k]).map(k=>{
     const b=deltaBuckets[k];const avgRoc=b.rocCount?b.totalROC/b.rocCount:null;
@@ -6226,7 +6225,7 @@ function renderAnalytics(){
     const rotOut=m.trades.filter(t=>t.action==='OUT').reduce((s,t)=>s+(t.total||0),0);
     const stockReal=rotationShareStats(w,db.trades,null).realised;
     const rotDiv=m.trades.filter(t=>t.action==='DIV').reduce((s,t)=>s+(t.total||0),0);
-    const rotRealised=m.premiumNet+stockReal+rotDiv;
+    const rotRealised=m.premiumRealised+stockReal+rotDiv;
     const cr=cycleReturn(w,m,rotationShareStats(w,db.trades,_priceOf),rotDiv);
     return`<tr>
       <td style="font-weight:600;color:var(--orange)">${w.sortOrder||'?'}</td>
@@ -6234,7 +6233,7 @@ function renderAnalytics(){
       <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:0.625rem;font-size:0.5625rem">${w.status==='open'?'● Open':'Closed'}</span></td>
       <td>${m.trades.length}</td>
       <td class="g">${fmtMoney(m.premiumCredits)}</td>
-      <td class="${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</td>
+      <td class="${colorN(m.premiumRealised)}">${fmtMoney(m.premiumRealised)}</td>
       <td class="${colorN(rotRealised)} fw5">${fmtMoney(rotRealised)}</td>
       <td>${m.breakeven!=null?'$'+fmt2(m.breakeven):'—'}</td>
       <td class="${ar&&ar.aroc!=null?colorN(ar.aroc):'m'}" style="font-weight:600">${ar&&ar.aroc!=null?ar.aroc.toFixed(1)+'%':'—'}</td>
@@ -6291,7 +6290,7 @@ function renderAnalytics(){
     <div class="a-section">${sec('Risk & Exposure','Capital deployed, exposure & fees')}${riskStats}${secEnd}</div>
 
     <div class="a-section">${sec('Rotation Scoreboard','Per-rotation performance')}
-      <table class="a-table"><thead><tr><th>#</th><th>Rotation</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th>Cycle /yr ${ii(`AROC uses premium only. Cycle /yr is the whole cycle: premium + share P&amp;L + dividends (+ unrealised for open cycles) ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table>
+      <table class="a-table"><thead><tr><th>#</th><th>Rotation</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th>Cycle /yr ${ii(`Realised only. AROC uses realised premium. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table>
     ${secEnd}</div>
   </div>`;
 }
