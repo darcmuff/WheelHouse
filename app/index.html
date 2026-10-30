@@ -2078,6 +2078,20 @@ async function fetchSymbol(sym){
   quotes[sym]={price:j.c,prev:j.pc,change:j.d,pct:j.dp,state:'REGULAR'};
 }
 
+// Pre-market / after-hours price: display only, memory only. Never feeds To strike, Needs you, values or P&L.
+let extq={};
+async function fetchExtQuotes(syms){
+  if(!syms.length){extq={};return;}
+  try{const r=await fetch(`/.netlify/functions/extquote?symbols=${encodeURIComponent(syms.join(','))}`,{signal:AbortSignal.timeout(10000)});
+    extq=r.ok?(await r.json())||{}:{};}catch(e){extq={};}
+}
+function extLine(sym,now){
+  const e=extq&&extq[sym];now=now||Date.now();
+  if(!e||!(e.price>0)||!(e.base>0)||now-e.at>15*60000)return'';
+  const pct=(e.price/e.base-1)*100,sg=pct>=0?'+':'−';
+  return`${e.session==='pre'?'Pre-market':'After hours'} $${e.price.toFixed(2)} (${sg}${Math.abs(pct).toFixed(1)}%)`;
+}
+function extHtml(sym,style){const t=extLine(sym);return t?`<span class="ext-px" style="color:var(--text3);font-size:0.6875rem;font-weight:400;white-space:nowrap;${style||''}">${t}</span>`:'';}
 async function fetchLogo(sym){
   if(sym.startsWith('^')||logos[sym]!==undefined)return;
   try{
@@ -2106,6 +2120,7 @@ async function fetchAllQuotes(){
       try{await fetchSymbol(sym);}catch(e){console.warn('Quote fetch:',sym,e.message);}
       if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
     }
+    await fetchExtQuotes(allSyms);
     // Wait for logos to finish too
     await Promise.allSettled(logoPromises);
     const nOk=Object.keys(quotes).length;
@@ -2621,7 +2636,7 @@ function renderLeapCard(l,spot,today){
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
@@ -3965,6 +3980,7 @@ function renderRotationWindow(wheel){
     ?`<span class="rot-header-price" style="flex-direction:row;align-items:baseline;gap:0.375rem">
         <span style="color:var(--silver);font-size:0.8125rem;font-weight:400">$${rawP.toFixed(2)}</span>
         ${chg!=null?`<span style="color:${chgColor};font-size:0.6875rem;font-weight:400">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
+        ${extHtml(wheel.ticker)}
       </span>`
     :'';
   const shares=(m.sharesHeld>0?m.sharesHeld:0)+' shares';
@@ -4649,7 +4665,7 @@ function renderStatsOverview(){
       <span><span class="d-phase ${ph.cls}">${ph.label}</span></span>
       <span class="t2-nw">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:600;margin-left:0.375rem">/ ${dte}d</span>`:''}</span>
       <span style="color:${pctCol};font-weight:600">${pctToStrike!==null?(pctToStrike>=0?'+':'')+pctToStrike.toFixed(1)+'%':'—'}</span>
-      <span style="color:var(--silver);white-space:nowrap">${price!=null?'$'+price.toFixed(2):'—'}</span>
+      <span style="color:var(--silver);white-space:nowrap">${price!=null?'$'+price.toFixed(2):'—'}${extHtml(w.ticker,'display:block')}</span>
       <span class="${colorN(m.premiumNet)}" style="white-space:nowrap">${fmtMoney(m.premiumNet)}</span>
       <span class="t2-nw">${basis}</span>
       ${(()=>{const u=rotationShareStats(w,db.trades,_priceOf).unrealised;return`<span style="text-align:right;white-space:nowrap" class="${u==null?'m':colorN(u)}">${u==null?'no price':u===0&&m.sharesHeld<=0?'—':fmtMoney(u)}</span>`;})()}
