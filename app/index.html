@@ -525,6 +525,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 /* ── LEAPs view (long calls) ── */
 .leap-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-bottom:0.75rem}
 .leap-sc{background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.6875rem 0.8125rem}
+.leap-sc .v.y{color:var(--yellow)}
 .leap-sc .l{font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
 .leap-sc .v{font-size:1.25rem;font-weight:600;margin-top:0.1875rem;white-space:nowrap}.leap-sc .s{font-size:0.6875rem;color:var(--text3);margin-top:2px}
 .leap-grid{display:flex;flex-direction:column;gap:0.625rem}
@@ -2701,7 +2702,7 @@ function renderLeapCard(l,spot,today){
   <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
-    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
+    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div><div class="lc-pct ${P.net>0?'g':P.net<0?'r':'m'}" style="font-size:0.6875rem;font-weight:600">Calls collected ${P.net<0?'−':''}${m0(Math.abs(P.net))}</div></div>
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
@@ -2723,6 +2724,28 @@ function leapTileTotals(openL,legs,spots,today){
   const pc=r(pcost),vv=r(value),pct=priced&&pc>0?Math.round((vv-pc)/pc*10000)/100:null;
   return{n:priced+noPrice,cost:r(cost),value:vv,pricedCost:pc,valuePct:pct,valueCls:pct==null||vv===pc?'':vv>pc?'g':'r',priced,noPrice,calls:r(calls),adj:r(cost-calls)};
 }
+// Pure: realised short-call premium across all LEAPs (closed/expired calls only), all time and this month.
+function leapCallsBanked(leaps,legs,today){
+  const seen=new Set();let all=0,month=0;const ym=(today||'').slice(0,7);
+  (leaps||[]).filter(l=>!l.demo).forEach(L=>pmccShortsFor(L,legs).forEach(c=>{if(seen.has(c.id)||c.status==='open')return;seen.add(c.id);
+    const r=OPTS.legPnL(c).realized||0;all+=r;if(String(c.closeDate||c.expiry||'').slice(0,7)===ym)month+=r;}));
+  const rd=n=>Math.round(n*100)/100;return{all:rd(all),month:rd(month)};
+}
+// Pure: the single most urgent LEAP item. Expired LEAP first, then whichever is soonest:
+// an open short call's expiry, a LEAP under 90 days left, or a review date reached.
+function leapNextAct(openL,legs,today){
+  const c=[],k=v=>'$'+String(+v).replace(/\.0+$/,'');
+  (openL||[]).filter(l=>!l.demo).forEach(l=>{
+    const left=OPTS.dte(l.expiry,today),name=`${l.underlying} ${k(l.strike)}C`;
+    if(left!=null&&left<0){c.push({rank:-1,id:l.id,text:`${name} LEAP has expired: close it`,cls:'r'});return;}
+    if(left!=null&&left<90)c.push({rank:left,id:l.id,text:`${name} LEAP: ${left} day${left===1?'':'s'} left`,cls:left<30?'r':'y'});
+    if(l.reviewDate&&l.reviewDate<=today)c.push({rank:0,id:l.id,text:`${name} LEAP: review date reached`,cls:'y'});
+    pmccShortsFor(l,legs).filter(x=>x.status==='open').forEach(x=>{const d=OPTS.dte(x.expiry,today);if(d==null)return;
+      c.push({rank:d,id:l.id,text:`${x.underlying} ${k(x.strike)}C ${d<0?'expired: close it':d===0?'expires today':`expires in ${d} day${d===1?'':'s'}`}`,cls:d<=3?'r':d<=14?'y':''});});
+  });
+  c.sort((a,b)=>a.rank-b.rank);return c[0]||null;
+}
+function goToLeap(id){collapsedLeaps.delete(id);if(leapStatus!=='open')leapStatus='open';switchView('options');setTimeout(()=>{const e=document.querySelector(`[data-leap="${CSS.escape(id)}"]`);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 function renderOptions(){
   const legs=db.opts||[];
   const today=new Date().toISOString().slice(0,10),spots=_optSpots();
@@ -2736,11 +2759,15 @@ function renderOptions(){
   const sc=(l,v,sub,cls='',pctH='')=>`<div class="leap-sc"><div class="l">${l}</div><div class="v ${cls}">${v}</div>${pctH}<div class="s">${sub}</div></div>`;
   const vPct=T.valuePct==null?'':`<div class="lc-pct ${T.valueCls||'m'}" style="font-size:0.6875rem;font-weight:600">${T.valuePct>0?'+':T.valuePct<0?'−':''}${Math.abs(T.valuePct).toFixed(2)}%</div>`;
   const nL=`across ${T.n} LEAP${T.n!==1?'s':''}`;
+  const CB=leapCallsBanked(leaps,legs,today),NX=leapNextAct(openL,legs,today);
+  const pl=T.priced?Math.round((T.value-T.pricedCost)*100)/100:null;
+  const sg=n=>(n>0?'+':n<0?'−':'')+m0(Math.abs(n));
+  const nxH=`<div class="leap-sc"${NX?` style="cursor:pointer" onclick="goToLeap('${esc(NX.id)}')"`:''}><div class="l">Next to act ${ii('The most urgent thing on your LEAPs: an expired LEAP, the nearest call expiry, a LEAP under 90 days or a review date.')}</div><div class="v ${NX?NX.cls:''}" style="font-size:0.9375rem;white-space:normal">${NX?esc(NX.text):'Nothing due'}</div><div class="s">${NX?'Click to open the LEAP':'No calls or LEAPs need you'}</div></div>`;
   const sumH=T.n?`<div class="leap-sum">
-    ${sc(`LEAP cost ${ii('What you paid for your open LEAPs, fees included.')}`,m0(T.cost),nL)}
-    ${sc(`Value now ${ii('What your open LEAPs are worth at today\'s prices, and the % up or down on what they cost. Unpriced LEAPs left out.')}`,T.priced?m0(T.value):'—',T.noPrice?`${T.noPrice} without a price`:nL,T.valueCls,vPct)}
-    ${sc(`Calls collected ${ii('Net from calls closed or expired on your open LEAPs, after buy backs and fees. Open calls not counted.')}`,m0(T.calls),'from closed calls',T.calls>0?'g':'')}
-    ${sc(`Cost after calls ${ii('LEAP cost minus calls collected.')}`,m0(T.adj),nL)}</div>`:'';
+    ${sc(`Total value ${ii('Open LEAPs at today\'s prices, and the % up or down on what they cost. Expired or unpriced LEAPs left out.')}`,T.priced?m0(T.value):'—',T.noPrice?`${T.noPrice} without a price`:nL,T.valueCls,vPct)}
+    ${sc(`Unrealised P&amp;L ${ii('Value now minus what you paid, on the LEAPs themselves. Calls sold against them not included.')}`,pl==null?'—':sg(pl),T.noPrice?`${T.noPrice} without a price`:nL,T.valueCls,vPct)}
+    ${sc(`Calls banked ${ii('Premium kept on calls sold against your LEAPs, closed or expired only, after buy backs and fees.')}`,sg(CB.all),`This month ${sg(CB.month)}`,CB.all>0?'g':CB.all<0?'r':'')}
+    ${nxH}</div>`:'';
   const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${leapStatus==='open'?'No open LEAPs. Add one with <b>+ LEAP</b>, or import a broker file with buy-to-open call fills.':'No closed LEAPs yet.'}</div>`;
   // non-long-call legs never vanish silently
   const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
@@ -7344,7 +7371,7 @@ window.authGoogle = authGoogle;
 window.authForgot = authForgot;
 window.onboardSubmit = onboardSubmit;
 window.switchView = switchView;
-window.goToOpt = goToOpt;
+window.goToOpt = goToOpt; window.goToLeap = goToLeap;
 window.setOptDemo = setOptDemo;
 window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;

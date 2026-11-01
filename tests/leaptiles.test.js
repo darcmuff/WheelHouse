@@ -2,7 +2,7 @@ const test=require('node:test');const assert=require('node:assert');const fs=req
 const{extractFn}=require('./extract');
 const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
 const OPTS=new Function(extractFn('optionsLib')+'\nreturn optionsLib();')();
-const T=new Function('OPTS',['leapStats','pmccShortsFor','pmccStats','leapTileTotals'].map(extractFn).join('\n')+'\nreturn {leapTileTotals,pmccStats,leapStats};')(OPTS);
+const T=new Function('OPTS',['leapStats','pmccShortsFor','pmccStats','leapTileTotals','leapCallsBanked','leapNextAct'].map(extractFn).join('\n')+'\nreturn {leapTileTotals,pmccStats,leapStats,leapCallsBanked,leapNextAct};')(OPTS);
 const today='2026-10-29';
 const A={id:'a',underlying:'AAA',type:'C',side:'long',strike:100,expiry:'2028-01-21',entryDate:'2026-01-02',qty:1,entryPrice:30,fees:1,status:'open',mark:35};
 const B={id:'b',underlying:'BBB',type:'C',side:'long',strike:50,expiry:'2028-01-21',entryDate:'2026-01-02',qty:2,entryPrice:10,status:'open'}; // no mark
@@ -33,3 +33,19 @@ test('Value now % and colour: against the cost of the same priced, unexpired LEA
   const eq=T.leapTileTotals([{...A,fees:0,mark:30}],legs,{AAA:110},today);assert.strictEqual(eq.valuePct,0);assert.strictEqual(eq.valueCls,'');
   const none=T.leapTileTotals([B,C],legs,{BBB:55,CCC:22},today);assert.strictEqual(none.valuePct,null);assert.strictEqual(none.valueCls,'');
   const h=SRC.slice(SRC.indexOf('function renderOptions('));assert.ok(h.includes('T.valueCls,vPct)')&&h.includes('lc-pct ${T.valueCls'));});
+test('Calls banked: closed/expired calls across all LEAPs, all time and this month; open calls never count',()=>{
+  const cb=T.leapCallsBanked([A0,A,B,C],legs,today);
+  const want=[ 's1','s2','s3' ].map(id=>OPTS.legPnL(legs.find(l=>l.id===id)).realized).reduce((a,b)=>a+b,0);
+  assert.strictEqual(cb.all,Math.round(want*100)/100);
+  const m=T.leapCallsBanked([A],[A,{...legs.find(l=>l.id==='s2'),expiry:'2026-10-16',closeDate:'2026-10-16'}],today);assert.strictEqual(m.month,m.all);
+  assert.strictEqual(T.leapCallsBanked([A],[A,{...legs.find(l=>l.id==='s2'),closeDate:'2026-09-01',expiry:'2026-09-01'}],today).month,0);});
+test('Next to act: expired LEAP first, else the soonest call expiry or LEAP near expiry, else nothing',()=>{
+  assert.ok(/expired/.test(T.leapNextAct([A,C],legs,today).text));
+  const n=T.leapNextAct([A],legs,today);assert.strictEqual(n.id,'a');assert.ok(/^AAA \$120C expires in \d+ days$/.test(n.text),n.text);
+  const near={...A,id:'n',expiry:'2026-11-05'};assert.ok(/LEAP: 7 days left/.test(T.leapNextAct([near],[near],today).text));
+  assert.strictEqual(T.leapNextAct([{...A,id:'z'}],[],today),null);});
+test('tiles: Total value, Unrealised P&L, Calls banked, Next to act; card header shows Calls collected under Cost after calls',()=>{
+  const a=SRC.indexOf('function renderOptions('),h=SRC.slice(a,SRC.indexOf('\n}\n',a));
+  ['Total value','Unrealised P&amp;L','Calls banked','Next to act','This month','Nothing due',"goToLeap("].forEach(x=>assert.ok(h.includes(x),x));
+  ['`LEAP cost','`Value now','`Calls collected','`Cost after calls'].forEach(x=>assert.ok(!h.includes(x),x));
+  assert.ok(SRC.includes('<div class="lc-v lc-mut">${m0(P.adj)}</div><div class="lc-pct')&&SRC.includes('Calls collected ${P.net<0'));});
