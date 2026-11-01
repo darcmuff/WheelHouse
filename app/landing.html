@@ -22,7 +22,7 @@
 :root{--bg:#111111;--card:#1C1C1E;--text:#F5F3EE;--text2:#c9c7c2;--text3:#9A9A9F;--line:#2c2c2f;--green:#FF5A36;--green2:rgba(255,90,54,.12);--profit:#3DDC84;--loss:#FF8A8A}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 a{color:var(--green)}.wrap{max-width:64rem;margin:0 auto;padding:0 1.25rem}
-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}.logo{font-weight:700;font-size:1.125rem;display:flex;align-items:center;gap:.5rem}.logo img{width:1.75rem;height:1.75rem;display:block}
+header{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}.logo{display:flex;align-items:center}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .btn{display:inline-block;padding:.75rem 1.25rem;border-radius:.5rem;text-decoration:none;font-weight:600;font-size:.95rem}.btn.p{background:var(--green);color:#111111}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
 .hero{padding:2rem 0 1rem}.hero h1{font-size:2rem;line-height:1.2;margin:0 0 .75rem;letter-spacing:-.02em}.hero p{color:var(--text2);font-size:1.075rem;max-width:38rem}
 .cta{display:flex;gap:.625rem;flex-wrap:wrap;margin:1.25rem 0}.small{font-size:.8rem;color:var(--text3)}
@@ -39,7 +39,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
 </head>
 <body>
 <div class="wrap">
-  <header><div class="logo"><img src="logo-mark.svg" alt="" width="28" height="28"><span data-brand="name">OpTrack</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
+  <header><div class="logo"><img src="logo-horizontal.svg" alt="OpTrack" width="128" height="40"><span class="vh" data-brand="name">OpTrack</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
 
   <section class="hero">
     <h1>The options wheel tracker I wanted, so I built it.</h1>
