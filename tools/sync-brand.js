@@ -8,7 +8,8 @@ function build(B, files) {
   const out = {};
   const man = JSON.parse(files['manifest.json']);
   Object.assign(man, { name: B.name, short_name: B.shortName, description: B.tagline, theme_color: B.accent, background_color: B.background,
-    icons: [{ src: B.icons.i192, sizes: '192x192', type: 'image/png' }, { src: B.icons.i512, sizes: '512x512', type: 'image/png' }] });
+    icons: [{ src: B.icons.i192, sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: B.icons.i512, sizes: '512x512', type: 'image/png', purpose: 'any' }]
+      .concat(B.icons.m192 ? [{ src: B.icons.m192, sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: B.icons.m512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }] : []) });
   out['manifest.json'] = JSON.stringify(man, null, 2) + '\n';
   // Renaming: remember the old cache prefix so the new service worker cleans up the old cache (data is not affected).
   let sw = files['sw.js'];
@@ -34,7 +35,11 @@ function build(B, files) {
   const brandText = x => x.replace(/(<[a-z0-9]+[^>]*data-brand="name"[^>]*>)([^<]*)(<)/g, (m, open, _t, close) => open + esc(B.name) + close);
   if (files['landing.html']) out['landing.html'] = brandText(files['landing.html'])
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(B.name + ': ' + B.tagline)}</title>`)
-    .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${esc(B.name + ': ' + B.tagline)}">`);
+    .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${esc(B.name + ': ' + B.tagline)}">`)
+    .replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${esc(B.shareImage)}">`)
+    .replace(/<meta name="theme-color" content="[^"]*">/, `<meta name="theme-color" content="${B.background}">`)
+    .replace(/<link rel="icon" href="[^"]*">/, `<link rel="icon" href="${B.icons.favicon}">`)
+    .replace(/<link rel="apple-touch-icon" href="[^"]*">/, `<link rel="apple-touch-icon" href="${B.icons.apple}">`);
   if (files['legal.html']) out['legal.html'] = brandText(files['legal.html']).replace(/<title>[^<]*<\/title>/, `<title>${esc(B.name)}: privacy, terms and disclaimer</title>`);
   return out;
 }
