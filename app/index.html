@@ -6532,7 +6532,9 @@ function parseSmartText(raw){
     'THE','AND','FOR','EST','GMT','GTC','DAY','NET','FEE','FEES','TYPE','OPEN',
     'GOOD','TIME','SELL','SOLD','CALL','PUTS','FILLED','BUY','LIMIT','STOP',
     'MARKET','ORDER','TRADE','CASH','DEBIT','CREDIT','PRICE','FILL','ACCOUNT',
-    'IND','IRA','ROTH','USD','GBP','EUR','STATUS','QTY','CUSIP','SIDE'
+    'IND','IRA','ROTH','USD','GBP','EUR','STATUS','QTY','CUSIP','SIDE',
+    'TO','CLOSE','PUT','BOUGHT','AT','ON','OF','IN','BY','EXP','EXPIRY','STRIKE','SHARES','CONTRACT','CONTRACTS','TOTAL','DATE',
+    'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','SEPT','OCT','NOV','DEC','JUNE','JULY','MARCH','APRIL'
   ]);
   // Normalise a candidate ticker — uppercase, strip noise
   const cleanTick=t=>t?t.toUpperCase().trim():null;
@@ -6540,6 +6542,9 @@ function parseSmartText(raw){
 
   // Labelled ticker fields (IBKR, Fidelity, E*Trade, Schwab)
   const labelTick=/(?:symbol|ticker|security|underlying)[:\s]+([A-Za-z]{1,5})\b/i.exec(full);
+  // Right before a $strike or Put/Call: "SOFI $15 Put", "SOFI 15 Call", "SOFI Put"
+  const strikeTick=/\b([A-Za-z]{1,5})\s+(?:\$\s?\d+(?:\.\d+)?\s*(?:put|call)s?\b|\$\s?\d+(?:\.\d+)?\b|\d+(?:\.\d+)?\s+(?:put|call)s?\b|(?:put|call)s?\b)/ig;
+  let t0=null;for(const m of full.matchAll(strikeTick)){const c=cleanTick(m[1]);if(okTick(c)){t0=c;break;}}
   // Adjacent to action verb (Robinhood, Tastytrade, Webull)
   const adjTick=/(?:buy|sell|bought|sold|open|executed)\s+\d*\s*([A-Za-z]{2,5})\b/i.exec(full);
   // Pipe-delimited: "| sofi |" or "| SOFI |"  (garbled / copy-paste formats)
@@ -6550,6 +6555,7 @@ function parseSmartText(raw){
   const t1=cleanTick(labelTick?.[1]),t2=cleanTick(adjTick?.[1]),
         t3=cleanTick(pipeTick?.[1]),t4=cleanTick(dashTick?.[1]);
   if(okTick(t1))r.ticker=t1;
+  else if(t0)r.ticker=t0;
   else if(okTick(t2))r.ticker=t2;
   else if(okTick(t3))r.ticker=t3;
   else if(okTick(t4))r.ticker=t4;
