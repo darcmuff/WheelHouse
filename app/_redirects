@@ -2,5 +2,6 @@
 # Returning users and the installed app are sent from / to /app/ by the landing page itself.
 # (Netlify treats /app and /app/ as the same path, so no slash redirect here: it would loop.)
 /        /landing.html   200!
+/start   /start.html     200
 /app     /index.html     200
 /app/*   /index.html     200

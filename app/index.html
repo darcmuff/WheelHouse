@@ -1240,6 +1240,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 <script>
 // Theme: the stored value keeps its old meaning ('light' → light, 'dark' → dark); nothing stored → light.
+(function(){var m=/[?&]checkout=(monthly|yearly)/.exec(location.search);if(m){try{sessionStorage.setItem('ot-checkout',m[1]);}catch(e){}history.replaceState(null,'',location.pathname);}})();
 function themeFromStored(v){return v==='dark'?'dark':'light';}
 // Legacy GitHub Pages deployment — redirect to the live app. Never fake a user.
 (function(){
@@ -7164,7 +7165,7 @@ onAuthStateChanged(_auth, async (user) => {
     loadingBar.style.width = '30%';
     loadingText.textContent = 'Loading rotations...';
     try {
-      loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);});
+      loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
       await loadDBFromFirestore(user.uid);
     } catch (e) {
       console.error('Load failed:', e);
