@@ -5,10 +5,12 @@ test('root shows the landing page; /app/ and /index.html are the app',()=>{asser
   const h=fs.readFileSync(path.join(A,'index.html'),'utf8');assert.ok(h.includes('<base href="/">'));});
 test('installed app and returning users skip the landing page',()=>{assert.ok(L.includes("display-mode: standalone")&&L.includes("'wh-view'")&&L.includes("location.replace('/app/'"));assert.ok(L.indexOf('location.replace')<L.indexOf('<style>'),'redirect runs before anything renders');});
 test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');});
-test('landing: features, screenshots, plans, not financial advice, legal links, CTAs, no hype',()=>{
-  ['SmartScan','Robinhood','LEAP','PMCC','captured','Realised','Monthly return','after-hours','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','id="plans"'].forEach(s=>assert.ok(L.includes(s),s));
-  ['img/shot-wheel.webp','img/shot-home.webp','img/shot-leaps.webp','img/shot-smartscan.webp'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
-  assert.ok(!/financial freedom|passive income|guaranteed/i.test(L));});
+test('landing leads with the USPs, top three first, then the rest, plans, not financial advice, CTAs, no hype',()=>{
+  const i=id=>L.indexOf('id="'+id+'"');assert.ok(i('usp-broker')>0&&i('usp-broker')<i('usp-honest')&&i('usp-honest')<i('usp-smartscan')&&i('usp-smartscan')<i('plans'),'USP order');
+  ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Roll chains','PMCC','every minute','after-hours','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','href="/start"','id="plans"'].forEach(s=>assert.ok(L.includes(s),s));
+  ['img/shot-rollchain.webp'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
+  assert.ok(L.includes('Demo data')&&L.includes('made-up numbers'),'screens and examples labelled');
+  assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));});
 test('landing is light: no external CSS/fonts, images small',()=>{assert.ok(!/<link[^>]+stylesheet/.test(L));fs.readdirSync(path.join(A,'img')).forEach(f=>assert.ok(fs.statSync(path.join(A,'img',f)).size<60000,f));});
 test('analytics: off by default, cookie-free providers only, never on localhost',()=>{const ctx={window:{}};require('vm').runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);
   assert.strictEqual(analyticsTag(ctx.window.BRAND.analytics,'x.netlify.app'),null);

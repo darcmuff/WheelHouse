@@ -13,28 +13,40 @@
 }catch(e){}})();
 </script>
 <title>OpTrack: Options Wheel Tracker</title>
-<meta name="description" content="A simple, honest tracker for the options wheel and LEAPs. Built by a trader who wanted one.">
+<meta name="description" content="An honest options tracker for the wheel and LEAPs. No broker link: type trades in, paste a confirmation or import a CSV. Realised P&amp;L only.">
 <meta name="theme-color" content="#FAF9F6"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.json">
 <meta property="og:title" content="OpTrack: Options Wheel Tracker"><meta property="og:image" content="optrack-share.png">
 <script src="brand.js"></script>
 <script src="analytics.js" defer></script>
 <style>
-:root{--bg:#FAF9F6;--card:#FFFFFF;--text:#111111;--text2:#3d3d40;--text3:#6b6b70;--line:#E4E1DA;--green:#FF5A36;--green2:rgba(255,90,54,.12);--profit:#1A9E5A;--loss:#D93A3A}
+:root{--bg:#FAF9F6;--card:#FFFFFF;--text:#111111;--text2:#3d3d40;--text3:#6b6b70;--line:#E4E1DA;--green:#FF5A36;--green2:rgba(255,90,54,.10);--profit:#1A9E5A;--loss:#D93A3A}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-a{color:var(--green)}.wrap{max-width:64rem;margin:0 auto;padding:0 1.25rem}
-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}.logo{display:flex;align-items:center}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.btn{display:inline-block;padding:.75rem 1.25rem;border-radius:.5rem;text-decoration:none;font-weight:600;font-size:.95rem}.btn.p{background:var(--green);color:#FFFFFF}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
-.hero{padding:2rem 0 1rem}.hero h1{font-size:2rem;line-height:1.2;margin:0 0 .75rem;letter-spacing:-.02em}.hero p{color:var(--text2);font-size:1.075rem;max-width:38rem}
-.cta{display:flex;gap:.625rem;flex-wrap:wrap;margin:1.25rem 0}.small{font-size:.8rem;color:var(--text3)}
-.shot{width:100%;height:auto;border-radius:.75rem;border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.4);background:#fff;display:block}
-h2{font-size:1.4rem;margin:3rem 0 1rem;letter-spacing:-.01em}
-.grid{display:grid;gap:1rem}.f{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1rem 1.125rem}.f b{display:block;margin-bottom:.25rem}.f span{color:var(--text2);font-size:.925rem}
-.story{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1.25rem;color:var(--text2)}
-.shots{display:grid;gap:1rem}figure{margin:0}figcaption{font-size:.85rem;color:var(--text3);margin-top:.375rem}
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:.75rem;overflow:hidden;font-size:.925rem}th,td{padding:.625rem .75rem;border-bottom:1px solid var(--line);text-align:left}th:not(:first-child),td:not(:first-child){text-align:center;width:6.5rem}tr:last-child td{border-bottom:0}.y{color:var(--green);font-weight:700}.n{color:var(--text3)}
-.nfa{background:#2a2414;border:1px solid #5c4a12;border-radius:.75rem;padding:1rem 1.125rem;font-size:.925rem;color:#f0d58a}
+a{color:var(--green)}.wrap{max-width:72rem;margin:0 auto;padding:0 2rem}
+header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0}.logo{display:flex;align-items:center}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.btn{display:inline-block;padding:.8rem 1.4rem;border-radius:.5rem;text-decoration:none;font-weight:600;font-size:1rem}.btn.p{background:var(--green);color:#FFFFFF}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
+.hero{padding:3.5rem 0 2.5rem;max-width:46rem}.hero h1{font-size:3.25rem;line-height:1.1;margin:0 0 1rem;letter-spacing:-.03em}.hero p{color:var(--text2);font-size:1.2rem;margin:0}
+.cta{display:flex;gap:.75rem;flex-wrap:wrap;margin:1.75rem 0 .75rem}.small{font-size:.85rem;color:var(--text3)}
+h2{font-size:1.6rem;margin:4rem 0 1.25rem;letter-spacing:-.01em}
+.usp{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+.u{background:var(--card);border:1px solid var(--line);border-radius:1rem;padding:1.5rem;display:flex;flex-direction:column}
+.u .k{font-size:.75rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em}
+.u h3{font-size:1.35rem;line-height:1.25;margin:.4rem 0 .6rem;letter-spacing:-.01em}.u p{color:var(--text2);margin:0 0 1.25rem;font-size:.975rem}
+.mock{margin-top:auto;background:var(--bg);border:1px solid var(--line);border-radius:.75rem;padding:1rem;font-size:.85rem}
+.mock .lbl{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+.ways div{display:flex;align-items:center;gap:.6rem;padding:.45rem 0;border-bottom:1px solid var(--line)}.ways div:last-child{border:0}
+.ways i{font-style:normal;width:1.6rem;height:1.6rem;border-radius:.4rem;background:var(--green2);color:var(--green);display:grid;place-items:center;font-weight:700;font-size:.8rem}
+.no{color:var(--text3);text-decoration:line-through}
+.pl .row{display:flex;justify-content:space-between;padding:.35rem 0}.pl .big{font-size:1.5rem;font-weight:700;color:var(--profit)}.pl .x{color:var(--text3)}.pl .neg{color:var(--loss)}
+.paste{background:#fff;border:1px dashed #cfcac0;border-radius:.5rem;padding:.6rem .7rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.75rem;color:var(--text2);line-height:1.5}
+.arrow{text-align:center;color:var(--text3);margin:.35rem 0}
+.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}.fields span{background:#fff;border:1px solid var(--line);border-radius:.4rem;padding:.3rem .45rem;font-size:.75rem}.fields b{display:block;font-size:.6rem;color:var(--text3);font-weight:600;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem}.f{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1.1rem 1.2rem}.f b{display:block;margin-bottom:.3rem}.f span{color:var(--text2);font-size:.9rem}
+.shot{width:100%;height:auto;border-radius:.75rem;border:1px solid var(--line);background:#fff;display:block}figure{margin:1.25rem 0 0}figcaption{font-size:.85rem;color:var(--text3);margin-top:.4rem}
+.plans{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:.75rem;overflow:hidden;font-size:.925rem}th,td{padding:.625rem .75rem;border-bottom:1px solid var(--line);text-align:left}th:not(:first-child),td:not(:first-child){text-align:center;width:7rem}tr:last-child td{border-bottom:0}.y{color:var(--green);font-weight:700}.n{color:var(--text3)}
+.price{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1.5rem}.price .amt{font-size:2rem;font-weight:700}.price .amt span{font-size:1rem;color:var(--text3);font-weight:400}
+.nfa{background:#FFF8E6;border:1px solid #F0D58A;border-radius:.75rem;padding:1rem 1.25rem;font-size:.95rem;color:#5c4a12;margin-top:4rem}
 footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}
-@media(min-width:48rem){.hero h1{font-size:2.6rem}.grid{grid-template-columns:repeat(2,1fr)}.shots{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -42,42 +54,53 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
   <header><div class="logo"><img src="logo-horizontal-dark.svg" alt="OpTrack" width="128" height="40"><span class="vh" data-brand="name">OpTrack</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
 
   <section class="hero">
-    <h1>The options wheel tracker I wanted, so I built it.</h1>
-    <p>I run the wheel and a few LEAPs, and every spreadsheet and app I tried either got the numbers wrong or buried them. So I built <span data-brand="name">OpTrack</span>: log a trade in seconds and see what you've actually banked.</p>
+    <h1>An options tracker that tells you the truth.</h1>
+    <p>Track the wheel and LEAPs without linking your broker. <span data-brand="name">OpTrack</span> only counts money you've actually banked, so the numbers you see are the numbers you made.</p>
     <div class="cta"><a class="btn p" href="/start" id="start-free">Start free</a><a class="btn g" href="/app/">Sign in</a></div>
-    <div class="small">Free to start. No card needed. It runs in your web browser on phone or computer, so there's nothing to download.</div>
+    <div class="small">Nothing to download: it runs in your web browser. No card needed to start.</div>
   </section>
 
-  <img class="shot" src="img/shot-wheel.webp" width="1200" height="760" alt="A wheel card showing the open put, profit captured so far and every trade in the cycle" fetchpriority="high">
+  <section class="usp">
+    <div class="u" id="usp-broker"><div class="k">No broker link</div><h3>You never hand over your brokerage login.</h3>
+      <p>Nothing connects to your broker. Type trades in, paste a confirmation, or import a Robinhood CSV. Your data stays yours: export it or delete it any time.</p>
+      <div class="mock ways"><div class="lbl">Ways to add a trade</div>
+        <div><i>✎</i>Manual entry</div><div><i>⎘</i>SmartScan: paste a confirmation</div><div><i>⇪</i>Robinhood CSV import</div><div class="no"><i>✕</i>Broker login</div></div></div>
 
-  <h2>What it does</h2>
+    <div class="u" id="usp-honest"><div class="k">Annoyingly honest P&amp;L</div><h3>Only banked money counts.</h3>
+      <p>Realised only, with fees taken off. Premium on trades that are still open never flatters your return or your win rate.</p>
+      <div class="mock pl"><div class="lbl">Example (made-up numbers)</div>
+        <div class="row"><span>Banked this month</span><span class="big">+$412</span></div>
+        <div class="row"><span>Fees</span><span class="neg">−$7.80 included</span></div>
+        <div class="row x"><span>Open premium, not counted yet</span><span>$260</span></div></div></div>
+
+    <div class="u" id="usp-smartscan"><div class="k">SmartScan</div><h3>Paste a confirmation, it fills the trade in.</h3>
+      <p>Sells, buy-backs and rolls, with the strike, expiry, price and fees picked out for you. Check it and save.</p>
+      <div class="mock"><div class="lbl">Example</div>
+        <div class="paste">Sold to open 2 XYZ 11/21 $45 Put @ 1.10<br>Fees $0.06</div>
+        <div class="arrow">↓</div>
+        <div class="fields"><span><b>Type</b>Sell put</span><span><b>Strike</b>$45</span><span><b>Expiry</b>21 Nov</span><span><b>Qty</b>2</span><span><b>Price</b>$1.10</span><span><b>Fees</b>$0.06</span></div></div></div>
+  </section>
+
+  <h2>And the rest</h2>
   <div class="grid">
-    <div class="f"><b>SmartScan</b><span>Paste the fill text from your broker's confirmation and it fills in the trade for you. Manual entry is there too.</span></div>
-    <div class="f"><b>Robinhood CSV import</b><span>Bring your history in from Robinhood's CSV export. It skips trades you already have and doesn't guess at rolls.</span></div>
-    <div class="f"><b>The wheel and LEAPs together</b><span>Puts, assignment, covered calls and called away, plus LEAPs and the calls you sell against them (PMCC), all side by side.</span></div>
-    <div class="f"><b>Live captured profit</b><span>Each open option shows how much of the premium you've already captured, kept up to date through the trading day.</span></div>
-    <div class="f"><b>Realised P&amp;L only</b><span>Your P&amp;L only counts money you've actually closed out. No paper gains dressed up as profit.</span></div>
-    <div class="f"><b>Monthly return, your way</b><span>See this month's banked return against the money you've got working or your account size, with a target of your own if you want one.</span></div>
+    <div class="f"><b>Roll chains</b><span>Every roll stays linked to the trade it came from, so you see what the whole position made, not just the last leg.</span></div>
+    <div class="f"><b>The wheel and LEAPs together</b><span>Puts, assignment and covered calls, plus LEAPs and the calls you sell against them (PMCC), with those calls knocking down your LEAP cost.</span></div>
+    <div class="f"><b>Live buy-back price</b><span>The cost to close each open option, refreshed every minute and adjusted for how the stock has moved, so you can see how much premium you've captured.</span></div>
+    <div class="f"><b>Monthly return, your way</b><span>This month's banked return against the money you've got working or your account size, with your own target or none.</span></div>
     <div class="f"><b>Pre-market and after-hours</b><span>See where your tickers are trading before the open and after the close.</span></div>
-    <div class="f"><b>Your data is yours</b><span>Export everything to a spreadsheet any time, or delete your account and all of it in one go.</span></div>
+  </div>
+  <figure><img class="shot" src="img/shot-rollchain.webp" width="1120" height="355" loading="lazy" alt="A roll chain: the original put, the buy-back and the new put linked together with the net for the chain"><figcaption>A roll chain, linked with its net for the whole chain. Demo data.</figcaption></figure>
+
+  <h2>Free and Pro</h2>
+  <div class="plans">
+    <table id="plans"><thead><tr><th></th><th>Free</th><th>Pro</th></tr></thead><tbody id="plans-body">
+      <tr><td>Manual entry and SmartScan</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td>Wheel tracking</td><td>Up to 3 tickers</td><td class="y">Unlimited</td></tr>
+    </tbody></table>
+    <div class="price"><div class="small">Pro</div><div class="amt" id="pro-amt">£9 <span>/ month</span></div><p class="small" id="price-line">Pro is £9 a month or £79 a year. Cancel any time.</p>
+      <div class="cta" style="margin:1rem 0 0"><a class="btn p" href="/start">Start free</a><a class="btn g" href="/start">See plans</a></div></div>
   </div>
 
-  <h2>A look inside</h2>
-  <div class="shots">
-    <figure><img class="shot" src="img/shot-home.webp" width="1200" height="760" loading="lazy" alt="Home screen with this month's P&amp;L"><figcaption>Home: this month, this year and what needs your attention.</figcaption></figure>
-    <figure><img class="shot" src="img/shot-leaps.webp" width="1200" height="760" loading="lazy" alt="LEAPs tab"><figcaption>LEAPs: what they cost, what they're worth and what your calls have paid back.</figcaption></figure>
-    <figure><img class="shot" src="img/shot-smartscan.webp" width="1200" height="760" loading="lazy" alt="SmartScan: paste a trade confirmation"><figcaption>SmartScan: paste a confirmation, check it, save.</figcaption></figure>
-  </div>
-  <p class="small">Screenshots use made-up example trades.</p>
-
-  <h2>Free and paid</h2>
-  <table id="plans"><thead><tr><th></th><th>Free</th><th>Pro</th></tr></thead><tbody id="plans-body">
-    <tr><td>Manual entry and SmartScan</td><td class="y">✓</td><td class="y">✓</td></tr>
-    <tr><td>Wheel tracking</td><td>Up to 3 tickers</td><td class="y">Unlimited</td></tr>
-  </tbody></table>
-  <p class="small" id="price-line">Pro is £9 a month or £79 a year. Cancel any time.</p>
-
-  <h2>The small print, in plain words</h2>
   <div class="nfa"><b>Not financial advice.</b> <span data-brand="name">OpTrack</span> keeps a record of the trades you enter and does the sums. It doesn't tell you what to buy or sell. Prices are delayed and can be wrong, so always check against your broker. Options are risky. <a href="legal.html#advice">Read more</a>.</div>
 
   <div class="cta" style="margin-top:2rem"><a class="btn p" href="/start">Start free</a><a class="btn g" href="/app/">Sign in</a></div>
@@ -93,7 +116,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
   var rows=[['Manual entry and SmartScan','✓','✓'],['Wheel tracking',paid.indexOf('unlimited')>=0?'Up to '+P.free.maxWheelTickers+' tickers':'Unlimited','Unlimited'],['LEAPs',paid.indexOf('unlimited')>=0||paid.indexOf('leaps-full')>=0?P.free.maxOpenLeaps+' open LEAP':'Unlimited','Unlimited'],['Realised P&L and Home','✓','✓'],['Export and delete your data','✓','✓']];
   Object.keys(N).forEach(function(k){if(k==='unlimited'||k==='leaps-full')return;rows.push([N[k],paid.indexOf(k)>=0?'–':'✓','✓']);});
   document.getElementById('plans-body').innerHTML=rows.map(function(r){return '<tr><td>'+r[0]+'</td>'+[r[1],r[2]].map(function(v){return '<td class="'+(v==='✓'||v==='Unlimited'?'y':v==='–'?'n':'')+'">'+v+'</td>';}).join('')+'</tr>';}).join('');
-  document.getElementById('price-line').textContent='Pro is '+c+P.priceMonthly+' a month or '+c+P.priceYearly+' a year. Cancel any time.'+(P.gating?'':' For now, everything is free while we finish setting up.');
+  var pa=document.getElementById('pro-amt');if(pa)pa.innerHTML=c+P.priceMonthly+' <span>/ month</span>';document.getElementById('price-line').textContent='Pro is '+c+P.priceMonthly+' a month or '+c+P.priceYearly+' a year. Cancel any time.'+(P.gating?'':' For now, everything is free while we finish setting up.');
 })();
 </script>
 </body>
