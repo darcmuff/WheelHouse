@@ -1732,6 +1732,14 @@ function realisedPremium(trades,today){
   });
   return{events,open};
 }
+// Capital at work right now, the one figure used on Home and in More stats.
+function currentCapitalAtWork(){
+  const sr=shareRealisations(db.trades);
+  const shareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((sr.open[w.id]||{}).cost||0),0);
+  return capitalAtWork(calcCapitalStats().atRisk,shareCost,db.opts||[],null);
+}
+// Pure: capital at work as % of the account size the user set; null when no account size.
+function utilisation(cawTotal,accountSize){return accountSize>0?Math.round(cawTotal/accountSize*1000)/10:null;}
 // Money tied up now: open put collateral + open share cost (wheel), and open long LEAP cost (separate).
 function capitalAtWork(putCollateral,shareCost,legs,accountSize){
   const leaps=(legs||[]).filter(l=>l.status==='open'&&l.side==='long'&&!l.demo).reduce((a,l)=>a+OPTS.legPnL(l).costBasis,0);
@@ -4675,9 +4683,9 @@ function renderStatsOverview(){
   </div>`;
 
   // Capital utilisation
-  const totalAccount=cap.maxCap||1;// best proxy without account balance input
-  const utilPct=cap.atRisk>0&&totalAccount>0?Math.min(100,(cap.atRisk/totalAccount*100)):0;
-  const utilCol=utilPct<70?'var(--green)':utilPct<85?'var(--yellow)':'var(--red)';
+  const cawU=currentCapitalAtWork(),acctU=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]).account;
+  const utilPct=utilisation(cawU.total,acctU);
+  const utilCol=utilPct==null?'var(--text3)':utilPct<70?'var(--green)':utilPct<85?'var(--yellow)':'var(--red)';
 
   // Last month comparison
   // Use the real calendar month (and the one before it), not just the last months that happen to have trades
@@ -4707,7 +4715,7 @@ function renderStatsOverview(){
 
   const k1=kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
-  const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
+  const k3=kpi('Capital Utilisation',utilPct==null?'—':utilPct.toFixed(0)+'%',utilPct==null?'Set an account size in Settings':fmtMoney(cawU.total)+' of '+fmtMoney(acctU),utilCol,false,'Capital at work (open put collateral, open shares and open LEAP cost) as a % of the account size you set in Settings. Green below 70%, amber 70–85%, red above 85%.');
 
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
@@ -4832,10 +4840,8 @@ function renderHome(){
   const nx=nextExpiry(wheelLegs,legs,today);
   const health=allDataHealth();
   const mName=new Date().toLocaleDateString('en-GB',{month:'long'});
-  const _sr=shareRealisations(db.trades);
-  const _openShareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((_sr.open[w.id]||{}).cost||0),0);
   const wl=calcWinLoss();
-  const caw=capitalAtWork(calcCapitalStats().atRisk,_openShareCost,legs,null);
+  const caw=currentCapitalAtWork();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
   const rBase=returnBase(rs,caw.total),mr=monthReturnPct(F.month.total,rBase,rs.target);
   const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
@@ -6273,7 +6279,7 @@ function renderAnalytics(){
 
   // ── Section 6: Risk ──
   const riskStats=`<div class="a-stat-grid">
-    ${stat(fmtMoney(cap.atRisk),'Current Exposure','open CSP collateral',cap.atRisk>0?'var(--red)':'var(--text3)','Total notional of all currently open cash-secured puts — strike × shares for each live put.')}
+    ${(c=>stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),c.total>0?'var(--red)':'var(--text3)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
     ${stat(fmtMoney(cap.maxCap),'Peak Exposure','highest single CSP','var(--text2)','Largest single cash-secured put notional ever opened. Your peak capital requirement.')}
     ${stat(fmtMoney(cap.totalFees),'Total Fees',cap.feesPct.toFixed(1)+'% of gross premium','var(--text2)','All commissions and regulatory fees logged across every trade.')}
     ${stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
@@ -7187,7 +7193,7 @@ function demoBoot(){
   ['settings-export','settings-signout','settings-delete','settings-user'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   const sx=document.getElementById('settings-legal');if(sx){const r=document.createElement('button');r.className='btn btn-ghost btn-full';r.style.cssText='text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem';r.textContent='↺ Reset demo';r.onclick=()=>OT_DEMO.reset();sx.after(r);}
   const ta=document.getElementById('paste-raw');if(ta){const b=document.createElement('button');b.type='button';b.id='demo-sample';b.className='btn btn-ghost';b.style.cssText='margin-top:0.5rem;font-size:0.75rem';b.textContent='Try a sample';b.onclick=()=>{ta.value=OT_DEMO.sample();ta.focus();};ta.after(b);}
-  const hv={home:'dash',wheel:'positions',leaps:'options',activity:'log'}[location.hash.slice(1)];
+  const hv={home:'dash',wheel:'positions',leaps:'options',activity:'log',stats:'analytics'}[location.hash.slice(1)];
   if(hv)switchView(hv);else render();
   fetchAllQuotes().then(()=>{db.wheels.forEach(w=>{if(w.status==='open'&&quotes[w.ticker])w.lastPrice=quotes[w.ticker].price;});render();
     const l=document.getElementById('loading-overlay');if(l)l.style.display='none';}).catch(()=>{const l=document.getElementById('loading-overlay');if(l)l.style.display='none';});
