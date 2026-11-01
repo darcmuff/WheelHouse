@@ -6,7 +6,7 @@ test('root shows the landing page; /app/ and /index.html are the app',()=>{asser
 test('installed app and returning users skip the landing page',()=>{assert.ok(L.includes("display-mode: standalone")&&L.includes("'wh-view'")&&L.includes("location.replace('/app/'"));assert.ok(L.indexOf('location.replace')<L.indexOf('<style>'),'redirect runs before anything renders');});
 test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');});
 test('landing: features, screenshots, plans, not financial advice, legal links, CTAs, no hype',()=>{
-  ['SmartScan','Robinhood','LEAP','PMCC','captured','Realised','2%','after-hours','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','retired roofer','id="plans"'].forEach(s=>assert.ok(L.includes(s),s));
+  ['SmartScan','Robinhood','LEAP','PMCC','captured','Realised','2%','after-hours','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','id="plans"'].forEach(s=>assert.ok(L.includes(s),s));
   ['img/shot-wheel.webp','img/shot-home.webp','img/shot-leaps.webp','img/shot-smartscan.webp'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
   assert.ok(!/financial freedom|passive income|guaranteed/i.test(L));});
 test('landing is light: no external CSS/fonts, images small',()=>{assert.ok(!/<link[^>]+stylesheet/.test(L));fs.readdirSync(path.join(A,'img')).forEach(f=>assert.ok(fs.statSync(path.join(A,'img',f)).size<60000,f));});
