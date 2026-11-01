@@ -63,3 +63,12 @@ test('return settings: saved choice wins, bad input is cleaned', () => {
   assert.strictEqual(RS.returnBase({ base: 'account', account: 50000 }, 30000), 50000);
   assert.strictEqual(RS.returnBase({ base: 'caw', account: 50000 }, 30000), 30000);
 });
+test('Home: Capital at work card shows the same figure Return this month divides by (wheel + shares + open LEAP cost)', () => {
+  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const card = H.slice(H.indexOf('<div class="hk"><div class="hk-l">Capital at work'), H.indexOf('<div class="hk"><div class="hk-l">Win rate'));
+  assert.ok(card.includes('<div class="hk-v">${fmtMoney(caw.total)'), 'card value is caw.total');
+  assert.ok(card.includes('Wheel ${fmtMoney(caw.wheel)') && card.includes('LEAPs ${fmtMoney(caw.leaps)'), 'split shown');
+  assert.ok(H.includes('returnBase(rs,caw.total)'), 'return divides by caw.total');
+  const c = L.capitalAtWork(10000, 20000, [{ status: 'open', side: 'long', entryPrice: 50, qty: 1 }], null);
+  assert.strictEqual(c.total, c.wheel + c.leaps);
+});
