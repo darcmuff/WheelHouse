@@ -20,7 +20,7 @@ exports.handler = async (event) => {
     const data = await res.json();
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=20', 'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=30' }, // shared CDN cache: one Finnhub call per ticker per 30s, however many users
       body: JSON.stringify(data)
     };
   } catch (e) {

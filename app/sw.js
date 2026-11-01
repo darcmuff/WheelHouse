@@ -1,6 +1,6 @@
 // WheelHouse service worker. Bump CACHE on every release.
-const CACHE='wheelhouse-v119';
-const STATIC = ['./', './manifest.json', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
+const CACHE='wheelhouse-v120';
+const STATIC = ['./', './manifest.json', './brand.js', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting()));

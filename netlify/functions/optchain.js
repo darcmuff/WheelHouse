@@ -53,5 +53,5 @@ exports.handler = async (event) => {
   if (!sym || !wanted.length) return { statusCode: 400, body: JSON.stringify({ error: 'symbol and contracts required' }) };
   const out = await getMarks(sym, wanted, { finnhubKey: process.env.FINNHUB_KEY });
   // 200 even when empty: the app then keeps manual marks / local greeks
-  return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=60' }, body: JSON.stringify(out) };
+  return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=60', 'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=60' }, body: JSON.stringify(out) };
 };
