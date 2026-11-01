@@ -1,4 +1,4 @@
-exports.handler = async (event) => {
+const _handler = async (event) => {
   const sym = event.queryStringParameters?.symbol;
   if (!sym) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing symbol parameter' }) };
@@ -27,3 +27,5 @@ exports.handler = async (event) => {
     return { statusCode: 502, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = require('../lib/origin').guard(_handler);

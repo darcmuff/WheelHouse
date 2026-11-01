@@ -29,8 +29,10 @@ async function getExt(syms, { fetchImpl = fetch, now = Date.now() } = {}) {
   return out;
 }
 exports.lastExt = lastExt; exports.getExt = getExt;
-exports.handler = async (event) => {
+const _handler = async (event) => {
   const syms = String(event.queryStringParameters?.symbols || '').toUpperCase().split(',').map(s => s.trim()).filter(s => /^[A-Z][A-Z0-9.\-]{0,9}$/.test(s)).slice(0, 40);
   const body = syms.length ? await getExt(syms) : {};
   return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=30', 'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=30' }, body: JSON.stringify(body) };
 };
+
+exports.handler = require('../lib/origin').guard(_handler);
