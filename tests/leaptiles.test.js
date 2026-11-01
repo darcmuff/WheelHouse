@@ -27,3 +27,9 @@ test('old tiles gone, tips short',()=>{const a=SRC.indexOf('function renderOptio
 test('open call premium is never counted (realised only)',()=>{
   const P=T.pmccStats(A,legs,today);assert.strictEqual(P.net,150+150);assert.strictEqual(P.adj,3001-300);
   assert.strictEqual(r.calls,300+(100*2-140*2));});
+test('Value now % and colour: against the cost of the same priced, unexpired LEAPs',()=>{
+  assert.strictEqual(r.pricedCost,3001);assert.strictEqual(r.valuePct,Math.round(499/3001*10000)/100);assert.strictEqual(r.valueCls,'g');
+  const lo=T.leapTileTotals([{...A,mark:20}],legs,{AAA:110},today);assert.strictEqual(lo.valueCls,'r');assert.ok(lo.valuePct<0);
+  const eq=T.leapTileTotals([{...A,fees:0,mark:30}],legs,{AAA:110},today);assert.strictEqual(eq.valuePct,0);assert.strictEqual(eq.valueCls,'');
+  const none=T.leapTileTotals([B,C],legs,{BBB:55,CCC:22},today);assert.strictEqual(none.valuePct,null);assert.strictEqual(none.valueCls,'');
+  const h=SRC.slice(SRC.indexOf('function renderOptions('));assert.ok(h.includes('T.valueCls,vPct)')&&h.includes('lc-pct ${T.valueCls'));});
