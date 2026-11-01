@@ -39,7 +39,7 @@ window.BRAND = {
     'live-refresh': 'Live captured profit (marks refresh every minute)',
     'extended-hours': 'Pre-market and after-hours prices',
     'robinhood-import': 'Robinhood CSV import',
-    'analytics': 'More stats: monthly 2% target and analytics'
+    'analytics': 'More stats: monthly return against your own target, and analytics'
   },
 
   // ── Privacy-friendly, cookie-free analytics. Off until set.

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractFn } = require('./extract');
+const { extractFn, extractConst } = require('./extract');
 const L = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + ['walkLegPairs','realisedPremium','shareRealisations','cycleReturn','calledAwayProfit','tickerPnL','capitalAtWork'].map(extractFn).join('\n') + '\nreturn {cycleReturn,calledAwayProfit,tickerPnL,capitalAtWork};')();
 const m = (trades, premiumRealised, premiumNet = premiumRealised) => ({ trades, premiumRealised, premiumNet });
 test('closed cycle annualised over first trade to last expiry', () => {
@@ -37,9 +37,29 @@ test('capital at work total includes open non-demo LEAP cost', () => {
   const c = L.capitalAtWork(10000, 20000, legs, null);
   assert.strictEqual(c.leaps, 5000); assert.strictEqual(c.total, 35000);
 });
-test('month return % with 2% target boundary', () => {
-  assert.strictEqual(R(100, 0), null);
-  assert.deepStrictEqual(R(800, 40000), { pct: 2, ok: true });
-  const r = R(790, 40000); assert.ok(Math.abs(r.pct - 1.975) < 1e-9); assert.strictEqual(r.ok, false);
-  assert.strictEqual(R(-100, 10000).ok, false);
+test('month return % with target boundary, and no verdict when target is off', () => {
+  assert.strictEqual(R(100, 0, 2), null);
+  assert.deepStrictEqual(R(800, 40000, 2), { pct: 2, ok: true });
+  const r = R(790, 40000, 2); assert.ok(Math.abs(r.pct - 1.975) < 1e-9); assert.strictEqual(r.ok, false);
+  assert.strictEqual(R(-100, 10000, 2).ok, false);
+  assert.strictEqual(R(800, 40000, null).ok, null);
+  assert.strictEqual(R(800, 40000, 3).ok, false);
+});
+const RS = new Function(extractConst('RET_LEGACY_BEFORE') + extractFn('returnSettings') + '\n' + extractFn('returnBase') + '\nreturn {returnSettings, returnBase};')();
+test('return settings: new users get capital at work with target off', () => {
+  assert.deepStrictEqual(RS.returnSettings(null, [], []), { base: 'caw', account: 0, target: null });
+  assert.deepStrictEqual(RS.returnSettings(null, [{ entered: '2027-01-05' }], [{ entryDate: '2027-01-05' }]), { base: 'caw', account: 0, target: null });
+});
+test('return settings: existing accounts keep capital at work and the 2% target', () => {
+  assert.deepStrictEqual(RS.returnSettings(null, [{ entered: '2025-06-01' }], []), { base: 'caw', account: 0, target: 2 });
+  assert.deepStrictEqual(RS.returnSettings(null, [], [{ entryDate: '2025-06-01' }]), { base: 'caw', account: 0, target: 2 });
+  assert.strictEqual(RS.returnSettings(null, [], [{ entryDate: '2025-06-01', demo: true }]).target, null);
+});
+test('return settings: saved choice wins, bad input is cleaned', () => {
+  const old = [{ entered: '2025-06-01' }];
+  assert.deepStrictEqual(RS.returnSettings('{"base":"account","account":50000,"target":null}', old, []), { base: 'account', account: 50000, target: null });
+  assert.deepStrictEqual(RS.returnSettings('{"base":"account","account":0,"target":1.5}', [], []), { base: 'caw', account: 0, target: 1.5 });
+  assert.deepStrictEqual(RS.returnSettings('not json', [], []), { base: 'caw', account: 0, target: null });
+  assert.strictEqual(RS.returnBase({ base: 'account', account: 50000 }, 30000), 50000);
+  assert.strictEqual(RS.returnBase({ base: 'caw', account: 50000 }, 30000), 30000);
 });
