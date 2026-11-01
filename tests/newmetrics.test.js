@@ -72,3 +72,12 @@ test('Home: Capital at work card shows the same figure Return this month divides
   const c = L.capitalAtWork(10000, 20000, [{ status: 'open', side: 'long', entryPrice: 50, qty: 1 }], null);
   assert.strictEqual(c.total, c.wheel + c.leaps);
 });
+test('More stats: exposure and utilisation use Home capital at work; utilisation needs an account size', () => {
+  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const U = new Function(extractFn('utilisation') + '\nreturn utilisation;')();
+  assert.strictEqual(U(45000, 0), null); assert.strictEqual(U(45000, null), null); assert.strictEqual(U(45000, 90000), 50);
+  assert.ok(H.includes("stat(fmtMoney(c.total),'Current Exposure'") && H.includes('(currentCapitalAtWork())'));
+  assert.ok(H.includes("'Set an account size in Settings'"));
+  assert.ok(!H.includes('cap.maxCap||1'), 'old biggest-put proxy gone');
+  assert.ok(H.includes('const caw=currentCapitalAtWork();'), 'Home uses the same helper');
+});
