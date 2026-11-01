@@ -1,6 +1,6 @@
 # Landing page at the site root; the app lives at /app/ (and /index.html keeps working).
 # Returning users and the installed app are sent from / to /app/ by the landing page itself.
-/                 /landing.html   200!
-/app              /app/           301
-/app/             /index.html     200
-/app/index.html   /app/           301
+# (Netlify treats /app and /app/ as the same path, so no slash redirect here: it would loop.)
+/        /landing.html   200!
+/app     /index.html     200
+/app/*   /index.html     200
