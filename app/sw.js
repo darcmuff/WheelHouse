@@ -1,6 +1,7 @@
 // WheelHouse service worker. Bump CACHE on every release.
-const CACHE='wheelhouse-v121';
-const STATIC = ['./', './manifest.json', './brand.js', './legal.html', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
+const CACHE='wheelhouse-v122';
+const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
+const STATIC = [SHELL, './landing.html', './manifest.json', './brand.js', './analytics.js', './legal.html', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting()));
@@ -28,12 +29,12 @@ self.addEventListener('fetch', e => {
   const isPage = req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html');
   if (isPage) {
     // Network first so updates always arrive; fall back to cached shell offline.
-    // Only the app shell is stored as './' (other pages such as legal.html must not replace it).
-    const shell = /\/app\/(index\.html)?$/.test(url.pathname);
+    // Only the app itself is stored as the shell (the landing and legal pages must not replace it).
+    const shell = /^\/(app\/?|app\/index\.html|index\.html)$/.test(url.pathname);
     e.respondWith(fetch(req).then(res => {
-      if (res && res.ok && shell) { const c = res.clone(); caches.open(CACHE).then(x => x.put('./', c)); }
+      if (res && res.ok && shell) { const c = res.clone(); caches.open(CACHE).then(x => x.put(SHELL, c)); }
       return res;
-    }).catch(() => shell ? caches.match('./').then(r => r || caches.match(req)) : caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./'))));
+    }).catch(() => shell ? caches.match(SHELL) : caches.match(req, { ignoreSearch: true }).then(r => r || caches.match(SHELL))));
     return;
   }
   // Cache first for same-origin static assets.

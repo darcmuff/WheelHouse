@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="/"><!-- the app is served at /app/ (and still at /index.html); all relative paths resolve from the site root -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -20,6 +21,7 @@
 <meta name="twitter:image" content="https://wheelhouse-tracker.netlify.app/wheelhouse-share.png">
 <link rel="manifest" href="manifest.json">
 <script src="brand.js"></script>
+<script src="analytics.js" defer></script>
 <meta name="theme-color" content="#f6f5f1">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
 <!-- Firebase loaded inside main module script -->
@@ -1224,8 +1226,22 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <a id="settings-legal" href="legal.html" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;text-decoration:none;color:var(--text2)">Privacy, terms &amp; disclaimer</a>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <div id="settings-user" style="font-size:0.6875rem;color:var(--text3);padding:0 0.875rem"></div>
+      <div id="settings-plan" style="display:none;font-size:0.75rem;color:var(--text2);padding:0 0.875rem"></div>
       <button id="settings-signout" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;color:var(--red)" onclick="doSignOut()">⎋ Sign Out</button>
       <button id="settings-delete" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.75rem;color:var(--text3)" onclick="openDeleteAccount()">Delete account…</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Upgrade -->
+<div class="mb" id="mUpgrade">
+  <div class="mbox sm">
+    <div class="mtitle"><span>Pro</span><span class="mx" onclick="closeModal('mUpgrade')">✕</span></div>
+    <div style="padding:0.5rem 0;font-size:0.8125rem;color:var(--text2);line-height:1.5">
+      <p id="upg-feature" style="margin:0 0 0.5rem;font-weight:600;color:var(--text)"></p>
+      <p style="margin:0 0 0.25rem">Pro includes:</p><ul id="upg-list" style="margin:0 0 0.75rem;padding-left:1.1rem"></ul>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap"><button class="btn btn-primary" onclick="startCheckout('monthly')" id="upg-monthly"></button><button class="btn btn-ghost" onclick="startCheckout('yearly')" id="upg-yearly"></button></div>
+      <div id="upg-msg" style="margin-top:0.5rem;font-size:0.75rem;color:var(--text3)"></div>
+      <p style="margin:0.75rem 0 0;font-size:0.6875rem;color:var(--text3)">Cancel any time from Settings. Payments handled securely by Stripe.</p>
     </div>
   </div>
 </div>
@@ -1278,7 +1294,7 @@ function themeFromStored(v){return v==='dark'?'dark':'light';}
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
   apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
@@ -2099,7 +2115,7 @@ async function fetchSymbol(sym){
 // Pre-market / after-hours price: display only, memory only. Never feeds To strike, Needs you, values or P&L.
 let extq={};
 async function fetchExtQuotes(syms){
-  if(!syms.length){extq={};return;}
+  if(!syms.length||!canUse('extended-hours')){extq={};return;}
   try{const r=await fetch(`/.netlify/functions/extquote?symbols=${encodeURIComponent(syms.join(','))}`,{signal:AbortSignal.timeout(10000)});
     extq=r.ok?(await r.json())||{}:{};}catch(e){extq={};}
 }
@@ -2222,6 +2238,7 @@ function goToTrade(wheelId,tradeId){
 // Clear the sticky highlight once an action lands on the focused trade (save, delete, expire)
 function _clearFocus(id){if(_focusTid&&(!id||_focusTid===id)){_focusTid=null;}}
 function switchView(v){
+  if(v==='analytics'&&!canUse('analytics')){openUpgrade('analytics');return;}
   view=v;
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
   render();
@@ -2718,6 +2735,7 @@ function renderOptions(){
 }
 // ── + LEAP / edit: single long call ──
 function openLeapAdd(){
+  if(!canUse('leaps-full')&&!underLimit('leap',(db.opts||[]).filter(l=>l.status==='open'&&l.side==='long').length)){openUpgrade('leaps-full');return;}
   ['lf-id','lf-und','lf-strike','lf-expiry','lf-price','lf-review','lf-notes','lf-mark'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('lf-qty').value='1';document.getElementById('lf-fees').value='0';
   document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
@@ -3345,6 +3363,7 @@ let _optMarksAt=0;
 async function fetchOptionMarks(force){
   const open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
   if(!open.length){_optMarkStatus='';return;}
+  if(!force&&_optMarksAt&&!canUse('live-refresh'))return; // free plan: marks once per visit, no auto refresh
   if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
   const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
   let ok=0,miss=0,failU=[];
@@ -5046,6 +5065,7 @@ function quickAddRotation(inputId){
   fetchLogo(ticker).then(()=>render()).catch(()=>{});
 }
 function openNewPos(){
+  if(!underLimit('wheel',new Set((db.wheels||[]).filter(w=>w.status==='open').map(w=>w.ticker)).size)){openUpgrade('unlimited');return;}
   document.getElementById('wf-id').value='';
   document.getElementById('wf-ticker').value='';
   document.getElementById('wf-label').value='';
@@ -5840,6 +5860,7 @@ function importPreview(pre){
   if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
   const p=_routeToOpenLongs(pre||BCSV.parseBrokerCSV(txt));_importParsed=p;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
+  if(p.rh&&!canUse('robinhood-import')){box.innerHTML=`<div class="imp-err">Robinhood import is a Pro feature. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
   if(p.rh){ // Robinhood activity report: plan against what's already here
     const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;p.rows=P.wheelRows;p.unrecognised=p.unrecognised.concat(P.unrecognised);p.skipped=p.skipped.concat(P.skipped);
     const why={};p.skipped.forEach(x=>{why[x.reason]=(why[x.reason]||0)+1;});
@@ -6982,6 +7003,8 @@ function openSettings(){
   }
   const dateSel=document.getElementById('date-fmt-select');
   if(dateSel)dateSel.value=dateFmt;
+  const pl=document.getElementById('settings-plan'),lab=planLabel();
+  if(pl){pl.style.display=lab?'block':'none';pl.innerHTML=!lab?'':`Plan: <b>${lab}</b> · `+(_ent&&_ent.founder?'free for life':_ent&&_ent.stripeCustomerId?'<a href="#" onclick="openBillingPortal();return false" style="color:var(--orange)">Manage billing</a>':'<a href="#" onclick="closeModal(\'mSettings\');openUpgrade(\'unlimited\');return false" style="color:var(--orange)">Upgrade</a>');}
 }
 function setDateFmt(val){
   dateFmt=val;
@@ -6997,6 +7020,33 @@ function toggleTheme(isLight){
 function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls are harmless)
 // "+ Add trade": SmartScan for whatever you're looking at — LEAP/short-call fills on LEAPs, wheel fills everywhere else.
 function pasteFill(){ if(view==='options'&&typeof openLeapAdd==='function')openLeapAdd(); else openPasteTrade(); }
+
+// ── Plans: Free / Pro. Everything is driven by window.BRAND.plans; gating is OFF unless plans.gating is true.
+// The entitlement lives at entitlements/{uid}: users can read it, only the server (Stripe webhook / founder tool) can write it.
+let _ent=null,_entErr=false;
+function planCfg(){return (typeof window!=='undefined'&&window.BRAND&&window.BRAND.plans)||{gating:false,paidFeatures:[],free:{}};}
+function isPro(ent,err){return !!(err||(ent&&(ent.plan==='pro'||ent.founder))); } // can't read it → never lock anyone out
+function canUse(feature,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(!(cfg.paidFeatures||[]).includes(feature))return true;
+  return isPro(ent===undefined?_ent:ent,err===undefined?_entErr:err);}
+function underLimit(kind,count,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const f=cfg.free||{};const lim=kind==='wheel'?f.maxWheelTickers:f.maxOpenLeaps;return lim==null||count<lim;}
+async function loadEntitlement(uid){try{const sn=await getDoc(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}}
+async function _pollUpgrade(uid){for(let i=0;i<6&&!isPro(_ent,false);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPro(_ent,false)){alert('Thanks! Pro is now on for your account.');render();}}
+function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';if(isPro(_ent,false))return 'Pro';return 'Free';}
+function openUpgrade(feature){
+  const B=window.BRAND||{},P=planCfg(),N=B.featureNames||{};
+  document.getElementById('upg-feature').textContent=N[feature]?N[feature]+' is part of Pro.':'That is part of Pro.';
+  document.getElementById('upg-list').innerHTML=(P.paidFeatures||[]).map(k=>`<li>${esc(N[k]||k)}</li>`).join('');
+  document.getElementById('upg-monthly').textContent=`${P.currency||'£'}${P.priceMonthly} a month`;
+  document.getElementById('upg-yearly').textContent=`${P.currency||'£'}${P.priceYearly} a year`;
+  document.getElementById('upg-msg').textContent='';openModal('mUpgrade');
+}
+async function _billingCall(fn,payload){
+  const u=_auth.currentUser;if(!u)throw new Error('Please sign in again.');
+  const r=await fetch('/.netlify/functions/'+fn,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify(payload||{})});
+  const j=await r.json().catch(()=>({}));if(!r.ok||!j.url)throw new Error(j.error||'Something went wrong, please try again.');return j.url;
+}
+async function startCheckout(plan){const m=document.getElementById('upg-msg');m.textContent='Opening secure checkout…';try{location.href=await _billingCall('checkout',{plan});}catch(e){m.textContent=e.message;}}
+async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
 
 // ── Your data: export and delete ─────────────────────────────
 const USER_COLLECTIONS=['wheels','trades','optlegs'];
@@ -7137,6 +7187,7 @@ onAuthStateChanged(_auth, async (user) => {
     loadingBar.style.width = '30%';
     loadingText.textContent = 'Loading rotations...';
     try {
+      loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);});
       await loadDBFromFirestore(user.uid);
     } catch (e) {
       console.error('Load failed:', e);
@@ -7291,6 +7342,7 @@ window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
 window.onboardSkip = onboardSkip;
+window.openUpgrade = openUpgrade; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
 window.exportMyData = exportMyData; window.openDeleteAccount = openDeleteAccount; window.doDeleteAccount = doDeleteAccount;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
