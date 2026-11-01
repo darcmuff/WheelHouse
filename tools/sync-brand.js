@@ -10,7 +10,11 @@ function build(B, files) {
   Object.assign(man, { name: B.name, short_name: B.shortName, description: B.tagline, theme_color: B.accent, background_color: B.background,
     icons: [{ src: B.icons.i192, sizes: '192x192', type: 'image/png' }, { src: B.icons.i512, sizes: '512x512', type: 'image/png' }] });
   out['manifest.json'] = JSON.stringify(man, null, 2) + '\n';
-  out['sw.js'] = files['sw.js'].replace(/const CACHE='[a-z0-9-]+?-v(\d+)'/, (m, v) => `const CACHE='${B.cachePrefix}-v${v}'`)
+  // Renaming: remember the old cache prefix so the new service worker cleans up the old cache (data is not affected).
+  let sw = files['sw.js'];
+  const oldP = (/const CACHE='([a-z0-9-]+?)-v\d+'/.exec(sw) || [])[1];
+  if (oldP && oldP !== B.cachePrefix) sw = sw.replace(/const LEGACY = \[([^\]]*)\];/, (m, list) => { const l = list.split(',').map(x => x.trim()).filter(Boolean); const q = `'${oldP}-'`; if (!l.includes(q)) l.push(q); return `const LEGACY = [${l.filter(x => x !== `'${B.cachePrefix}-'`).join(', ')}];`; });
+  out['sw.js'] = sw.replace(/const CACHE='[a-z0-9-]+?-v(\d+)'/, (m, v) => `const CACHE='${B.cachePrefix}-v${v}'`)
     .replace(/k\.startsWith\('[a-z0-9-]+-'\)/, `k.startsWith('${B.cachePrefix}-')`);
   let h = files['index.html'];
   const title = `${B.name} — ${B.tagline}`, share = `${B.siteUrl}/${B.shareImage}`;
@@ -27,10 +31,15 @@ function build(B, files) {
     .replace(/(<[a-z0-9]+[^>]*data-brand="(name|tagline)"[^>]*>)([^<]*)(<)/g, (m, open, k, _t, close) => open + esc(k === 'name' ? B.name : B.tagline) + close)
     .replace(/(<[a-z0-9]+[^>]*data-brand="welcome"[^>]*>)([^<]*)(<)/g, (m, open, _t, close) => open + esc('Welcome to ' + B.name) + close);
   out['index.html'] = h;
+  const brandText = x => x.replace(/(<[a-z0-9]+[^>]*data-brand="name"[^>]*>)([^<]*)(<)/g, (m, open, _t, close) => open + esc(B.name) + close);
+  if (files['landing.html']) out['landing.html'] = brandText(files['landing.html'])
+    .replace(/<title>[^<]*<\/title>/, `<title>${esc(B.name + ': ' + B.tagline)}</title>`)
+    .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${esc(B.name + ': ' + B.tagline)}">`);
+  if (files['legal.html']) out['legal.html'] = brandText(files['legal.html']).replace(/<title>[^<]*<\/title>/, `<title>${esc(B.name)}: privacy, terms and disclaimer</title>`);
   return out;
 }
 if (require.main === module) {
-  const B = loadBrand(), names = ['manifest.json', 'sw.js', 'index.html'];
+  const B = loadBrand(), names = ['manifest.json', 'sw.js', 'index.html', 'landing.html', 'legal.html'];
   const files = Object.fromEntries(names.map(n => [n, fs.readFileSync(path.join(APP, n), 'utf8')]));
   const out = build(B, files), diff = names.filter(n => out[n] !== files[n]);
   if (process.argv.includes('--check')) { if (diff.length) { console.log('Out of sync:', diff.join(', ')); process.exit(1); } console.log('Brand in sync'); }

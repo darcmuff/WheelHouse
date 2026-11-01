@@ -1,6 +1,6 @@
 {
-  "name": "WheelHouse",
-  "short_name": "WheelHouse",
+  "name": "OpTrack",
+  "short_name": "OpTrack",
   "description": "Options Wheel Tracker",
   "id": "/",
   "start_url": "/app/",
