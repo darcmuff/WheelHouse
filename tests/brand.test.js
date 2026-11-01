@@ -1,0 +1,10 @@
+const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
+const{loadBrand,build}=require('../tools/sync-brand.js');const APP=path.join(__dirname,'..','app');
+const files=Object.fromEntries(['manifest.json','sw.js','index.html'].map(n=>[n,fs.readFileSync(path.join(APP,n),'utf8')]));
+test('brand lives in one place and the static files are in sync with it',()=>{const B=loadBrand();assert.strictEqual(B.name,'WheelHouse');
+  const out=build(B,files);['manifest.json','sw.js','index.html'].forEach(n=>assert.strictEqual(out[n],files[n],n+' out of sync: run node tools/sync-brand.js'));});
+test('a rename is one edit: everything follows',()=>{const B={...loadBrand(),name:'Newname',shortName:'Newname',cachePrefix:'newname'};const out=build(B,files);
+  const m=JSON.parse(out['manifest.json']);assert.strictEqual(m.name,'Newname');assert.ok(/const CACHE='newname-v\d+'/.test(out['sw.js']));assert.ok(out['sw.js'].includes("k.startsWith('newname-')"));
+  assert.ok(out['index.html'].includes('<title>Newname — '));assert.ok(!/>WheelHouse</.test(out['index.html']));assert.ok(out['index.html'].includes('Welcome to Newname'));});
+test('functions share a CDN cache so many users do not multiply API calls',()=>{['quote','optchain','extquote','profile'].forEach(f=>assert.ok(fs.readFileSync(path.join(__dirname,'..','netlify','functions',f+'.js'),'utf8').includes('Netlify-CDN-Cache-Control'),f));});
+test('owner-only Firestore rules file',()=>{const r=fs.readFileSync(path.join(__dirname,'..','firestore.rules'),'utf8');assert.ok(r.includes('request.auth.uid == uid')&&r.includes('allow read, write: if false'));});

@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>WHEELHOUSE — Options Wheel Tracker</title>
+<title>WheelHouse — Options Wheel Tracker</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -19,6 +19,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://wheelhouse-tracker.netlify.app/wheelhouse-share.png">
 <link rel="manifest" href="manifest.json">
+<script src="brand.js"></script>
 <meta name="theme-color" content="#f6f5f1">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
 <!-- Firebase loaded inside main module script -->
@@ -746,8 +747,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
         <circle cx="60" cy="60" r="8" fill="var(--orange)"/>
         <circle cx="60" cy="60" r="4" fill="#18191c"/>
       </svg>
-      <div style="color:var(--text);font-size:1.375rem;font-weight:600;letter-spacing:-0.02em;">WheelHouse</div>
-      <div style="color:var(--text3);font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
+      <div data-brand="name" style="color:var(--text);font-size:1.375rem;font-weight:600;letter-spacing:-0.02em;">WheelHouse</div>
+      <div data-brand="tagline" style="color:var(--text3);font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
     </div>
 
     <!-- Tab switcher -->
@@ -826,7 +827,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   align-items:center;justify-content:center;
 ">
   <div style="width:100%;max-width:27.5rem;padding:2rem 1.5rem;text-align:center;">
-    <div style="color:var(--orange);font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">Welcome to WheelHouse</div>
+    <div style="color:var(--orange);font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;" data-brand="welcome">Welcome to WheelHouse</div>
     <h2 style="color:var(--text);font-size:1.5rem;font-weight:600;margin-bottom:0.5rem;letter-spacing:-0.02em;">What's your first ticker?</h2>
     <p style="color:var(--text3);font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
     <input id="onboard-ticker" type="text" placeholder="e.g. SOFI" maxlength="8" style="
@@ -895,7 +896,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
   <!-- SIDEBAR -->
   <header id="topnav">
-    <div class="tn-brand"><span class="tn-mark"></span>WheelHouse</div>
+    <div class="tn-brand"><span class="tn-mark"></span><span data-brand="name">WheelHouse</span></div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
     <div class="tn-right">
       <button class="btn btn-primary tn-paste" onclick="pasteFill()" title="Add a trade — SmartScan or Manual Entry">+ Add trade</button>
@@ -5744,6 +5745,7 @@ function _routeToOpenLongs(p){
 // Wheel: puts, covered calls on shares you hold, assignments, share buys/sells → db.trades rows.
 // LEAPs: any bought option → its own leg; calls sold on a ticker with an open LEAP (and no wheel shares) → short calls on that LEAP.
 // A buy-back and a new sale on the same day stay two separate trades: the CSV can't show whether it was one roll order.
+function _brandName(){return(typeof window!=='undefined'&&window.BRAND&&window.BRAND.name)||'WheelHouse';}
 function rhPlan(ev,opts,trades,mkId){
   const legs=(opts||[]).map(l=>({...l})),newLegs=[],changed=new Set(),wheelRows=[],lines=[],bad=[],skip=[];let dupes=0;
   const r2=n=>Math.round(n*100)/100,D=(a,b)=>Math.round((Date.parse(a)-Date.parse(b))/864e5);
@@ -5824,7 +5826,7 @@ function importPreview(pre){
     box.innerHTML=`<div class="imp-broker">Robinhood activity report</div>`+
       (p.rows.length?`<div class="imp-sub">${p.rows.length} wheel trade${p.rows.length>1?'s':''} to add:</div><div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+
       (P.lines.length?`<div class="imp-sub">${P.lines.length} LEAP trade${P.lines.length>1?'s':''} to add (LEAPs tab):</div><ul class="imp-bad" style="color:var(--text2)">${P.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
-      (P.dupes?`<div class="imp-sub" style="color:var(--text3)">${P.dupes} already in WheelHouse, skipped</div>`:'')+
+      (P.dupes?`<div class="imp-sub" style="color:var(--text3)">${P.dupes} already in ${_brandName()}, skipped</div>`:'')+
       (p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">${p.skipped.length} row${p.skipped.length>1?'s':''} skipped: ${Object.entries(why).map(([k,n])=>`${esc(k)} (${n})`).join(', ')}</div>`:'')+
       (p.unrecognised.length?`<div class="imp-sub">Not imported (${p.unrecognised.length}):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'');
     const n=p.rows.length+P.newLegs.length+P.changedLegs.length;
@@ -5923,7 +5925,7 @@ function doImport(){
   });
   const parts=[`${imported} imported`];
   if(dupes>0)parts.push(`${dupes} duplicates skipped`);
-  if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in WheelHouse`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
+  if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in ${_brandName()}`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
   alert(`Import complete: ${parts.join(', ')}.`);
 }
 // ── Realised P&L chart (READ-ONLY). Closed trades only, booked on their close date, split the same way as the

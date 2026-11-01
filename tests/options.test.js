@@ -120,9 +120,9 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
 
   const S1 = R.stats(LC({}), 205, TODAY);
   check('stats: value, cost incl fees, P&L, BE %, delta-as-shares>0, theta<0', S1.value === 8000 && S1.cost === 6001.3 && Math.abs(S1.pl - 1998.7) < 0.01 && Math.abs(S1.beDist - (210 / 205 * 100 - 100)) < 1e-9 && S1.dsh > 0 && S1.dsh < 200 && S1.thd < 0, S1);
-  R.setDb([LC({ id: 'w', expiry: '2027-03-19', reviewDate: '2026-11-01' })]);
+  R.setDb([LC({ id: 'w', expiry: '2027-03-19', reviewDate: '2099-11-01' })]);
   const hw = R.render();
-  check('under 270 days → no warning border/note; review date shown', !/leap-card lc warn|leap-card warn/.test(hw) && !/Under 9 months left/.test(hw) && /Review 1 Nov 26/.test(hw), hw.slice(0, 200));
+  check('under 270 days → no warning border/note; review date shown', !/leap-card lc warn|leap-card warn/.test(hw) && !/Under 9 months left/.test(hw) && /Review 1 Nov 99/.test(hw), hw.slice(0, 200));
   R.setDb([LC({ id: 'c', status: 'closed', closePrice: 45, closeDate: '2026-09-01' })]); R.setStatus('closed');
   const hc = R.render();
   check('closed toggle shows closed LEAP with realised P&L', /data-leap="c"/.test(hc) && /Realised/.test(hc) && !/leap-sum/.test(hc));

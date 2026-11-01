@@ -20,7 +20,7 @@ exports.handler = async (event) => {
     const data = await res.json();
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=86400', 'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=604800' },
       body: JSON.stringify(data)
     };
   } catch (e) {
