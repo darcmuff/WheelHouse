@@ -1196,6 +1196,15 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
           <option value="us">MM/DD</option>
         </select>
       </div>
+      <div style="padding:0.25rem 0.875rem;display:flex;flex-direction:column;gap:0.5rem" id="ret-settings">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Monthly return vs</span>
+          <select id="ret-base" onchange="saveReturnSettings()" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem;cursor:pointer"><option value="caw">Capital at work</option><option value="account">Account size</option></select></div>
+        <div id="ret-acct-row" style="display:none;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Account size</span>
+          <input id="ret-account" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 50000" onchange="saveReturnSettings()" style="width:6.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Monthly target</span>
+          <span style="display:flex;align-items:center;gap:0.25rem"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onchange="saveReturnSettings()" style="width:3.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"><span style="font-size:0.75rem;color:var(--text3)">%</span></span></div>
+        <div style="font-size:0.6875rem;color:var(--text3)">Banked profit only. Leave the target empty to switch it off.</div>
+      </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
       <div style="border-top:1px solid var(--border);margin:0"></div>
@@ -1716,10 +1725,26 @@ function capitalAtWork(putCollateral,shareCost,legs,accountSize){
   const wheel=(putCollateral||0)+(shareCost||0),total=wheel+leaps;
   return{puts:putCollateral||0,shares:shareCost||0,wheel,leaps,total,pct:accountSize>0?total/accountSize*100:null};
 }
-// Pure: month's realised sold-option profit as % of capital at work; null when no capital. ok = hit 2% target.
-function monthReturnPct(profit,capital){
+// Return settings: what monthly return % is measured against, and an optional monthly target.
+// base 'caw' = capital at work (worked out by the app), 'account' = an account size the user types in.
+// target: a % or null (Off). Default for new users: capital at work, target Off. Accounts with trades from
+// before this setting existed (entered before RET_LEGACY_BEFORE) keep the old 2% target unless changed.
+const RET_LEGACY_BEFORE='2026-11-02';
+function returnSettings(raw,trades,legs){
+  let s=null;try{s=raw?JSON.parse(raw):null;}catch(e){}
+  if(!s||typeof s!=='object'){
+    const old=(trades||[]).some(t=>t.entered&&t.entered<RET_LEGACY_BEFORE)||(legs||[]).some(l=>!l.demo&&l.entryDate&&l.entryDate<RET_LEGACY_BEFORE);
+    s={base:'caw',account:0,target:old?2:null};
+  }
+  const account=+s.account>0?+s.account:0,target=+s.target>0?+s.target:null;
+  return{base:s.base==='account'&&account>0?'account':'caw',account,target};
+}
+// Pure: the figure the month's return is measured against.
+function returnBase(rs,cawTotal){return rs&&rs.base==='account'&&rs.account>0?rs.account:(cawTotal||0);}
+// Pure: month's realised profit as % of the base; null when no base. ok = hit the target (null when target is Off).
+function monthReturnPct(profit,capital,target){
   if(!(capital>0))return null;
-  const pct=(profit||0)/capital*100;return{pct,ok:pct>=2};
+  const pct=(profit||0)/capital*100;return{pct,ok:target>0?pct>=target:null};
 }
 // Monthly P&L — group all trades by YYYY-MM
 function calcMonthlyPnL(){
@@ -4798,7 +4823,8 @@ function renderHome(){
   const _openShareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((_sr.open[w.id]||{}).cost||0),0);
   const wl=calcWinLoss();
   const caw=capitalAtWork(calcCapitalStats().atRisk,_openShareCost,legs,null);
-  const mr=monthReturnPct(F.month.total,caw.total);
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
+  const rBase=returnBase(rs,caw.total),mr=monthReturnPct(F.month.total,rBase,rs.target);
   const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
@@ -4815,7 +4841,7 @@ function renderHome(){
   </div>
   <div class="hk-grid hk-row2">
     <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p)p.hidden=!p.hidden"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':''):'nothing to do'}</div></div>
-    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's realised profit from sold options, as a % of money at work (LEAP cost + shares/put collateral). Target 2%.`)}</div><div class="hk-v ${mr?(mr.ok?'pos':'neg'):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(caw.total).replace(/\.\d\d$/,'')} at work</div></div>
+    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's realised profit from sold options, as a % of ${rs.base==='account'?'the account size you set':'money at work (LEAP cost + shares/put collateral)'}.${rs.target?` Target ${rs.target}%.`:''} Change this in Settings.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':'neg'):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'at work'}${rs.target?` · target ${rs.target}%`:''}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
   <div class="hcard ny-panel" id="ny-panel" hidden><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(i=>`<div class="ny-row"><span class="ny-dot ${i.sev==='red'?'r':i.sev==='amber'?'a':'g'}"></span><span>${i.text}</span><a onclick="goToHealth()">Open</a></div>`).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
@@ -6981,8 +7007,20 @@ function openSettings(){
   }
   const dateSel=document.getElementById('date-fmt-select');
   if(dateSel)dateSel.value=dateFmt;
+  fillReturnSettings();
   const pl=document.getElementById('settings-plan'),lab=planLabel();
   if(pl){pl.style.display=lab?'block':'none';pl.innerHTML=!lab?'':`Plan: <b>${lab}</b> · `+(_ent&&_ent.founder?'free for life':_ent&&_ent.stripeCustomerId?'<a href="#" onclick="openBillingPortal();return false" style="color:var(--orange)">Manage billing</a>':'<a href="#" onclick="closeModal(\'mSettings\');openUpgrade(\'unlimited\');return false" style="color:var(--orange)">Upgrade</a>');}
+}
+function fillReturnSettings(){
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]),b=document.getElementById('ret-base');if(!b)return;
+  b.value=rs.base;document.getElementById('ret-account').value=rs.account||'';document.getElementById('ret-target').value=rs.target||'';
+  document.getElementById('ret-acct-row').style.display=rs.base==='account'||b.value==='account'?'flex':'none';
+}
+function saveReturnSettings(){
+  const b=document.getElementById('ret-base').value,a=+document.getElementById('ret-account').value||0,t=+document.getElementById('ret-target').value||0;
+  localStorage.setItem('wh-returnSet',JSON.stringify({base:b,account:a>0?a:0,target:t>0?t:null}));
+  document.getElementById('ret-acct-row').style.display=b==='account'?'flex':'none';
+  render();
 }
 function setDateFmt(val){
   dateFmt=val;
@@ -7320,7 +7358,7 @@ window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
 window.onboardSkip = onboardSkip;
-window.openUpgrade = openUpgrade; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
+window.saveReturnSettings = saveReturnSettings; window.openUpgrade = openUpgrade; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
 window.exportMyData = exportMyData; window.openDeleteAccount = openDeleteAccount; window.doDeleteAccount = doDeleteAccount;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
