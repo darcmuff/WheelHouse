@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// Returning users and the installed app go straight to the app. Add ?home to see this page anyway.
+(function(){try{
+  if(/[?&]home\b/.test(location.search))return;
+  var standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+  var returning=['wh-view','wh-theme','wh-dateFmt','wheel_tracker_v7'].some(function(k){return localStorage.getItem(k)!==null;});
+  if(standalone||returning)location.replace('/app/'+location.search+location.hash);
+}catch(e){}})();
+</script>
+<title>WheelHouse: Options Wheel Tracker</title>
+<meta name="description" content="A simple, honest tracker for the options wheel and LEAPs. Built by a retired roofer who wanted one.">
+<link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.json">
+<meta property="og:title" content="WheelHouse: Options Wheel Tracker"><meta property="og:image" content="wheelhouse-share.png">
+<script src="brand.js"></script>
+<script src="analytics.js" defer></script>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--text:#1c1d1f;--text2:#4b5058;--text3:#7a808a;--line:#e5e3dc;--green:#2f6f4f;--green2:#e7f1ea}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--green)}.wrap{max-width:64rem;margin:0 auto;padding:0 1.25rem}
+header{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}.logo{font-weight:700;font-size:1.125rem;display:flex;align-items:center;gap:.5rem}.logo i{width:1rem;height:1rem;border:3px solid var(--green);border-radius:50%;display:inline-block}
+.btn{display:inline-block;padding:.75rem 1.25rem;border-radius:.5rem;text-decoration:none;font-weight:600;font-size:.95rem}.btn.p{background:var(--green);color:#fff}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
+.hero{padding:2rem 0 1rem}.hero h1{font-size:2rem;line-height:1.2;margin:0 0 .75rem;letter-spacing:-.02em}.hero p{color:var(--text2);font-size:1.075rem;max-width:38rem}
+.cta{display:flex;gap:.625rem;flex-wrap:wrap;margin:1.25rem 0}.small{font-size:.8rem;color:var(--text3)}
+.shot{width:100%;height:auto;border-radius:.75rem;border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.07);background:#fff;display:block}
+h2{font-size:1.4rem;margin:3rem 0 1rem;letter-spacing:-.01em}
+.grid{display:grid;gap:1rem}.f{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1rem 1.125rem}.f b{display:block;margin-bottom:.25rem}.f span{color:var(--text2);font-size:.925rem}
+.story{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1.25rem;color:var(--text2)}
+.shots{display:grid;gap:1rem}figure{margin:0}figcaption{font-size:.85rem;color:var(--text3);margin-top:.375rem}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:.75rem;overflow:hidden;font-size:.925rem}th,td{padding:.625rem .75rem;border-bottom:1px solid var(--line);text-align:left}th:not(:first-child),td:not(:first-child){text-align:center;width:6.5rem}tr:last-child td{border-bottom:0}.y{color:var(--green);font-weight:700}.n{color:var(--text3)}
+.nfa{background:#fff8e6;border:1px solid #f0d58a;border-radius:.75rem;padding:1rem 1.125rem;font-size:.925rem;color:#5c4a12}
+footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}
+@media(min-width:48rem){.hero h1{font-size:2.6rem}.grid{grid-template-columns:repeat(2,1fr)}.shots{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="logo"><i></i><span data-brand="name">WheelHouse</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
+
+  <section class="hero">
+    <h1>The options wheel tracker I wanted, so I built it.</h1>
+    <p>I'm Marc, a retired roofer. I run the wheel and a few LEAPs, and every spreadsheet and app I tried either got the numbers wrong or buried them. So I built <span data-brand="name">WheelHouse</span>: log a trade in seconds and see what you've actually banked.</p>
+    <div class="cta"><a class="btn p" href="/app/" id="start-free">Start free</a><a class="btn g" href="/app/">Sign in</a></div>
+    <div class="small">Free to start. No card needed. Works on your phone and computer.</div>
+  </section>
+
+  <img class="shot" src="img/shot-wheel.webp" width="1200" height="760" alt="A wheel card showing the open put, profit captured so far and every trade in the cycle" fetchpriority="high">
+
+  <h2>What it does</h2>
+  <div class="grid">
+    <div class="f"><b>SmartScan</b><span>Paste the fill text from your broker's confirmation and it fills in the trade for you. Manual entry is there too.</span></div>
+    <div class="f"><b>Robinhood CSV import</b><span>Bring your history in from Robinhood's CSV export. It skips trades you already have and doesn't guess at rolls.</span></div>
+    <div class="f"><b>The wheel and LEAPs together</b><span>Puts, assignment, covered calls and called away, plus LEAPs and the calls you sell against them (PMCC), all side by side.</span></div>
+    <div class="f"><b>Live captured profit</b><span>Each open option shows how much of the premium you've already captured, kept up to date through the trading day.</span></div>
+    <div class="f"><b>Realised P&amp;L only</b><span>Your P&amp;L only counts money you've actually closed out. No paper gains dressed up as profit.</span></div>
+    <div class="f"><b>A monthly 2% target</b><span>See at a glance how this month is going against a steady 2% target on the money you've got working.</span></div>
+    <div class="f"><b>Pre-market and after-hours</b><span>See where your tickers are trading before the open and after the close.</span></div>
+    <div class="f"><b>Your data is yours</b><span>Export everything to a spreadsheet any time, or delete your account and all of it in one go.</span></div>
+  </div>
+
+  <h2>A look inside</h2>
+  <div class="shots">
+    <figure><img class="shot" src="img/shot-home.webp" width="1200" height="760" loading="lazy" alt="Home screen with this month's P&amp;L"><figcaption>Home: this month, this year and what needs your attention.</figcaption></figure>
+    <figure><img class="shot" src="img/shot-leaps.webp" width="1200" height="760" loading="lazy" alt="LEAPs tab"><figcaption>LEAPs: what they cost, what they're worth and what your calls have paid back.</figcaption></figure>
+    <figure><img class="shot" src="img/shot-smartscan.webp" width="1200" height="760" loading="lazy" alt="SmartScan: paste a trade confirmation"><figcaption>SmartScan: paste a confirmation, check it, save.</figcaption></figure>
+  </div>
+  <p class="small">Screenshots use made-up example trades.</p>
+
+  <h2>Free and paid</h2>
+  <table id="plans"><thead><tr><th></th><th>Free</th><th>Pro</th></tr></thead><tbody id="plans-body">
+    <tr><td>Manual entry and SmartScan</td><td class="y">✓</td><td class="y">✓</td></tr>
+    <tr><td>Wheel tracking</td><td>Up to 3 tickers</td><td class="y">Unlimited</td></tr>
+  </tbody></table>
+  <p class="small" id="price-line">Pro is £9 a month or £79 a year. Cancel any time.</p>
+
+  <h2>The small print, in plain words</h2>
+  <div class="nfa"><b>Not financial advice.</b> <span data-brand="name">WheelHouse</span> keeps a record of the trades you enter and does the sums. It doesn't tell you what to buy or sell. Prices are delayed and can be wrong, so always check against your broker. Options are risky. <a href="legal.html#advice">Read more</a>.</div>
+
+  <div class="cta" style="margin-top:2rem"><a class="btn p" href="/app/">Start free</a><a class="btn g" href="/app/">Sign in</a></div>
+
+  <footer><span>© <span id="yr">2026</span> Marc Duff</span><a href="legal.html#privacy">Privacy</a><a href="legal.html#terms">Terms</a><a href="legal.html#advice">Not financial advice</a><a id="support" href="#" hidden>Contact</a></footer>
+</div>
+<script>
+(function(){var B=window.BRAND;if(!B)return;
+  document.querySelectorAll('[data-brand="name"]').forEach(function(e){e.textContent=B.name;});document.title=B.name+': '+B.tagline;
+  document.getElementById('yr').textContent=new Date().getFullYear();
+  if(B.supportEmail){var s=document.getElementById('support');s.href='mailto:'+B.supportEmail;s.hidden=false;}
+  var P=B.plans,N=B.featureNames||{};if(!P)return;var paid=P.paidFeatures||[],c=P.currency||'£';
+  var rows=[['Manual entry and SmartScan','✓','✓'],['Wheel tracking',paid.indexOf('unlimited')>=0?'Up to '+P.free.maxWheelTickers+' tickers':'Unlimited','Unlimited'],['LEAPs',paid.indexOf('unlimited')>=0||paid.indexOf('leaps-full')>=0?P.free.maxOpenLeaps+' open LEAP':'Unlimited','Unlimited'],['Realised P&L and Home','✓','✓'],['Export and delete your data','✓','✓']];
+  Object.keys(N).forEach(function(k){if(k==='unlimited'||k==='leaps-full')return;rows.push([N[k],paid.indexOf(k)>=0?'–':'✓','✓']);});
+  document.getElementById('plans-body').innerHTML=rows.map(function(r){return '<tr><td>'+r[0]+'</td>'+[r[1],r[2]].map(function(v){return '<td class="'+(v==='✓'||v==='Unlimited'?'y':v==='–'?'n':'')+'">'+v+'</td>';}).join('')+'</tr>';}).join('');
+  document.getElementById('price-line').textContent='Pro is '+c+P.priceMonthly+' a month or '+c+P.priceYearly+' a year. Cancel any time.'+(P.gating?'':' For now, everything is free while we finish setting up.');
+})();
+</script>
+</body>
+</html>
