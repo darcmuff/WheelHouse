@@ -11,7 +11,7 @@
 <style>
 :root{--bg:#111111;--card:#1C1C1E;--text:#F5F3EE;--text2:#c9c7c2;--text3:#9A9A9F;--line:#2c2c2f;--accent:#FF5A36;--profit:#3DDC84;--loss:#FF8A8A}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-a{color:var(--accent)}.wrap{max-width:40rem;margin:0 auto;padding:0 1.25rem}
+a{color:var(--accent)}.wrap{max-width:68rem;margin:0 auto;padding:0 1.25rem}
 header{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}header img{height:2.5rem;width:auto;display:block}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .btn{display:block;text-align:center;padding:.9rem 1.25rem;border-radius:.625rem;text-decoration:none;font-weight:700;font-size:1rem}.btn.p{background:var(--accent);color:#111111}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
@@ -31,6 +31,8 @@ summary{padding:.875rem 1rem;font-weight:600;cursor:pointer;list-style:none;disp
 summary:after{content:"+";color:var(--accent);font-weight:700}details[open] summary:after{content:"–"}
 details p{margin:0;padding:0 1rem 1rem}
 .small{font-size:.8rem;color:var(--text3)}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:start}.hero h2{margin-top:1.5rem}.faq{display:grid;grid-template-columns:1fr 1fr;gap:0 .75rem;align-items:start}.end{display:flex;gap:.75rem;justify-content:center}.end .btn{min-width:12rem}
+@media (max-width:860px){.hero,.faq{grid-template-columns:1fr;gap:0}}
 footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}
 </style>
 </head>
@@ -38,6 +40,7 @@ footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap
 <div class="wrap">
   <header><a href="/"><img src="logo-horizontal.svg" alt="OpTrack" width="128" height="40"></a><a class="btn g sm" href="/app/">Sign in</a></header>
 
+  <div class="hero"><div>
   <h1><span data-brand="name">OpTrack</span></h1>
   <p class="price" id="price">£9 <span>/ month</span></p>
   <p class="small" id="price-year">or £79 a year</p>
@@ -52,20 +55,26 @@ footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap
     <a class="small" href="/app/?checkout=yearly" id="go-pro-year" style="text-align:center">Or go Pro yearly</a>
   </div>
 
+  </div><div>
   <h2>What you get</h2>
   <div class="card"><b>Free</b><ul class="get" id="get-free"></ul></div>
   <div class="card" style="margin-top:.75rem"><b>Pro</b> <span class="small">everything in Free, plus</span><ul class="get" id="get-pro"></ul></div>
 
+  </div></div>
+
   <h2>Questions</h2>
+  <div class="faq">
   <details><summary>What do I get?</summary><p>A web app for tracking the wheel and LEAPs. It runs in your browser on phone or computer, with nothing to download, and you can pin it to your home screen if you like. Log a trade, follow it through rolls and assignment, and see your realised profit, return on capital and win rate. The free plan covers the basics; Pro takes the limits off and adds the extras listed above.</p></details>
   <details><summary>Is it for beginners?</summary><p>Yes, if you already know what selling a put or a covered call is. It doesn't teach you to trade. It just keeps your record straight, which helps whether you've done ten trades or a thousand.</p></details>
   <details><summary>Do I need to link my broker?</summary><p>No. You type trades in, paste a confirmation and let SmartScan fill it in, or import a Robinhood CSV. Nothing connects to your broker, and your data stays yours. You can export it or delete your account at any time.</p></details>
   <details><summary>Can I cancel anytime?</summary><p>Yes. Cancel Pro from Settings whenever you like and you keep it until the end of the period you paid for, then drop back to the free plan. Your trades stay put.</p></details>
   <details><summary>Is this financial advice?</summary><p>No. OpTrack records the trades you enter and does the sums. It doesn't tell you what to buy or sell, and prices can be delayed. Your trades are your call.</p></details>
 
+  </div>
+
   <!-- Reviews: add real customer reviews and a star summary here once we have them. Never invent any. -->
 
-  <div class="join"><a class="btn p" href="/app/">Start free</a><a class="btn g" href="/app/?checkout=monthly">Go Pro</a></div>
+  <div class="join end"><a class="btn p" href="/app/">Start free</a><a class="btn g" href="/app/?checkout=monthly">Go Pro</a></div>
   <p class="small" id="gating-note"></p>
 
   <footer><span>© <span id="yr">2026</span> Marc Duff</span><a href="/">Home</a><a href="legal.html#privacy">Privacy</a><a href="legal.html#terms">Terms</a><a href="legal.html#advice">Not financial advice</a></footer>
