@@ -20,6 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://wheelhouse-tracker.netlify.app/optrack-share.png">
 <link rel="manifest" href="manifest.json">
+<script src="demo.js"></script>
 <script src="brand.js"></script>
 <script src="analytics.js" defer></script>
 <meta name="theme-color" content="#f6f5f1">
@@ -726,6 +727,10 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .btn-danger:hover{background:color-mix(in srgb,var(--red) 10%,transparent)}
 [data-theme="dark"] #topnav .nav-item.active{background:var(--bg3);color:var(--text)}
 [data-theme="dark"] #topnav{background:color-mix(in srgb,var(--bg) 92%,transparent)}
+#demo-banner{position:sticky;top:0;z-index:70;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.4rem 1.5rem;background:#FFF1EC;color:#5a2a1c;border-bottom:1px solid #F5C9BA;font-size:0.8125rem}
+#demo-banner .db-act{display:flex;gap:0.5rem;align-items:center}#demo-banner button{background:transparent;border:1px solid #F5C9BA;border-radius:0.375rem;padding:0.2rem 0.6rem;color:inherit;cursor:pointer;font-size:0.75rem}
+#demo-banner .db-go{background:#FF5A36;color:#fff;text-decoration:none;border-radius:0.375rem;padding:0.25rem 0.75rem;font-weight:600;font-size:0.75rem}
+.ot-demo #topnav{top:2.1rem}
 </style>
 </head>
 <body>
@@ -1291,10 +1296,12 @@ const _firebaseConfig = {
   messagingSenderId: "466853706084",
   appId: "1:466853706084:web:7278a179265e8e540ba271"
 };
-const _app  = initializeApp(_firebaseConfig);
-const _auth = getAuth(_app);
-const _fsDb = getFirestore(_app);
-const _googleProvider = new GoogleAuthProvider();
+// Demo (/demo): Firebase is never initialised, so nothing can sign in, read or write a real account.
+const APP_DEMO = !!(window.OT_DEMO && window.OT_DEMO.active);
+const _app  = APP_DEMO ? null : initializeApp(_firebaseConfig);
+const _auth = APP_DEMO ? null : getAuth(_app);
+const _fsDb = APP_DEMO ? null : getFirestore(_app);
+const _googleProvider = APP_DEMO ? null : new GoogleAuthProvider();
 
 // Scoped UID — only set after onAuthStateChanged confirms a valid user
 let _confirmedUid = null;
@@ -1382,11 +1389,13 @@ function _stripUndefined(o){
   return Object.fromEntries(Object.entries(o).filter(([,v])=>v!==undefined));
 }
 function _saveWheel(wheel){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
   const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),_stripUndefined(wheel))
     .catch(e=>console.error('Wheel save failed:',e));
 }
 function _saveTrade(trade){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
   const uid=_currentUid();if(!uid||!trade||!trade.id)return;
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),_stripUndefined(trade))
     .catch(e=>console.error('Trade save failed:',e));
@@ -1399,23 +1408,27 @@ function _persistableLeg(leg){
   const o={...leg};o.mark=null;o.markSrc=null;o.markAt=null;o.delta=null;o.theta=null;o.iv=null;return o;
 }
 function _saveOpt(leg){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
   if(optDemo||(leg&&leg.demo)){_demoNotSaved();return;}
   const uid=_currentUid();if(!uid||!leg||!leg.id)return;
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(_persistableLeg(leg)))
     .catch(e=>{console.error('Option save failed:',e);toastOptErr(e);});
 }
 function _deleteOptDoc(id){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
   if(optDemo||String(id).startsWith('demo-')){_demoNotSaved();return;}
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'optlegs',id)).catch(e=>console.error('Option delete failed:',e));
 }
 function toastOptErr(e){if(/permission/i.test(e&&e.message||''))alert('Could not save option position: Firestore rules do not allow the optlegs collection yet. Ask for the optlegs Firestore rule (docs/OPTIONS.md).');}
 function _deleteWheelDoc(wheelId){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheelId))
     .catch(e=>console.error('Wheel delete failed:',e));
 }
 function _deleteTradeDoc(tradeId){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'trades',tradeId))
     .catch(e=>console.error('Trade delete failed:',e));
@@ -7057,6 +7070,7 @@ function openUpgrade(feature){
   document.getElementById('upg-msg').textContent='';openModal('mUpgrade');
 }
 async function _billingCall(fn,payload){
+  if(APP_DEMO){location.href='/start';throw new Error('Opening sign-up…');}
   const u=_auth.currentUser;if(!u)throw new Error('Please sign in again.');
   const r=await fetch('/.netlify/functions/'+fn,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify(payload||{})});
   const j=await r.json().catch(()=>({}));if(!r.ok||!j.url)throw new Error(j.error||'Something went wrong, please try again.');return j.url;
@@ -7085,6 +7099,7 @@ async function deleteAllUserData(uid,api){
 }
 function _download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
 async function exportMyData(){
+  if(APP_DEMO){alert('Export works on your own account. This is the demo.');return;}
   const uid=_currentUid();if(!uid){alert('Please sign in first.');return;}
   try{
     const data={};for(const c of USER_COLLECTIONS){data[c]=(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.data());}
@@ -7153,6 +7168,25 @@ async function migrateLocalStorage(userId) {
   }
 }
 
+// ── Demo boot: made-up trades from demo.js, Pro features on, prices made up locally (no API calls). ──
+function demoBoot(){
+  window._authResolved=true;_confirmedUid=null;
+  _ent={plan:'pro',demo:true};_entErr=false;
+  const d=OT_DEMO.load();db.wheels=d.wheels;db.trades=d.trades;db.opts=d.opts;window._db=db;
+  document.getElementById('auth-overlay').style.display='none';
+  document.documentElement.classList.add('ot-demo');
+  const bar=document.createElement('div');bar.id='demo-banner';
+  bar.innerHTML='<span><b>Demo</b> with made-up trades. Nothing is saved to an account.</span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/start" class="db-go">Start free</a></span>';
+  document.body.prepend(bar);
+  ['settings-export','settings-signout','settings-delete','settings-user'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  const sx=document.getElementById('settings-legal');if(sx){const r=document.createElement('button');r.className='btn btn-ghost btn-full';r.style.cssText='text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem';r.textContent='↺ Reset demo';r.onclick=()=>OT_DEMO.reset();sx.after(r);}
+  const ta=document.getElementById('paste-raw');if(ta){const b=document.createElement('button');b.type='button';b.id='demo-sample';b.className='btn btn-ghost';b.style.cssText='margin-top:0.5rem;font-size:0.75rem';b.textContent='Try a sample';b.onclick=()=>{ta.value=OT_DEMO.sample();ta.focus();};ta.after(b);}
+  const hv={home:'dash',wheel:'positions',leaps:'options',activity:'log'}[location.hash.slice(1)];
+  if(hv)switchView(hv);else render();
+  fetchAllQuotes().then(()=>{db.wheels.forEach(w=>{if(w.status==='open'&&quotes[w.ticker])w.lastPrice=quotes[w.ticker].price;});render();
+    const l=document.getElementById('loading-overlay');if(l)l.style.display='none';}).catch(()=>{const l=document.getElementById('loading-overlay');if(l)l.style.display='none';});
+  clearInterval(_pollHandle);_pollHandle=setInterval(fetchAllQuotes,60000);
+}
 function showAuthOverlay() {
   document.getElementById('auth-overlay').style.display = 'flex';
   const ob = document.getElementById('onboard-overlay');
@@ -7164,7 +7198,7 @@ function showAuthOverlay() {
   render();
 }
 
-onAuthStateChanged(_auth, async (user) => {
+if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
   window._authResolved = true;
   if (user) {
     _confirmedUid = user.uid;
