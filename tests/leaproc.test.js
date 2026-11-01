@@ -3,8 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn } = require('./extract');
 const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['optsMonthly', 'walkLegPairs', 'realisedPremium', 'shareRealisations', 'calcMonthlyRealised', 'monthlyExtraSources', 'homeFigures', 'capitalAtWork', 'returnBase', 'monthReturnPct', 'realisedDaily'].map(extractFn).join('\n') +
-  '\nreturn {calcMonthlyRealised,monthlyExtraSources,homeFigures,capitalAtWork,returnBase,monthReturnPct,realisedDaily};')();
+  ['optsMonthly', 'walkLegPairs', 'realisedPremium', 'shareRealisations', 'calcMonthlyRealised', 'monthlyExtraSources', 'homeFigures', 'capitalAtWork', 'returnBase', 'monthReturnPct', 'realisedDaily', 'allOptionsByMonth'].map(extractFn).join('\n') +
+  '\nreturn {calcMonthlyRealised,monthlyExtraSources,homeFigures,capitalAtWork,returnBase,monthReturnPct,realisedDaily,allOptionsByMonth};')();
 const TODAY = '2026-10-23';
 const leapSold = { id: 'L', side: 'long', type: 'C', qty: 1, entryPrice: 40, fees: 0, status: 'closed', closePrice: 90, closeDate: '2026-10-05', closeFees: 0 };
 const leapOpen = { id: 'L2', side: 'long', type: 'C', qty: 1, entryPrice: 50, fees: 0, status: 'open', mark: 80 };
@@ -34,4 +34,11 @@ test('denominator includes open LEAP cost while open, not once closed', () => {
   assert.strictEqual(c.leaps, 5000); assert.strictEqual(c.total, 12000);
   assert.strictEqual(S.returnBase({ base: 'caw' }, c.total), 12000);
   assert.strictEqual(S.capitalAtWork(0, 0, [leapSold], null).leaps, 0);
+});
+test("'All options, by month' panel: Covered calls column = short-call premium only, open line excludes LEAPs", () => {
+  const A = S.allOptionsByMonth([{ ym: '2026-10', pNet: 100 }], [leapSold, leapOpen, shortExp, shortBtc, { ...shortExp, id: 's9', status: 'open', mark: 1 }], TODAY);
+  const oct = A.rows.find(r => r.ym === '2026-10');
+  assert.strictEqual(oct.opts, 548); assert.strictEqual(oct.total, 648);
+  assert.strictEqual(A.all.opts, 548);
+  assert.strictEqual(A.open.n, 1); assert.strictEqual(A.open.pl, 200);
 });
