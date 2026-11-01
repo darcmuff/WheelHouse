@@ -24,12 +24,12 @@ check('short bought back + expired (no close date → expiry month), net of fees
 check('open legs not in months; open P&L from marks, unmarked counted', O.openPl === 399.35 && O.unmarked === 1 && O.openN === 2, O);
 const wm = S.calcMonthlyPnL();
 const A = S.allOptionsByMonth(wm, legs, '2026-10-23');
-check('wheel column = realised premium by banked date (Sep: 120 sold − 30 bought back + 50 assigned; open Oct call not counted)', A.rows.find(r => r.ym === '2026-09').wheel === 140 && A.rows.find(r => r.ym === '2026-10').wheel === 0);
-check('newest month first, union of wheel and options months', A.rows.map(r => r.ym).join() === '2026-10,2026-09');
+check('wheel column = realised premium by banked date (Sep: 120 sold − 30 bought back + 50 assigned; open Oct call not counted)', A.rows.find(r => r.ym === '2026-09').wheel === 140 && !A.rows.find(r => r.ym === '2026-10'));
+check('LEAP-only month (Oct) has no row: closed LEAPs are not in this table', A.rows.map(r => r.ym).join() === '2026-09');
 check('total = wheel + options', A.rows.every(r => Math.abs(r.total - (r.wheel + r.opts)) < 0.001));
-check('YTD and all-time: realised only', A.ytd.wheel === 140 && A.all.wheel === 140 && Math.abs(A.ytd.total - (140 + 1498.70 + 1596.10)) < 0.01, A);
+check('YTD and all-time: realised only', A.ytd.wheel === 140 && A.all.wheel === 140 && Math.abs(A.ytd.total - (140 + 1596.10)) < 0.01, A);
 const h = S.renderAllOptionsByMonth(wm);
-check('renders table, YTD + all-time rows and the open line', /All options, by month/.test(h) && /Year to date 2026/.test(h) && /All time/.test(h) && /Open, not yet banked/.test(h) && /1 without a mark/.test(h));
+check('renders table, YTD + all-time rows and the open line', /All options, by month/.test(h) && /Year to date 2026/.test(h) && /All time/.test(h) && /Open covered calls, not yet banked/.test(h) && /Covered calls/.test(h) && !/LEAPs &amp; CCs/.test(h));
 check('READ-ONLY: wheels, trades and option legs unchanged after compute + render', JSON.stringify({ w: S.db.wheels, t: S.db.trades, o: S.db.opts }) === before);
 const src = ['optsMonthly', 'allOptionsByMonth', 'renderAllOptionsByMonth'].map(extractFn).join('\n');
 check('no write calls in the feature code', !/_save|setDoc|deleteDoc|saveDB|\.push\(|db\.(trades|wheels|opts)\s*=/.test(src));

@@ -1826,25 +1826,27 @@ function _priceOf(w){return (typeof quotes!=='undefined'&&quotes[w.ticker]?.pric
 // ── All options, by month (READ-ONLY: reads db.trades via calcMonthlyPnL and db.opts; writes nothing) ──
 // Options realised P&L by close date (expired → expiry if no close date). Open legs only feed the "open, not yet banked" line.
 function optsMonthly(legs){
-  const mo={},gain={},loss={},lgain={},lloss={};let openPl=0,unmarked=0,openN=0;
+  const mo={},gain={},loss={},lgain={},lloss={},cc={};let openPl=0,unmarked=0,openN=0,ccOpenPl=0,ccUnmarked=0,ccOpenN=0;
   (legs||[]).forEach(l=>{
     const p=OPTS.legPnL(l);
-    if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;return;}
+    if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;if(l.side==='short'){ccOpenN++;if(p.unrealized==null)ccUnmarked++;else ccOpenPl+=p.unrealized;}return;}
     const d=l.closeDate||l.expiry;if(!d)return;const ym=d.slice(0,7);mo[ym]=(mo[ym]||0)+p.realized;
     const G=v=>{if(v>=0)gain[ym]=(gain[ym]||0)+v;else loss[ym]=(loss[ym]||0)-v;};
-    if(l.side==='short'){G(p.openCash);G(p.realized-p.openCash);} // short calls (PMCC) like wheel options: credit collected, buyback cost as loss
+    if(l.side==='short'){G(p.openCash);G(p.realized-p.openCash);cc[ym]=(cc[ym]||0)+p.realized;} // short calls (PMCC) like wheel options: credit collected, buyback cost as loss
     else{const v=p.realized;if(v>=0)lgain[ym]=(lgain[ym]||0)+v;else lloss[ym]=(lloss[ym]||0)-v;} // long LEAPs: kept out of option income, own table
   });
-  Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);
-  return{byMonth:mo,gain,loss,lgain,lloss,openPl:Math.round(openPl*100)/100,unmarked,openN};
+  Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);Object.keys(cc).forEach(k=>cc[k]=Math.round(cc[k]*100)/100);
+  // ccByMonth/ccOpen*: PMCC short calls only (no LEAP legs) — for monthly-return style tables
+  return{ccByMonth:cc,ccOpenPl:Math.round(ccOpenPl*100)/100,ccUnmarked,ccOpenN,byMonth:mo,gain,loss,lgain,lloss,openPl:Math.round(openPl*100)/100,unmarked,openN};
 }
 function allOptionsByMonth(wheelMonthly,legs,today){
   const W={};(wheelMonthly||[]).forEach(m=>W[m.ym]=m.pNet);
   const O=optsMonthly(legs),yr=(today||new Date().toISOString()).slice(0,4);
-  const yms=[...new Set([...Object.keys(W),...Object.keys(O.byMonth)])].sort().reverse();
-  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.byMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
+  // Covered calls only: realised PMCC short-call premium. Closed LEAPs live in Shares & LEAPs P&L, never here.
+  const yms=[...new Set([...Object.keys(W),...Object.keys(O.ccByMonth)])].sort().reverse();
+  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.ccByMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
   const sum=(f,yr0)=>Math.round(rows.filter(r=>!yr0||r.ym.startsWith(yr0)).reduce((a,r)=>a+r[f],0)*100)/100;
-  return{rows,ytd:{wheel:sum('wheel',yr),opts:sum('opts',yr),total:sum('total',yr),year:yr},all:{wheel:sum('wheel'),opts:sum('opts'),total:sum('total')},open:{pl:O.openPl,unmarked:O.unmarked,n:O.openN}};
+  return{rows,ytd:{wheel:sum('wheel',yr),opts:sum('opts',yr),total:sum('total',yr),year:yr},all:{wheel:sum('wheel'),opts:sum('opts'),total:sum('total')},open:{pl:O.ccOpenPl,unmarked:O.ccUnmarked,n:O.ccOpenN}};
 }
 function renderAllOptionsByMonth(monthly){
   const A=allOptionsByMonth(monthly,db.opts||[],new Date().toISOString().slice(0,10));
@@ -1856,10 +1858,10 @@ function renderAllOptionsByMonth(monthly){
   const row=(a,b,c,d,st='')=>`<div class="d-table-row" style="grid-template-columns:${cols};${st}"><span>${a}</span><span style="text-align:right">${b}</span><span style="text-align:right">${c}</span><span style="text-align:right;font-weight:600">${d}</span></div>`;
   const body=A.rows.map(r=>row(two(r.label,new Date(r.ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'2-digit'})),m(r.wheel),m(r.opts),m(r.total))).join('');
   const tot=row(`<b>${two('Year to date '+A.ytd.year,'YTD')}</b>`,m(A.ytd.wheel),m(A.ytd.opts),m(A.ytd.total),'background:var(--bg3)')+row('<b>All time</b>',m(A.all.wheel),m(A.all.opts),m(A.all.total),'background:var(--bg3)');
-  const openH=`<div style="padding:0.5625rem 1.25rem;font-size:0.6875rem;color:var(--text3);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center"><span><b style="color:var(--text2)">Open, not yet banked:</b> ${A.open.n?m(A.open.pl):'—'}</span><span>${A.open.n} open LEAP${A.open.n!==1?'s':''} &amp; short calls${A.open.unmarked?` · ${A.open.unmarked} without a mark`:''} · moves with prices, not in the months above${optDemo?' · <b style="color:#fcd34d">options figures are DEMO</b>':''}</span></div>`;
+  const openH=`<div style="padding:0.5625rem 1.25rem;font-size:0.6875rem;color:var(--text3);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center"><span><b style="color:var(--text2)">Open covered calls, not yet banked:</b> ${A.open.n?m(A.open.pl):'—'}</span><span>${A.open.n} open covered call${A.open.n!==1?'s':''} (premium not banked yet; LEAPs not included)${A.open.unmarked?` · ${A.open.unmarked} without a mark`:''} · moves with prices, not in the months above${optDemo?' · <b style="color:#fcd34d">options figures are DEMO</b>':''}</span></div>`;
   return`<div class="d-panel mo-pnl">
-      <div class="d-panel-hdr"><span class="d-panel-title">All options, by month</span><span class="d-panel-count">wheel premium + realised LEAPs &amp; covered calls</span></div>
-      <div class="d-panel-body"><div class="d-table-hdr" style="grid-template-columns:${cols}"><span>Month</span><span style="text-align:right">Wheel</span><span style="text-align:right">${two('LEAPs &amp; CCs','LEAPs+CC')}</span><span style="text-align:right">Total</span></div>
+      <div class="d-panel-hdr"><span class="d-panel-title">All options, by month</span><span class="d-panel-count">wheel premium + covered calls</span></div>
+      <div class="d-panel-body"><div class="d-table-hdr" style="grid-template-columns:${cols}"><span>Month</span><span style="text-align:right">Wheel</span><span style="text-align:right">${two('Covered calls','CCs')}</span><span style="text-align:right">Total</span></div>
       <div style="max-height:26.25rem;overflow-y:auto">${body}</div>${tot}${openH}</div>
     </div>`;
 }
@@ -4842,7 +4844,7 @@ function renderStatsOverview(){
 
 
 // ═══ HOME (Direction A) — read-only figures built from the Monthly P&L rows ═══
-// Pure: rows from calcMonthlyRealised; returns this month (wheel vs LEAPs) and this year.
+// Pure: rows from calcMonthlyRealised; returns this month (wheel vs PMCC short calls) and this year; LEAP-leg P&L never included.
 function homeFigures(rows,today){
   // Options only — same figures as the Monthly P&L table: wheel premium + PMCC short calls (collected − loss). No shares, dividends or LEAPs.
   const ym=today.slice(0,7),yr=today.slice(0,4),rd=n=>Math.round(n*100)/100;
