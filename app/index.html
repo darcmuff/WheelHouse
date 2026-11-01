@@ -747,7 +747,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
         <circle cx="60" cy="60" r="8" fill="var(--orange)"/>
         <circle cx="60" cy="60" r="4" fill="#18191c"/>
       </svg>
-      <div data-brand="name" style="color:var(--text);font-size:1.375rem;font-weight:600;letter-spacing:-0.02em;">WheelHouse</div>
+      <div data-brand="name" style="color:#f3f4f6;font-size:1.375rem;font-weight:600;letter-spacing:-0.02em;">WheelHouse</div>
       <div data-brand="tagline" style="color:var(--text3);font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
     </div>
 
@@ -817,6 +817,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <div style="text-align:center;margin-top:1.25rem;color:#4b5563;font-size:0.6875rem;">
       Free forever. No credit card required.
     </div>
+    <div id="auth-legal" style="text-align:center;margin-top:0.625rem;color:#6b7280;font-size:0.6875rem;line-height:1.5;">
+      By continuing you agree to the <a href="legal.html#terms" target="_blank" rel="noopener" style="color:#5eead4">Terms</a> and <a href="legal.html#privacy" target="_blank" rel="noopener" style="color:#5eead4">Privacy policy</a>.<br>Not financial advice: <a href="legal.html#advice" target="_blank" rel="noopener" style="color:#5eead4">read why</a>.
+    </div>
   </div>
 </div>
 
@@ -828,8 +831,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 ">
   <div style="width:100%;max-width:27.5rem;padding:2rem 1.5rem;text-align:center;">
     <div style="color:var(--orange);font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;" data-brand="welcome">Welcome to WheelHouse</div>
-    <h2 style="color:var(--text);font-size:1.5rem;font-weight:600;margin-bottom:0.5rem;letter-spacing:-0.02em;">What's your first ticker?</h2>
-    <p style="color:var(--text3);font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
+    <h2 style="color:#f3f4f6;font-size:1.5rem;font-weight:600;margin-bottom:0.5rem;letter-spacing:-0.02em;">What's your first ticker?</h2>
+    <p style="color:#9ca3af;font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
     <input id="onboard-ticker" type="text" placeholder="e.g. SOFI" maxlength="8" style="
       width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;
       padding:0.875rem;color:var(--text);font-size:1.25rem;font-weight:600;text-align:center;
@@ -842,7 +845,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       border:none;border-radius:0.375rem;font-size:0.9375rem;font-weight:600;
       cursor:pointer;transition:opacity 0.2s;
     ">Start Tracking →</button>
-    <div style="margin-top:1rem;color:#4b5563;font-size:0.75rem;">You can rename or delete this ticker later from Settings</div>
+    <div style="margin-top:1rem;color:#9ca3af;font-size:0.75rem;line-height:1.6;">Only trading LEAPs, or have a broker file to import?<br><a href="#" id="onboard-skip" onclick="onboardSkip();return false" style="color:#5eead4">Skip for now</a></div>
   </div>
 </div>
 
@@ -1217,8 +1220,27 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
       <div style="border-top:1px solid var(--border);margin:0"></div>
+      <button id="settings-export" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem" onclick="exportMyData()">⇩ Export my data</button>
+      <a id="settings-legal" href="legal.html" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;text-decoration:none;color:var(--text2)">Privacy, terms &amp; disclaimer</a>
+      <div style="border-top:1px solid var(--border);margin:0"></div>
       <div id="settings-user" style="font-size:0.6875rem;color:var(--text3);padding:0 0.875rem"></div>
       <button id="settings-signout" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;color:var(--red)" onclick="doSignOut()">⎋ Sign Out</button>
+      <button id="settings-delete" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.75rem;color:var(--text3)" onclick="openDeleteAccount()">Delete account…</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Delete account -->
+<div class="mb" id="mDelete">
+  <div class="mbox sm">
+    <div class="mtitle"><span>Delete account</span><span class="mx" onclick="closeModal('mDelete')">✕</span></div>
+    <div style="padding:0.5rem 0;font-size:0.8125rem;color:var(--text2);line-height:1.5">
+      <p style="margin:0 0 0.625rem">This permanently deletes your account and <b>every</b> wheel, trade and LEAP stored with it. It can't be undone.</p>
+      <p style="margin:0 0 0.625rem">Want a copy first? <a href="#" onclick="exportMyData();return false" style="color:var(--orange)">Export my data</a>.</p>
+      <label style="display:block;margin:0 0 0.375rem;font-size:0.75rem;color:var(--text3)">Type DELETE to confirm</label>
+      <input id="delete-confirm" autocomplete="off" oninput="document.getElementById('delete-go').disabled=this.value.trim()!=='DELETE'" style="width:100%;box-sizing:border-box;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:0.5rem">
+      <input id="delete-password" type="password" placeholder="Your password" autocomplete="current-password" style="display:none;width:100%;box-sizing:border-box;margin-top:0.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:0.5rem">
+      <div id="delete-msg" style="margin-top:0.5rem;font-size:0.75rem;color:var(--red)"></div>
+      <button id="delete-go" class="btn btn-full" disabled onclick="doDeleteAccount()" style="margin-top:0.75rem;background:var(--red);color:#fff">Delete my account forever</button>
     </div>
   </div>
 </div>
@@ -1255,7 +1277,7 @@ function themeFromStored(v){return v==='dark'?'dark':'light';}
 // FIREBASE — single module context, no execution boundary
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
@@ -1344,7 +1366,7 @@ async function loadDBFromFirestore(userId){
   render();
   // Show onboarding only after a confirmed-successful load with genuinely no rotations
   const ob=document.getElementById('onboard-overlay');
-  if(ob)ob.style.display=(!db.wheels||db.wheels.length===0)?'flex':'none';
+  if(ob)ob.style.display=needsOnboarding(db,localStorage.getItem('wh-onboardSkipped')==='1')?'flex':'none';
 }
 
 // Firestore helpers
@@ -3364,7 +3386,7 @@ function renderSidebar(){
 
 function renderPositions(){
   let wheels=[...db.wheels];
-  if(!wheels.length)return`<div class="empty"><h3>No rotations</h3><p>Click "+ New Rotation" in the sidebar.</p></div>`;
+  if(!wheels.length)return`<div class="empty" id="wheel-empty"><h3>No wheels yet</h3><p>Start one by adding your first put, or bring your history in from your broker.</p><div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem"><button class="btn btn-primary" onclick="openNewPos()">+ Start a wheel</button><button class="btn btn-ghost" onclick="openImport()">Import broker file</button></div></div>`;
 
   // Sort
   if(posSortBy==='ticker') wheels.sort((a,b)=>(a.ticker||'').localeCompare(b.ticker||''));
@@ -5965,7 +5987,7 @@ function pnlCurveHtml(){
   const el=typeof document!=='undefined'&&document.getElementById('pnl-curve');
   const W=pnlFull?Math.max(600,window.innerWidth-96):Math.max(600,(el&&el.clientWidth?el.clientWidth-40:1100)),H=pnlFull?Math.max(320,window.innerHeight-170):380;
   const PL=60,PR=14,PT=14,PB=30,cw=W-PL-PR,ch=H-PT-PB,n=Math.max(1,B.buckets.length);
-  const mx=Math.max(1,...B.buckets.map(b=>Math.max(b.gain,b.loss))),mn=0,rg=mx; // both bars rise from zero
+  const _pcEmpty=!B.buckets.some(b=>b.gain||b.loss);const mx=_pcEmpty?100:Math.max(1,...B.buckets.map(b=>Math.max(b.gain,b.loss))),mn=0,rg=mx; // empty: a tidy $0–$100 scale instead of $0,$0,$1,$1 // both bars rise from zero
   const Y=v=>PT+(mx-v)/rg*ch,y0=Y(0),slot=cw/n,bw=Math.max(1,Math.min(28,slot*0.36));
   const raw=rg/5,m=Math.pow(10,Math.floor(Math.log10(raw))),step=[1,2,5,10].map(k=>k*m).find(k=>k>=raw)||m*10;
   const money=v=>(v<0?'-':'')+'$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1).replace(/\.0$/,'')+'k':Math.round(Math.abs(v)));
@@ -5983,7 +6005,7 @@ function pnlCurveHtml(){
   return`<div class="pc-head"><div class="a-chart-title" style="margin:0">Options P&amp;L ${ii('Options only, realised, matching the Monthly P&L table: wheel puts and calls plus PMCC short calls, on the day they closed, expired or were assigned. Green = premium collected, red = buyback costs. Share sales, dividends and closed LEAPs are in Shares & LEAPs P&L. Open options are not included. Hover a bar for that period.')}</div>
     <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span><span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> collected · <span class="r">${fmtMoney(-B.loss)}</span> loss</span>
     <div class="pc-btns">${PNL_RANGES.map(([k])=>btn(k,k===pnlRange,'setPnlRange')).join('')}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
-    <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg><div class="pc-tip" id="pc-tip"></div></div>
+    <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg>${_pcEmpty?'<div class="pc-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:0.8125rem;pointer-events:none">Your realised P&amp;L shows here once a trade closes, expires or is assigned.</div>':''}<div class="pc-tip" id="pc-tip"></div></div>
     <div class="a-chart-legend"><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Premium collected</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div></div>`;
 }
 function pnlTip(e,el){const t=document.getElementById('pc-tip');if(!t)return;if(!e){t.style.display='none';return;}
@@ -6921,6 +6943,8 @@ async function authGoogle(){
   }
 }
 
+function needsOnboarding(d,skipped){return !skipped&&!(d.wheels&&d.wheels.length)&&!(d.trades&&d.trades.length)&&!(((typeof _realOpts!=='undefined'&&_realOpts)||d.opts||[]).length);}
+function onboardSkip(){localStorage.setItem('wh-onboardSkipped','1');const ob=document.getElementById('onboard-overlay');if(ob)ob.style.display='none';}
 async function onboardSubmit(){
   const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
   if(!ticker){document.getElementById('onboard-ticker').focus();return;}
@@ -6973,6 +6997,64 @@ function toggleTheme(isLight){
 function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls are harmless)
 // "+ Add trade": SmartScan for whatever you're looking at — LEAP/short-call fills on LEAPs, wheel fills everywhere else.
 function pasteFill(){ if(view==='options'&&typeof openLeapAdd==='function')openLeapAdd(); else openPasteTrade(); }
+
+// ── Your data: export and delete ─────────────────────────────
+const USER_COLLECTIONS=['wheels','trades','optlegs'];
+function _csvCell(v){if(v===null||v===undefined)return '';if(typeof v==='object')v=JSON.stringify(v);
+  // Text that starts like a formula gets a leading ' so Excel/Sheets show it rather than run it.
+  if(typeof v==='string'&&/^[=+\-@\t\r]/.test(v)&&isNaN(Number(v)))v="'"+v;v=String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function toCSV(rows){const keys=[];rows.forEach(r=>Object.keys(r).forEach(k=>{if(!keys.includes(k))keys.push(k);}));return [keys.join(',')].concat(rows.map(r=>keys.map(k=>_csvCell(r[k])).join(','))).join('\r\n');}
+function buildExport(data,meta){
+  const app=(typeof window!=='undefined'&&window.BRAND&&window.BRAND.name)||'WheelHouse';
+  const json={app,exportedAt:(meta&&meta.at)||new Date().toISOString(),account:(meta&&meta.email)||'',wheels:data.wheels||[],trades:data.trades||[],leaps:data.optlegs||[]};
+  const rows=[].concat((data.wheels||[]).map(r=>({record:'wheel',...r})),(data.trades||[]).map(r=>({record:'trade',...r})),(data.optlegs||[]).map(r=>({record:'leap',...r})));
+  return {json:JSON.stringify(json,null,2),csv:toCSV(rows)};
+}
+async function deleteAllUserData(uid,api){
+  if(!uid)throw new Error('Not signed in');let n=0;
+  for(const c of USER_COLLECTIONS){const ids=await api.list(c);for(const id of ids){await api.del(c,id);n++;}}
+  const left=[];for(const c of USER_COLLECTIONS){if((await api.list(c)).length)left.push(c);}
+  if(left.length)throw new Error('Some data could not be deleted ('+left.join(', ')+'). Nothing else was removed; please try again.');
+  return n;
+}
+function _download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+async function exportMyData(){
+  const uid=_currentUid();if(!uid){alert('Please sign in first.');return;}
+  try{
+    const data={};for(const c of USER_COLLECTIONS){data[c]=(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.data());}
+    const out=buildExport(data,{email:_auth.currentUser&&_auth.currentUser.email});
+    const base=String(_brandName()).toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-export-'+new Date().toISOString().slice(0,10);
+    _download(base+'.json',out.json,'application/json');setTimeout(()=>_download(base+'.csv',out.csv,'text/csv'),400);
+  }catch(e){console.error('Export failed:',e);alert('Could not export, please check your connection and try again.');}
+}
+function openDeleteAccount(){
+  closeModal('mSettings');openModal('mDelete');
+  const u=_auth.currentUser;const pw=document.getElementById('delete-password');
+  const isPw=!!(u&&u.providerData&&u.providerData.some(p=>p.providerId==='password'));
+  pw.style.display=isPw?'block':'none';pw.value='';
+  document.getElementById('delete-confirm').value='';document.getElementById('delete-go').disabled=true;document.getElementById('delete-msg').textContent='';
+}
+async function doDeleteAccount(){
+  const u=_auth.currentUser,uid=_currentUid(),msg=document.getElementById('delete-msg'),btn=document.getElementById('delete-go');
+  if(!u||!uid||u.uid!==uid){msg.textContent='Please sign in again first.';return;}
+  if(document.getElementById('delete-confirm').value.trim()!=='DELETE')return;
+  btn.disabled=true;btn.textContent='Deleting…';msg.textContent='';
+  try{
+    // 1. Prove it's really you (Firebase needs a recent sign-in to delete an account).
+    if(u.providerData.some(p=>p.providerId==='password')){const pw=document.getElementById('delete-password').value;if(!pw)throw Object.assign(new Error('Enter your password to confirm.'),{soft:true});await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,pw));}
+    else await reauthenticateWithPopup(u,_googleProvider);
+    // 2. Delete every document, then 3. the login itself.
+    await deleteAllUserData(uid,{list:async c=>(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.id),del:(c,id)=>deleteDoc(doc(_fsDb,'users',uid,c,id))});
+    await deleteUser(u);
+    Object.keys(localStorage).filter(k=>k.startsWith('wh-')||k==='wheel_tracker_v7').forEach(k=>localStorage.removeItem(k));
+    closeModal('mDelete');alert('Your account and all its data have been deleted.');location.reload();
+  }catch(e){
+    console.error('Delete failed:',e);btn.disabled=false;btn.textContent='Delete my account forever';
+    const m={'auth/wrong-password':'Wrong password.','auth/invalid-credential':'Wrong password.','auth/popup-closed-by-user':'Sign-in was cancelled, so nothing was deleted.','auth/too-many-requests':'Too many attempts, please try later.'};
+    msg.textContent=m[e.code]||e.message;
+  }
+}
+
 async function doSignOut(){
   try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
@@ -7208,6 +7290,8 @@ window.pasteFill = pasteFill;
 window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
+window.onboardSkip = onboardSkip;
+window.exportMyData = exportMyData; window.openDeleteAccount = openDeleteAccount; window.doDeleteAccount = doDeleteAccount;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
 window.onActionChange = onActionChange;
