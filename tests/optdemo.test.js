@@ -15,9 +15,9 @@ let db={wheels:[{id:'w1',ticker:'SOFI',status:'open',lastPrice:20}],trades:[{id:
 let quotes={};let view='options';let _optMarkStatus='';let renders=0;const render=()=>{renders++;};
 const fetch=async()=>({ok:true,json:async()=>({contracts:{}})});
 `;
-const code = stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+const code = 'const APP_DEMO=false;\n' + stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
   grab(/let optDemo=[^\n]*\n/) + grab(/let _realOpts=null;[^\n]*\n/) + grab(/const DEMO_SPOTS=[^\n]*\n/) +
-  ['optDemoLegs', 'setOptDemo', '_demoNotSaved', '_saveOpt', '_deleteOptDoc', 'saveDB'].map(extractFn).join('\n') + '\nasync ' + extractFn('fetchOptionMarks') +
+  ['optDemoLegs', 'setOptDemo', '_demoNotSaved', '_persistableLeg', '_saveOpt', '_deleteOptDoc', 'saveDB'].map(extractFn).join('\n') + '\nasync ' + extractFn('fetchOptionMarks') +
   '\nlet _optMarksAt=0;\nreturn {get db(){return db},get writes(){return writes},get deletes(){return deletes},get optDemo(){return optDemo},get real(){return _realOpts},optDemoLegs,setOptDemo,_saveOpt,_deleteOptDoc,saveDB,fetchOptionMarks,OPTS};';
 const S = new Function(code)();
 

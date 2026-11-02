@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Start OpTrack</title>
+<meta name="description" content="Track your options wheel and LEAPs. Free plan, or Pro for a few quid a month.">
+<meta name="theme-color" content="#FAF9F6"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:title" content="Start OpTrack"><meta property="og:image" content="optrack-share.png">
+<script src="brand.js"></script>
+<script src="analytics.js" defer></script>
+<style>
+:root{--bg:#FAF9F6;--card:#FFFFFF;--text:#111111;--text2:#3d3d40;--text3:#6b6b70;--line:#E4E1DA;--accent:#FF5A36;--profit:#1A9E5A;--loss:#D93A3A}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent)}.wrap{max-width:68rem;margin:0 auto;padding:0 1.25rem}
+header{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}header img{height:2.5rem;width:auto;display:block}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.btn{display:block;text-align:center;padding:.9rem 1.25rem;border-radius:.625rem;text-decoration:none;font-weight:700;font-size:1rem}.btn.p{background:var(--accent);color:#FFFFFF}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
+.btn.sm{display:inline-block;padding:.5rem .9rem;font-size:.9rem;font-weight:600}
+h1{font-size:2.25rem;line-height:1.15;margin:1.5rem 0 .25rem;letter-spacing:-.02em}
+.price{font-size:1.5rem;font-weight:700;margin:0}.price span{color:var(--text3);font-size:1rem;font-weight:400}
+.free{color:var(--profit);font-weight:600;margin:.25rem 0 1.25rem}
+.promise{font-size:1.25rem;font-weight:700;margin:1.25rem 0 .5rem}
+p{color:var(--text2)}
+.join{display:grid;gap:.625rem;margin:1.5rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1rem 1.125rem}
+h2{font-size:1.25rem;margin:2.25rem 0 .75rem}
+ul.get{list-style:none;padding:0;margin:0}ul.get li{padding:.4rem 0 .4rem 1.6rem;position:relative;border-bottom:1px solid var(--line)}ul.get li:last-child{border:0}
+ul.get li:before{content:"✓";position:absolute;left:0;color:var(--accent);font-weight:700}ul.get li em{color:var(--text3);font-style:normal;font-size:.85rem}
+details{background:var(--card);border:1px solid var(--line);border-radius:.75rem;margin-bottom:.5rem}
+summary{padding:.875rem 1rem;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between}summary::-webkit-details-marker{display:none}
+summary:after{content:"+";color:var(--accent);font-weight:700}details[open] summary:after{content:"–"}
+details p{margin:0;padding:0 1rem 1rem}
+.small{font-size:.8rem;color:var(--text3)}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:start}.hero h2{margin-top:1.5rem}.faq{display:grid;grid-template-columns:1fr 1fr;gap:0 .75rem;align-items:start}.end{display:flex;gap:.75rem;justify-content:center}.end .btn{min-width:12rem}
+@media (max-width:860px){.hero,.faq{grid-template-columns:1fr;gap:0}}
+footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="/"><img src="logo-horizontal-dark.svg" alt="OpTrack" width="128" height="40"></a><a class="btn g sm" href="/app/">Sign in</a></header>
+
+  <div class="hero"><div>
+  <h1><span data-brand="name">OpTrack</span></h1>
+  <p class="price" id="price">£9 <span>/ month</span></p>
+  <p class="small" id="price-year">or £79 a year</p>
+  <p class="free">Free plan available</p>
+
+  <p class="promise">See what your options trades have actually made you.</p>
+  <p>I sell puts and calls and run a few LEAPs, and I got fed up with spreadsheets that never added up. OpTrack is what I built for myself. You put your trades in, it keeps every roll in one chain and shows what you've banked and what's still open. No hype, no tips, just your numbers done properly.</p>
+
+  <div class="join">
+    <a class="btn p" href="/app/" id="go-free">Start free</a>
+    <a class="btn g" href="/app/?checkout=monthly" id="go-pro">Go Pro</a>
+    <a class="small" href="/app/?checkout=yearly" id="go-pro-year" style="text-align:center">Or go Pro yearly</a>
+    <a class="small" href="/demo" id="try-demo" style="text-align:center">Not sure yet? Try the demo, no sign-up needed</a>
+  </div>
+
+  </div><div>
+  <h2>What you get</h2>
+  <div class="card"><b>Free</b><ul class="get" id="get-free"></ul></div>
+  <div class="card" style="margin-top:.75rem"><b>Pro</b> <span class="small">everything in Free, plus</span><ul class="get" id="get-pro"></ul></div>
+
+  </div></div>
+
+  <h2>Questions</h2>
+  <div class="faq">
+  <details><summary>What do I get?</summary><p>A web app for tracking the wheel and LEAPs. It runs in your browser on phone or computer, with nothing to download, and you can pin it to your home screen if you like. Log a trade, follow it through rolls and assignment, and see your realised profit, return on capital and win rate. The free plan covers the basics; Pro takes the limits off and adds the extras listed above.</p></details>
+  <details><summary>Is it for beginners?</summary><p>Yes, if you already know what selling a put or a covered call is. It doesn't teach you to trade. It just keeps your record straight, which helps whether you've done ten trades or a thousand.</p></details>
+  <details><summary>Do I need to link my broker?</summary><p>No. You type trades in, paste a confirmation and let SmartScan fill it in, or import a Robinhood CSV. Nothing connects to your broker, and your data stays yours. You can export it or delete your account at any time.</p></details>
+  <details><summary>Can I cancel anytime?</summary><p>Yes. Cancel Pro from Settings whenever you like and you keep it until the end of the period you paid for, then drop back to the free plan. Your trades stay put.</p></details>
+  <details><summary>Is this financial advice?</summary><p>No. OpTrack records the trades you enter and does the sums. It doesn't tell you what to buy or sell, and prices can be delayed. Your trades are your call.</p></details>
+
+  </div>
+
+  <!-- Reviews: add real customer reviews and a star summary here once we have them. Never invent any. -->
+
+  <div class="join end"><a class="btn p" href="/app/">Start free</a><a class="btn g" href="/app/?checkout=monthly">Go Pro</a></div>
+  <p class="small" id="gating-note"></p>
+
+  <footer><span>© <span id="yr">2026</span> Marc Duff</span><a href="/">Home</a><a href="legal.html#privacy">Privacy</a><a href="legal.html#terms">Terms</a><a href="legal.html#advice">Not financial advice</a></footer>
+</div>
+<script>
+(function(){var B=window.BRAND;if(!B)return;
+  document.querySelectorAll('[data-brand="name"]').forEach(function(e){e.textContent=B.name;});
+  document.getElementById('yr').textContent=new Date().getFullYear();
+  var P=B.plans,N=B.featureNames||{};if(!P)return;var c=P.currency||'£',paid=P.paidFeatures||[];
+  document.getElementById('price').innerHTML=c+P.priceMonthly+' <span>/ month</span>';
+  document.getElementById('price-year').textContent='or '+c+P.priceYearly+' a year';
+  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');};
+  var free=['Manual entry and SmartScan (paste a trade confirmation)','Wheel tracking'+(paid.indexOf('unlimited')>=0?' <em>up to '+P.free.maxWheelTickers+' tickers</em>':''),'LEAPs and PMCC'+(paid.indexOf('unlimited')>=0||paid.indexOf('leaps-full')>=0?' <em>'+P.free.maxOpenLeaps+' open LEAP</em>':''),'Realised profit, return and win rate','Export or delete your data any time'];
+  Object.keys(N).forEach(function(k){if(paid.indexOf(k)<0)free.push(esc(N[k]));});
+  document.getElementById('get-free').innerHTML=free.map(function(x){return '<li>'+x+'</li>';}).join('');
+  document.getElementById('get-pro').innerHTML=paid.map(function(k){return '<li>'+esc(N[k]||k)+'</li>';}).join('');
+  if(!P.gating)document.getElementById('gating-note').textContent='For now everything is free while I finish setting up, so Start free gets you the lot.';
+})();
+</script>
+</body>
+</html>

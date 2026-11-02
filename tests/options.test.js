@@ -88,7 +88,8 @@ const H = O.health([
   L({ id: 'h7', entryDate: '2026-03-01' }),                 // opened after expiry
 ], [{ id: 'w1', ticker: 'SOFI' }], TODAY);
 const has = (id, re) => H.some(i => i.legId === id && re.test(i.text));
-check('health: open past expiry', has('h1', /still open/));
+check('health: open LEAP past expiry', has('h1', /^AAPL LEAP expired — close it$/));
+check('health: open short call past expiry', O.health([L({ id: 'h8', side: 'short', expiry: '2026-01-02' })], [], TODAY).some(i => /still open/.test(i.text)));
 check('health: no strike', has('h2', /no strike/));
 check('health: dangling rotation', has('h3', /no longer exists/));
 check('health: wrong underlying', has('h4', /different underlying/));
@@ -103,14 +104,14 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   const fmtMoney=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);let quotes={AAPL:{price:205}};let view='options';let _optsLoadError='';let optDemo=false;const DEMO_SPOTS={};
   let db={wheels:[{id:'w1',ticker:'AAPL',label:'Rotation 1',status:'open'}],trades:[],opts:[]};let collapsedLeaps=new Set();let dateFmt='uk';let _focusTid=null;function openEditTrade(){}function openOptEdit(){}function pmccClose(){}function pmccExpire(){}function pmccDeleteShort(){}function openPmccSell(){}function isChainTip(){return false;}function buildRollChain(){return null;};`;
   const R = new Function(stubs + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-    ['setOptFilter','_optSpots','_legLine','renderOptions','renderOptionsLegacy','splitLeapLegs','leapStats','_fdShort','renderLeapCard','colorN','leapPayback','leapFormLeg','pmccShortsFor','pmccStats','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','pmccShortEvents','renderPmccListRow','pmccShortProfit','pmccChainPriorNet','renderTradeRow','calcTradeROC','isCredit','ii','fmtDateFull','fmtPrem'].map(extractFn).join('\n') +
-    `\nlet optFilter={status:'open',tenor:'all',side:'all'};let _optMarkStatus='';let leapStatus='open';\nreturn {render:renderOptions,legacy:renderOptionsLegacy,split:splitLeapLegs,stats:leapStats,form:leapFormLeg,setDb:d=>{db.opts=d;},setStatus:v=>{leapStatus=v;}};`)();
+    ['setOptFilter','_optSpots','_legLine','renderOptions','leapTileTotals','leapCallsBanked','leapNextAct','leapUnrealPct','renderOptionsLegacy','splitLeapLegs','leapStats','_fdShort','renderLeapCard','leapSpotHtml','isRegularSession','colorN','leapPayback','leapFormLeg','pmccShortsFor','pmccStats','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','listCut','listMoreBtn','pmccShortEvents','renderPmccListRow','pmccShortProfit','pmccChainPriorNet','renderTradeRow','calcTradeROC','isCredit','ii','fmtDateFull','fmtPrem'].map(extractFn).join('\n') +
+    `\nlet optFilter={status:'open',tenor:'all',side:'all'};let _optMarkStatus='';let leapStatus='open';const listShowAll=new Set();const extHtml=()=>'';\nreturn {render:renderOptions,legacy:renderOptionsLegacy,split:splitLeapLegs,stats:leapStats,form:leapFormLeg,setDb:d=>{db.opts=d;},setStatus:v=>{leapStatus=v;}};`)();
   check('render: LEAPs empty state', /No open LEAPs/.test(R.render()) && !/Other options/.test(R.render()));
   const LC = (o) => L({ type: 'C', side: 'long', strike: 180, expiry: '2028-01-21', entryDate: '2026-01-02', entryPrice: 30, mark: 40, iv: 0.3, qty: 2, fees: 1.3, ...o });
   R.setDb([LC({ id: 'lc1' }), L({ id: 'a', groupId: 'g', mark: 4, wheelId: 'w1' }), L({ id: 'b', groupId: 'g', side: 'short', strike: 210, entryPrice: 1.5, mark: 2 }), L({ id: 'sp', groupId: 'sp', type: 'P', side: 'short', strike: 190, mark: 1 })]);
   const h = R.render();
   check('render: one LEAP card for the long call only', (h.match(/class="leap-card/g) || []).length === 1 && /data-leap="lc1"/.test(h), h.slice(0, 300));
-  check('render: summary strip (value/cost, P&L, share equiv, time value)', /Market value/.test(h) && /Open P&amp;L/.test(h) && /Share equivalent/.test(h) && /Time value/.test(h) && /decay ≈/.test(h));
+  check('render: summary tiles (total value, unrealised P&L, calls banked, next to act)', /Total value/.test(h) && /Unrealised P&amp;L/.test(h) && /Calls banked/.test(h) && /Next to act/.test(h) && /Calls collected/.test(h) && /Cost after calls/.test(h) && !/Share equivalent|Time value|decay ≈/.test(h));
   check('render: non-long-call legs listed under Other options (2 groups), not dropped', /Other options \(2\)/.test(h) && /Call vertical/.test(h));
   check('render: no multi-leg builder / tenor / side filter chips', !/Any expiry|Long &amp; short|Long & short|\+ Position/.test(h) && /\+ LEAP/.test(h));
   check('render: no ITM badge, breakeven in hero, days-left bar', !/leap-badge itm|>ITM<|>OTM</.test(h) && /lc-k">Breakeven<\/div><div class="lc-v sm">\$210\.00/.test(h) && /days left/.test(h));
@@ -119,9 +120,9 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
 
   const S1 = R.stats(LC({}), 205, TODAY);
   check('stats: value, cost incl fees, P&L, BE %, delta-as-shares>0, theta<0', S1.value === 8000 && S1.cost === 6001.3 && Math.abs(S1.pl - 1998.7) < 0.01 && Math.abs(S1.beDist - (210 / 205 * 100 - 100)) < 1e-9 && S1.dsh > 0 && S1.dsh < 200 && S1.thd < 0, S1);
-  R.setDb([LC({ id: 'w', expiry: '2027-03-19', reviewDate: '2026-11-01' })]);
+  R.setDb([LC({ id: 'w', expiry: '2027-03-19', reviewDate: '2099-11-01' })]);
   const hw = R.render();
-  check('under 270 days → no warning border/note; review date shown', !/leap-card lc warn|leap-card warn/.test(hw) && !/Under 9 months left/.test(hw) && /Review 1 Nov 26/.test(hw), hw.slice(0, 200));
+  check('under 270 days → no warning border/note; review date shown', !/leap-card lc warn|leap-card warn/.test(hw) && !/Under 9 months left/.test(hw) && /Review 1 Nov 99/.test(hw), hw.slice(0, 200));
   R.setDb([LC({ id: 'c', status: 'closed', closePrice: 45, closeDate: '2026-09-01' })]); R.setStatus('closed');
   const hc = R.render();
   check('closed toggle shows closed LEAP with realised P&L', /data-leap="c"/.test(hc) && /Realised/.test(hc) && !/leap-sum/.test(hc));

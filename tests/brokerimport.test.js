@@ -4,8 +4,8 @@ const { extractFn, extractConst } = require('./extract');
 const code = [extractConst('MON_PAT'), extractConst('MON_MAP'), extractConst('CREDITS'),
   extractConst('ACTION_MAP'), extractConst('VALID_ACTIONS'),
   extractFn('isCredit'), extractFn('computeTotal'), extractFn('parseCSVLine'), extractFn('normDate'),
-  extractFn('brokerCSVLib')].join('\n');
-const L = new Function(code + '\nreturn brokerCSVLib();')();
+  extractFn('brokerCSVLib'), extractFn('rhPlan')].join('\n');
+const L = new Function(code + '\nconst B=brokerCSVLib();B.rhPlan=rhPlan;return B;')();
 
 let pass = 0, fail = 0;
 const check = (name, ok, extra) => { ok ? pass++ : fail++; console.log((ok ? '  ✓ ' : '  ✗ ') + name + (ok || extra === undefined ? '' : '  → ' + JSON.stringify(extra))); };
@@ -42,11 +42,12 @@ const rh = L.parseBrokerCSV(`"Activity Date","Process Date","Settle Date","Instr
 "","","","","","","","",""
 "The data provided is for informational purposes only."`);
 check('robinhood: detected', rh.broker === 'Robinhood', rh.broker);
+{let k=0;const P=L.rhPlan(rh.rh,[],[],()=>'x'+(++k));rh.rows=P.wheelRows;rh.skipped=rh.skipped.concat(P.skipped);}
 check('robinhood: actions', acts(rh) === 'CSP,BTC,EXP,IN', acts(rh));
 check('robinhood: CSP values', rh.rows[0].premium === 1.25 && rh.rows[0].shares === 100 && rh.rows[0].total === 124.95 && rh.rows[0].strike === 150 && rh.rows[0].expiry === '2025-01-17' && rh.rows[0].entered === '2025-01-10', rh.rows[0]);
 check('robinhood: EXP 2 contracts', rh.rows[2].shares === 200 && rh.rows[2].ticker === 'SOFI');
 check('robinhood: assignment IN at strike', rh.rows[3].premium === 10 && rh.rows[3].total === 1000);
-check('robinhood: stock/ACH/div skipped', rh.skipped.length === 3, rh.skipped);
+check('robinhood: assignment shares/ACH/div skipped', rh.skipped.length === 3, rh.skipped);
 
 // ── Tastytrade ──
 const tt = L.parseBrokerCSV(`Date,Type,Sub Type,Action,Symbol,Instrument Type,Description,Value,Quantity,Average Price,Commissions,Fees,Multiplier,Root Symbol,Underlying Symbol,Expiration Date,Strike Price,Call or Put,Order #,Currency
@@ -154,8 +155,8 @@ function full(name, res, rows) {
     check(`${name} #${i+1} all fields`, !bad.length, bad.map(f => `${f}: ${g[f]} ≠ ${e[F.indexOf(f)]}`)); });
 }
 full('robinhood full', rh, [
-  ['2025-01-10','AAPL','CSP',150,'2025-01-17',100,1.25,0,124.95],
-  ['2025-01-15','AAPL','BTC',150,'2025-01-17',100,0.20,0,20.05],
+  ['2025-01-10','AAPL','CSP',150,'2025-01-17',100,1.25,0.05,124.95],
+  ['2025-01-15','AAPL','BTC',150,'2025-01-17',100,0.20,0.05,20.05],
   ['2025-01-17','SOFI','EXP',14,'2025-01-17',200,0,0,0],
   ['2025-01-17','F','IN',10,'2025-01-17',100,10,0,1000]]);
 full('schwab full', sc, [

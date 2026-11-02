@@ -1,0 +1,15 @@
+const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
+const{loadBrand,build}=require('../tools/sync-brand.js');const APP=path.join(__dirname,'..','app');
+const files=Object.fromEntries(['manifest.json','sw.js','index.html'].map(n=>[n,fs.readFileSync(path.join(APP,n),'utf8')]));
+test('brand lives in one place and the static files are in sync with it',()=>{const B=loadBrand();assert.strictEqual(B.name,'OpTrack');
+  const out=build(B,files);['manifest.json','sw.js','index.html'].forEach(n=>assert.strictEqual(out[n],files[n],n+' out of sync: run node tools/sync-brand.js'));});
+test('a rename is one edit: everything follows',()=>{const B={...loadBrand(),name:'Newname',shortName:'Newname',cachePrefix:'newname'};const out=build(B,files);
+  const m=JSON.parse(out['manifest.json']);assert.strictEqual(m.name,'Newname');assert.ok(/const CACHE='newname-v\d+'/.test(out['sw.js']));assert.ok(out['sw.js'].includes("k.startsWith('newname-')"));
+  assert.ok(out['index.html'].includes('<title>Newname — '));assert.ok(!/>WheelHouse</.test(out['index.html']));assert.ok(out['index.html'].includes('Welcome to Newname'));});
+test('functions share a CDN cache so many users do not multiply API calls',()=>{['quote','optchain','extquote','profile'].forEach(f=>assert.ok(fs.readFileSync(path.join(__dirname,'..','netlify','functions',f+'.js'),'utf8').includes('Netlify-CDN-Cache-Control'),f));});
+test('owner-only Firestore rules file',()=>{const r=fs.readFileSync(path.join(__dirname,'..','firestore.rules'),'utf8');assert.ok(r.includes('request.auth.uid == uid')&&r.includes('allow read, write: if false'));});
+test('rename reaches landing + legal, and the old SW cache is cleaned (data untouched)',()=>{const f={...files,'landing.html':fs.readFileSync(path.join(APP,'landing.html'),'utf8'),'legal.html':fs.readFileSync(path.join(APP,'legal.html'),'utf8')};
+  const out=build({...loadBrand(),name:'Zed',cachePrefix:'zed'},f);assert.ok(out['landing.html'].includes('<title>Zed: ')&&!/data-brand="name">OpTrack</.test(out['landing.html']));assert.ok(out['legal.html'].includes('<title>Zed: '));
+  assert.ok(/const LEGACY = \['wheelhouse-', 'optrack-'\];/.test(out['sw.js']),out['sw.js'].slice(0,300));
+  const sw=fs.readFileSync(path.join(APP,'sw.js'),'utf8');assert.ok(sw.includes("const CACHE='optrack-v")&&sw.includes("LEGACY = ['wheelhouse-']"));assert.ok(!/localStorage|indexedDB/.test(sw),'SW never touches stored data');
+  assert.strictEqual(loadBrand().name,'OpTrack');});

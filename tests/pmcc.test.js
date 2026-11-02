@@ -24,8 +24,8 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','pmccShortEvents','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
-  `\nconst B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','listCut','listMoreBtn','pmccShortEvents','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
+  `\nconst listShowAll=new Set();const B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
 const leap = { id: 'L1', groupId: 'L1', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2028-06-16', qty: 2, entryPrice: 72, fees: 1.30, entryDate: '2026-06-01', status: 'open' };
@@ -48,10 +48,10 @@ check('shorts follow the LEAP through a roll (rolledFrom chain)', S.pmccShortsFo
 // ── maths ──
 const P = S.pmccStats(leap, legs, today);
 // a: +1020-1.30 open, -230-1.30 close = 787.40 ; b: 920-1.30 = 918.70 ; c open cash: 1280-1.30 = 1278.70
-check('premium collected = net of buybacks and fees', Math.abs(P.net - (787.40 + 918.70 + 1278.70)) < 0.01, P.net);
+check('premium collected = realised net of closed/expired calls only (open call excluded)', Math.abs(P.net - (787.40 + 918.70)) < 0.01, P.net);
 check('LEAP cost includes fees', Math.abs(P.cost - 14401.30) < 0.01, P.cost);
-check('adjusted cost = cost − net premium', Math.abs(P.adj - (14401.30 - 2984.80)) < 0.01, P.adj);
-check('adjusted per share', Math.abs(P.adjPerSh - (14401.30 - 2984.80) / 200) < 0.001, P.adjPerSh);
+check('adjusted cost = cost − net premium', Math.abs(P.adj - (14401.30 - 1706.10)) < 0.01, P.adj);
+check('adjusted per share', Math.abs(P.adjPerSh - (14401.30 - 1706.10) / 200) < 0.001, P.adjPerSh);
 check('current open short = c, with DTE and live P&L', P.cur && P.cur.id === 'c' && P.curDte === 30 && Math.abs(P.curPnl - (1278.70 - 610)) < 0.01, [P.curDte, P.curPnl]);
 check('history newest first', P.past.map(l => l.id).join() === 'b,a');
 

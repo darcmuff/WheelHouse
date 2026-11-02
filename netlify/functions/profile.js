@@ -1,4 +1,4 @@
-exports.handler = async (event) => {
+const _handler = async (event) => {
   const sym = event.queryStringParameters?.symbol;
   if (!sym) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing symbol parameter' }) };
@@ -20,10 +20,12 @@ exports.handler = async (event) => {
     const data = await res.json();
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=86400', 'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=604800' },
       body: JSON.stringify(data)
     };
   } catch (e) {
     return { statusCode: 502, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = require('../lib/origin').guard(_handler);

@@ -46,12 +46,14 @@ async function getMarks(sym, wanted, { fetchImpl = fetch, finnhubKey } = {}) {
 }
 
 exports.pick = pick; exports.pickFinnhub = pickFinnhub; exports.getMarks = getMarks;
-exports.handler = async (event) => {
+const _handler = async (event) => {
   const q = event.queryStringParameters || {};
   const sym = String(q.symbol || '').toUpperCase().replace(/[^A-Z.]/g, '');
   const wanted = String(q.contracts || '').toUpperCase().split(',').map(s => s.trim()).filter(s => /^[A-Z.]+\d{6}[CP]\d{8}$/.test(s)).slice(0, 60);
   if (!sym || !wanted.length) return { statusCode: 400, body: JSON.stringify({ error: 'symbol and contracts required' }) };
   const out = await getMarks(sym, wanted, { finnhubKey: process.env.FINNHUB_KEY });
   // 200 even when empty: the app then keeps manual marks / local greeks
-  return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=60' }, body: JSON.stringify(out) };
+  return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=60', 'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=60' }, body: JSON.stringify(out) };
 };
+
+exports.handler = require('../lib/origin').guard(_handler);

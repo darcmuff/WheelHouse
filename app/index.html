@@ -3,22 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="/"><!-- the app is served at /app/ (and still at /index.html); all relative paths resolve from the site root -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>WHEELHOUSE — Options Wheel Tracker</title>
+<title>OpTrack — Options Wheel Tracker</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<meta property="og:title" content="WheelHouse — Options Wheel Tracker">
+<meta property="og:title" content="OpTrack — Options Wheel Tracker">
 <meta property="og:description" content="Track, analyse and optimise your options wheel strategy.">
-<meta property="og:image" content="https://wheelhouse-tracker.netlify.app/wheelhouse-share.png">
+<meta property="og:image" content="https://wheelhouse-tracker.netlify.app/optrack-share.png">
 <meta property="og:url" content="https://wheelhouse-tracker.netlify.app/app/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://wheelhouse-tracker.netlify.app/wheelhouse-share.png">
+<meta name="twitter:image" content="https://wheelhouse-tracker.netlify.app/optrack-share.png">
 <link rel="manifest" href="manifest.json">
+<script src="demo.js"></script>
+<script src="brand.js"></script>
+<script src="analytics.js" defer></script>
 <meta name="theme-color" content="#f6f5f1">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
 <!-- Firebase loaded inside main module script -->
@@ -26,7 +30,7 @@
 :root{
   --bg:#f6f5f1; --bg2:#ffffff; --bg3:#f0efe9; --bg4:#e4e2da;
   --border:#e6e4dc; --border2:#d3d0c6;
-  --orange:#2f6f4f; --orange2:#3d8562; --orangeL:#e3efe7; --orangeD:rgba(47,111,79,0.08);
+  --orange:#FF5A36; --orange2:#e84a28; --orangeL:#ffe6df; --orangeD:rgba(255,90,54,0.08);
   --text:#1d201e; --text2:#545a56; --text3:#8a908b;
   --green:#2f7d57; --red:#b5483d; --blue:#3f6c9a; --yellow:#a8701c; --silver:#3c423e;
   --shadow:0 1px 2px rgba(30,30,20,.04),0 2px 8px rgba(30,30,20,.04);
@@ -41,7 +45,7 @@
   --orange:  #0d9488;
   --orange2: #14b8a6;
   --orangeL: #ccfbf1;
-  --orangeD: rgba(13,148,136,0.12);
+  --orangeD: rgba(255,90,54,0.12);
   --text:    #f0f1f3;
   --text2:   #b2b6bf;
   --text3:   #8d95a8;
@@ -321,6 +325,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 }
 .btn:hover{opacity:.85}.btn:active{transform:scale(.97)}
 .btn-primary{background:var(--orange);color:#fff}
+#new-rot-ticker-top::placeholder{color:#fff;opacity:1}
 .btn-success{background:#0d2218;color:var(--green);border:1px solid #1a3d2a}
 .btn-danger{background:#2a0d0d;color:var(--red);border:1px solid #3d1a1a}
 .btn-warn{background:#2a1800;color:var(--orange2);border:1px solid #3d2600}
@@ -521,6 +526,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 /* ── LEAPs view (long calls) ── */
 .leap-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-bottom:0.75rem}
 .leap-sc{background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.6875rem 0.8125rem}
+.leap-sc .v.y{color:var(--yellow)}
 .leap-sc .l{font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
 .leap-sc .v{font-size:1.25rem;font-weight:600;margin-top:0.1875rem;white-space:nowrap}.leap-sc .s{font-size:0.6875rem;color:var(--text3);margin-top:2px}
 .leap-grid{display:flex;flex-direction:column;gap:0.625rem}
@@ -541,7 +547,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .leap-bar{height:0.3125rem;background:var(--bg4);border-radius:0.1875rem;overflow:hidden;margin:0.625rem 0 0.25rem}.leap-bar>i{display:block;height:100%;background:var(--orange)}
 .leap-barl{display:flex;justify-content:space-between;font-size:0.625rem;color:var(--text3)}.leap-barl b{color:var(--text)}
 .leap-split{display:flex;height:1rem;border-radius:0.25rem;overflow:hidden;margin-top:0.625rem;font-size:0.5625rem;font-weight:600;white-space:nowrap}
-.leap-split .in{background:rgba(13,148,136,.35);color:var(--orangeL);display:flex;align-items:center;padding-left:0.375rem;overflow:hidden}
+.leap-split .in{background:rgba(255,90,54,.35);color:var(--orangeL);display:flex;align-items:center;padding-left:0.375rem;overflow:hidden}
 .leap-split .tv{background:rgba(251,191,36,.18);color:var(--yellow);display:flex;align-items:center;padding-left:0.375rem;flex:1;overflow:hidden}
 .leap-kv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-top:0.625rem}
 .leap-kv div{background:var(--bg3);border-radius:0.375rem;padding:0.375rem 0.5rem;min-width:0}.leap-kv b{display:block;font-size:0.8125rem;font-weight:600}.leap-kv span{font-size:0.625rem;color:var(--text3)}
@@ -592,7 +598,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 #content{margin-left:0!important;padding:1.25rem 1.5rem 3rem!important;max-width:72rem;margin:0 auto!important}
 #topnav{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:1.5rem;padding:0.625rem 1.5rem;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
 .tn-brand{display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:0.875rem;color:var(--text)}
-.tn-mark{width:1rem;height:1rem;border-radius:50%;border:3px solid var(--orange)}
+.tn-mark{width:1.375rem;height:1.375rem;display:block}
 .tn-tabs{display:flex;gap:0.25rem}
 #topnav .nav-item,#tabbar .nav-item{border:0;padding:0.4375rem 0.875rem;border-radius:0.625rem;color:var(--text2);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:0.375rem;background:none}
 #topnav .nav-item.active{background:var(--bg2);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
@@ -641,7 +647,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .rot-badge.closed{background:rgba(181,72,61,.12)!important;color:var(--red)!important}
 .wl-body{padding:0.25rem 1.125rem 0.875rem}
 .wl-top{display:flex;justify-content:space-between;align-items:center}.wl-stage{color:var(--text2);font-size:0.7rem}
-.wl-prem{font-size:0.65rem;font-weight:600;background:var(--orangeL);padding:0.15rem 0.6rem;border-radius:1rem}
 .wl-steps{display:flex;margin:0.75rem 0 0.625rem}.wl-st{flex:1;display:flex;flex-direction:column;align-items:center;font-size:0.575rem;color:var(--text3);position:relative}
 .wl-st:before{content:'';position:absolute;top:0.25rem;left:-50%;width:100%;height:2px;background:var(--border)}.wl-st:first-child:before{display:none}
 .wl-st b{width:0.625rem;height:0.625rem;border-radius:50%;background:var(--border);z-index:1;margin-bottom:0.25rem}
@@ -717,13 +722,17 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 #mSettings .btn{border-radius:0.625rem}
 .btn-ghost{background:var(--bg2);border:1px solid var(--border);color:var(--text)}.btn-ghost:hover{background:var(--bg3)}
 /* dark theme tune-up */
-[data-theme="dark"]{--bg:#141716;--bg2:#1c201e;--bg3:#252a27;--bg4:#2f3531;--border:#2c322e;--border2:#3a413c;--orange:#5fae86;--orange2:#7cc39d;--orangeL:rgba(95,174,134,.14);--orangeD:rgba(95,174,134,.12);--text:#e9ece9;--text2:#b0b8b2;--text3:#838c86;--green:#6cc493;--red:#e07a6e;--blue:#86aee0;--yellow:#d9a54d;--silver:#c8ccc8;--shadow:none}
+[data-theme="dark"]{--bg:#111111;--bg2:#1C1C1E;--bg3:#26262a;--bg4:#313136;--border:#2c2c30;--border2:#3a3a40;--orange:#FF5A36;--orange2:#ff7a5c;--orangeL:rgba(255,90,54,.14);--orangeD:rgba(255,90,54,.12);--text:#F5F3EE;--text2:#c9c7c2;--text3:#9A9A9F;--green:#3DDC84;--red:#FF8A8A;--blue:#86aee0;--yellow:#d9a54d;--silver:#c8ccc8;--shadow:none}
 [data-theme="dark"] .hb-w{background:#3d6b55}
 .btn-success,.btn-warn{background:var(--bg2);color:var(--text);border:1px solid var(--border)}
 .btn-danger{background:transparent;color:var(--red);border:1px solid color-mix(in srgb,var(--red) 35%,transparent)}
 .btn-danger:hover{background:color-mix(in srgb,var(--red) 10%,transparent)}
 [data-theme="dark"] #topnav .nav-item.active{background:var(--bg3);color:var(--text)}
 [data-theme="dark"] #topnav{background:color-mix(in srgb,var(--bg) 92%,transparent)}
+#demo-banner{position:sticky;top:0;z-index:70;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.4rem 1.5rem;background:#FFF1EC;color:#5a2a1c;border-bottom:1px solid #F5C9BA;font-size:0.8125rem}
+#demo-banner .db-act{display:flex;gap:0.5rem;align-items:center}#demo-banner button{background:transparent;border:1px solid #F5C9BA;border-radius:0.375rem;padding:0.2rem 0.6rem;color:inherit;cursor:pointer;font-size:0.75rem}
+#demo-banner .db-go{background:#FF5A36;color:#fff;text-decoration:none;border-radius:0.375rem;padding:0.25rem 0.75rem;font-weight:600;font-size:0.75rem}
+.ot-demo #topnav{top:2.1rem}
 </style>
 </head>
 <body>
@@ -738,17 +747,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   <div style="width:100%;max-width:25rem;padding:2rem 1.5rem;">
     <!-- Logo -->
     <div style="text-align:center;margin-bottom:2rem;">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="56" height="56" style="margin-bottom:0.75rem">
-        <circle cx="60" cy="60" r="58" fill="var(--bg2)"/>
-        <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="3" opacity="0.6"/>
-        <line x1="60" y1="60" x2="60" y2="18" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="60" y1="60" x2="96" y2="81" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="60" y1="60" x2="24" y2="81" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="60" cy="60" r="8" fill="var(--orange)"/>
-        <circle cx="60" cy="60" r="4" fill="#18191c"/>
-      </svg>
-      <div style="color:var(--text);font-size:1.375rem;font-weight:600;letter-spacing:-0.02em;">WheelHouse</div>
-      <div style="color:var(--text3);font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
+      <img src="logo-mark.svg" alt="" width="56" height="56" style="margin-bottom:0.75rem">
+      <div data-brand="name" style="color:#f3f4f6;font-size:1.375rem;font-weight:600;letter-spacing:-0.02em;">OpTrack</div>
+      <div data-brand="tagline" style="color:var(--text3);font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
     </div>
 
     <!-- Tab switcher -->
@@ -817,6 +818,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <div style="text-align:center;margin-top:1.25rem;color:#4b5563;font-size:0.6875rem;">
       Free forever. No credit card required.
     </div>
+    <div id="auth-legal" style="text-align:center;margin-top:0.625rem;color:#6b7280;font-size:0.6875rem;line-height:1.5;">
+      By continuing you agree to the <a href="legal.html#terms" target="_blank" rel="noopener" style="color:#5eead4">Terms</a> and <a href="legal.html#privacy" target="_blank" rel="noopener" style="color:#5eead4">Privacy policy</a>.<br>Not financial advice: <a href="legal.html#advice" target="_blank" rel="noopener" style="color:#5eead4">read why</a>.
+    </div>
   </div>
 </div>
 
@@ -827,9 +831,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   align-items:center;justify-content:center;
 ">
   <div style="width:100%;max-width:27.5rem;padding:2rem 1.5rem;text-align:center;">
-    <div style="color:var(--orange);font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">Welcome to WheelHouse</div>
-    <h2 style="color:var(--text);font-size:1.5rem;font-weight:600;margin-bottom:0.5rem;letter-spacing:-0.02em;">What's your first ticker?</h2>
-    <p style="color:var(--text3);font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
+    <div style="color:var(--orange);font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;" data-brand="welcome">Welcome to OpTrack</div>
+    <h2 style="color:#f3f4f6;font-size:1.5rem;font-weight:600;margin-bottom:0.5rem;letter-spacing:-0.02em;">What's your first ticker?</h2>
+    <p style="color:#9ca3af;font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
     <input id="onboard-ticker" type="text" placeholder="e.g. SOFI" maxlength="8" style="
       width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;
       padding:0.875rem;color:var(--text);font-size:1.25rem;font-weight:600;text-align:center;
@@ -842,7 +846,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       border:none;border-radius:0.375rem;font-size:0.9375rem;font-weight:600;
       cursor:pointer;transition:opacity 0.2s;
     ">Start Tracking →</button>
-    <div style="margin-top:1rem;color:#4b5563;font-size:0.75rem;">You can rename or delete this ticker later from Settings</div>
+    <div style="margin-top:1rem;color:#9ca3af;font-size:0.75rem;line-height:1.6;">Only trading LEAPs, or have a broker file to import?<br><a href="#" id="onboard-skip" onclick="onboardSkip();return false" style="color:#5eead4">Skip for now</a></div>
   </div>
 </div>
 
@@ -865,22 +869,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   transition:opacity .6s;
 ">
   <div style="position:relative;width:5rem;height:5rem;margin-bottom:1.5rem">
-    <svg viewBox="0 0 120 120" style="width:5rem;height:5rem;animation:wh-spin 3s linear infinite">
-      <circle cx="60" cy="60" r="44" fill="none" stroke="#e8762b" stroke-width="2" opacity="0.85"/>
-      <path d="M 48.61 17.5 A 44 44 0 0 1 17.5 71.39" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-      <path d="M 20.1 74.32 L 17.5 71.39 L 16.72 75.22" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M 28.89 91.11 A 44 44 0 0 1 91.11 91.11" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-      <path d="M 92.35 87.4 L 91.11 91.11 L 94.82 89.87" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M 102.5 71.39 A 44 44 0 0 1 71.39 17.5" fill="none" stroke="var(--orange2)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
-      <path d="M 67.56 18.28 L 71.39 17.5 L 68.46 14.9" fill="none" stroke="var(--orange2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <line x1="60" y1="47" x2="60" y2="20" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
-      <line x1="48.74" y1="66.5" x2="25.36" y2="80" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
-      <line x1="71.26" y1="66.5" x2="94.64" y2="80" stroke="var(--orange)" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="60" cy="60" r="13" fill="var(--orange)" opacity="0.12"/>
-      <circle cx="60" cy="60" r="10" fill="var(--orange)"/>
-      <circle cx="60" cy="60" r="6" fill="#18191c"/>
-      <circle cx="60" cy="60" r="2.5" fill="var(--orange2)"/>
-    </svg>
+    <img src="logo-mark.svg" alt="" style="width:5rem;height:5rem;display:block">
   </div>
   <div id="loading-progress" style="width:11.25rem;height:0.1875rem;background:var(--bg3);border-radius:0.1875rem;overflow:hidden;margin-bottom:0.75rem">
     <div id="loading-bar" style="width:0%;height:100%;background:var(--orange);border-radius:0.1875rem;transition:width .3s"></div>
@@ -896,11 +885,11 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
   <!-- SIDEBAR -->
   <header id="topnav">
-    <div class="tn-brand"><span class="tn-mark"></span>WheelHouse</div>
+    <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg" alt=""><span data-brand="name">OpTrack</span></div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
     <div class="tn-right">
       <button class="btn btn-primary tn-paste" onclick="pasteFill()" title="Add a trade — SmartScan or Manual Entry">+ Add trade</button>
-      <button class="tn-gear" onclick="openSettings()" title="Settings" aria-label="Settings"><svg viewBox="0 0 256 256" width="20" height="20" fill="currentColor"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Z"/></svg></button>
+      <button class="tn-gear" onclick="openSettings()" title="Settings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button>
     </div>
   </header>
   <nav id="tabbar"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
@@ -1061,7 +1050,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mLeap')">Cancel</button><button class="btn btn-primary" onclick="leapRunScan()">SmartScan →</button></div>
     </div>
     <div id="lf-panel-manual">
-    <div id="lf-filled" style="display:none;background:rgba(13,148,136,.12);border:1px solid rgba(13,148,136,.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
+    <div id="lf-filled" style="display:none;background:rgba(255,90,54,.12);border:1px solid rgba(255,90,54,.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
       <div class="fld"><label>Ticker</label><input id="lf-und" type="text" placeholder="TSLA" style="text-transform:uppercase"></div>
       <div class="fld"><label>Strike ($)</label><input id="lf-strike" type="number" step="0.5"></div>
@@ -1131,7 +1120,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     </div>
     <input type="hidden" id="pcc-side" value="sto">
     <div id="pcc-err" style="display:none;color:var(--red);font-size:0.75rem;margin-bottom:0.5rem"></div>
-    <div id="pcc-filled" style="display:none;background:rgba(13,148,136,.12);border:1px solid rgba(13,148,136,.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
+    <div id="pcc-filled" style="display:none;background:rgba(255,90,54,.12);border:1px solid rgba(255,90,54,.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
       <div class="fld"><label>Ticker</label><input id="pcc-und" type="text" readonly style="opacity:.7"></div>
       <div class="fld"><label>Strike ($)</label><input id="pcc-strike" type="number" step="0.5"></div>
@@ -1214,17 +1203,60 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
           <option value="us">MM/DD</option>
         </select>
       </div>
+      <div style="padding:0.25rem 0.875rem;display:flex;flex-direction:column;gap:0.5rem" id="ret-settings">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Monthly return vs</span>
+          <select id="ret-base" onchange="saveReturnSettings()" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem;cursor:pointer"><option value="caw">Capital at work</option><option value="account">Account size</option></select></div>
+        <div id="ret-acct-row" style="display:none;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Account size</span>
+          <input id="ret-account" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 50000" onchange="saveReturnSettings()" style="width:6.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Monthly target</span>
+          <span style="display:flex;align-items:center;gap:0.25rem"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onchange="saveReturnSettings()" style="width:3.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"><span style="font-size:0.75rem;color:var(--text3)">%</span></span></div>
+        <div style="font-size:0.6875rem;color:var(--text3)">Banked profit only. Leave the target empty to switch it off.</div>
+      </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
       <div style="border-top:1px solid var(--border);margin:0"></div>
+      <button id="settings-export" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem" onclick="exportMyData()">⇩ Export my data</button>
+      <a id="settings-legal" href="legal.html" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;text-decoration:none;color:var(--text2)">Privacy, terms &amp; disclaimer</a>
+      <div style="border-top:1px solid var(--border);margin:0"></div>
       <div id="settings-user" style="font-size:0.6875rem;color:var(--text3);padding:0 0.875rem"></div>
+      <div id="settings-plan" style="display:none;font-size:0.75rem;color:var(--text2);padding:0 0.875rem"></div>
       <button id="settings-signout" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;color:var(--red)" onclick="doSignOut()">⎋ Sign Out</button>
+      <button id="settings-delete" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.75rem;color:var(--text3)" onclick="openDeleteAccount()">Delete account…</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Upgrade -->
+<div class="mb" id="mUpgrade">
+  <div class="mbox sm">
+    <div class="mtitle"><span>Pro</span><span class="mx" onclick="closeModal('mUpgrade')">✕</span></div>
+    <div style="padding:0.5rem 0;font-size:0.8125rem;color:var(--text2);line-height:1.5">
+      <p id="upg-feature" style="margin:0 0 0.5rem;font-weight:600;color:var(--text)"></p>
+      <p style="margin:0 0 0.25rem">Pro includes:</p><ul id="upg-list" style="margin:0 0 0.75rem;padding-left:1.1rem"></ul>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap"><button class="btn btn-primary" onclick="startCheckout('monthly')" id="upg-monthly"></button><button class="btn btn-ghost" onclick="startCheckout('yearly')" id="upg-yearly"></button></div>
+      <div id="upg-msg" style="margin-top:0.5rem;font-size:0.75rem;color:var(--text3)"></div>
+      <p style="margin:0.75rem 0 0;font-size:0.6875rem;color:var(--text3)">Cancel any time from Settings. Payments handled securely by Stripe.</p>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Delete account -->
+<div class="mb" id="mDelete">
+  <div class="mbox sm">
+    <div class="mtitle"><span>Delete account</span><span class="mx" onclick="closeModal('mDelete')">✕</span></div>
+    <div style="padding:0.5rem 0;font-size:0.8125rem;color:var(--text2);line-height:1.5">
+      <p style="margin:0 0 0.625rem">This permanently deletes your account and <b>every</b> wheel, trade and LEAP stored with it. It can't be undone.</p>
+      <p style="margin:0 0 0.625rem">Want a copy first? <a href="#" onclick="exportMyData();return false" style="color:var(--orange)">Export my data</a>.</p>
+      <label style="display:block;margin:0 0 0.375rem;font-size:0.75rem;color:var(--text3)">Type DELETE to confirm</label>
+      <input id="delete-confirm" autocomplete="off" oninput="document.getElementById('delete-go').disabled=this.value.trim()!=='DELETE'" style="width:100%;box-sizing:border-box;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:0.5rem">
+      <input id="delete-password" type="password" placeholder="Your password" autocomplete="current-password" style="display:none;width:100%;box-sizing:border-box;margin-top:0.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:0.5rem">
+      <div id="delete-msg" style="margin-top:0.5rem;font-size:0.75rem;color:var(--red)"></div>
+      <button id="delete-go" class="btn btn-full" disabled onclick="doDeleteAccount()" style="margin-top:0.75rem;background:var(--red);color:#fff">Delete my account forever</button>
     </div>
   </div>
 </div>
 
 <script>
 // Theme: the stored value keeps its old meaning ('light' → light, 'dark' → dark); nothing stored → light.
+(function(){var m=/[?&]checkout=(monthly|yearly)/.exec(location.search);if(m){try{sessionStorage.setItem('ot-checkout',m[1]);}catch(e){}history.replaceState(null,'',location.pathname);}})();
 function themeFromStored(v){return v==='dark'?'dark':'light';}
 // Legacy GitHub Pages deployment — redirect to the live app. Never fake a user.
 (function(){
@@ -1255,8 +1287,8 @@ function themeFromStored(v){return v==='dark'?'dark':'light';}
 // FIREBASE — single module context, no execution boundary
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
   apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
@@ -1266,10 +1298,12 @@ const _firebaseConfig = {
   messagingSenderId: "466853706084",
   appId: "1:466853706084:web:7278a179265e8e540ba271"
 };
-const _app  = initializeApp(_firebaseConfig);
-const _auth = getAuth(_app);
-const _fsDb = getFirestore(_app);
-const _googleProvider = new GoogleAuthProvider();
+// Demo (/demo): Firebase is never initialised, so nothing can sign in, read or write a real account.
+const APP_DEMO = !!(window.OT_DEMO && window.OT_DEMO.active);
+const _app  = APP_DEMO ? null : initializeApp(_firebaseConfig);
+const _auth = APP_DEMO ? null : getAuth(_app);
+const _fsDb = APP_DEMO ? null : getFirestore(_app);
+const _googleProvider = APP_DEMO ? null : new GoogleAuthProvider();
 
 // Scoped UID — only set after onAuthStateChanged confirms a valid user
 let _confirmedUid = null;
@@ -1344,7 +1378,7 @@ async function loadDBFromFirestore(userId){
   render();
   // Show onboarding only after a confirmed-successful load with genuinely no rotations
   const ob=document.getElementById('onboard-overlay');
-  if(ob)ob.style.display=(!db.wheels||db.wheels.length===0)?'flex':'none';
+  if(ob)ob.style.display=needsOnboarding(db,localStorage.getItem('wh-onboardSkipped')==='1')?'flex':'none';
 }
 
 // Firestore helpers
@@ -1357,34 +1391,46 @@ function _stripUndefined(o){
   return Object.fromEntries(Object.entries(o).filter(([,v])=>v!==undefined));
 }
 function _saveWheel(wheel){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
   const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),_stripUndefined(wheel))
     .catch(e=>console.error('Wheel save failed:',e));
 }
 function _saveTrade(trade){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
   const uid=_currentUid();if(!uid||!trade||!trade.id)return;
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),_stripUndefined(trade))
     .catch(e=>console.error('Trade save failed:',e));
 }
 let _optsLoadError='';
+// Live prices (optchain/Cboe/Finnhub marks + greeks) live in memory only — never written to Firestore.
+// Only a mark the user typed (markSrc==='manual') is persisted.
+function _persistableLeg(leg){
+  if(!leg||leg.markSrc==='manual')return leg;
+  const o={...leg};o.mark=null;o.markSrc=null;o.markAt=null;o.delta=null;o.theta=null;o.iv=null;delete o.markWhy;delete o.markNote;return o;
+}
 function _saveOpt(leg){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
   if(optDemo||(leg&&leg.demo)){_demoNotSaved();return;}
   const uid=_currentUid();if(!uid||!leg||!leg.id)return;
-  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(leg))
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(_persistableLeg(leg)))
     .catch(e=>{console.error('Option save failed:',e);toastOptErr(e);});
 }
 function _deleteOptDoc(id){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
   if(optDemo||String(id).startsWith('demo-')){_demoNotSaved();return;}
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'optlegs',id)).catch(e=>console.error('Option delete failed:',e));
 }
 function toastOptErr(e){if(/permission/i.test(e&&e.message||''))alert('Could not save option position: Firestore rules do not allow the optlegs collection yet. Ask for the optlegs Firestore rule (docs/OPTIONS.md).');}
 function _deleteWheelDoc(wheelId){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheelId))
     .catch(e=>console.error('Wheel delete failed:',e));
 }
 function _deleteTradeDoc(tradeId){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
   const uid=_currentUid();if(!uid)return;
   _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'trades',tradeId))
     .catch(e=>console.error('Trade delete failed:',e));
@@ -1541,7 +1587,8 @@ function optionsLib(){
       if(l.type!=='C'&&l.type!=='P')out.push({sev:'red',legId:l.id,text:`${nm(l)} is neither call nor put`});
       if(l.side!=='long'&&l.side!=='short')out.push({sev:'red',legId:l.id,text:`${nm(l)} has no long/short side`});
       if(l.entryPrice==null||l.entryPrice==='')out.push({sev:'amber',legId:l.id,text:`${nm(l)} has no entry premium`});
-      if(l.status==='open'&&l.expiry&&l.expiry<today)out.push({sev:'amber',legId:l.id,text:`${nm(l)} expired ${l.expiry} but is still open — close, expire or record assignment`});
+      if(l.status==='open'&&l.expiry&&l.expiry<today&&l.side==='long'&&l.type==='C'&&!l.parentLeapId)out.push({sev:'amber',legId:l.id,text:`${l.underlying} LEAP expired — close it`});
+      else if(l.status==='open'&&l.expiry&&l.expiry<today)out.push({sev:'amber',legId:l.id,text:`${nm(l)} expired ${l.expiry} but is still open — close, expire or record assignment`});
       if(l.status==='closed'&&(l.closePrice==null||!l.closeDate))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is closed but has no close price/date`});
       if(l.closeDate&&l.entryDate&&l.closeDate<l.entryDate)out.push({sev:'red',legId:l.id,text:`${nm(l)} closed before it was opened`});
       if(l.entryDate&&l.expiry&&l.entryDate>l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} opened after its expiry`});
@@ -1593,7 +1640,11 @@ function calcWheel(wheel){
   let unrealised=null;
   if(wheel.lastPrice!=null&&sharesHeld>0){unrealised=(wheel.lastPrice*sharesHeld)-netCashOut;}
   const lastTrade=trades.length?trades[trades.length-1]:null;
-  return{credits,debits,netPnL,premiumNet,premiumCredits,premiumDebits,sharesHeld,breakeven,shareCost,unrealised,trades,lastTrade,netCashOut};
+  // Realised only: premium banked when a sell is bought back, expires, or is assigned/called away. Never premium on an open option.
+  const premiumRealised=Math.round(realisedPremium(trades.map(t=>({...t,wheelId:wheel.id}))).events.reduce((a,e)=>a+e.amount,0)*100)/100;
+  const shareRealised=shareRealisations(trades.map(t=>({...t,wheelId:wheel.id}))).events.reduce((a,e)=>a+e.pnl,0);
+  const realisedPnL=Math.round((premiumRealised+shareRealised+divs)*100)/100;
+  return{credits,debits,netPnL,premiumNet,premiumRealised,realisedPnL,premiumCredits,premiumDebits,sharesHeld,breakeven,shareCost,unrealised,trades,lastTrade,netCashOut};
 }
 
 // Annualised Return on Capital — capital at risk = highest CSP strike × shares
@@ -1613,14 +1664,14 @@ function calcAROC(wheel,m){
   }
   last.setHours(0,0,0,0);
   const days=Math.max(1,Math.round((last-first)/86400000)+1);
-  const roc=(m.premiumNet/cap)*100;
+  const roc=((m.premiumRealised||0)/cap)*100; // realised premium only
   if(wheel.status==='open'&&days<14)return{roc,aroc:null,cap,days}; // too young to annualise
   return{roc,aroc:roc*(365/days),cap,days};
 }
 
 
 // ── New metrics (display only, read-only over trades/legs) ──
-// Whole-cycle return: (premium + realised shares + dividends [+ unrealised if open]) ÷ capital (same capital rule as calcAROC).
+// Whole-cycle return: realised only — (realised premium + realised shares + dividends) ÷ capital (same capital rule as calcAROC).
 // Annualised over first trade → end (closed: last trade/expiry; open: today). Under 7 days: raw return only.
 function cycleReturn(wheel,m,rss,divs,today){
   if(!m.trades.length)return null;
@@ -1629,8 +1680,8 @@ function cycleReturn(wheel,m,rss,divs,today){
   if(!cap&&rss&&rss.openShares>0)cap=rss.openCost;
   if(!cap)return null;
   const isOpen=wheel.status==='open';
-  const un=isOpen&&rss&&rss.unrealised!=null?rss.unrealised:0;
-  const realised=m.premiumNet+((rss&&rss.realised)||0)+(divs||0);
+  const un=0; // realised only: open shares/options never count
+  const realised=(m.premiumRealised||0)+((rss&&rss.realised)||0)+(divs||0);
   const total=realised+un;
   const dates=m.trades.map(t=>t.entered).filter(Boolean).sort();
   let end=isOpen?(today||new Date().toISOString().slice(0,10)):dates[dates.length-1];
@@ -1683,35 +1734,49 @@ function realisedPremium(trades,today){
   });
   return{events,open};
 }
+// Capital at work right now, the one figure used on Home and in More stats.
+function currentCapitalAtWork(){
+  const sr=shareRealisations(db.trades);
+  const shareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((sr.open[w.id]||{}).cost||0),0);
+  return capitalAtWork(calcCapitalStats().atRisk,shareCost,db.opts||[],null);
+}
+// Pure: capital at work as % of the account size the user set; null when no account size.
+function utilisation(cawTotal,accountSize){return accountSize>0?Math.round(cawTotal/accountSize*1000)/10:null;}
 // Money tied up now: open put collateral + open share cost (wheel), and open long LEAP cost (separate).
 function capitalAtWork(putCollateral,shareCost,legs,accountSize){
   const leaps=(legs||[]).filter(l=>l.status==='open'&&l.side==='long'&&!l.demo).reduce((a,l)=>a+OPTS.legPnL(l).costBasis,0);
   const wheel=(putCollateral||0)+(shareCost||0),total=wheel+leaps;
   return{puts:putCollateral||0,shares:shareCost||0,wheel,leaps,total,pct:accountSize>0?total/accountSize*100:null};
 }
-// Pure: month's realised sold-option profit as % of capital at work; null when no capital. ok = hit 2% target.
-function monthReturnPct(profit,capital){
+// Return settings: what monthly return % is measured against, and an optional monthly target.
+// base 'caw' = capital at work (worked out by the app), 'account' = an account size the user types in.
+// target: a % or null (Off). Default for new users: capital at work, target Off. Accounts with trades from
+// before this setting existed (entered before RET_LEGACY_BEFORE) keep the old 2% target unless changed.
+const RET_LEGACY_BEFORE='2026-11-02';
+function returnSettings(raw,trades,legs){
+  let s=null;try{s=raw?JSON.parse(raw):null;}catch(e){}
+  if(!s||typeof s!=='object'){
+    const old=(trades||[]).some(t=>t.entered&&t.entered<RET_LEGACY_BEFORE)||(legs||[]).some(l=>!l.demo&&l.entryDate&&l.entryDate<RET_LEGACY_BEFORE);
+    s={base:'caw',account:0,target:old?2:null};
+  }
+  const account=+s.account>0?+s.account:0,target=+s.target>0?+s.target:null;
+  return{base:s.base==='account'&&account>0?'account':'caw',account,target};
+}
+// Pure: the figure the month's return is measured against.
+function returnBase(rs,cawTotal){return rs&&rs.base==='account'&&rs.account>0?rs.account:(cawTotal||0);}
+// Pure: month's realised profit as % of the base; null when no base. ok = hit the target (null when target is Off).
+function monthReturnPct(profit,capital,target){
   if(!(capital>0))return null;
-  const pct=(profit||0)/capital*100;return{pct,ok:pct>=2};
+  const pct=(profit||0)/capital*100;return{pct,ok:target>0?pct>=target:null};
 }
 // Monthly P&L — group all trades by YYYY-MM
 function calcMonthlyPnL(){
-  const mo={};
-  db.trades.forEach(t=>{
-    if(!t.entered)return;
-    const ym=t.entered.slice(0,7);
-    if(!mo[ym])mo[ym]={credits:0,debits:0,pCr:0,pDb:0};
-    const v=t.total||0;
-    switch(t.action){
-      case'CSP': mo[ym].credits+=v;mo[ym].pCr+=v;break;
-      case'BTC': mo[ym].debits+=v;mo[ym].pDb+=v;break;
-      case'STOC':mo[ym].credits+=v;mo[ym].pCr+=v;break;
-      case'STC': mo[ym].credits+=v;mo[ym].pCr+=v;break;
-      case'IN':  mo[ym].debits+=v;break;
-      case'OUT': mo[ym].credits+=v;break;
-      case'DIV': mo[ym].credits+=v;break;
-    }
-  });
+  // Realised only, booked on the day it was banked: option premium when bought back / expired / assigned,
+  // share sales (FIFO), dividends. Premium on still-open options never counts.
+  const mo={},M=ym=>mo[ym]=mo[ym]||{credits:0,debits:0,pCr:0,pDb:0};
+  realisedPremium(db.trades).events.forEach(e=>{if(!e.date)return;const r=M(e.date.slice(0,7));if(e.amount>=0){r.pCr+=e.amount;r.credits+=e.amount;}else{r.pDb-=e.amount;r.debits-=e.amount;}});
+  shareRealisations(db.trades).events.forEach(e=>{if(!e.date)return;const r=M(e.date.slice(0,7));if(e.pnl>=0)r.credits+=e.pnl;else r.debits-=e.pnl;});
+  db.trades.forEach(t=>{if(t.action==='DIV'&&t.entered)M(t.entered.slice(0,7)).credits+=t.total||0;});
   return Object.entries(mo).sort(([a],[b])=>a.localeCompare(b)).map(([ym,v])=>({
     ym,
     label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),
@@ -1762,25 +1827,27 @@ function _priceOf(w){return (typeof quotes!=='undefined'&&quotes[w.ticker]?.pric
 // ── All options, by month (READ-ONLY: reads db.trades via calcMonthlyPnL and db.opts; writes nothing) ──
 // Options realised P&L by close date (expired → expiry if no close date). Open legs only feed the "open, not yet banked" line.
 function optsMonthly(legs){
-  const mo={},gain={},loss={},lgain={},lloss={};let openPl=0,unmarked=0,openN=0;
+  const mo={},gain={},loss={},lgain={},lloss={},cc={};let openPl=0,unmarked=0,openN=0,ccOpenPl=0,ccUnmarked=0,ccOpenN=0;
   (legs||[]).forEach(l=>{
     const p=OPTS.legPnL(l);
-    if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;return;}
+    if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;if(l.side==='short'){ccOpenN++;if(p.unrealized==null)ccUnmarked++;else ccOpenPl+=p.unrealized;}return;}
     const d=l.closeDate||l.expiry;if(!d)return;const ym=d.slice(0,7);mo[ym]=(mo[ym]||0)+p.realized;
     const G=v=>{if(v>=0)gain[ym]=(gain[ym]||0)+v;else loss[ym]=(loss[ym]||0)-v;};
-    if(l.side==='short'){G(p.openCash);G(p.realized-p.openCash);} // short calls (PMCC) like wheel options: credit collected, buyback cost as loss
+    if(l.side==='short'){G(p.openCash);G(p.realized-p.openCash);cc[ym]=(cc[ym]||0)+p.realized;} // short calls (PMCC) like wheel options: credit collected, buyback cost as loss
     else{const v=p.realized;if(v>=0)lgain[ym]=(lgain[ym]||0)+v;else lloss[ym]=(lloss[ym]||0)-v;} // long LEAPs: kept out of option income, own table
   });
-  Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);
-  return{byMonth:mo,gain,loss,lgain,lloss,openPl:Math.round(openPl*100)/100,unmarked,openN};
+  Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);Object.keys(cc).forEach(k=>cc[k]=Math.round(cc[k]*100)/100);
+  // ccByMonth/ccOpen*: PMCC short calls only (no LEAP legs) — for monthly-return style tables
+  return{ccByMonth:cc,ccOpenPl:Math.round(ccOpenPl*100)/100,ccUnmarked,ccOpenN,byMonth:mo,gain,loss,lgain,lloss,openPl:Math.round(openPl*100)/100,unmarked,openN};
 }
 function allOptionsByMonth(wheelMonthly,legs,today){
   const W={};(wheelMonthly||[]).forEach(m=>W[m.ym]=m.pNet);
   const O=optsMonthly(legs),yr=(today||new Date().toISOString()).slice(0,4);
-  const yms=[...new Set([...Object.keys(W),...Object.keys(O.byMonth)])].sort().reverse();
-  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.byMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
+  // Covered calls only: realised PMCC short-call premium. Closed LEAPs live in Shares & LEAPs P&L, never here.
+  const yms=[...new Set([...Object.keys(W),...Object.keys(O.ccByMonth)])].sort().reverse();
+  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.ccByMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
   const sum=(f,yr0)=>Math.round(rows.filter(r=>!yr0||r.ym.startsWith(yr0)).reduce((a,r)=>a+r[f],0)*100)/100;
-  return{rows,ytd:{wheel:sum('wheel',yr),opts:sum('opts',yr),total:sum('total',yr),year:yr},all:{wheel:sum('wheel'),opts:sum('opts'),total:sum('total')},open:{pl:O.openPl,unmarked:O.unmarked,n:O.openN}};
+  return{rows,ytd:{wheel:sum('wheel',yr),opts:sum('opts',yr),total:sum('total',yr),year:yr},all:{wheel:sum('wheel'),opts:sum('opts'),total:sum('total')},open:{pl:O.ccOpenPl,unmarked:O.ccUnmarked,n:O.ccOpenN}};
 }
 function renderAllOptionsByMonth(monthly){
   const A=allOptionsByMonth(monthly,db.opts||[],new Date().toISOString().slice(0,10));
@@ -1792,10 +1859,10 @@ function renderAllOptionsByMonth(monthly){
   const row=(a,b,c,d,st='')=>`<div class="d-table-row" style="grid-template-columns:${cols};${st}"><span>${a}</span><span style="text-align:right">${b}</span><span style="text-align:right">${c}</span><span style="text-align:right;font-weight:600">${d}</span></div>`;
   const body=A.rows.map(r=>row(two(r.label,new Date(r.ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'2-digit'})),m(r.wheel),m(r.opts),m(r.total))).join('');
   const tot=row(`<b>${two('Year to date '+A.ytd.year,'YTD')}</b>`,m(A.ytd.wheel),m(A.ytd.opts),m(A.ytd.total),'background:var(--bg3)')+row('<b>All time</b>',m(A.all.wheel),m(A.all.opts),m(A.all.total),'background:var(--bg3)');
-  const openH=`<div style="padding:0.5625rem 1.25rem;font-size:0.6875rem;color:var(--text3);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center"><span><b style="color:var(--text2)">Open, not yet banked:</b> ${A.open.n?m(A.open.pl):'—'}</span><span>${A.open.n} open LEAP${A.open.n!==1?'s':''} &amp; short calls${A.open.unmarked?` · ${A.open.unmarked} without a mark`:''} · moves with prices, not in the months above${optDemo?' · <b style="color:#fcd34d">options figures are DEMO</b>':''}</span></div>`;
+  const openH=`<div style="padding:0.5625rem 1.25rem;font-size:0.6875rem;color:var(--text3);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center"><span><b style="color:var(--text2)">Open covered calls, not yet banked:</b> ${A.open.n?m(A.open.pl):'—'}</span><span>${A.open.n} open covered call${A.open.n!==1?'s':''} (premium not banked yet; LEAPs not included)${A.open.unmarked?` · ${A.open.unmarked} without a mark`:''} · moves with prices, not in the months above${optDemo?' · <b style="color:#fcd34d">options figures are DEMO</b>':''}</span></div>`;
   return`<div class="d-panel mo-pnl">
-      <div class="d-panel-hdr"><span class="d-panel-title">All options, by month</span><span class="d-panel-count">wheel premium + realised LEAPs &amp; covered calls</span></div>
-      <div class="d-panel-body"><div class="d-table-hdr" style="grid-template-columns:${cols}"><span>Month</span><span style="text-align:right">Wheel</span><span style="text-align:right">${two('LEAPs &amp; CCs','LEAPs+CC')}</span><span style="text-align:right">Total</span></div>
+      <div class="d-panel-hdr"><span class="d-panel-title">All options, by month</span><span class="d-panel-count">wheel premium + covered calls</span></div>
+      <div class="d-panel-body"><div class="d-table-hdr" style="grid-template-columns:${cols}"><span>Month</span><span style="text-align:right">Wheel</span><span style="text-align:right">${two('Covered calls','CCs')}</span><span style="text-align:right">Total</span></div>
       <div style="max-height:26.25rem;overflow-y:auto">${body}</div>${tot}${openH}</div>
     </div>`;
 }
@@ -1815,10 +1882,10 @@ function calcOverall(){
     else{
       closed++;
       // Win/loss on option income (premium net) for this rotation
-      if(m.premiumNet>=0)wins++;else losses++;
+      if(m.premiumRealised>=0)wins++;else losses++;
     }
   });
-  const pNet=pc-pd;
+  const pNet=Math.round(db.wheels.reduce((a,w)=>a+calcWheel(w).premiumRealised,0)*100)/100; // realised only
   // totalRealised = everything except currently-open stock positions
   const totalRealised=pNet+stockRealised+divs;
   const tot=wins+losses;
@@ -1909,6 +1976,8 @@ function calcYTD(){
     else if(t.action==='IN')stockIn+=v;
     else if(t.action==='DIV')divs+=v;
   });
+  // realised only: premium banked this year (bought back / expired / assigned), never open sells
+  sc=0;sd=0;realisedPremium(db.trades).events.forEach(e=>{if(!e.date||e.date<start)return;if(e.amount>=0)sc+=e.amount;else sd-=e.amount;});
   const optNet=sc-sd;
   // Share Realised P&L this year: each sale this year against its own rotation's FIFO cost (may be negative)
   const stockIncome=shareRealisations(db.trades).events.filter(e=>e.date>=start).reduce((a,e)=>a+e.pnl,0);
@@ -2071,6 +2140,20 @@ async function fetchSymbol(sym){
   quotes[sym]={price:j.c,prev:j.pc,change:j.d,pct:j.dp,state:'REGULAR'};
 }
 
+// Pre-market / after-hours price: display only, memory only. Never feeds To strike, Needs you, values or P&L.
+let extq={};
+async function fetchExtQuotes(syms){
+  if(!syms.length||!canUse('extended-hours')){extq={};return;}
+  try{const r=await fetch(`/.netlify/functions/extquote?symbols=${encodeURIComponent(syms.join(','))}`,{signal:AbortSignal.timeout(10000)});
+    extq=r.ok?(await r.json())||{}:{};}catch(e){extq={};}
+}
+function extLine(sym,now){
+  const e=extq&&extq[sym];now=now||Date.now();
+  if(!e||!(e.price>0)||!(e.base>0)||now-e.at>15*60000)return'';
+  const pct=(e.price/e.base-1)*100,sg=pct>=0?'+':'−';
+  return`${e.session==='pre'?'Pre-market':'After hours'} $${e.price.toFixed(2)} (${sg}${Math.abs(pct).toFixed(1)}%)`;
+}
+function extHtml(sym,style){const t=extLine(sym);return t?`<span class="ext-px" style="color:var(--text3);font-size:0.6875rem;font-weight:400;white-space:nowrap;${style||''}">${t}</span>`:'';}
 async function fetchLogo(sym){
   if(sym.startsWith('^')||logos[sym]!==undefined)return;
   try{
@@ -2099,14 +2182,15 @@ async function fetchAllQuotes(){
       try{await fetchSymbol(sym);}catch(e){console.warn('Quote fetch:',sym,e.message);}
       if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
     }
+    await fetchExtQuotes(allSyms);
+    _applyWheelMarks();
     // Wait for logos to finish too
     await Promise.allSettled(logoPromises);
     const nOk=Object.keys(quotes).length;
     if(nOk>0){
       db.wheels.forEach(w=>{
         if(w.status==='open'&&quotes[w.ticker]&&w.lastPrice!==quotes[w.ticker].price){
-          w.lastPrice=quotes[w.ticker].price;
-          _saveWheel(w); // persist only real changes — not every wheel every poll
+          w.lastPrice=quotes[w.ticker].price; // in memory only — live prices are never saved
         }
       });
       render();
@@ -2182,6 +2266,7 @@ function goToTrade(wheelId,tradeId){
 // Clear the sticky highlight once an action lands on the focused trade (save, delete, expire)
 function _clearFocus(id){if(_focusTid&&(!id||_focusTid===id)){_focusTid=null;}}
 function switchView(v){
+  if(v==='analytics'&&!canUse('analytics')){openUpgrade('analytics');return;}
   view=v;
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
   render();
@@ -2203,6 +2288,7 @@ function _saveUIState(){
 }
 
 function render(){
+  {const b=document.querySelector('.tn-paste');if(b)b.style.display=(view==='positions'||view==='options')?'none':'';} // Wheel tab: cards have their own Add trade; LEAPs tab: has + LEAP
   _saveUIState();
   renderSidebar();
   const c=document.getElementById('content');
@@ -2354,12 +2440,17 @@ function splitLeapLegs(legs){
     other.push(...g);});
   return{leaps,other,shorts};
 }
+// LEAP card Unrealised %: the LEAP's own gain ÷ what was paid for it (fees included), like Robinhood's total return. Null without a price.
+function leapUnrealPct(S){if(!S||S.expired||S.pl==null||!(S.cost>0))return null;return Math.round(S.pl/S.cost*10000)/100;}
 function leapStats(l,spot,today){
   const q=+l.qty||0,mark=l.mark!=null&&l.mark!==''?+l.mark:null,paid=+l.entryPrice||0;
   const left=OPTS.dte(l.expiry,today),total=l.entryDate?OPTS.dte(l.expiry,l.entryDate):null;
   const intr=spot>0?Math.max(0,spot-(+l.strike)):null;
   const tv=mark!=null&&intr!=null?Math.max(0,mark-intr):null;
   const p=OPTS.legPnL(l),cost=paid*100*q+(+l.fees||0);
+  const expired=l.status==='open'&&left!=null&&left<0; // past expiry but not closed: value unknown until it's closed
+  if(expired)return{q,mark:null,paid,left,total,prog:1,spot,intr:null,tv:null,value:null,cost,pl:null,expired:true,
+    be:(+l.strike)+paid,beDist:spot>0?((+l.strike)+paid)/spot*100-100:null,dsh:null,thd:null};
   const g=l.status==='open'?OPTS.legGreeks(l,spot,today):null;
   return{q,mark,paid,left,total,prog:left!=null&&total>0?Math.min(1,Math.max(0,1-left/total)):null,spot,intr,tv,
     value:mark!=null?mark*100*q:null,cost,pl:l.status==='open'?p.unrealized:p.realized,
@@ -2374,7 +2465,7 @@ function pmccShortsFor(leap,legs){
 }
 function pmccStats(leap,legs,today){
   const sh=pmccShortsFor(leap,legs),q=+leap.qty||0;
-  let net=0;sh.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?p.openCash:p.realized;});net=Math.round(net*100)/100;
+  let net=0;sh.forEach(l=>{const p=OPTS.legPnL(l);if(l.status!=='open')net+=p.realized;});net=Math.round(net*100)/100;
   const cost=(+leap.entryPrice||0)*100*q+(+leap.fees||0),adj=cost-net,adjPerSh=q?adj/(100*q):0;
   const open=sh.filter(l=>l.status==='open').sort((a,b)=>(a.expiry||'').localeCompare(b.expiry||''));
   const past=sh.filter(l=>l.status!=='open').sort((a,b)=>(b.closeDate||b.expiry||'').localeCompare(a.closeDate||a.expiry||''));
@@ -2494,7 +2585,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       ts=toStrike(spot,+c.strike).text;
       const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=ppdCellHtml(t.total/t.days,t.days);
       const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
-      if(mark!=null&&sold>0){const cc=capturedCellHtml(Math.round((sold-mark)/sold*100),pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),true);cap=cc.html;capColor=cc.color;}
+      if(mark!=null&&sold>0){const cc=capturedCellHtml(Math.round((sold-mark)/sold*100),pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),true);cap=`<span title="${esc(c.markNote||('Buy-back price $'+(+mark).toFixed(2)))}">${cc.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;capColor=cc.color;}
     }else{
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
@@ -2530,11 +2621,26 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
     <span style="display:flex;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="openPmccLegEdit('${esc(e.legId)}');event.stopPropagation()">Edit</button></span>
   </div>`;
 }
+// Long trade lists: show the newest `limit` rows only (no DOM for the rest). Open legs always shown; a roll chain is never split.
+const listShowAll=new Set(); // per card, memory only
+function listCut(n,chainIdx,isOpen,limit,all){
+  const all_=[...Array(n).keys()];if(all||n<=limit)return all_;
+  const keep=new Set(all_.slice(0,limit));all_.forEach(i=>{if(isOpen[i])keep.add(i);});
+  const ch=new Set();keep.forEach(i=>{if(chainIdx[i]!=null)ch.add(chainIdx[i]);});
+  all_.forEach(i=>{if(chainIdx[i]!=null&&ch.has(chainIdx[i]))keep.add(i);});
+  return all_.filter(i=>keep.has(i));
+}
+function listMoreBtn(id,n,shown){
+  if(n<=10)return'';const on=listShowAll.has(id);if(!on&&shown>=n)return'';
+  return`<div class="list-more" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" style="color:var(--text3)" onclick="toggleListAll('${esc(id)}')">${on?'Show less':`Show all (${n})`}</button></div>`;
+}
+function toggleListAll(id){listShowAll.has(id)?listShowAll.delete(id):listShowAll.add(id);render();}
 function renderPmcc(leap,today,spot){
   const ev=pmccShortEvents(leap,db.opts||[]);
   const cmap=pmccChainMap(ev);
-  const chainOut={},rowHtml=ev.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
-  const rows=hoistChainLines(ev.map(e=>cmap[e.legId]),rowHtml,chainOut);
+  const keep=listCut(ev.length,ev.map(e=>cmap[e.legId]!=null?'c'+cmap[e.legId]:'l'+e.legId),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
+  const chainOut={},rowHtml=evS.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
+  const rows=hoistChainLines(evS.map(e=>cmap[e.legId]),rowHtml,chainOut)+listMoreBtn(leap.id,ev.length,keep.length);
   return`<div class="trade-body open pmcc-open pmcc-trades">${tradeTableHead({lastCol:'Captured',toStrike:true})}
     ${rows||'<div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3)">No short calls yet.</span></div>'}
   </div>`;
@@ -2568,6 +2674,16 @@ function savePmccLeg(){
 function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
 // Pure: share of the LEAP's cost won back by calls sold against it (0–100, whole %).
 function leapPayback(cost,net){return{pct:cost>0?Math.max(0,Math.min(100,Math.round(net/cost*100))):0};}
+// LEAP card header: stock price + today's move (regular session; out of hours it's the last close) + distance from strike. Pure.
+function leapSpotHtml(q,strike,open){
+  if(!q||!(q.price>0))return '';
+  const pct=q.pct!=null&&q.state!=='DELAYED'?q.pct:null,up=pct!=null&&pct>=0;
+  const mv=pct!=null?` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}%</span>`:'';
+  const tag=open?'':' <span style="color:var(--text3);font-weight:400">close</span>';
+  const d=strike>0?(q.price-strike)/strike*100:null;
+  const vs=d!=null?` <span style="color:var(--text3);font-weight:400">· ${Math.abs(d).toFixed(1)}% ${d>=0?'above':'below'} strike</span>`:'';
+  return `<span class="lc-spot" style="margin-left:0.75rem;font-size:0.7rem;font-weight:600">$${q.price.toFixed(2)}${mv}${tag}${vs}</span>`;
+}
 function renderLeapCard(l,spot,today){
   const S=leapStats(l,spot,today),open=l.status==='open';
   const plH=S.pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${S.pl>=0?'g':'r'}">${S.pl>=0?'+':''}${fmtMoney(S.pl).replace(/\.\d\d$/,'')}${S.cost>0?` <small>(${S.pl>=0?'+':''}${(S.pl/S.cost*100).toFixed(1)}%)</small>`:''}</span>`;
@@ -2580,7 +2696,7 @@ function renderLeapCard(l,spot,today){
   if(open){
     const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
     row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Value</div><div class="val">${S.value!=null?fmtMoney(S.value).replace(/\.\d\d$/,''):'—'}</div></div><div><div class="rmb-lbl">P&amp;L</div><div class="pl">${plH}</div></div></div>
-    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>${S.left!=null?`<b>${S.left}</b> days left`:'—'}</span></div>
+    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>${S.expired?'Expired':S.left!=null?`<b>${S.left}</b> days left`:'—'}</span></div>
       <div class="leap-bar"><i style="width:${S.prog!=null?(S.prog*100).toFixed(0):0}%"></i></div>
       ${S.tv!=null?`<div class="leap-split">${inW>0?`<div class="in" style="width:${Math.max(inW,12)}%">Intrinsic $${S.intr.toFixed(2)}</div>`:''}<div class="tv">Time $${S.tv.toFixed(2)}</div></div>`:''}</div>
     <div class="rmb-col"><div class="rmb-lbl">Breakeven</div><div class="rmb-val">$${S.be.toFixed(2)}</div><div class="rmb-sub">${S.beDist!=null?`${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:'no spot'}</div></div>
@@ -2596,11 +2712,11 @@ function renderLeapCard(l,spot,today){
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.left!=null?` · ${S.left} days left`:''}</span></div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span><span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
-    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls sold against it.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div></div>
-    <div><div class="lc-k">Unrealised</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div></div>
+    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div><div class="lc-pct ${P.net>0?'g':P.net<0?'r':'m'}" style="font-size:0.6875rem;font-weight:600">Calls collected ${P.net<0?'−':''}${m0(Math.abs(P.net))}</div></div>
+    <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
   ${renderPmcc(l,today,spot)}
@@ -2611,6 +2727,38 @@ function renderLeapCard(l,spot,today){
   <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
   <div class="leap-row">${row}</div>${renderPmcc(l,today,spot)}</div>`;
 }
+// LEAPs tab tiles: sums that make sense across many LEAPs. Calls/adj match each card's "Cost after calls".
+function leapTileTotals(openL,legs,spots,today){
+  let cost=0,value=0,pcost=0,priced=0,noPrice=0,calls=0;
+  (openL||[]).filter(l=>!l.demo).forEach(l=>{const S=leapStats(l,(spots||{})[l.underlying],today),P=pmccStats(l,legs,today);
+    cost+=S.cost;if(S.value==null)noPrice++;else{value+=S.value;pcost+=S.cost;priced++;}calls+=P.net;});
+  const r=n=>Math.round(n*100)/100;
+  // Value now vs what those same priced LEAPs cost: % and colour (g above cost, r below, '' level/unknown).
+  const pc=r(pcost),vv=r(value),pct=priced&&pc>0?Math.round((vv-pc)/pc*10000)/100:null;
+  return{n:priced+noPrice,cost:r(cost),value:vv,pricedCost:pc,valuePct:pct,valueCls:pct==null||vv===pc?'':vv>pc?'g':'r',priced,noPrice,calls:r(calls),adj:r(cost-calls)};
+}
+// Pure: realised short-call premium across all LEAPs (closed/expired calls only), all time and this month.
+function leapCallsBanked(leaps,legs,today){
+  const seen=new Set();let all=0,month=0;const ym=(today||'').slice(0,7);
+  (leaps||[]).filter(l=>!l.demo).forEach(L=>pmccShortsFor(L,legs).forEach(c=>{if(seen.has(c.id)||c.status==='open')return;seen.add(c.id);
+    const r=OPTS.legPnL(c).realized||0;all+=r;if(String(c.closeDate||c.expiry||'').slice(0,7)===ym)month+=r;}));
+  const rd=n=>Math.round(n*100)/100;return{all:rd(all),month:rd(month)};
+}
+// Pure: the single most urgent LEAP item. Expired LEAP first, then whichever is soonest:
+// an open short call's expiry, a LEAP under 90 days left, or a review date reached.
+function leapNextAct(openL,legs,today){
+  const c=[],k=v=>'$'+String(+v).replace(/\.0+$/,'');
+  (openL||[]).filter(l=>!l.demo).forEach(l=>{
+    const left=OPTS.dte(l.expiry,today),name=`${l.underlying} ${k(l.strike)}C`;
+    if(left!=null&&left<0){c.push({rank:-1,id:l.id,text:`${name} LEAP has expired: close it`,cls:'r'});return;}
+    if(left!=null&&left<90)c.push({rank:left,id:l.id,text:`${name} LEAP: ${left} day${left===1?'':'s'} left`,cls:left<30?'r':'y'});
+    if(l.reviewDate&&l.reviewDate<=today)c.push({rank:0,id:l.id,text:`${name} LEAP: review date reached`,cls:'y'});
+    pmccShortsFor(l,legs).filter(x=>x.status==='open').forEach(x=>{const d=OPTS.dte(x.expiry,today);if(d==null)return;
+      c.push({rank:d,id:l.id,text:`${x.underlying} ${k(x.strike)}C ${d<0?'expired: close it':d===0?'expires today':`expires in ${d} day${d===1?'':'s'}`}`,cls:d<=3?'r':d<=14?'y':''});});
+  });
+  c.sort((a,b)=>a.rank-b.rank);return c[0]||null;
+}
+function goToLeap(id){collapsedLeaps.delete(id);if(leapStatus!=='open')leapStatus='open';switchView('options');setTimeout(()=>{const e=document.querySelector(`[data-leap="${CSS.escape(id)}"]`);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 function renderOptions(){
   const legs=db.opts||[];
   const today=new Date().toISOString().slice(0,10),spots=_optSpots();
@@ -2618,18 +2766,21 @@ function renderOptions(){
   const openL=leaps.filter(l=>l.status==='open');
   const shown=(leapStatus==='open'?openL:leaps.filter(l=>l.status!=='open'))
     .sort((a,b)=>leapStatus==='open'?(a.expiry||'').localeCompare(b.expiry||''):(b.closeDate||'').localeCompare(a.closeDate||''));
-  // summary (open LEAPs)
-  let val=0,cost=0,pl=0,dsh=0,thd=0,tv=0,unmarked=0,noG=0;
-  openL.forEach(l=>{const S=leapStats(l,spots[l.underlying],today);cost+=S.cost;
-    if(S.value==null)unmarked++;else{val+=S.value;pl+=S.pl||0;}
-    if(S.tv!=null)tv+=S.tv*100*S.q;if(S.dsh==null)noG++;else{dsh+=S.dsh;thd+=S.thd;}});
+  // summary (open LEAPs) — totals that add up across many LEAPs on different stocks
+  const T=leapTileTotals(openL,legs,spots,today);
   const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
-  const sc=(l,v,sub,cls='')=>`<div class="leap-sc"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="s ${cls}">${sub}</div></div>`;
-  const sumH=openL.length?`<div class="leap-sum">
-    ${sc('Market value',m0(val),`cost ${m0(cost)}${unmarked?` · ${unmarked} unmarked`:''}`)}
-    ${sc('Open P&amp;L',(pl>=0?'+':'')+m0(pl),cost>0?`${pl>=0?'+':''}${(pl/cost*100).toFixed(1)}%`:'',pl>=0?'g':'r')}
-    ${sc('Share equivalent',`${Math.round(dsh)} sh`,noG?`combined delta · ${noG} w/o greeks`:'combined delta')}
-    ${sc('Time value',m0(tv),`decay ≈ ${m0(thd)}/day`)}</div>`:'';
+  const sc=(l,v,sub,cls='',pctH='')=>`<div class="leap-sc"><div class="l">${l}</div><div class="v ${cls}">${v}</div>${pctH}<div class="s">${sub}</div></div>`;
+  const vPct=T.valuePct==null?'':`<div class="lc-pct ${T.valueCls||'m'}" style="font-size:0.6875rem;font-weight:600">${T.valuePct>0?'+':T.valuePct<0?'−':''}${Math.abs(T.valuePct).toFixed(2)}%</div>`;
+  const nL=`across ${T.n} LEAP${T.n!==1?'s':''}`;
+  const CB=leapCallsBanked(leaps,legs,today),NX=leapNextAct(openL,legs,today);
+  const pl=T.priced?Math.round((T.value-T.pricedCost)*100)/100:null;
+  const sg=n=>(n>0?'+':n<0?'−':'')+m0(Math.abs(n));
+  const nxH=`<div class="leap-sc"${NX?` style="cursor:pointer" onclick="goToLeap('${esc(NX.id)}')"`:''}><div class="l">Next to act ${ii('The most urgent thing on your LEAPs: an expired LEAP, the nearest call expiry, a LEAP under 90 days or a review date.')}</div><div class="v ${NX?NX.cls:''}" style="font-size:0.9375rem;white-space:normal">${NX?esc(NX.text):'Nothing due'}</div><div class="s">${NX?'Click to open the LEAP':'No calls or LEAPs need you'}</div></div>`;
+  const sumH=T.n?`<div class="leap-sum">
+    ${sc(`Total value ${ii('Open LEAPs at today\'s prices, and the % up or down on what they cost. Expired or unpriced LEAPs left out.')}`,T.priced?m0(T.value):'—',T.noPrice?`${T.noPrice} without a price`:nL,T.valueCls,vPct)}
+    ${sc(`Unrealised P&amp;L ${ii('Value now minus what you paid, on the LEAPs themselves. Calls sold against them not included.')}`,pl==null?'—':sg(pl),T.noPrice?`${T.noPrice} without a price`:nL,T.valueCls,vPct)}
+    ${sc(`Calls banked ${ii('Premium kept on calls sold against your LEAPs, closed or expired only, after buy backs and fees.')}`,sg(CB.all),`This month ${sg(CB.month)}`,CB.all>0?'g':CB.all<0?'r':'')}
+    ${nxH}</div>`:'';
   const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${leapStatus==='open'?'No open LEAPs. Add one with <b>+ LEAP</b>, or import a broker file with buy-to-open call fills.':'No closed LEAPs yet.'}</div>`;
   // non-long-call legs never vanish silently
   const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
@@ -2651,6 +2802,7 @@ function renderOptions(){
 }
 // ── + LEAP / edit: single long call ──
 function openLeapAdd(){
+  if(!canUse('leaps-full')&&!underLimit('leap',(db.opts||[]).filter(l=>l.status==='open'&&l.side==='long').length)){openUpgrade('leaps-full');return;}
   ['lf-id','lf-und','lf-strike','lf-expiry','lf-price','lf-review','lf-notes','lf-mark'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('lf-qty').value='1';document.getElementById('lf-fees').value='0';
   document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
@@ -3246,9 +3398,59 @@ function saveOptClose(){
   closeModal('mOptClose');render();
 }
 // ── Wheel card "Profit": live mid of each wheel's open short option via the same optchain proxy. Display-only, never saved. ──
-const _wheelMarks={};let _wheelMarksAt=0;
+const _wheelMarks={},_wheelMarkRaw={};let _wheelMarksAt=0;
+// Cboe's free option quotes run ~15 min behind. Bring a delayed mid up to date with the live stock price using the quote's
+// own delta and gamma: mid + Δ·dS + ½Γ·dS². Pure. Falls back to the raw mid when greeks or prices are missing.
+function adjMark(mid,delta,gamma,quoteSpot,liveSpot){
+  if(mid==null||!(mid>=0))return null;
+  if(!(quoteSpot>0)||!(liveSpot>0)||delta==null||isNaN(+delta))return Math.round(mid*100)/100;
+  const dS=liveSpot-quoteSpot,g=isNaN(+gamma)?0:+gamma;
+  return Math.max(0.01,Math.round((mid+(+delta)*dS+0.5*g*dS*dS)*100)/100);
+}
+// US regular session (9:30–16:00 New York, Mon–Fri). Outside it the option quote and the stock price come from different
+// moments (Cboe's out-of-hours spot vs Friday's close), so a delta adjustment would be invented movement. Pure given `now`.
+function isRegularSession(now){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(now||new Date()).map(x=>[x.type,x.value]));
+  if(p.weekday==='Sat'||p.weekday==='Sun')return false;const m=(+p.hour%24)*60+(+p.minute);return m>=570&&m<960;
+}
+// Steady, honest buy-back price for a short option. Pure.
+// c = contract quote {bid,ask,last,delta,gamma}; prev = last mark shown (or null); o = {strike,type:'P'|'C',regular:bool}.
+// 1) Good quote only: bid>0, ask>0, spread ≤ 60% of mid (or ≤ $0.10). Else keep the last good mark; only with none, use the last trade.
+// 2) Delta/gamma move only in regular hours, only for stock moves ≤ 4%, and the result stays within a band around the quote.
+// 3) Never below intrinsic value or a cent. 4) Ignore wiggles under max($0.02, 1%) so the figure doesn't flicker.
+function steadyMark(c,quoteSpot,liveSpot,prev,o){
+  o=o||{};const r2=n=>Math.round(n*100)/100;
+  if(!c)return prev!=null?{mark:prev,why:'held'}:null;
+  const b=+c.bid,a=+c.ask,good=b>0&&a>=b&&((a-b)<=0.10||(a-b)/((a+b)/2)<=0.6);
+  let mid,why;
+  if(good){mid=(a+b)/2;why='mid';}
+  else if(prev!=null)return{mark:prev,why:'held'};
+  else if(+c.last>0){mid=+c.last;why='last';}
+  else return null;
+  let m=mid;
+  if(good&&o.regular&&quoteSpot>0&&liveSpot>0&&c.delta!=null&&!isNaN(+c.delta)&&Math.abs(liveSpot-quoteSpot)/quoteSpot<=0.04){
+    const adj=adjMark(mid,c.delta,c.gamma,quoteSpot,liveSpot);const band=Math.max(a-b,0.15*mid,0.05);
+    m=Math.min(a+band,Math.max(b-band,adj));if(r2(m)!==r2(mid))why='adjusted';
+  }
+  if(o.strike>0&&liveSpot>0)m=Math.max(m,o.type==='C'?liveSpot-o.strike:o.strike-liveSpot);
+  m=Math.max(0.01,r2(m));
+  if(prev!=null&&why!=='last'&&Math.abs(m-prev)<Math.max(0.02,prev*0.01))return{mark:prev,why:'held-small'};
+  return{mark:m,why};
+}
+function _applyWheelMarks(){const reg=isRegularSession();Object.entries(_wheelMarkRaw).forEach(([k,r])=>{const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
+  const s=steadyMark(r.c,r.spot,live,_wheelMarks[k]??null,{strike:r.strike,type:r.type,regular:reg});if(s){_wheelMarks[k]=s.mark;r.why=s.why;}});}
+function wheelMarkNote(k){const r=_wheelMarkRaw[k];if(!r)return'';const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
+  return markNote(_wheelMarks[k],r.why,r.u,live,r.c);}
+// Plain words for the buy-back price actually used and where it came from.
+function markNote(mark,why,u,live,c){if(mark==null)return'';const q=c&&c.bid>0&&c.ask>0?` (bid $${(+c.bid).toFixed(2)} / ask $${(+c.ask).toFixed(2)})`:'';
+  const base=`Buy-back price $${(+mark).toFixed(2)}: `;
+  return base+(why==='adjusted'?`15-min delayed option quote${q}, adjusted to ${u} at $${(+live).toFixed(2)}`
+    :why==='held'?`last good quote kept: the latest quote had no usable bid/ask${q}`
+    :why==='held-small'?`15-min delayed option quote${q}; small change ignored to keep it steady`
+    :why==='last'?`last traded price (no bid/ask right now)`
+    :`15-min delayed option quote${q}${isRegularSession()?'':', market closed so not adjusted'}`);}
 async function fetchWheelMarks(force){
-  if(!force&&Date.now()-_wheelMarksAt<5*60e3)return;_wheelMarksAt=Date.now();
+  if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
   const byU={};
   (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const u=String(w.ticker).toUpperCase();openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry).forEach(t=>{(byU[u]=byU[u]||new Set()).add(wheelLegOcc(w.ticker,t));});});
   let changed=false;
@@ -3256,9 +3458,10 @@ async function fetchWheelMarks(force){
     try{
       const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${[...set].join(',')}`,{signal:AbortSignal.timeout(15000)});
       if(!r.ok)continue;const j=await r.json();
-      set.forEach(k=>{const c=j.contracts&&j.contracts[k];const mid=c?(c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last>0?c.last:null)):null;if(mid!=null){_wheelMarks[k]=mid;changed=true;}});
+      set.forEach(k=>{const c=j.contracts&&j.contracts[k];const mid=c?(c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last>0?c.last:null)):null;if(mid!=null){_wheelMarkRaw[k]={u,c,strike:+k.slice(-8)/1000,type:k.slice(-9,-8),mid,delta:c.delta??null,gamma:c.gamma??null,spot:j.spot>0?j.spot:null};changed=true;}});
     }catch(e){console.warn('Wheel marks:',u,e.message);}
   }
+  _applyWheelMarks();
   if(changed&&view==='positions')render();
 }
 // ── Live marks: CBOE delayed chain via Netlify proxy; graceful fallback to manual marks + local BS greeks ──
@@ -3266,7 +3469,8 @@ let _optMarksAt=0;
 async function fetchOptionMarks(force){
   const open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
   if(!open.length){_optMarkStatus='';return;}
-  if(!force&&Date.now()-_optMarksAt<5*60e3)return;_optMarksAt=Date.now();
+  if(!force&&_optMarksAt&&!canUse('live-refresh'))return; // free plan: marks once per visit, no auto refresh
+  if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
   const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
   let ok=0,miss=0,failU=[];
   for(const[u,ls]of Object.entries(byU)){
@@ -3283,8 +3487,12 @@ async function fetchOptionMarks(force){
         if(l.markSrc==='manual'&&!force)return; // a manual mark wins until the user refreshes explicitly
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
-        Object.assign(l,{mark:Math.round(mid*100)/100,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
-        _saveOpt(l);ok++;
+        const live=quotes[u]&&quotes[u].state!=='DELAYED'?quotes[u].price:null;
+        const prevM=l.markSrc&&l.markSrc!=='manual'&&l.mark!=null?+l.mark:null;
+        const sm=steadyMark(c,j.spot,live,prevM,{strike:+l.strike,type:l.type,regular:isRegularSession()});if(!sm){miss++;return;}
+        l.markWhy=sm.why;l.markNote=markNote(sm.mark,sm.why,u,live,c);
+        Object.assign(l,{mark:sm.mark,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
+        ok++; // in memory only — live marks are never saved
       });
     }catch(e){failU.push(u);console.warn('Option marks:',u,e.message);}
   }
@@ -3306,7 +3514,7 @@ function renderSidebar(){
 
 function renderPositions(){
   let wheels=[...db.wheels];
-  if(!wheels.length)return`<div class="empty"><h3>No rotations</h3><p>Click "+ New Rotation" in the sidebar.</p></div>`;
+  if(!wheels.length)return`<div class="empty" id="wheel-empty"><h3>No wheels yet</h3><p>Start one by adding your first put, or bring your history in from your broker.</p><div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem"><button class="btn btn-primary" onclick="openNewPos()">+ Start a wheel</button><button class="btn btn-ghost" onclick="openImport()">Import broker file</button></div></div>`;
 
   // Sort
   if(posSortBy==='ticker') wheels.sort((a,b)=>(a.ticker||'').localeCompare(b.ticker||''));
@@ -3315,7 +3523,7 @@ function renderPositions(){
     wheels.sort((a,b)=>lastTrade(b).localeCompare(lastTrade(a)));
   }
   else if(posSortBy==='pnl'){
-    wheels.sort((a,b)=>calcWheel(b).netPnL-calcWheel(a).netPnL);
+    wheels.sort((a,b)=>calcWheel(b).realisedPnL-calcWheel(a).realisedPnL);
   }
   else if(posSortBy==='dte'){
     const nearestDTE=w=>{const op=buildOpenPosition(db.trades.filter(t=>t.wheelId===w.id));return op?op.dte:9999;};
@@ -3341,11 +3549,10 @@ function renderPositions(){
       <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
     </div>
     <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg></button>
-    <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:5rem;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
+    <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:5rem;text-transform:uppercase;background:var(--orange);color:#fff;border:1px solid var(--orange);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
-    <button class="rot-header-btn" onclick="openSettings()" title="Settings"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button>
   </div>`;
 
   // Render each rotation
@@ -3392,7 +3599,7 @@ function renderRotationMini(wheel){
       <span class="mini-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
       <span class="mini-price">${cPrice}</span>
       <span class="mini-chg">${cChg}</span>
-      <span class="mini-pnl ${colorN(m.netPnL)}">${fmtMoney(m.netPnL)}</span>
+      <span class="mini-pnl ${colorN(m.realisedPnL)}">${fmtMoney(m.realisedPnL)}</span>
       <span class="mini-leg">${cLeg}</span>
       <span>${cDte}</span>
       <span></span>
@@ -3935,6 +4142,7 @@ function renderRotationWindow(wheel){
     ?`<span class="rot-header-price" style="flex-direction:row;align-items:baseline;gap:0.375rem">
         <span style="color:var(--silver);font-size:0.8125rem;font-weight:400">$${rawP.toFixed(2)}</span>
         ${chg!=null?`<span style="color:${chgColor};font-size:0.6875rem;font-weight:400">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
+        ${extHtml(wheel.ticker)}
       </span>`
     :'';
   const shares=(m.sharesHeld>0?m.sharesHeld:0)+' shares';
@@ -3967,7 +4175,7 @@ function renderRotationWindow(wheel){
   // PPD — net premium divided by total option-days traded
   const optLegs=m.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&(t.days||0)>0);
   const totalOptDays=optLegs.reduce((s,t)=>s+(t.days||0),0);
-  const rotPPD=totalOptDays>0?m.premiumNet/totalOptDays:null;
+  const rotPPD=totalOptDays>0?m.premiumRealised/totalOptDays:null;
   const ppdHtml=rotPPD!=null
     ?`<span class="${colorN(rotPPD)}">${rotPPD>=0?'$'+fmt2(rotPPD):'-$'+fmt2(Math.abs(rotPPD))}</span>`
     :`<span class="m">—</span>`;
@@ -3996,7 +4204,7 @@ function renderRotationWindow(wheel){
   const _steps=`<div class="wl-steps">${_stepNames.map((n,i)=>`<div class="wl-st${i<_stage?' d':i===_stage?' n':''}"><b></b>${n}${i===_stage&&openPos?`<span class="wl-leg">${openPos.action==='CSP'?'Put':'Call'} $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d</span>`:''}</div>`).join('')}</div>`;
   const _fact=(l,v,c='')=>`<div class="wl-f"><span>${l}</span><b class="${c}">${v}</b></div>`;
   const _divs=m.trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0);
-  const _cs=wheelCardSummary({sharesHeld:m.sharesHeld,breakeven:m.breakeven,openShares:_rss.openShares,openCost:_rss.openCost,openPos,premiumNet:m.premiumNet,sharesRealised:_rss.realised,divs:_divs,closed:!isOpen});
+  const _cs=wheelCardSummary({sharesHeld:m.sharesHeld,breakeven:m.breakeven,openShares:_rss.openShares,openCost:_rss.openCost,openPos,premiumNet:m.premiumRealised,sharesRealised:_rss.realised,divs:_divs,closed:!isOpen});
   const _f2=_cs.held
     ?`<div class="wl-f wl-be"><span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>${_cs.assignedAt!=null?`<small>Assigned at $${fmt2(_cs.assignedAt)}</small>`:''}</div>`
     :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
@@ -4016,10 +4224,10 @@ function renderRotationWindow(wheel){
   const _fRet=_cr?_fact(_cr.ann!=null?'Cycle return / yr'+(_cr.incUnrealised?' (incl. unrealised)':''):'Cycle return ('+_cr.days+'d)',(_cr.ann!=null?_cr.ann:_cr.raw).toFixed(1)+'%',colorN(_cr.raw)):'';
   const _cap=(m.sharesHeld>0&&openPos&&openPos.action==='STOC'&&_rss.openShares>0)?calledAwayProfit(openPos.strike,_rss.openShares,_rss.openCost,m.premiumNet,_rss.realised):null;
   const _fCall=_cap!=null?_fact('Profit if called',(_cap>=0?'+':'')+fmtMoney(_cap).replace(/\.00$/,''),colorN(_cap)):'';
-  const _fPrem=_fact('Premium collected',fmtMoney(m.premiumCredits).replace(/\.00$/,''));
+  const _fPrem=_fact('Realised premium',fmtMoney(m.premiumRealised).replace(/\.00$/,''),colorN(m.premiumRealised)); // realised only; was gross 'Premium collected' incl. open sells
   const _fDays=_cr?_fact('Days in cycle',String(_cr.days)):'';
   const wheelCardBody=`<div class="wl-body">
-    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span><span class="wl-prem ${colorN(m.premiumNet)}">${m.premiumNet>=0?'+':''}${fmtMoney(m.premiumNet).replace(/\.00$/,'')} premium</span></div>
+    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span></div>
     ${_steps}${_memo}
     <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
   </div>`;
@@ -4031,8 +4239,8 @@ function renderRotationWindow(wheel){
       <button class="btn btn-ghost btn-sm" style="margin-top:0.375rem;font-size:0.625rem;padding:0.1875rem 0.5rem;line-height:1;border-color:var(--orange);color:var(--orange)" onclick="openPasteTrade('${wheel.id}');event.stopPropagation()">✦ Add Trade</button>
     </div>
     <div class="rmb-col">
-      <div class="rmb-lbl">Premium</div>
-      <div class="rmb-val ${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</div>
+      <div class="rmb-lbl">Realised premium</div>
+      <div class="rmb-val ${colorN(m.premiumRealised)}">${fmtMoney(m.premiumRealised)}</div>
       <div class="rmb-sub">Shares P&amp;L: <span class="${colorN(_rss.realised)}">${_rss.realised?fmtMoney(_rss.realised):'—'}</span></div>
       <div class="rmb-sub">Unrealised: ${_rss.unrealised==null?'<span class="m">no price</span>':`<span class="${colorN(_rss.unrealised)}">${_rss.openShares>0?fmtMoney(_rss.unrealised):'—'}</span>`}</div>
       ${aroc?`<div class="rmb-sub">${aroc.aroc!=null?`AROC: <span class="${colorN(aroc.aroc)}">${aroc.aroc.toFixed(1)}%</span> &middot; `:''}ROC: <span class="${colorN(aroc.roc)}">${aroc.roc.toFixed(1)}%</span>${aroc.aroc==null?` <span class="t3">(too early to annualise)</span>`:''}</div>`:''}
@@ -4068,7 +4276,7 @@ function renderRotationWindow(wheel){
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
     const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
-    {const cm=wheelChainMap(m.trades),chainOut={};const rh=_ord.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_ord.map(t=>cm[t.id]),rh,chainOut);}
+    {const cm=wheelChainMap(m.trades),chainOut={};const keep=listCut(_ord.length,_ord.map(t=>cm[t.id]),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);const rh=_S.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_S.map(t=>cm[t.id]),rh,chainOut)+listMoreBtn(wheel.id,_ord.length,keep.length);}
     expandedHtml+=`${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}</div>`;
   }
 
@@ -4096,13 +4304,13 @@ function renderRotationWindow(wheel){
 }
 
 
-function calcTradeROC(t){
-  // Annualised ROC% for CSP/STOC: (credit / collateral) * (365/DTE) * 100
-  if((t.action!=='CSP'&&t.action!=='STOC')||!t.strike||!t.shares)return null;
+function calcTradeROC(t,net){
+  // Annualised ROC% for a CLOSED CSP/STOC: (realised net / collateral) * (365/DTE) * 100. Open sells (net==null): no ROC.
+  if((t.action!=='CSP'&&t.action!=='STOC')||!t.strike||!t.shares||net==null)return null;
   const collateral=t.strike*t.shares;if(!collateral)return null;
   const dte=t.days>0?t.days:null;
   if(!dte)return null;
-  return((t.total/collateral)*(365/dte)*100);
+  return((net/collateral)*(365/dte)*100);
 }
 // Shared list formats (wheel + LEAP): strike trims .00 ($170, $19.5, $142.50); debit totals show with a minus (display only).
 // Shared trade-list cells (wheel + LEAP cards). Captured: % kept, with profit $ beside it.
@@ -4153,7 +4361,7 @@ function wheelListCells(t,L){
     const mark=L.marks?L.marks[wheelLegOcc(L.ticker,t)]:null;
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:(+t.shares||0)/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
-      const c=capturedCellHtml(Math.round((prem-mark)/prem*100),pf,true);r.cap=c.html;r.capColor=c.color;}
+      const c=capturedCellHtml(Math.round((prem-mark)/prem*100),pf,true);r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(wheelLegOcc(L.ticker,t)):'')}">${c.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;r.capColor=c.color;}
     return r;
   }
   const o=L.outcomes[t.id];if(!o)return r;
@@ -4183,7 +4391,8 @@ function renderTradeRow(t,wheelTrades,opts){
     }
   }
   if(opts.list){const lc=wheelListCells(t,opts.list);opts={...opts,rocHtml:lc.cap,rocColor:lc.capColor,ppdHtml:lc.ppd,extraAfterStrike:`<span class="to-strike m">${esc(lc.ts)}</span>`,editBtn:true};}
-  const roc=calcTradeROC(t);
+  const _o=wheelTrades?wheelSellOutcomes(wheelTrades)[t.id]:null;
+  const roc=calcTradeROC(t,_o?_o.net:null);
   const rocDisplay=opts.rocHtml!=null?opts.rocHtml:(roc!==null?roc.toFixed(1)+'%':'—');
   const rocColor=opts.rocColor!=null?opts.rocColor:(roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)');
   // PPD — income velocity: net dollars per day. Credit opens (incl. PMCC STO).
@@ -4559,9 +4768,9 @@ function renderStatsOverview(){
   </div>`;
 
   // Capital utilisation
-  const totalAccount=cap.maxCap||1;// best proxy without account balance input
-  const utilPct=cap.atRisk>0&&totalAccount>0?Math.min(100,(cap.atRisk/totalAccount*100)):0;
-  const utilCol=utilPct<70?'var(--green)':utilPct<85?'var(--yellow)':'var(--red)';
+  const cawU=currentCapitalAtWork(),acctU=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]).account;
+  const utilPct=utilisation(cawU.total,acctU);
+  const utilCol=utilPct==null?'var(--text3)':utilPct<70?'var(--green)':utilPct<85?'var(--yellow)':'var(--red)';
 
   // Last month comparison
   // Use the real calendar month (and the one before it), not just the last months that happen to have trades
@@ -4591,12 +4800,12 @@ function renderStatsOverview(){
 
   const k1=kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
-  const k3=kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cap.atRisk)+' deployed',utilCol,false,'Percentage of your peak capital currently committed as collateral for open CSPs. Green below 70%, amber 70–85%, red above 85%. Keep 20–30% cash reserve for opportunities and unexpected assignments.');
+  const k3=kpi('Capital Utilisation',utilPct==null?'—':utilPct.toFixed(0)+'%',utilPct==null?'Set an account size in Settings':fmtMoney(cawU.total)+' of '+fmtMoney(acctU),utilCol,false,'Capital at work (open put collateral, open shares and open LEAP cost) as a % of the account size you set in Settings. Green below 70%, amber 70–85%, red above 85%.');
 
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
   const avgArocVal=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
-  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average Annualised Return on Capital across your currently open rotations. Calculated as (net premium ÷ capital at risk) × (365 ÷ days held).');
+  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average annualised return on capital across your open rotations, realised only: (premium banked from closed, expired or assigned options ÷ capital at risk) × (365 ÷ days held). Premium on open options is not counted.');
 
 
   // ── Positions table ──
@@ -4619,8 +4828,8 @@ function renderStatsOverview(){
       <span><span class="d-phase ${ph.cls}">${ph.label}</span></span>
       <span class="t2-nw">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:600;margin-left:0.375rem">/ ${dte}d</span>`:''}</span>
       <span style="color:${pctCol};font-weight:600">${pctToStrike!==null?(pctToStrike>=0?'+':'')+pctToStrike.toFixed(1)+'%':'—'}</span>
-      <span style="color:var(--silver);white-space:nowrap">${price!=null?'$'+price.toFixed(2):'—'}</span>
-      <span class="${colorN(m.premiumNet)}" style="white-space:nowrap">${fmtMoney(m.premiumNet)}</span>
+      <span style="color:var(--silver);white-space:nowrap">${price!=null?'$'+price.toFixed(2):'—'}${extHtml(w.ticker,'display:block')}</span>
+      <span class="${colorN(m.premiumRealised)}" style="white-space:nowrap">${fmtMoney(m.premiumRealised)}</span>
       <span class="t2-nw">${basis}</span>
       ${(()=>{const u=rotationShareStats(w,db.trades,_priceOf).unrealised;return`<span style="text-align:right;white-space:nowrap" class="${u==null?'m':colorN(u)}">${u==null?'no price':u===0&&m.sharesHeld<=0?'—':fmtMoney(u)}</span>`;})()}
     </div>`;
@@ -4688,7 +4897,7 @@ function renderStatsOverview(){
 
 
 // ═══ HOME (Direction A) — read-only figures built from the Monthly P&L rows ═══
-// Pure: rows from calcMonthlyRealised; returns this month (wheel vs LEAPs) and this year.
+// Pure: rows from calcMonthlyRealised; returns this month (wheel vs PMCC short calls) and this year; LEAP-leg P&L never included.
 function homeFigures(rows,today){
   // Options only — same figures as the Monthly P&L table: wheel premium + PMCC short calls (collected − loss). No shares, dividends or LEAPs.
   const ym=today.slice(0,7),yr=today.slice(0,4),rd=n=>Math.round(n*100)/100;
@@ -4716,11 +4925,10 @@ function renderHome(){
   const nx=nextExpiry(wheelLegs,legs,today);
   const health=allDataHealth();
   const mName=new Date().toLocaleDateString('en-GB',{month:'long'});
-  const _sr=shareRealisations(db.trades);
-  const _openShareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((_sr.open[w.id]||{}).cost||0),0);
   const wl=calcWinLoss();
-  const caw=capitalAtWork(calcCapitalStats().atRisk,_openShareCost,legs,null);
-  const mr=monthReturnPct(F.month.total,caw.total);
+  const caw=currentCapitalAtWork();
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
+  const rBase=returnBase(rs,caw.total),mr=monthReturnPct(F.month.total,rBase,rs.target);
   const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
@@ -4731,13 +4939,13 @@ function renderHome(){
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">This year ${ii(`Same as this month, since 1 January. Realised options only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · PMCC calls ${sgn(F.year.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price, plus premium on open wheel options.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Open premium ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}</div></div>
-    <div class="hk"><div class="hk-l">Capital at work ${ii(`Money tied up in open put collateral and open shares. LEAPs shown separately.`)}</div><div class="hk-v">${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Puts ${fmtMoney(caw.puts).replace(/\.\d\d$/,'')} · Shares ${fmtMoney(caw.shares).replace(/\.\d\d$/,'')}${caw.leaps?` · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')} separate`:''}</div></div>
+    <div class="hk"><div class="hk-l">Capital at work ${ii(`Open put collateral, open shares and open LEAP cost. Return this month uses this figure.`)}</div><div class="hk-v">${fmtMoney(caw.total).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}</div></div>
     <div class="hk"><div class="hk-l">Win rate ${ii(`Closed sold options only, incl. PMCC calls. A win kept the premium or was bought back cheaper. Open options don’t count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="hk-grid hk-row2">
     <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p)p.hidden=!p.hidden"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':''):'nothing to do'}</div></div>
-    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's realised profit from sold options, as a % of money at work (LEAP cost + shares/put collateral). Target 2%.`)}</div><div class="hk-v ${mr?(mr.ok?'pos':'neg'):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(caw.total).replace(/\.\d\d$/,'')} at work</div></div>
+    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's realised profit from sold options, as a % of ${rs.base==='account'?'the account size you set':'money at work (LEAP cost + shares/put collateral)'}.${rs.target?` Target ${rs.target}%.`:''} Change this in Settings.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':'neg'):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'at work'}${rs.target?` · target ${rs.target}%`:''}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
   <div class="hcard ny-panel" id="ny-panel" hidden><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(i=>`<div class="ny-row"><span class="ny-dot ${i.sev==='red'?'r':i.sev==='amber'?'a':'g'}"></span><span>${i.text}</span><a onclick="goToHealth()">Open</a></div>`).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
@@ -4960,11 +5168,12 @@ function quickAddRotation(inputId){
   render();
   // Fetch price and logo in background
   fetchSymbol(ticker).then(()=>{
-    if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;_saveWheel(wheel);render();}
+    if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;render();}
   }).catch(()=>{});
   fetchLogo(ticker).then(()=>render()).catch(()=>{});
 }
 function openNewPos(){
+  if(!underLimit('wheel',new Set((db.wheels||[]).filter(w=>w.status==='open').map(w=>w.ticker)).size)){openUpgrade('unlimited');return;}
   document.getElementById('wf-id').value='';
   document.getElementById('wf-ticker').value='';
   document.getElementById('wf-label').value='';
@@ -5026,7 +5235,7 @@ function saveWheel(){
     db.wheels.push(wheel);
     // Auto-fetch price and logo in background
     fetchSymbol(ticker).then(()=>{
-      if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;_saveWheel(wheel);render();}
+      if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;render();}
     }).catch(()=>{});
     fetchLogo(ticker).then(()=>render()).catch(()=>{});
   }
@@ -5434,6 +5643,46 @@ function brokerCSVLib(){
     keep.forEach(r=>delete r._pc);
     return{...res,rows:keep,optionFills:(res.optionFills||[]).concat(fills)};
   }
+  // ── Robinhood account activity report (Reports and statements → Account activity report, CSV) ──
+  // Columns: Activity Date, Process Date, Settle Date, Instrument, Description, Trans Code, Quantity, Price, Amount.
+  // Newest first; options described as "SPCX 11/20/2026 Call $170.00"; expiries as "Option Expiration for …";
+  // assignment = OASGN (qty like "2S", no price) plus a separate share Buy/Sell row; fees = gap between price×size and Amount.
+  const RH_SKIP={CDIV:'dividend',MDIV:'dividend',DIV:'dividend',DRIP:'dividend reinvested',ACH:'cash in or out',DCF:'cash in or out',RTP:'cash in or out',WIRE:'cash in or out',ACATI:'transfer from another broker',ACATO:'transfer to another broker',INT:'interest',MINT:'margin interest',GOLD:'Gold subscription',SLIP:'stock lending',GDBP:'cash in or out',FUTSWP:'cash sweep',SPL:'stock split',SPR:'stock split',OCA:'option adjustment',REC:'free stock',SOFF:'spin-off',CIL:'cash in lieu',SXCH:'exchange',DTAX:'tax',DFEE:'fee',AFEE:'fee',GMPC:'gift',TA:'transfer'};
+  function parseRobinhood(rows,hi){
+    const H=rows[hi].map(norm),ix=n=>H.indexOf(n);
+    const C={date:ix('activity date'),ins:ix('instrument'),desc:ix('description'),code:ix('trans code'),qty:ix('quantity'),price:ix('price'),amt:ix('amount')};
+    const ev=[],bad=[],skip=[];
+    const r2=n=>Math.round(n*100)/100;
+    for(let i=hi+1;i<rows.length;i++){
+      const v=rows[i],g=c=>c>-1&&c<v.length?String(v[c]||'').trim():'';
+      const raw=v.join(',').replace(/\s+/g,' ');
+      const code=g(C.code).toUpperCase(),date=pickDate(g(C.date));
+      if(!code&&!date)continue; // blank lines and the disclaimer footer
+      if(norm(v[0])==='activity date')continue;
+      if(!date){bad.push({line:i+1,raw,reason:'no date'});continue;}
+      const desc=g(C.desc),optS=desc.replace(/^option (expiration|assignment|exercise)s? for\s+/i,'').split('\n')[0];
+      const opt=parseOption(optS);
+      const qty=Math.abs(num(g(C.qty).replace(/[A-Za-z]+$/,''))),price=Math.abs(num(g(C.price))),amt=num(g(C.amt));
+      const base={line:i+1,raw,date,code,qty:isNaN(qty)?0:qty,price:isNaN(price)?0:price,amount:isNaN(amt)?0:amt};
+      if(['STO','BTO','BTC','STC','OEXP','OASGN','OEXCS'].includes(code)){
+        if(!opt){bad.push({line:i+1,raw,reason:"couldn't read the option"});continue;}
+        if(!(base.qty>0)){bad.push({line:i+1,raw,reason:'no quantity'});continue;}
+        let fees=0;
+        if(code==='STO'||code==='STC')fees=r2(base.price*base.qty*100-base.amount);
+        else if(code==='BTO'||code==='BTC')fees=r2(-base.amount-base.price*base.qty*100);
+        if(!(fees>0)||fees>50*base.qty)fees=0; // a rebate or an odd row: never invent fees
+        ev.push({...base,kind:'opt',ticker:opt.ticker,pc:opt.pc,strike:opt.strike,expiry:opt.expiry,fees});
+      }else if(code==='BUY'||code==='SELL'){
+        const tk=(g(C.ins)||'').toUpperCase();
+        if(!tk||!(base.qty>0)){bad.push({line:i+1,raw,reason:'share trade with no ticker or quantity'});continue;}
+        if(/dividend reinvest/i.test(desc)){skip.push({line:i+1,raw,reason:'dividend reinvested'});continue;}
+        const fees=code==='BUY'?r2(-base.amount-base.price*base.qty):r2(base.price*base.qty-base.amount);
+        ev.push({...base,kind:'shares',ticker:tk,fees:fees>0&&fees<50?fees:0,assign:/assign|exercise/i.test(desc)});
+      }else skip.push({line:i+1,raw,reason:RH_SKIP[code]||(code?'not a trade ('+code+')':'not a trade')});
+    }
+    if(ev.length>1&&ev[0].date>ev[ev.length-1].date)ev.reverse(); // Robinhood lists newest first; work oldest first
+    return{broker:'Robinhood',rh:ev,rows:[],optionFills:[],unrecognised:bad,skipped:skip};
+  }
   function parseBrokerCSV(text){
     text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
     if(!text)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Empty file'};
@@ -5445,6 +5694,7 @@ function brokerCSVLib(){
     let hdr=ib?rows[hi].slice(2):rows[hi];
     const broker=detectBroker(hdr,ib?'trades':'');
     if(broker==='CoveredWheel'&&hi===0)return parseNative(text);
+    if(broker==='Robinhood'){_dmy=false;return parseRobinhood(rows,hi);}
     const C=mapCols(hdr);
     if(C.date>-1)_dmy=sniffDMY(rows.slice(hi+1).map(r=>(ib?r.slice(2):r)[C.date]||'').join('\n')+(/trading ?212|etoro/i.test(broker)?' etoro':''));
     const out=[],bad=[],skip=[];
@@ -5544,7 +5794,7 @@ function brokerCSVLib(){
   function parseStatementText(text){
     text=String(text||'').replace(/\r\n?/g,'\n');
     const src=detectSource(text);
-    if(text.replace(/\s/g,'').length<20)return{broker:src,rows:[],unrecognised:[],skipped:[],error:"This PDF has no readable text — it looks like a scanned image. WheelHouse can't read scanned PDFs; download a text statement or CSV from your broker instead."};
+    if(text.replace(/\s/g,'').length<20)return{broker:src,rows:[],unrecognised:[],skipped:[],error:"This PDF has no readable text — it looks like a scanned image. Scanned PDFs can't be read; download a text statement or CSV from your broker instead."};
     // day-first sniff ignores dates inside option descriptions
     _dmy=sniffDMY(text.split('\n').map(l=>{const f=findOption(l);return f?l.slice(0,f.start)+' '+l.slice(f.end):l;}).join('\n'));
     const lines=text.split('\n').map(l=>l.trim());
@@ -5625,7 +5875,7 @@ function brokerCSVLib(){
     }
     return splitLongs({broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')});
   }
-  return{splitLongs,parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
+  return{splitLongs,parseRobinhood,parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
 }
 const BCSV=brokerCSVLib();
 let _importParsed=null;
@@ -5641,12 +5891,98 @@ function _routeToOpenLongs(p){
   });
   return{...p,rows:keep,optionFills:fills};
 }
+// Robinhood events (oldest first) → what to add, given what's already in WheelHouse. Pure: never writes.
+// Wheel: puts, covered calls on shares you hold, assignments, share buys/sells → db.trades rows.
+// LEAPs: any bought option → its own leg; calls sold on a ticker with an open LEAP (and no wheel shares) → short calls on that LEAP.
+// A buy-back and a new sale on the same day stay two separate trades: the CSV can't show whether it was one roll order.
+function _brandName(){return(typeof window!=='undefined'&&window.BRAND&&window.BRAND.name)||'OpTrack';}
+function rhPlan(ev,opts,trades,mkId){
+  const legs=(opts||[]).map(l=>({...l})),newLegs=[],changed=new Set(),wheelRows=[],lines=[],bad=[],skip=[];let dupes=0;
+  const r2=n=>Math.round(n*100)/100,D=(a,b)=>Math.round((Date.parse(a)-Date.parse(b))/864e5);
+  const held={};(trades||[]).forEach(t=>{if(t.action==='IN')held[t.ticker]=(held[t.ticker]||0)+(+t.shares||0);if(t.action==='OUT')held[t.ticker]=(held[t.ticker]||0)-(+t.shares||0);});
+  const wheeled=new Set((trades||[]).map(t=>t.ticker));
+  const rank=e=>e.kind==='shares'?1:['STO','BTO'].includes(e.code)?2:0;
+  const E=ev.map((e,i)=>({e,i})).sort((a,b)=>a.e.date.localeCompare(b.e.date)||rank(a.e)-rank(b.e)||a.i-b.i).map(x=>x.e);
+  const same=(l,e,side)=>l.underlying===e.ticker&&l.type===e.pc&&+l.strike===+e.strike&&l.expiry===e.expiry&&l.side===side;
+  const openLeg=(e,side)=>legs.find(l=>l.status==='open'&&same(l,e,side));
+  const dupOpen=(e,side)=>legs.find(l=>same(l,e,side)&&(l.entryDate||'')===e.date&&+l.qty===+e.qty&&Math.abs(+l.entryPrice-e.price)<0.005);
+  const dupClose=(e,side)=>legs.find(l=>l.status!=='open'&&same(l,e,side)&&l.closeDate===e.date);
+  const leapFor=(tk,date)=>legs.filter(l=>l.status==='open'&&l.side==='long'&&l.type==='C'&&!l.parentLeapId&&l.underlying===tk&&l.expiry>date).sort((a,b)=>b.expiry.localeCompare(a.expiry))[0];
+  const c=e=>`${e.qty} ${e.ticker} $${+e.strike} ${e.pc==='C'?'call':'put'}${e.qty>1?'s':''} (${e.expiry})`;
+  const close=(l,e,how)=>{if(+e.qty<+l.qty){const rest={...l,id:mkId(),qty:+l.qty-e.qty,fees:0};legs.push(rest);newLegs.push(rest);l.qty=e.qty;}
+    Object.assign(l,how==='exp'?{status:'expired',closePrice:0,closeDate:e.date,closeFees:0}:{status:'closed',closePrice:e.price,closeDate:e.date,closeFees:e.fees});
+    if(!newLegs.includes(l))changed.add(l.id);};
+  const pend=[];
+  const wheelDup=r=>(trades||[]).some(t=>t.ticker===r.ticker&&t.action===r.action&&t.entered===r.entered&&(+t.strike||0)===(+r.strike||0)&&(+t.shares||0)===(+r.shares||0)&&(!t.expiry||!r.expiry||t.expiry===r.expiry)&&Math.abs((+t.premium||0)-(+r.premium||0))<0.005);
+  const addWheel=(e,action,o)=>{
+    const shares=o.shares,premium=o.premium,fees=o.fees||0;
+    const r={ticker:e.ticker,action,entered:e.date,expiry:o.expiry||null,strike:o.strike||null,premium,fees,shares,total:r2(o.total!=null?o.total:computeTotal(action,premium,shares,fees)),days:(action==='CSP'||action==='STOC')&&o.expiry?Math.max(0,D(o.expiry,e.date)):0,verified:false,comment:'Imported from Robinhood'};
+    if(action==='IN')held[e.ticker]=(held[e.ticker]||0)+shares;if(action==='OUT')held[e.ticker]=(held[e.ticker]||0)-shares;
+    wheeled.add(e.ticker);
+    if(wheelDup(r)){dupes++;return;}
+    wheelRows.push(r);};
+  for(const e of E){
+    if(e.kind==='shares'){
+      const pi=pend.findIndex(p=>p.ticker===e.ticker&&p.side===e.code&&p.shares===e.qty&&e.date>=p.date&&D(e.date,p.date)<=4&&(Math.abs(e.price-p.strike)<0.005||e.assign));
+      if(pi>-1){pend.splice(pi,1);skip.push({line:e.line,raw:e.raw,reason:'shares from the assignment, already counted'});continue;}
+      if(!wheeled.has(e.ticker)){skip.push({line:e.line,raw:e.raw,reason:"share trade on a stock you don't wheel"});continue;}
+      addWheel(e,e.code==='BUY'?'IN':'OUT',{shares:e.qty,premium:e.price,fees:e.fees});continue;
+    }
+    const opt={expiry:e.expiry,strike:e.strike},sh=e.qty*100,amt=Math.abs(e.amount);
+    if(e.code==='BTO'){
+      if(dupOpen(e,'long')){dupes++;continue;}
+      const l={id:mkId(),groupId:null,underlying:e.ticker,type:e.pc,side:'long',strike:+e.strike,expiry:e.expiry,qty:e.qty,entryPrice:e.price,entryDate:e.date,fees:e.fees,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:'Imported from Robinhood'};
+      l.groupId=l.id;legs.push(l);newLegs.push(l);lines.push(`Bought ${c(e)} at $${e.price.toFixed(2)}${e.pc==='C'&&D(e.expiry,e.date)>=270?' — LEAP':''}`);continue;
+    }
+    if(e.code==='STO'&&e.pc==='C'&&!(held[e.ticker]>0)){
+      const L=leapFor(e.ticker,e.date);
+      if(L){
+        if(dupOpen(e,'short')){dupes++;continue;}
+        const l={id:mkId(),groupId:null,parentLeapId:L.id,underlying:e.ticker,type:'C',side:'short',strike:+e.strike,expiry:e.expiry,qty:e.qty,entryPrice:e.price,entryDate:e.date,fees:e.fees,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:'Imported from Robinhood'};
+        l.groupId=l.id;legs.push(l);newLegs.push(l);lines.push(`Sold ${c(e)} against your ${e.ticker} LEAP at $${e.price.toFixed(2)}`);continue;
+      }
+    }
+    if(['BTC','OEXP','OASGN','STC','OEXCS'].includes(e.code)){
+      const side=e.code==='STC'||e.code==='OEXCS'?'long':e.code==='OEXP'?(openLeg(e,'short')?'short':openLeg(e,'long')?'long':'short'):'short';
+      const l=openLeg(e,side);
+      if(l&&(side==='long'||l.parentLeapId)){
+        if(e.code==='OASGN'||e.code==='OEXCS'){bad.push({line:e.line,raw:e.raw,reason:e.code==='OASGN'?'a call sold against your LEAP was assigned — enter this one by hand':'you exercised an option — enter this one by hand'});continue;}
+        close(l,e,e.code==='OEXP'?'exp':'close');
+        lines.push(`${e.code==='OEXP'?'Expired':e.code==='STC'?'Sold back':'Bought back'} ${c(e)}${e.code==='OEXP'?'':' at $'+e.price.toFixed(2)}`);continue;
+      }
+      if(dupClose(e,side)&&(side==='long'||dupClose(e,side).parentLeapId)){dupes++;continue;}
+    }
+    if(e.code==='OEXCS'){bad.push({line:e.line,raw:e.raw,reason:'you exercised an option — enter this one by hand'});continue;}
+    // wheel
+    if(e.code==='STO')addWheel(e,e.pc==='P'?'CSP':'STOC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='BTC')addWheel(e,'BTC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='STC')addWheel(e,'STC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='OEXP')addWheel(e,'EXP',{...opt,shares:sh,premium:0,fees:0,total:0});
+    else if(e.code==='OASGN'){const put=e.pc==='P';addWheel(e,put?'IN':'OUT',{strike:e.strike,expiry:e.expiry,shares:sh,premium:+e.strike,fees:0});pend.push({ticker:e.ticker,date:e.date,side:put?'BUY':'SELL',shares:sh,strike:+e.strike});}
+  }
+  return{wheelRows,newLegs,changedLegs:legs.filter(l=>changed.has(l.id)),lines,dupes,unrecognised:bad,skipped:skip};
+}
 function importPreview(pre){
   const txt=pre?'x':document.getElementById('import-csv').value;
   const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
   if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
   const p=_routeToOpenLongs(pre||BCSV.parseBrokerCSV(txt));_importParsed=p;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
+  if(p.rh&&!canUse('robinhood-import')){box.innerHTML=`<div class="imp-err">Robinhood import is a Pro feature. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
+  if(p.rh){ // Robinhood activity report: plan against what's already here
+    const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;p.rows=P.wheelRows;p.unrecognised=p.unrecognised.concat(P.unrecognised);p.skipped=p.skipped.concat(P.skipped);
+    const why={};p.skipped.forEach(x=>{why[x.reason]=(why[x.reason]||0)+1;});
+    const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
+    const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
+    box.innerHTML=`<div class="imp-broker">Robinhood activity report</div>`+
+      (p.rows.length?`<div class="imp-sub">${p.rows.length} wheel trade${p.rows.length>1?'s':''} to add:</div><div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+
+      (P.lines.length?`<div class="imp-sub">${P.lines.length} LEAP trade${P.lines.length>1?'s':''} to add (LEAPs tab):</div><ul class="imp-bad" style="color:var(--text2)">${P.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
+      (P.dupes?`<div class="imp-sub" style="color:var(--text3)">${P.dupes} already in ${_brandName()}, skipped</div>`:'')+
+      (p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">${p.skipped.length} row${p.skipped.length>1?'s':''} skipped: ${Object.entries(why).map(([k,n])=>`${esc(k)} (${n})`).join(', ')}</div>`:'')+
+      (p.unrecognised.length?`<div class="imp-sub">Not imported (${p.unrecognised.length}):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'');
+    const n=p.rows.length+P.newLegs.length+P.changedLegs.length;
+    btn.disabled=!n;btn.textContent=n?`Import ${p.rows.length+P.lines.length}`:'Nothing new';return;
+  }
   const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
   const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
   const badH=p.unrecognised.length?`<div class="imp-sub">Couldn't understand ${p.unrecognised.length} row${p.unrecognised.length>1?'s':''} (not imported):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'';
@@ -5690,8 +6026,15 @@ function initImportDrop(){
 }
 function doImport(){
   if(!_importParsed)importPreview();
-  const p=_importParsed;if(!p||!(p.rows.length||(p.optionFills||[]).length))return;
-  if((p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
+  const p=_importParsed;if(!p)return;
+  if(p.plan){
+    const P=p.plan;
+    if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
+    else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(P.newLegs);P.newLegs.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);}
+    if(!p.rows.length){closeModal('mImport');document.getElementById('import-csv').value='';_importParsed=null;importPreview();render();return;}
+  }
+  if(!(p.rows.length||(p.optionFills||[]).length))return;
+  if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
   else if((p.optionFills||[]).length){
     const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
     db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));
@@ -5704,7 +6047,7 @@ function doImport(){
   for(const r of p.rows){
     const{ticker,action,entered,strike,shares}=r;
     const fp=`${ticker}|${action}|${entered}|${strike||''}|${shares||''}`;
-    if(existingFingerprints.has(fp)){dupes++;continue;}
+    if(!p.plan&&existingFingerprints.has(fp)){dupes++;continue;}
     existingFingerprints.add(fp);
     let wheel=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
     if(!wheel){
@@ -5727,13 +6070,13 @@ function doImport(){
   newWheelTickers.forEach(ticker=>{
     fetchSymbol(ticker).then(()=>{
       const w=db.wheels.find(x=>x.ticker===ticker&&x.status==='open');
-      if(w&&quotes[ticker]){w.lastPrice=quotes[ticker].price;_saveWheel(w);render();}
+      if(w&&quotes[ticker]){w.lastPrice=quotes[ticker].price;render();}
     }).catch(()=>{});
     fetchLogo(ticker).then(()=>render()).catch(()=>{});
   });
   const parts=[`${imported} imported`];
   if(dupes>0)parts.push(`${dupes} duplicates skipped`);
-  if(skipped>0)parts.push(`${skipped} invalid skipped`);
+  if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in ${_brandName()}`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
   alert(`Import complete: ${parts.join(', ')}.`);
 }
 // ── Realised P&L chart (READ-ONLY). Closed trades only, booked on their close date, split the same way as the
@@ -5773,7 +6116,7 @@ function pnlCurveHtml(){
   const el=typeof document!=='undefined'&&document.getElementById('pnl-curve');
   const W=pnlFull?Math.max(600,window.innerWidth-96):Math.max(600,(el&&el.clientWidth?el.clientWidth-40:1100)),H=pnlFull?Math.max(320,window.innerHeight-170):380;
   const PL=60,PR=14,PT=14,PB=30,cw=W-PL-PR,ch=H-PT-PB,n=Math.max(1,B.buckets.length);
-  const mx=Math.max(1,...B.buckets.map(b=>Math.max(b.gain,b.loss))),mn=0,rg=mx; // both bars rise from zero
+  const _pcEmpty=!B.buckets.some(b=>b.gain||b.loss);const mx=_pcEmpty?100:Math.max(1,...B.buckets.map(b=>Math.max(b.gain,b.loss))),mn=0,rg=mx; // empty: a tidy $0–$100 scale instead of $0,$0,$1,$1 // both bars rise from zero
   const Y=v=>PT+(mx-v)/rg*ch,y0=Y(0),slot=cw/n,bw=Math.max(1,Math.min(28,slot*0.36));
   const raw=rg/5,m=Math.pow(10,Math.floor(Math.log10(raw))),step=[1,2,5,10].map(k=>k*m).find(k=>k>=raw)||m*10;
   const money=v=>(v<0?'-':'')+'$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1).replace(/\.0$/,'')+'k':Math.round(Math.abs(v)));
@@ -5791,7 +6134,7 @@ function pnlCurveHtml(){
   return`<div class="pc-head"><div class="a-chart-title" style="margin:0">Options P&amp;L ${ii('Options only, realised, matching the Monthly P&L table: wheel puts and calls plus PMCC short calls, on the day they closed, expired or were assigned. Green = premium collected, red = buyback costs. Share sales, dividends and closed LEAPs are in Shares & LEAPs P&L. Open options are not included. Hover a bar for that period.')}</div>
     <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span><span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> collected · <span class="r">${fmtMoney(-B.loss)}</span> loss</span>
     <div class="pc-btns">${PNL_RANGES.map(([k])=>btn(k,k===pnlRange,'setPnlRange')).join('')}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
-    <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg><div class="pc-tip" id="pc-tip"></div></div>
+    <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg>${_pcEmpty?'<div class="pc-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:0.8125rem;pointer-events:none">Your realised P&amp;L shows here once a trade closes, expires or is assigned.</div>':''}<div class="pc-tip" id="pc-tip"></div></div>
     <div class="a-chart-legend"><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Premium collected</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div></div>`;
 }
 function pnlTip(e,el){const t=document.getElementById('pc-tip');if(!t)return;if(!e){t.style.display='none';return;}
@@ -5855,7 +6198,7 @@ function renderAnalytics(){
   db.wheels.forEach(w=>{
     if(!tickerMap[w.ticker])tickerMap[w.ticker]={ticker:w.ticker,premium:0,cycles:0,trades:0,arocs:[]};
     const m=calcWheel(w);const ar=calcAROC(w,m);
-    tickerMap[w.ticker].premium+=m.premiumNet;
+    tickerMap[w.ticker].premium+=m.premiumRealised;
     tickerMap[w.ticker].trades+=m.trades.length;
     tickerMap[w.ticker].cycles++;
     if(ar&&ar.aroc!=null)tickerMap[w.ticker].arocs.push(ar.aroc);
@@ -5885,14 +6228,14 @@ function renderAnalytics(){
   // ── Section 1: Performance Overview ──
   const perfStats=`<div class="a-stat-grid">
     ${stat(fmtMoney(s.totalRealised),'Wheel Realised P&L','all-time: premium + shares + dividends',s.totalRealised>=0?'var(--green)':'var(--red)','Everything earned from the wheel — option premiums, stock sales, and dividends. Open stock positions excluded.')}
-    ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed rotations','var(--orange)','Average Annualised Return on Capital across closed rotations. Formula: (net premium ÷ capital at risk) × (365 ÷ days held).')}
+    ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed rotations','var(--orange)','Average annualised return on capital across closed rotations, realised only: (realised premium ÷ capital at risk) × (365 ÷ days held).')}
     ${stat(sortinoStr,'Sortino Ratio','risk-adjusted','var(--text)','Risk-adjusted return using only downside volatility. Higher is better. Unlike Sharpe, it does not penalise upside variance — fairer for option-selling strategies.')}
     ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--red)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
   </div>
   <div class="a-stat-grid" style="margin-top:0.625rem">
     ${stat(profitFactorStr,'Profit Factor','gross credits ÷ debits',parseFloat(profitFactorStr)>=1.5?'var(--green)':'var(--text2)','Gross premium credits divided by total buyback debits. Above 1.0 means profitable overall. Above 2.0 is excellent.')}
     ${stat(wl.wr?wl.wr+'%':'—','Win Rate',wl.wins+'W · '+wl.losses+'L',parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)','Percentage of option cycles that ended profitably — expired worthless or closed for a gain.')}
-    ${stat(fmtMoney(s.pNet),'Premium','all-time, net of buybacks',s.pNet>=0?'var(--green)':'var(--red)','Option credits (CSP, STOC, STC) minus buybacks (BTC), all-time.')}
+    ${stat(fmtMoney(s.pNet),'Premium','all-time, net of buybacks',s.pNet>=0?'var(--green)':'var(--red)','Realised option premium, all-time: sells that were bought back, expired or assigned, net of buybacks. Open options not counted.')}
     ${stat(fmtMoney(ytd.yearly),'Annualised Projection','based on YTD pace',ytd.yearly>=0?'var(--green)':'var(--red)','Current YTD daily income rate projected forward to a full year.')}
   </div>`;
 
@@ -5909,7 +6252,7 @@ function renderAnalytics(){
   if(cumData.length>1){
     const pts=cumData.map((d,i)=>{const x=ePL+(i/(cumData.length-1))*ecW;return{x,y:eqY(d.val)};});
     eqLine=`<polyline points="${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')}" fill="none" stroke="var(--orange)" stroke-width="2"/>`;
-    eqArea=`<polygon points="${ePL},${eqY(0)} ${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')} ${pts[pts.length-1].x.toFixed(1)},${eqY(0)}" fill="rgba(13,148,136,0.08)"/>`;
+    eqArea=`<polygon points="${ePL},${eqY(0)} ${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')} ${pts[pts.length-1].x.toFixed(1)},${eqY(0)}" fill="rgba(255,90,54,0.08)"/>`;
     eqDots=pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${cumData[i].val>=0?'var(--orange)':'var(--red)'}" stroke="var(--bg2)" stroke-width="1.5"/>`).join('');
   }
   let eqYTicks='';
@@ -5939,12 +6282,14 @@ function renderAnalytics(){
   // ── Section 3: Trade Quality — DTE analysis ──
   const dteBuckets={'1-7d':{min:1,max:7},'8-14d':{min:8,max:14},'15-30d':{min:15,max:30},'31-45d':{min:31,max:45},'45d+':{min:46,max:999}};
   const dteAnalysis={};
+  const _sellOut={};db.wheels.forEach(w=>Object.assign(_sellOut,wheelSellOutcomes(db.trades.filter(t=>t.wheelId===w.id))));
+  const _net=t=>_sellOut[t.id]?_sellOut[t.id].net:null;
   for(const[label,range] of Object.entries(dteBuckets)){
-    const trades=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.days>=range.min&&t.days<=range.max);
+    const trades=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.days>=range.min&&t.days<=range.max&&_net(t)!=null); // closed sells only
     if(!trades.length)continue;
-    const totalPrem=trades.reduce((s,t)=>s+(t.total||0),0);
-    const avgPPD=trades.filter(t=>t.days>0).length?trades.filter(t=>t.days>0).reduce((s,t)=>s+(t.total/t.days),0)/trades.filter(t=>t.days>0).length:0;
-    const rocs=trades.map(t=>calcTradeROC(t)).filter(Boolean);
+    const totalPrem=trades.reduce((s,t)=>s+_net(t),0);
+    const avgPPD=trades.filter(t=>t.days>0).length?trades.filter(t=>t.days>0).reduce((s,t)=>s+(_net(t)/t.days),0)/trades.filter(t=>t.days>0).length:0;
+    const rocs=trades.map(t=>calcTradeROC(t,_net(t))).filter(x=>x!=null);
     const avgROC=rocs.length?rocs.reduce((a,b)=>a+b,0)/rocs.length:null;
     dteAnalysis[label]={count:trades.length,totalPrem,avgPPD,avgROC};
   }
@@ -5957,13 +6302,13 @@ function renderAnalytics(){
   </tr>`).join('');
 
   // Delta analysis
-  const deltaRows2=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.delta!=null);
+  const deltaRows2=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.delta!=null&&_net(t)!=null);
   const deltaBuckets={};
   for(const t of deltaRows2){
     const b=t.delta<=0.15?'≤0.15':t.delta<=0.25?'0.16–0.25':t.delta<=0.35?'0.26–0.35':'≥0.36';
     if(!deltaBuckets[b])deltaBuckets[b]={count:0,totalCr:0,totalROC:0,rocCount:0};
-    deltaBuckets[b].count++;deltaBuckets[b].totalCr+=t.total||0;
-    const roc=calcTradeROC(t);if(roc!=null){deltaBuckets[b].totalROC+=roc;deltaBuckets[b].rocCount++;}
+    deltaBuckets[b].count++;deltaBuckets[b].totalCr+=_net(t);
+    const roc=calcTradeROC(t,_net(t));if(roc!=null){deltaBuckets[b].totalROC+=roc;deltaBuckets[b].rocCount++;}
   }
   const deltaTableRows=['≤0.15','0.16–0.25','0.26–0.35','≥0.36'].filter(k=>deltaBuckets[k]).map(k=>{
     const b=deltaBuckets[k];const avgRoc=b.rocCount?b.totalROC/b.rocCount:null;
@@ -6019,7 +6364,7 @@ function renderAnalytics(){
 
   // ── Section 6: Risk ──
   const riskStats=`<div class="a-stat-grid">
-    ${stat(fmtMoney(cap.atRisk),'Current Exposure','open CSP collateral',cap.atRisk>0?'var(--red)':'var(--text3)','Total notional of all currently open cash-secured puts — strike × shares for each live put.')}
+    ${(c=>stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),c.total>0?'var(--red)':'var(--text3)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
     ${stat(fmtMoney(cap.maxCap),'Peak Exposure','highest single CSP','var(--text2)','Largest single cash-secured put notional ever opened. Your peak capital requirement.')}
     ${stat(fmtMoney(cap.totalFees),'Total Fees',cap.feesPct.toFixed(1)+'% of gross premium','var(--text2)','All commissions and regulatory fees logged across every trade.')}
     ${stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
@@ -6032,7 +6377,7 @@ function renderAnalytics(){
     const rotOut=m.trades.filter(t=>t.action==='OUT').reduce((s,t)=>s+(t.total||0),0);
     const stockReal=rotationShareStats(w,db.trades,null).realised;
     const rotDiv=m.trades.filter(t=>t.action==='DIV').reduce((s,t)=>s+(t.total||0),0);
-    const rotRealised=m.premiumNet+stockReal+rotDiv;
+    const rotRealised=m.premiumRealised+stockReal+rotDiv;
     const cr=cycleReturn(w,m,rotationShareStats(w,db.trades,_priceOf),rotDiv);
     return`<tr>
       <td style="font-weight:600;color:var(--orange)">${w.sortOrder||'?'}</td>
@@ -6040,7 +6385,7 @@ function renderAnalytics(){
       <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:0.625rem;font-size:0.5625rem">${w.status==='open'?'● Open':'Closed'}</span></td>
       <td>${m.trades.length}</td>
       <td class="g">${fmtMoney(m.premiumCredits)}</td>
-      <td class="${colorN(m.premiumNet)}">${fmtMoney(m.premiumNet)}</td>
+      <td class="${colorN(m.premiumRealised)}">${fmtMoney(m.premiumRealised)}</td>
       <td class="${colorN(rotRealised)} fw5">${fmtMoney(rotRealised)}</td>
       <td>${m.breakeven!=null?'$'+fmt2(m.breakeven):'—'}</td>
       <td class="${ar&&ar.aroc!=null?colorN(ar.aroc):'m'}" style="font-weight:600">${ar&&ar.aroc!=null?ar.aroc.toFixed(1)+'%':'—'}</td>
@@ -6097,7 +6442,7 @@ function renderAnalytics(){
     <div class="a-section">${sec('Risk & Exposure','Capital deployed, exposure & fees')}${riskStats}${secEnd}</div>
 
     <div class="a-section">${sec('Rotation Scoreboard','Per-rotation performance')}
-      <table class="a-table"><thead><tr><th>#</th><th>Rotation</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th>Cycle /yr ${ii(`AROC uses premium only. Cycle /yr is the whole cycle: premium + share P&amp;L + dividends (+ unrealised for open cycles) ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table>
+      <table class="a-table"><thead><tr><th>#</th><th>Rotation</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th>Cycle /yr ${ii(`Realised only. AROC uses realised premium. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table>
     ${secEnd}</div>
   </div>`;
 }
@@ -6278,7 +6623,9 @@ function parseSmartText(raw){
     'THE','AND','FOR','EST','GMT','GTC','DAY','NET','FEE','FEES','TYPE','OPEN',
     'GOOD','TIME','SELL','SOLD','CALL','PUTS','FILLED','BUY','LIMIT','STOP',
     'MARKET','ORDER','TRADE','CASH','DEBIT','CREDIT','PRICE','FILL','ACCOUNT',
-    'IND','IRA','ROTH','USD','GBP','EUR','STATUS','QTY','CUSIP','SIDE'
+    'IND','IRA','ROTH','USD','GBP','EUR','STATUS','QTY','CUSIP','SIDE',
+    'TO','CLOSE','PUT','BOUGHT','AT','ON','OF','IN','BY','EXP','EXPIRY','STRIKE','SHARES','CONTRACT','CONTRACTS','TOTAL','DATE',
+    'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','SEPT','OCT','NOV','DEC','JUNE','JULY','MARCH','APRIL'
   ]);
   // Normalise a candidate ticker — uppercase, strip noise
   const cleanTick=t=>t?t.toUpperCase().trim():null;
@@ -6286,6 +6633,9 @@ function parseSmartText(raw){
 
   // Labelled ticker fields (IBKR, Fidelity, E*Trade, Schwab)
   const labelTick=/(?:symbol|ticker|security|underlying)[:\s]+([A-Za-z]{1,5})\b/i.exec(full);
+  // Right before a $strike or Put/Call: "SOFI $15 Put", "SOFI 15 Call", "SOFI Put"
+  const strikeTick=/\b([A-Za-z]{1,5})\s+(?:\$\s?\d+(?:\.\d+)?\s*(?:put|call)s?\b|\$\s?\d+(?:\.\d+)?\b|\d+(?:\.\d+)?\s+(?:put|call)s?\b|(?:put|call)s?\b)/ig;
+  let t0=null;for(const m of full.matchAll(strikeTick)){const c=cleanTick(m[1]);if(okTick(c)){t0=c;break;}}
   // Adjacent to action verb (Robinhood, Tastytrade, Webull)
   const adjTick=/(?:buy|sell|bought|sold|open|executed)\s+\d*\s*([A-Za-z]{2,5})\b/i.exec(full);
   // Pipe-delimited: "| sofi |" or "| SOFI |"  (garbled / copy-paste formats)
@@ -6296,6 +6646,7 @@ function parseSmartText(raw){
   const t1=cleanTick(labelTick?.[1]),t2=cleanTick(adjTick?.[1]),
         t3=cleanTick(pipeTick?.[1]),t4=cleanTick(dashTick?.[1]);
   if(okTick(t1))r.ticker=t1;
+  else if(t0)r.ticker=t0;
   else if(okTick(t2))r.ticker=t2;
   else if(okTick(t3))r.ticker=t3;
   else if(okTick(t4))r.ticker=t4;
@@ -6557,7 +6908,7 @@ function showRollPreview(trades){
   const net=trades.reduce((s,t)=>s+(isCredit(t.action)?t.total:-t.total),0);
   document.getElementById('paste-preview').innerHTML=`
     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6875rem">
-      <span style="background:rgba(13,148,136,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">↻ ROLL DETECTED</span>
+      <span style="background:rgba(255,90,54,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">↻ ROLL DETECTED</span>
       <span style="font-size:0.6875rem;color:var(--text3)">Both trades linked automatically</span>
       <span style="margin-left:auto;font-size:0.875rem;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit: +':'Net debit: -'}$${Math.abs(net).toFixed(2)}</span>
     </div>
@@ -6727,6 +7078,8 @@ async function authGoogle(){
   }
 }
 
+function needsOnboarding(d,skipped){return !skipped&&!(d.wheels&&d.wheels.length)&&!(d.trades&&d.trades.length)&&!(((typeof _realOpts!=='undefined'&&_realOpts)||d.opts||[]).length);}
+function onboardSkip(){localStorage.setItem('wh-onboardSkipped','1');const ob=document.getElementById('onboard-overlay');if(ob)ob.style.display='none';}
 async function onboardSubmit(){
   const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
   if(!ticker){document.getElementById('onboard-ticker').focus();return;}
@@ -6764,6 +7117,20 @@ function openSettings(){
   }
   const dateSel=document.getElementById('date-fmt-select');
   if(dateSel)dateSel.value=dateFmt;
+  fillReturnSettings();
+  const pl=document.getElementById('settings-plan'),lab=planLabel();
+  if(pl){pl.style.display=lab?'block':'none';pl.innerHTML=!lab?'':`Plan: <b>${lab}</b> · `+(_ent&&_ent.founder?'free for life':_ent&&_ent.stripeCustomerId?'<a href="#" onclick="openBillingPortal();return false" style="color:var(--orange)">Manage billing</a>':'<a href="#" onclick="closeModal(\'mSettings\');openUpgrade(\'unlimited\');return false" style="color:var(--orange)">Upgrade</a>');}
+}
+function fillReturnSettings(){
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]),b=document.getElementById('ret-base');if(!b)return;
+  b.value=rs.base;document.getElementById('ret-account').value=rs.account||'';document.getElementById('ret-target').value=rs.target||'';
+  document.getElementById('ret-acct-row').style.display=rs.base==='account'||b.value==='account'?'flex':'none';
+}
+function saveReturnSettings(){
+  const b=document.getElementById('ret-base').value,a=+document.getElementById('ret-account').value||0,t=+document.getElementById('ret-target').value||0;
+  localStorage.setItem('wh-returnSet',JSON.stringify({base:b,account:a>0?a:0,target:t>0?t:null}));
+  document.getElementById('ret-acct-row').style.display=b==='account'?'flex':'none';
+  render();
 }
 function setDateFmt(val){
   dateFmt=val;
@@ -6779,6 +7146,93 @@ function toggleTheme(isLight){
 function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls are harmless)
 // "+ Add trade": SmartScan for whatever you're looking at — LEAP/short-call fills on LEAPs, wheel fills everywhere else.
 function pasteFill(){ if(view==='options'&&typeof openLeapAdd==='function')openLeapAdd(); else openPasteTrade(); }
+
+// ── Plans: Free / Pro. Everything is driven by window.BRAND.plans; gating is OFF unless plans.gating is true.
+// The entitlement lives at entitlements/{uid}: users can read it, only the server (Stripe webhook / founder tool) can write it.
+let _ent=null,_entErr=false;
+function planCfg(){return (typeof window!=='undefined'&&window.BRAND&&window.BRAND.plans)||{gating:false,paidFeatures:[],free:{}};}
+function isPro(ent,err){return !!(err||(ent&&(ent.plan==='pro'||ent.founder))); } // can't read it → never lock anyone out
+function canUse(feature,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(!(cfg.paidFeatures||[]).includes(feature))return true;
+  return isPro(ent===undefined?_ent:ent,err===undefined?_entErr:err);}
+function underLimit(kind,count,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const f=cfg.free||{};const lim=kind==='wheel'?f.maxWheelTickers:f.maxOpenLeaps;return lim==null||count<lim;}
+async function loadEntitlement(uid){try{const sn=await getDoc(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}}
+async function _pollUpgrade(uid){for(let i=0;i<6&&!isPro(_ent,false);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPro(_ent,false)){alert('Thanks! Pro is now on for your account.');render();}}
+function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';if(isPro(_ent,false))return 'Pro';return 'Free';}
+function openUpgrade(feature){
+  const B=window.BRAND||{},P=planCfg(),N=B.featureNames||{};
+  document.getElementById('upg-feature').textContent=N[feature]?N[feature]+' is part of Pro.':'That is part of Pro.';
+  document.getElementById('upg-list').innerHTML=(P.paidFeatures||[]).map(k=>`<li>${esc(N[k]||k)}</li>`).join('');
+  document.getElementById('upg-monthly').textContent=`${P.currency||'£'}${P.priceMonthly} a month`;
+  document.getElementById('upg-yearly').textContent=`${P.currency||'£'}${P.priceYearly} a year`;
+  document.getElementById('upg-msg').textContent='';openModal('mUpgrade');
+}
+async function _billingCall(fn,payload){
+  if(APP_DEMO){location.href='/start';throw new Error('Opening sign-up…');}
+  const u=_auth.currentUser;if(!u)throw new Error('Please sign in again.');
+  const r=await fetch('/.netlify/functions/'+fn,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify(payload||{})});
+  const j=await r.json().catch(()=>({}));if(!r.ok||!j.url)throw new Error(j.error||'Something went wrong, please try again.');return j.url;
+}
+async function startCheckout(plan){const m=document.getElementById('upg-msg');m.textContent='Opening secure checkout…';try{location.href=await _billingCall('checkout',{plan});}catch(e){m.textContent=e.message;}}
+async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
+
+// ── Your data: export and delete ─────────────────────────────
+const USER_COLLECTIONS=['wheels','trades','optlegs'];
+function _csvCell(v){if(v===null||v===undefined)return '';if(typeof v==='object')v=JSON.stringify(v);
+  // Text that starts like a formula gets a leading ' so Excel/Sheets show it rather than run it.
+  if(typeof v==='string'&&/^[=+\-@\t\r]/.test(v)&&isNaN(Number(v)))v="'"+v;v=String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function toCSV(rows){const keys=[];rows.forEach(r=>Object.keys(r).forEach(k=>{if(!keys.includes(k))keys.push(k);}));return [keys.join(',')].concat(rows.map(r=>keys.map(k=>_csvCell(r[k])).join(','))).join('\r\n');}
+function buildExport(data,meta){
+  const app=(typeof window!=='undefined'&&window.BRAND&&window.BRAND.name)||'OpTrack';
+  const json={app,exportedAt:(meta&&meta.at)||new Date().toISOString(),account:(meta&&meta.email)||'',wheels:data.wheels||[],trades:data.trades||[],leaps:data.optlegs||[]};
+  const rows=[].concat((data.wheels||[]).map(r=>({record:'wheel',...r})),(data.trades||[]).map(r=>({record:'trade',...r})),(data.optlegs||[]).map(r=>({record:'leap',...r})));
+  return {json:JSON.stringify(json,null,2),csv:toCSV(rows)};
+}
+async function deleteAllUserData(uid,api){
+  if(!uid)throw new Error('Not signed in');let n=0;
+  for(const c of USER_COLLECTIONS){const ids=await api.list(c);for(const id of ids){await api.del(c,id);n++;}}
+  const left=[];for(const c of USER_COLLECTIONS){if((await api.list(c)).length)left.push(c);}
+  if(left.length)throw new Error('Some data could not be deleted ('+left.join(', ')+'). Nothing else was removed; please try again.');
+  return n;
+}
+function _download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+async function exportMyData(){
+  if(APP_DEMO){alert('Export works on your own account. This is the demo.');return;}
+  const uid=_currentUid();if(!uid){alert('Please sign in first.');return;}
+  try{
+    const data={};for(const c of USER_COLLECTIONS){data[c]=(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.data());}
+    const out=buildExport(data,{email:_auth.currentUser&&_auth.currentUser.email});
+    const base=String(_brandName()).toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-export-'+new Date().toISOString().slice(0,10);
+    _download(base+'.json',out.json,'application/json');setTimeout(()=>_download(base+'.csv',out.csv,'text/csv'),400);
+  }catch(e){console.error('Export failed:',e);alert('Could not export, please check your connection and try again.');}
+}
+function openDeleteAccount(){
+  closeModal('mSettings');openModal('mDelete');
+  const u=_auth.currentUser;const pw=document.getElementById('delete-password');
+  const isPw=!!(u&&u.providerData&&u.providerData.some(p=>p.providerId==='password'));
+  pw.style.display=isPw?'block':'none';pw.value='';
+  document.getElementById('delete-confirm').value='';document.getElementById('delete-go').disabled=true;document.getElementById('delete-msg').textContent='';
+}
+async function doDeleteAccount(){
+  const u=_auth.currentUser,uid=_currentUid(),msg=document.getElementById('delete-msg'),btn=document.getElementById('delete-go');
+  if(!u||!uid||u.uid!==uid){msg.textContent='Please sign in again first.';return;}
+  if(document.getElementById('delete-confirm').value.trim()!=='DELETE')return;
+  btn.disabled=true;btn.textContent='Deleting…';msg.textContent='';
+  try{
+    // 1. Prove it's really you (Firebase needs a recent sign-in to delete an account).
+    if(u.providerData.some(p=>p.providerId==='password')){const pw=document.getElementById('delete-password').value;if(!pw)throw Object.assign(new Error('Enter your password to confirm.'),{soft:true});await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,pw));}
+    else await reauthenticateWithPopup(u,_googleProvider);
+    // 2. Delete every document, then 3. the login itself.
+    await deleteAllUserData(uid,{list:async c=>(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.id),del:(c,id)=>deleteDoc(doc(_fsDb,'users',uid,c,id))});
+    await deleteUser(u);
+    Object.keys(localStorage).filter(k=>k.startsWith('wh-')||k==='wheel_tracker_v7').forEach(k=>localStorage.removeItem(k));
+    closeModal('mDelete');alert('Your account and all its data have been deleted.');location.reload();
+  }catch(e){
+    console.error('Delete failed:',e);btn.disabled=false;btn.textContent='Delete my account forever';
+    const m={'auth/wrong-password':'Wrong password.','auth/invalid-credential':'Wrong password.','auth/popup-closed-by-user':'Sign-in was cancelled, so nothing was deleted.','auth/too-many-requests':'Too many attempts, please try later.'};
+    msg.textContent=m[e.code]||e.message;
+  }
+}
+
 async function doSignOut(){
   try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
@@ -6811,6 +7265,25 @@ async function migrateLocalStorage(userId) {
   }
 }
 
+// ── Demo boot: made-up trades from demo.js, Pro features on, prices made up locally (no API calls). ──
+function demoBoot(){
+  window._authResolved=true;_confirmedUid=null;
+  _ent={plan:'pro',demo:true};_entErr=false;
+  const d=OT_DEMO.load();db.wheels=d.wheels;db.trades=d.trades;db.opts=d.opts;window._db=db;
+  document.getElementById('auth-overlay').style.display='none';
+  document.documentElement.classList.add('ot-demo');
+  const bar=document.createElement('div');bar.id='demo-banner';
+  bar.innerHTML='<span><b>Demo</b> with made-up trades. Nothing is saved to an account.</span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/start" class="db-go">Start free</a></span>';
+  document.body.prepend(bar);
+  ['settings-export','settings-signout','settings-delete','settings-user'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  const sx=document.getElementById('settings-legal');if(sx){const r=document.createElement('button');r.className='btn btn-ghost btn-full';r.style.cssText='text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem';r.textContent='↺ Reset demo';r.onclick=()=>OT_DEMO.reset();sx.after(r);}
+  const ta=document.getElementById('paste-raw');if(ta){const b=document.createElement('button');b.type='button';b.id='demo-sample';b.className='btn btn-ghost';b.style.cssText='margin-top:0.5rem;font-size:0.75rem';b.textContent='Try a sample';b.onclick=()=>{ta.value=OT_DEMO.sample();ta.focus();};ta.after(b);}
+  const hv={home:'dash',wheel:'positions',leaps:'options',activity:'log',stats:'analytics'}[location.hash.slice(1)];
+  if(hv)switchView(hv);else render();
+  fetchAllQuotes().then(()=>{db.wheels.forEach(w=>{if(w.status==='open'&&quotes[w.ticker])w.lastPrice=quotes[w.ticker].price;});render();
+    const l=document.getElementById('loading-overlay');if(l)l.style.display='none';}).catch(()=>{const l=document.getElementById('loading-overlay');if(l)l.style.display='none';});
+  clearInterval(_pollHandle);_pollHandle=setInterval(fetchAllQuotes,60000);
+}
 function showAuthOverlay() {
   document.getElementById('auth-overlay').style.display = 'flex';
   const ob = document.getElementById('onboard-overlay');
@@ -6822,7 +7295,7 @@ function showAuthOverlay() {
   render();
 }
 
-onAuthStateChanged(_auth, async (user) => {
+if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
   window._authResolved = true;
   if (user) {
     _confirmedUid = user.uid;
@@ -6861,6 +7334,7 @@ onAuthStateChanged(_auth, async (user) => {
     loadingBar.style.width = '30%';
     loadingText.textContent = 'Loading rotations...';
     try {
+      loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
       await loadDBFromFirestore(user.uid);
     } catch (e) {
       console.error('Load failed:', e);
@@ -6901,8 +7375,7 @@ onAuthStateChanged(_auth, async (user) => {
     if (nOk > 0) {
       db.wheels.forEach(w => {
         if (w.status === 'open' && quotes[w.ticker] && w.lastPrice !== quotes[w.ticker].price) {
-          w.lastPrice = quotes[w.ticker].price;
-          _saveWheel(w); // persist only real changes
+          w.lastPrice = quotes[w.ticker].price; // in memory only
         }
       });
     }
@@ -6953,7 +7426,7 @@ window.authGoogle = authGoogle;
 window.authForgot = authForgot;
 window.onboardSubmit = onboardSubmit;
 window.switchView = switchView;
-window.goToOpt = goToOpt;
+window.goToOpt = goToOpt; window.goToLeap = goToLeap;
 window.setOptDemo = setOptDemo;
 window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;
@@ -6992,6 +7465,7 @@ window.moveWheel = moveWheel;
 window.deleteWheel = deleteWheel;
 window.toggleExpand = toggleExpand;
 window.toggleLeapExpand = toggleLeapExpand;
+window.toggleListAll = toggleListAll;
 window.toggleMinimise = toggleMinimise;
 window.toggleHide = toggleHide;
 window.toggleMinAll = toggleMinAll;
@@ -7014,6 +7488,9 @@ window.pasteFill = pasteFill;
 window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
+window.onboardSkip = onboardSkip;
+window.saveReturnSettings = saveReturnSettings; window.openUpgrade = openUpgrade; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
+window.exportMyData = exportMyData; window.openDeleteAccount = openDeleteAccount; window.doDeleteAccount = doDeleteAccount;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
 window.onActionChange = onActionChange;

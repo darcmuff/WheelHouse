@@ -1,0 +1,20 @@
+const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
+const A=path.join(__dirname,'..','app');const L=fs.readFileSync(path.join(A,'landing.html'),'utf8');const R=fs.readFileSync(path.join(A,'_redirects'),'utf8');
+const{analyticsTag}=require('../app/analytics.js');
+test('root shows the landing page; /app/ and /index.html are the app',()=>{assert.ok(/^\/\s+\/landing\.html\s+200!$/m.test(R));assert.ok(/^\/app\s+\/index\.html\s+200$/m.test(R)&&/^\/app\/\*\s+\/index\.html\s+200$/m.test(R));assert.ok(!/301/.test(R.replace(/^#.*$/mg,'')),'no slash redirect loop');
+  const h=fs.readFileSync(path.join(A,'index.html'),'utf8');assert.ok(h.includes('<base href="/">'));});
+test('installed app and returning users skip the landing page',()=>{assert.ok(L.includes("display-mode: standalone")&&L.includes("'wh-view'")&&L.includes("location.replace('/app/'"));assert.ok(L.indexOf('location.replace')<L.indexOf('<style>'),'redirect runs before anything renders');});
+test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');});
+test('landing leads with the USPs, top three first, then the rest, plans, not financial advice, CTAs, no hype',()=>{
+  const i=id=>L.indexOf('id="'+id+'"');assert.ok(i('usp-broker')>0&&i('usp-broker')<i('usp-honest')&&i('usp-honest')<i('usp-smartscan')&&i('usp-smartscan')<i('plans'),'USP order');
+  ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Roll chains','PMCC','every minute','after-hours','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','href="/start"','id="plans"'].forEach(s=>assert.ok(L.includes(s),s));
+  ['img/shot-rollchain.webp'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
+  assert.ok(L.includes('Demo data')&&L.includes('made-up numbers'),'screens and examples labelled');
+  assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));});
+test('landing is light: no external CSS/fonts, images small',()=>{assert.ok(!/<link[^>]+stylesheet/.test(L));fs.readdirSync(path.join(A,'img')).forEach(f=>assert.ok(fs.statSync(path.join(A,'img',f)).size<60000,f));});
+test('analytics: off by default, cookie-free providers only, never on localhost',()=>{const ctx={window:{}};require('vm').runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);
+  assert.strictEqual(analyticsTag(ctx.window.BRAND.analytics,'x.netlify.app'),null);
+  assert.strictEqual(analyticsTag({provider:'plausible',domain:'optrack.app'},'optrack.app').attrs['data-domain'],'optrack.app');assert.strictEqual(analyticsTag({provider:'plausible',domain:'optrack.app'},'localhost'),null);
+  assert.ok(analyticsTag({provider:'goatcounter',goatcounter:'https://optrack.goatcounter.com/count'},'a').src.includes('gc.zgo.at'));assert.strictEqual(analyticsTag({provider:'goatcounter',goatcounter:'https://evil.com/x'},'a'),null);
+  ['index.html','landing.html','legal.html'].forEach(f=>assert.ok(fs.readFileSync(path.join(A,f),'utf8').includes('src="analytics.js"'),f));});
+test('service worker keeps the app, not the landing page, as the offline shell',()=>{const s=fs.readFileSync(path.join(A,'sw.js'),'utf8');assert.ok(s.includes("const SHELL = './index.html'")&&s.includes('x.put(SHELL, c)'));});

@@ -21,7 +21,7 @@ async function getCandles(sym, from, to, { fetchImpl = fetch } = {}) {
   return parseCandles(await r.json(), from, to);
 }
 
-exports.handler = async (event) => {
+const _handler = async (event) => {
   const q = event.queryStringParameters || {};
   const sym = String(q.symbol || '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
   if (!sym) return fail(400, 'Missing symbol parameter');
@@ -36,3 +36,5 @@ exports.handler = async (event) => {
 };
 exports.parseCandles = parseCandles;
 exports.getCandles = getCandles;
+
+exports.handler = require('../lib/origin').guard(_handler);

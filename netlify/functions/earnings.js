@@ -51,7 +51,7 @@ async function nextEarnings(sym, today, { fetchImpl = fetch, finnhubKey } = {}) 
   return { date: n.date, source: 'nasdaq', partial: n.errors > 0 };
 }
 
-exports.handler = async (event) => {
+const _handler = async (event) => {
   const sym = String((event.queryStringParameters || {}).symbol || '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
   if (!sym) return resp(400, { error: 'Missing symbol parameter' });
   const today = iso(new Date());
@@ -63,3 +63,5 @@ exports.handler = async (event) => {
   }
 };
 Object.assign(exports, { nasdaqHit, finnhubNext, nextEarnings, addDays });
+
+exports.handler = require('../lib/origin').guard(_handler);

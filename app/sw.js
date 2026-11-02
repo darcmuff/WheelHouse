@@ -1,6 +1,9 @@
 // WheelHouse service worker. Bump CACHE on every release.
-const CACHE = 'wheelhouse-v106';
-const STATIC = ['./', './manifest.json', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
+const CACHE='optrack-v143';
+// Caches from earlier app names, deleted on update. Only the service-worker cache: your data and settings are untouched.
+const LEGACY = ['wheelhouse-'];
+const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
+const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './demo.js', './analytics.js', './legal.html', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg', './logo-horizontal.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting()));
@@ -8,7 +11,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('wheelhouse-') && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => (k.startsWith('optrack-') || LEGACY.some(p => k.startsWith(p))) && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -28,10 +31,12 @@ self.addEventListener('fetch', e => {
   const isPage = req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html');
   if (isPage) {
     // Network first so updates always arrive; fall back to cached shell offline.
+    // Only the app itself is stored as the shell (the landing and legal pages must not replace it).
+    const shell = /^\/(app\/?|app\/index\.html|index\.html)$/.test(url.pathname);
     e.respondWith(fetch(req).then(res => {
-      if (res && res.ok) { const c = res.clone(); caches.open(CACHE).then(x => x.put('./', c)); }
+      if (res && res.ok && shell) { const c = res.clone(); caches.open(CACHE).then(x => x.put(SHELL, c)); }
       return res;
-    }).catch(() => caches.match('./').then(r => r || caches.match(req))));
+    }).catch(() => shell ? caches.match(SHELL) : caches.match(req, { ignoreSearch: true }).then(r => r || caches.match(SHELL))));
     return;
   }
   // Cache first for same-origin static assets.

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn, extractConst } = require('./extract');
-const F = new Function(['shareRealisations', 'breakevenSteps', 'chartMarkers', 'priceChartSVG', 'chartWindow', 'stackTags', 'snapMarkers', 'wheelEndDate', 'earningsDays', 'calcWheel'].map(extractFn).join('\n') + '\n' + extractConst('CHART_KINDS') +
+const F = new Function(['walkLegPairs','realisedPremium','shareRealisations', 'breakevenSteps', 'chartMarkers', 'priceChartSVG', 'chartWindow', 'stackTags', 'snapMarkers', 'wheelEndDate', 'earningsDays', 'calcWheel'].map(extractFn).join('\n') + '\n' + extractConst('CHART_KINDS') +
   '\nconst esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]));let db;\nreturn {breakevenSteps,chartMarkers,priceChartSVG,chartWindow,stackTags,snapMarkers,wheelEndDate,earningsDays,calcWheel,setDb:d=>db=d};')();
 const opt = (i, a, ent, exp, k, p, ew) => { const g = p * 400, tot = Math.round((['CSP', 'STOC', 'STC'].includes(a) ? g - 1.08 : g + 1.08) * 100) / 100;
   return { id: 't' + i, wheelId: 'w1', action: a, entered: ent, expiry: exp, strike: k, premium: p, fees: 1.08, shares: 400, total: tot, ...(ew ? { expiredWorthless: true } : {}) }; };
