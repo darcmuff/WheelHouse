@@ -326,6 +326,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 }
 .btn:hover{opacity:.85}.btn:active{transform:scale(.97)}
 .btn-primary{background:var(--orange);color:#fff}
+#new-rot-ticker-top::placeholder{color:#fff;opacity:1}
 .btn-success{background:#0d2218;color:var(--green);border:1px solid #1a3d2a}
 .btn-danger{background:#2a0d0d;color:var(--red);border:1px solid #3d1a1a}
 .btn-warn{background:#2a1800;color:var(--orange2);border:1px solid #3d2600}
@@ -3541,7 +3542,7 @@ function renderPositions(){
       <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
     </div>
     <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg></button>
-    <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:5rem;text-transform:uppercase;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
+    <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:5rem;text-transform:uppercase;background:var(--orange);color:#fff;border:1px solid var(--orange);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
