@@ -2287,7 +2287,7 @@ function _saveUIState(){
 }
 
 function render(){
-  {const b=document.querySelector('.tn-paste');if(b)b.style.display=view==='positions'?'none':'';} // Wheel tab: cards have their own Add trade
+  {const b=document.querySelector('.tn-paste');if(b)b.style.display=(view==='positions'||view==='options')?'none':'';} // Wheel tab: cards have their own Add trade; LEAPs tab: has + LEAP
   _saveUIState();
   renderSidebar();
   const c=document.getElementById('content');
