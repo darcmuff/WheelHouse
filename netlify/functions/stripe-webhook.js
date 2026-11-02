@@ -5,6 +5,8 @@ const { verifySignature } = require('../lib/stripe');
 const fb = require('../lib/fbadmin');
 const J = (code, body) => ({ statusCode: code, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const ACTIVE = ['active', 'trialing', 'past_due'];
+// Newer Stripe API versions put the renewal date on the subscription item; older ones on the subscription.
+function periodEnd(o) { const it = o.items && o.items.data && o.items.data[0]; return (it && it.current_period_end) || o.current_period_end || null; }
 async function apply(evt, deps) {
   const get = deps.getEntitlement || fb.getEntitlement, set = deps.setEntitlement || fb.setEntitlement;
   const o = evt.data && evt.data.object || {};
@@ -15,7 +17,7 @@ async function apply(evt, deps) {
   } else if (/^customer\.subscription\.(created|updated|deleted)$/.test(evt.type)) {
     uid = (o.metadata || {}).uid;
     const on = evt.type !== 'customer.subscription.deleted' && ACTIVE.includes(o.status);
-    fields = { plan: on ? 'pro' : 'free', status: evt.type === 'customer.subscription.deleted' ? 'canceled' : o.status, stripeCustomerId: o.customer || null, subscriptionId: o.id || null, currentPeriodEnd: o.current_period_end || null, source: 'stripe' };
+    fields = { plan: on ? 'pro' : 'free', status: evt.type === 'customer.subscription.deleted' ? 'canceled' : o.status, stripeCustomerId: o.customer || null, subscriptionId: o.id || null, currentPeriodEnd: periodEnd(o), source: 'stripe' };
   } else return { ignored: evt.type };
   if (!uid) return { ignored: 'no uid' };
   const cur = await get(uid).catch(() => null);
@@ -33,4 +35,5 @@ const handler = async (event, ctx, deps = {}) => {
   try { return J(200, await apply(evt, deps)); } catch (e) { console.error('webhook', e.message); return J(500, { error: 'retry' }); } // 500 → Stripe retries
 };
 exports.apply = apply;
+exports.periodEnd = periodEnd;
 exports.handler = handler; // not origin-guarded: Stripe's servers call it, the signature is the guard
