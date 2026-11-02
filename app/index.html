@@ -1406,7 +1406,7 @@ let _optsLoadError='';
 // Only a mark the user typed (markSrc==='manual') is persisted.
 function _persistableLeg(leg){
   if(!leg||leg.markSrc==='manual')return leg;
-  const o={...leg};o.mark=null;o.markSrc=null;o.markAt=null;o.delta=null;o.theta=null;o.iv=null;return o;
+  const o={...leg};o.mark=null;o.markSrc=null;o.markAt=null;o.delta=null;o.theta=null;o.iv=null;delete o.markWhy;delete o.markNote;return o;
 }
 function _saveOpt(leg){
   if(APP_DEMO){OT_DEMO.save(db);return;}
@@ -2584,7 +2584,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       ts=toStrike(spot,+c.strike).text;
       const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=ppdCellHtml(t.total/t.days,t.days);
       const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
-      if(mark!=null&&sold>0){const cc=capturedCellHtml(Math.round((sold-mark)/sold*100),pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),true);cap=cc.html;capColor=cc.color;}
+      if(mark!=null&&sold>0){const cc=capturedCellHtml(Math.round((sold-mark)/sold*100),pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),true);cap=`<span title="${esc(c.markNote||('Buy-back price $'+(+mark).toFixed(2)))}">${cc.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;capColor=cc.color;}
     }else{
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
@@ -3396,9 +3396,48 @@ function adjMark(mid,delta,gamma,quoteSpot,liveSpot){
   const dS=liveSpot-quoteSpot,g=isNaN(+gamma)?0:+gamma;
   return Math.max(0.01,Math.round((mid+(+delta)*dS+0.5*g*dS*dS)*100)/100);
 }
-function _applyWheelMarks(){Object.entries(_wheelMarkRaw).forEach(([k,r])=>{const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;_wheelMarks[k]=adjMark(r.mid,r.delta,r.gamma,r.spot,live);});}
+// US regular session (9:30–16:00 New York, Mon–Fri). Outside it the option quote and the stock price come from different
+// moments (Cboe's out-of-hours spot vs Friday's close), so a delta adjustment would be invented movement. Pure given `now`.
+function isRegularSession(now){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(now||new Date()).map(x=>[x.type,x.value]));
+  if(p.weekday==='Sat'||p.weekday==='Sun')return false;const m=(+p.hour%24)*60+(+p.minute);return m>=570&&m<960;
+}
+// Steady, honest buy-back price for a short option. Pure.
+// c = contract quote {bid,ask,last,delta,gamma}; prev = last mark shown (or null); o = {strike,type:'P'|'C',regular:bool}.
+// 1) Good quote only: bid>0, ask>0, spread ≤ 60% of mid (or ≤ $0.10). Else keep the last good mark; only with none, use the last trade.
+// 2) Delta/gamma move only in regular hours, only for stock moves ≤ 4%, and the result stays within a band around the quote.
+// 3) Never below intrinsic value or a cent. 4) Ignore wiggles under max($0.02, 1%) so the figure doesn't flicker.
+function steadyMark(c,quoteSpot,liveSpot,prev,o){
+  o=o||{};const r2=n=>Math.round(n*100)/100;
+  if(!c)return prev!=null?{mark:prev,why:'held'}:null;
+  const b=+c.bid,a=+c.ask,good=b>0&&a>=b&&((a-b)<=0.10||(a-b)/((a+b)/2)<=0.6);
+  let mid,why;
+  if(good){mid=(a+b)/2;why='mid';}
+  else if(prev!=null)return{mark:prev,why:'held'};
+  else if(+c.last>0){mid=+c.last;why='last';}
+  else return null;
+  let m=mid;
+  if(good&&o.regular&&quoteSpot>0&&liveSpot>0&&c.delta!=null&&!isNaN(+c.delta)&&Math.abs(liveSpot-quoteSpot)/quoteSpot<=0.04){
+    const adj=adjMark(mid,c.delta,c.gamma,quoteSpot,liveSpot);const band=Math.max(a-b,0.15*mid,0.05);
+    m=Math.min(a+band,Math.max(b-band,adj));if(r2(m)!==r2(mid))why='adjusted';
+  }
+  if(o.strike>0&&liveSpot>0)m=Math.max(m,o.type==='C'?liveSpot-o.strike:o.strike-liveSpot);
+  m=Math.max(0.01,r2(m));
+  if(prev!=null&&why!=='last'&&Math.abs(m-prev)<Math.max(0.02,prev*0.01))return{mark:prev,why:'held-small'};
+  return{mark:m,why};
+}
+function _applyWheelMarks(){const reg=isRegularSession();Object.entries(_wheelMarkRaw).forEach(([k,r])=>{const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
+  const s=steadyMark(r.c,r.spot,live,_wheelMarks[k]??null,{strike:r.strike,type:r.type,regular:reg});if(s){_wheelMarks[k]=s.mark;r.why=s.why;}});}
 function wheelMarkNote(k){const r=_wheelMarkRaw[k];if(!r)return'';const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
-  return live&&r.delta!=null?`Buy-back price $${(+_wheelMarks[k]).toFixed(2)}: 15-min delayed option quote, adjusted to ${r.u} at $${live.toFixed(2)}`:`Buy-back price $${(+_wheelMarks[k]).toFixed(2)}: 15-min delayed option quote`;}
+  return markNote(_wheelMarks[k],r.why,r.u,live,r.c);}
+// Plain words for the buy-back price actually used and where it came from.
+function markNote(mark,why,u,live,c){if(mark==null)return'';const q=c&&c.bid>0&&c.ask>0?` (bid $${(+c.bid).toFixed(2)} / ask $${(+c.ask).toFixed(2)})`:'';
+  const base=`Buy-back price $${(+mark).toFixed(2)}: `;
+  return base+(why==='adjusted'?`15-min delayed option quote${q}, adjusted to ${u} at $${(+live).toFixed(2)}`
+    :why==='held'?`last good quote kept: the latest quote had no usable bid/ask${q}`
+    :why==='held-small'?`15-min delayed option quote${q}; small change ignored to keep it steady`
+    :why==='last'?`last traded price (no bid/ask right now)`
+    :`15-min delayed option quote${q}${isRegularSession()?'':', market closed so not adjusted'}`);}
 async function fetchWheelMarks(force){
   if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
   const byU={};
@@ -3408,7 +3447,7 @@ async function fetchWheelMarks(force){
     try{
       const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${[...set].join(',')}`,{signal:AbortSignal.timeout(15000)});
       if(!r.ok)continue;const j=await r.json();
-      set.forEach(k=>{const c=j.contracts&&j.contracts[k];const mid=c?(c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last>0?c.last:null)):null;if(mid!=null){_wheelMarkRaw[k]={u,mid,delta:c.delta??null,gamma:c.gamma??null,spot:j.spot>0?j.spot:null};changed=true;}});
+      set.forEach(k=>{const c=j.contracts&&j.contracts[k];const mid=c?(c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last>0?c.last:null)):null;if(mid!=null){_wheelMarkRaw[k]={u,c,strike:+k.slice(-8)/1000,type:k.slice(-9,-8),mid,delta:c.delta??null,gamma:c.gamma??null,spot:j.spot>0?j.spot:null};changed=true;}});
     }catch(e){console.warn('Wheel marks:',u,e.message);}
   }
   _applyWheelMarks();
@@ -3438,7 +3477,10 @@ async function fetchOptionMarks(force){
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
         const live=quotes[u]&&quotes[u].state!=='DELAYED'?quotes[u].price:null;
-        Object.assign(l,{mark:adjMark(mid,c.delta,c.gamma,j.spot,live),markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
+        const prevM=l.markSrc&&l.markSrc!=='manual'&&l.mark!=null?+l.mark:null;
+        const sm=steadyMark(c,j.spot,live,prevM,{strike:+l.strike,type:l.type,regular:isRegularSession()});if(!sm){miss++;return;}
+        l.markWhy=sm.why;l.markNote=markNote(sm.mark,sm.why,u,live,c);
+        Object.assign(l,{mark:sm.mark,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
         ok++; // in memory only — live marks are never saved
       });
     }catch(e){failU.push(u);console.warn('Option marks:',u,e.message);}

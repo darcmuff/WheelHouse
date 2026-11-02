@@ -9,4 +9,4 @@ test('no greeks or no live price: raw mid',()=>{assert.strictEqual(adjMark(2.545
 test('never below a cent; null mid stays null',()=>{assert.strictEqual(adjMark(0.05,0.5,0,100,80),0.01);assert.strictEqual(adjMark(null,0.5,0,1,1),null);});
 test('marks refresh every minute and re-adjust after each stock refresh',()=>{
   assert.ok(SRC.includes('Date.now()-_wheelMarksAt<60e3')&&SRC.includes('Date.now()-_optMarksAt<60e3'));
-  assert.ok(SRC.includes('    _applyWheelMarks();\n'));assert.ok(SRC.includes('mark:adjMark(mid,c.delta,c.gamma,j.spot,live)'));});
+  assert.ok(SRC.includes('    _applyWheelMarks();\n'));assert.ok(SRC.includes('steadyMark(c,j.spot,live,prevM,'));});
