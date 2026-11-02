@@ -20,6 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://wheelhouse-tracker.netlify.app/optrack-share.png">
 <link rel="manifest" href="manifest.json">
+<script src="onboarding.js"></script>
 <script src="demo.js"></script>
 <script src="brand.js"></script>
 <script src="analytics.js" defer></script>
@@ -7222,6 +7223,13 @@ async function doDeleteAccount(){
   }
 }
 
+// Onboarding test site only: delete the throwaway test account and its data on "Restart onboarding".
+if(window.OT_ONBOARDING&&!APP_DEMO)window._obDeleteAccount=async function(){
+  const u=_auth.currentUser;if(!u)return;const uid=u.uid;
+  try{await deleteAllUserData(uid,{list:async c=>(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.id),del:(c,id)=>deleteDoc(doc(_fsDb,'users',uid,c,id))});}catch(e){console.warn('Test data delete failed',e);}
+  try{await deleteUser(u);}catch(e){console.warn('Test account delete failed (sign-in too old?)',e);}
+};
+
 async function doSignOut(){
   try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
@@ -7503,7 +7511,7 @@ setTimeout(function(){if(window._authResolved)return;var t=document.getElementBy
 </script>
 <script>
 // Register the offline service worker. When a new version takes over, reload once so the fresh app shows.
-if('serviceWorker' in navigator && location.protocol==='https:'){
+if('serviceWorker' in navigator && location.protocol==='https:' && !window.OT_ONBOARDING){
   window.addEventListener('load',()=>{
     const hadCtrl=!!navigator.serviceWorker.controller;let reloaded=false;
     navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtrl&&!reloaded){reloaded=true;location.reload();}});

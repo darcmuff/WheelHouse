@@ -1,0 +1,6 @@
+const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');const vm=require('vm');
+const SRC=fs.readFileSync(path.join(__dirname,'..','app','onboarding.js'),'utf8');
+function run(host,pathname,search=''){const store={a:'1'};const ctx={location:{hostname:host,pathname,search},window:{},localStorage:{clear(){for(const k in store)delete store[k];}},sessionStorage:{clear(){}},navigator:{},indexedDB:{deleteDatabase(){}},document:{addEventListener(){}},console};ctx.window=ctx;vm.runInNewContext(SRC,ctx);return {ctx,store};}
+test('inactive on dev and prod hosts',()=>{for(const h of ['dev--wheelhouse-tracker.netlify.app','optrack.app','wheelhouse-tracker.netlify.app']){const r=run(h,'/');assert.strictEqual(r.ctx.OT_ONBOARDING,false);assert.strictEqual(r.store.a,'1');}});
+test('active on onboarding branch: landing wipes storage',()=>{const r=run('onboarding--wheelhouse-tracker.netlify.app','/');assert.strictEqual(r.ctx.OT_ONBOARDING,true);assert.strictEqual(r.store.a,undefined);});
+test('active on onboarding branch: /start and /app keep state mid-flow',()=>{for(const p of ['/start','/app/']){const r=run('onboarding--wheelhouse-tracker.netlify.app',p);assert.strictEqual(r.store.a,'1');}});
