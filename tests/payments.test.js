@@ -35,3 +35,14 @@ test('ID token check: real signature, right project, not expired',async()=>{cons
   await assert.rejects(fb.verifyIdToken(mk({...good,aud:'other'}),o));await assert.rejects(fb.verifyIdToken(mk({...good,exp:now-10}),o));
   await assert.rejects(fb.verifyIdToken(mk(good,crypto.generateKeyPairSync('rsa',{modulusLength:2048}).privateKey),o));await assert.rejects(fb.verifyIdToken('x.y',o));});
 test('Firestore REST encoding round-trips',()=>{const f={plan:'pro',founder:true,n:3,x:1.5,z:null};assert.deepStrictEqual(fb.fromFs(Object.fromEntries(Object.entries(f).map(([k,v])=>[k,fb.toFs(v)]))),f);});
+
+test('webhook saves renewal date from subscription items (new API) or top level (old API)', async () => {
+  const { apply, periodEnd } = require('../netlify/functions/stripe-webhook');
+  assert.strictEqual(periodEnd({ items: { data: [{ current_period_end: 1796246113 }] } }), 1796246113);
+  assert.strictEqual(periodEnd({ current_period_end: 123 }), 123);
+  assert.strictEqual(periodEnd({}), null);
+  let saved;
+  await apply({ type: 'customer.subscription.updated', data: { object: { id: 'sub_1', customer: 'cus_1', status: 'active', metadata: { uid: 'u1' }, items: { data: [{ current_period_end: 1796246113 }] } } } },
+    { getEntitlement: async () => null, setEntitlement: async (u, f) => { saved = f; } });
+  assert.strictEqual(saved.currentPeriodEnd, 1796246113);
+});
