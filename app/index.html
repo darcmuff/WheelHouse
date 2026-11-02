@@ -1300,6 +1300,8 @@ const _firebaseConfig = {
 };
 // Demo (/demo): Firebase is never initialised, so nothing can sign in, read or write a real account.
 const APP_DEMO = !!(window.OT_DEMO && window.OT_DEMO.active);
+// Onboarding test site: simulated sign-up, no Firebase, starts empty (see onboarding.js).
+const APP_SIM = APP_DEMO && !!window.OT_DEMO.sim;
 const _app  = APP_DEMO ? null : initializeApp(_firebaseConfig);
 const _auth = APP_DEMO ? null : getAuth(_app);
 const _fsDb = APP_DEMO ? null : getFirestore(_app);
@@ -7026,6 +7028,7 @@ function showAuthError(msg){
 }
 
 async function authSubmit(){
+  if(APP_SIM){OT_DEMO.signIn();simEnter();return;}
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-password').value;
   const mode=document.getElementById('auth-submit-btn').dataset.mode||'signin';
@@ -7061,6 +7064,7 @@ async function authForgot(e){
 }
 
 async function authGoogle(){
+  if(APP_SIM){OT_DEMO.signIn();simEnter();return;}
   try{
     await signInWithPopup(_auth,_googleProvider);
   }catch(e){
@@ -7074,6 +7078,7 @@ async function onboardSubmit(){
   const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
   if(!ticker){document.getElementById('onboard-ticker').focus();return;}
   // UID is guaranteed here — onboarding only shows after onAuthStateChanged confirms a valid user
+  if(APP_SIM){const t=ticker;db.wheels.push({id:'w_'+t.toLowerCase()+'_'+uid(),ticker:t,label:t+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()});OT_DEMO.save(db);document.getElementById('onboard-overlay').style.display='none';render();return;}
   const userId=_confirmedUid;
   if(!userId){console.error('Onboard: no confirmed UID — should not happen');return;}
   const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
@@ -7223,14 +7228,8 @@ async function doDeleteAccount(){
   }
 }
 
-// Onboarding test site only: delete the throwaway test account and its data on "Restart onboarding".
-if(window.OT_ONBOARDING&&!APP_DEMO)window._obDeleteAccount=async function(){
-  const u=_auth.currentUser;if(!u)return;const uid=u.uid;
-  try{await deleteAllUserData(uid,{list:async c=>(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.id),del:(c,id)=>deleteDoc(doc(_fsDb,'users',uid,c,id))});}catch(e){console.warn('Test data delete failed',e);}
-  try{await deleteUser(u);}catch(e){console.warn('Test account delete failed (sign-in too old?)',e);}
-};
-
 async function doSignOut(){
+  if(APP_SIM){otRestartOnboarding();return;}
   try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
 
@@ -7262,6 +7261,31 @@ async function migrateLocalStorage(userId) {
   }
 }
 
+// ── Onboarding test site: fake sign-in screen (accepts anything), then the app as a brand-new user. ──
+function simBoot(){
+  window._authResolved=true;_confirmedUid=null;_ent={plan:'free'};_entErr=false;
+  const l=document.getElementById('loading-overlay');if(l)l.style.display='none';
+  ['settings-export','settings-delete'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  if(OT_DEMO.signedIn()){simEnter();return;}
+  document.getElementById('auth-overlay').style.display='flex';
+  authTab('signup');
+  const em=document.getElementById('auth-email'),pw=document.getElementById('auth-password');
+  if(em)em.value='test@optrack.app';if(pw)pw.value='testtest';
+  const n=document.createElement('div');n.id='sim-note';n.style.cssText='margin-top:0.75rem;font-size:0.75rem;color:#9ca3af;text-align:center';
+  n.textContent='Test site: any email and password work. No account is created.';
+  const btn=document.getElementById('auth-submit-btn');if(btn)btn.after(n);
+}
+function simEnter(){
+  const d=OT_DEMO.load();db.wheels=d.wheels;db.trades=d.trades;db.opts=d.opts;window._db=db;
+  document.getElementById('auth-overlay').style.display='none';
+  const l=document.getElementById('loading-overlay');if(l)l.style.display='none';
+  showSignOutButton({email:'test@optrack.app'});
+  render();
+  const ob=document.getElementById('onboard-overlay');
+  if(ob)ob.style.display=needsOnboarding(db,localStorage.getItem('wh-onboardSkipped')==='1')?'flex':'none';
+  fetchAllQuotes().then(render).catch(()=>{});
+  clearInterval(_pollHandle);_pollHandle=setInterval(fetchAllQuotes,60000);
+}
 // ── Demo boot: made-up trades from demo.js, Pro features on, prices made up locally (no API calls). ──
 function demoBoot(){
   window._authResolved=true;_confirmedUid=null;
@@ -7292,7 +7316,7 @@ function showAuthOverlay() {
   render();
 }
 
-if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
+if (APP_SIM) simBoot(); else if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
   window._authResolved = true;
   if (user) {
     _confirmedUid = user.uid;

@@ -1,6 +1,6 @@
 // Onboarding test mode. Only active on the onboarding branch site (onboarding--…netlify.app).
 // Every visit to the landing page wipes this browser's OpTrack state, so the new-user flow runs fresh.
-// In the app, "Restart onboarding" deletes the test account + its data, then starts again from the landing page.
+// Sign-up is simulated: no Firebase account; data stays in this browser. "Restart onboarding" wipes it and starts again.
 (function(){
   var on=/^onboarding--/.test(location.hostname)||/[?&]obtest\b/.test(location.search);
   window.OT_ONBOARDING=on;
@@ -17,9 +17,18 @@
   window.OT_ONBOARDING_WIPE=function(){wipeSync();return wipeAsync();};
   var path=location.pathname;
   if(path==='/'||path==='/landing.html'){wipeSync();wipeAsync();}
+  // Simulated account: in the app, Firebase is never started (same switch as /demo) and data lives only in this browser.
+  if(path!=='/demo'){
+    var KEY='ot-sim-data';
+    window.OT_DEMO={active:true,sim:true,
+      load:function(){try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.wheels))return{wheels:d.wheels,trades:d.trades||[],opts:d.opts||[]};}catch(e){}return{wheels:[],trades:[],opts:[]};},
+      save:function(db){try{localStorage.setItem(KEY,JSON.stringify({wheels:db.wheels,trades:db.trades,opts:db.opts||[]}));}catch(e){}},
+      signedIn:function(){return localStorage.getItem('ot-sim-user')==='1';},
+      signIn:function(){localStorage.setItem('ot-sim-user','1');},
+      reset:function(){window.otRestartOnboarding();}};
+  }
   window.otRestartOnboarding=async function(){
     var b=document.getElementById('ob-restart');if(b){b.disabled=true;b.textContent='Restarting…';}
-    try{if(window._obDeleteAccount)await window._obDeleteAccount();}catch(e){console.warn('Test account delete failed',e);}
     await window.OT_ONBOARDING_WIPE();
     location.href='/';
   };
