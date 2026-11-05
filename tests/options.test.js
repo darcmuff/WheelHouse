@@ -111,7 +111,7 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   R.setDb([LC({ id: 'lc1' }), L({ id: 'a', groupId: 'g', mark: 4, wheelId: 'w1' }), L({ id: 'b', groupId: 'g', side: 'short', strike: 210, entryPrice: 1.5, mark: 2 }), L({ id: 'sp', groupId: 'sp', type: 'P', side: 'short', strike: 190, mark: 1 })]);
   const h = R.render();
   check('render: one LEAP card for the long call only', (h.match(/class="leap-card/g) || []).length === 1 && /data-leap="lc1"/.test(h), h.slice(0, 300));
-  check('render: summary tiles (total value, unrealised P&L, calls banked, next to act)', /Total value/.test(h) && /Unrealised P&amp;L/.test(h) && /Calls banked/.test(h) && /Next to act/.test(h) && /Calls collected/.test(h) && /Cost after calls/.test(h) && !/Share equivalent|Time value|decay ≈/.test(h));
+  check('render: summary tiles (total value, unrealised P&L, calls banked, next to act)', /Total value/.test(h) && /Unrealised P&amp;L/.test(h) && /Calls banked/.test(h) && /Next to act/.test(h) && /Cost after calls/.test(h) && !/Calls collected/.test(h) && !/Share equivalent|Time value|decay ≈/.test(h));
   check('render: non-long-call legs listed under Other options (2 groups), not dropped', /Other options \(2\)/.test(h) && /Call vertical/.test(h));
   check('render: no multi-leg builder / tenor / side filter chips', !/Any expiry|Long &amp; short|Long & short|\+ Position/.test(h) && /\+ LEAP/.test(h));
   check('render: no ITM badge, breakeven in hero, days-left bar', !/leap-badge itm|>ITM<|>OTM</.test(h) && /lc-k">Breakeven<\/div><div class="lc-v sm">\$210\.00/.test(h) && /days left/.test(h));
