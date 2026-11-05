@@ -44,8 +44,9 @@ test('Next to act: expired LEAP first, else the soonest call expiry or LEAP near
   const n=T.leapNextAct([A],legs,today);assert.strictEqual(n.id,'a');assert.ok(/^AAA \$120C expires in \d+ days$/.test(n.text),n.text);
   const near={...A,id:'n',expiry:'2026-11-05'};assert.ok(/LEAP: 7 days left/.test(T.leapNextAct([near],[near],today).text));
   assert.strictEqual(T.leapNextAct([{...A,id:'z'}],[],today),null);});
-test('tiles: Total value, Unrealised P&L, Calls banked, Next to act; card header shows Calls collected under Cost after calls',()=>{
+test('tiles: Total value, Unrealised P&L, Calls banked, Next to act; card header has Cost after calls without Calls collected line',()=>{
   const a=SRC.indexOf('function renderOptions('),h=SRC.slice(a,SRC.indexOf('\n}\n',a));
   ['Total value','Unrealised P&amp;L','Calls banked','Next to act','This month','Nothing due',"goToLeap("].forEach(x=>assert.ok(h.includes(x),x));
   ['`LEAP cost','`Value now','`Calls collected','`Cost after calls'].forEach(x=>assert.ok(!h.includes(x),x));
-  assert.ok(SRC.includes('<div class="lc-v lc-mut">${m0(P.adj)}</div><div class="lc-pct')&&SRC.includes('Calls collected ${P.net<0'));});
+  assert.ok(SRC.includes('<div class="lc-k">Cost after calls')&&SRC.includes('<div class="lc-v lc-mut">${m0(P.adj)}</div></div>'));
+  assert.ok(!SRC.includes('Calls collected ${P.net<0'));});

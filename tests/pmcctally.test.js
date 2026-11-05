@@ -1,4 +1,4 @@
-// pmcctally.test.js — LEAP card "Calls collected" (all time, this LEAP) vs Home "PMCC calls" (this month, all LEAPs).
+// pmcctally.test.js — LEAP pmccStats (all time / this month per LEAP) vs Home "PMCC calls" (this month, all LEAPs).
 // Realistic sample: calls sold since Sep; Home's November figure must equal the sum of the cards' November lines.
 const test=require('node:test');const assert=require('node:assert');const{extractFn}=require('./extract');
 const OPTS=new Function(extractFn('optionsLib')+'\nreturn optionsLib();')();
@@ -24,4 +24,4 @@ test('Home PMCC calls this month = sum of every card\'s month line',()=>{
 test('open calls excluded from both; year PMCC = sum of cards all-time',()=>{
   const rows=T.calcMonthlyRealised([],T.monthlyExtraSources(legs),today);const F=T.homeFigures(rows,today);
   assert.strictEqual(F.year.pmcc,[L,L2].reduce((a,l)=>a+T.pmccStats(l,legs,today).net,0));});
-test('LEAP card shows one Calls collected total (no all-time / month split)',()=>{const s=require('fs').readFileSync(require('path').join(__dirname,'../app/index.html'),'utf8');const i=s.indexOf('Calls collected ${P.net<0');const seg=s.slice(i,s.indexOf('</div></div>',i));assert.ok(i>0&&!seg.includes('all time')&&!seg.includes('P.month'));});
+test('LEAP card header has Cost after calls only (Calls collected line dropped; Calls banked tile covers it)',()=>{const s=require('fs').readFileSync(require('path').join(__dirname,'../app/index.html'),'utf8');assert.ok(s.includes('<div class="lc-k">Cost after calls'));assert.ok(s.includes('<div class="lc-v lc-mut">${m0(P.adj)}</div></div>'));assert.ok(!s.includes('Calls collected ${P.net<0'));assert.ok(s.includes('Calls banked'));});
