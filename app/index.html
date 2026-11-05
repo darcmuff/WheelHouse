@@ -2288,7 +2288,7 @@ function _saveUIState(){
 }
 
 function render(){
-  {const b=document.querySelector('.tn-paste');if(b)b.style.display=(view==='positions'||view==='options')?'none':'';} // Wheel tab: cards have their own Add trade; LEAPs tab: has + LEAP
+  {const b=document.querySelector('.tn-paste');if(b)b.style.display=(view==='dash'||view==='positions'||view==='options')?'none':'';} // Home: no Add trade; Wheel tab: cards have their own Add trade; LEAPs tab: has + LEAP
   _saveUIState();
   renderSidebar();
   const c=document.getElementById('content');
@@ -2465,13 +2465,15 @@ function pmccShortsFor(leap,legs){
 }
 function pmccStats(leap,legs,today){
   const sh=pmccShortsFor(leap,legs),q=+leap.qty||0;
-  let net=0;sh.forEach(l=>{const p=OPTS.legPnL(l);if(l.status!=='open')net+=p.realized;});net=Math.round(net*100)/100;
+  let net=0,month=0;const ym=(today||new Date().toISOString()).slice(0,7);
+  sh.forEach(l=>{if(l.status==='open')return;const p=OPTS.legPnL(l);net+=p.realized;if((l.closeDate||l.expiry||'').slice(0,7)===ym)month+=p.realized;}); // month: same rule as Home/Monthly P&L (booked in the month it closed or expired)
+  net=Math.round(net*100)/100;month=Math.round(month*100)/100;
   const cost=(+leap.entryPrice||0)*100*q+(+leap.fees||0),adj=cost-net,adjPerSh=q?adj/(100*q):0;
   const open=sh.filter(l=>l.status==='open').sort((a,b)=>(a.expiry||'').localeCompare(b.expiry||''));
   const past=sh.filter(l=>l.status!=='open').sort((a,b)=>(b.closeDate||b.expiry||'').localeCompare(a.closeDate||a.expiry||''));
   const cur=open[0]||null;
   const curPnl=cur?OPTS.legPnL(cur).unrealized:null;
-  return{shorts:sh,open,past,cur,curPnl,curDte:cur?OPTS.dte(cur.expiry,today):null,net,cost,adj,adjPerSh};
+  return{shorts:sh,open,past,cur,curPnl,curDte:cur?OPTS.dte(cur.expiry,today):null,net,month,cost,adj,adjPerSh};
 }
 // Build chronological trade events for a LEAP + its poor man's covered calls (newest first, like the wheel).
 // Pure: never writes. Events mirror wheel trade rows: BTO (LEAP), STO/BTC/EXP/ASN (short calls).
@@ -2723,7 +2725,7 @@ function renderLeapCard(l,spot,today){
   <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
-    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div><div class="lc-pct ${P.net>0?'g':P.net<0?'r':'m'}" style="font-size:0.6875rem;font-weight:600">Calls collected ${P.net<0?'−':''}${m0(Math.abs(P.net))}</div></div>
+    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}</div><div class="lc-pct ${P.net>0?'g':P.net<0?'r':'m'}" style="font-size:0.6875rem;font-weight:600">Calls collected ${P.net<0?'−':''}${m0(Math.abs(P.net))} all time ${ii(`All calls closed or expired against this LEAP since you opened it (incl. LEAPs it was rolled from). Home's Options P&amp;L only counts calls closed this month, across all LEAPs. This LEAP this month: ${P.month<0?'−':'+'}${m0(Math.abs(P.month))}.`)}<br><span class="lc-mut">${new Date(today+'T12:00:00').toLocaleDateString('en-GB',{month:'short'})} ${P.month<0?'−':P.month>0?'+':''}${m0(Math.abs(P.month))}</span></div></div>
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
@@ -2810,7 +2812,7 @@ function renderOptions(){
 }
 // ── + LEAP / edit: single long call ──
 function openLeapAdd(){
-  if(!canUse('leaps-full')&&!underLimit('leap',(db.opts||[]).filter(l=>l.status==='open'&&l.side==='long').length)){openUpgrade('leaps-full');return;}
+  if(!leapCapOk(1,db.opts)){openUpgrade('unlimited',capMsg('leap'));return;}
   ['lf-id','lf-und','lf-strike','lf-expiry','lf-price','lf-review','lf-notes','lf-mark'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('lf-qty').value='1';document.getElementById('lf-fees').value='0';
   document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
@@ -2847,6 +2849,7 @@ function saveLeap(){
   const old=id?(db.opts||[]).find(l=>l.id===id):null;
   const r=leapFormLeg({und:g('lf-und'),strike:g('lf-strike'),expiry:g('lf-expiry'),qty:g('lf-qty'),price:g('lf-price'),date:g('lf-date'),fees:g('lf-fees'),review:g('lf-review'),notes:g('lf-notes'),mark:g('lf-mark'),newId:uid()},old);
   if(r.err){alert(r.err);return;}
+  if(!old&&!leapCapOk(1,db.opts)){openUpgrade('unlimited',capMsg('leap'));return;}
   db.opts=db.opts||[];const i=db.opts.findIndex(l=>l.id===r.leg.id);if(i>-1)db.opts[i]=r.leg;else db.opts.push(r.leg);
   _saveOpt(r.leg);closeModal('mLeap');render();
 }
@@ -4521,8 +4524,12 @@ function renderLog(){
 // One lifecycle walk per rotation: tracks open option legs + a running share ledger.
 // wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
 function allDataHealth(){
-  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+esc(i.text)}));}catch(e){console.warn('options health',e);}
-  return runDataHealth().concat(o);
+  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+esc(i.text)}));}
+  catch(e){console.warn('options health',e);o=[{sev:'amber',text:'Options · LEAP/options checks could not run — those positions were not checked. Reload to retry.'}];}
+  // never report "all clear" when the options legs never loaded — say they weren't checked
+  if(_optsLoadError)o.unshift({sev:'amber',text:`Options · Your LEAP/options positions couldn't load (${esc(_optsLoadError)}), so they weren't checked. Reload to retry.`});
+  const order={red:0,amber:1,grey:2};
+  return runDataHealth().concat(o).sort((a,b)=>order[a.sev]-order[b.sev]);
 }
 function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
 function runDataHealth(){
@@ -4772,7 +4779,7 @@ function renderStatsOverview(){
     ${health.length?`<div class="d-panel-body">
       ${tradeTableHead()}
       ${healthRows}
-    </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades verified — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
+    </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades${(db.opts||[]).length?` and ${(db.opts||[]).length} option legs`:''} checked — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
   </div>`;
 
   // Capital utilisation
@@ -5164,6 +5171,7 @@ function quickAddRotation(inputId){
   const inp=document.getElementById(inputId||'new-rot-ticker');
   const ticker=inp.value.toUpperCase().trim();
   if(!ticker){inp.focus();return;}
+  if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
   const existing=db.wheels.filter(w=>w.ticker===ticker).length;
   const now=new Date();
   const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
@@ -5181,7 +5189,7 @@ function quickAddRotation(inputId){
   fetchLogo(ticker).then(()=>render()).catch(()=>{});
 }
 function openNewPos(){
-  if(!underLimit('wheel',new Set((db.wheels||[]).filter(w=>w.status==='open').map(w=>w.ticker)).size)){openUpgrade('unlimited');return;}
+  if(!wheelCapOk(null,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
   document.getElementById('wf-id').value='';
   document.getElementById('wf-ticker').value='';
   document.getElementById('wf-label').value='';
@@ -5228,8 +5236,9 @@ function saveWheel(){
     lastPrice:parseFloat(document.getElementById('wf-price').value)||null,
     notes:document.getElementById('wf-notes').value.trim()};
   let wheel;
-  if(id){wheel=db.wheels.find(x=>x.id===id);Object.assign(wheel,data);}
+  if(id){wheel=db.wheels.find(x=>x.id===id);if(data.status==='open'&&wheel.status!=='open'&&!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}Object.assign(wheel,data);}
   else{
+    if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
     // Auto-generate label: "Rotation N" based on existing rotations for this ticker
     const existing=db.wheels.filter(w=>w.ticker===ticker).length;
     if(!data.label){
@@ -5366,7 +5375,7 @@ function saveTrade(){
   let wheelId=document.getElementById('tf-wheel').value;
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
-    if(ex){wheelId=ex.id;}else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
+    if(ex){wheelId=ex.id;}else{if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
   const action=document.getElementById('tf-action').value;
   const deltaRaw=parseFloat(document.getElementById('tf-delta').value);
@@ -6035,16 +6044,18 @@ function initImportDrop(){
 function doImport(){
   if(!_importParsed)importPreview();
   const p=_importParsed;if(!p)return;
+  let capSkipLeaps=0;const capSkipTickers=new Set();let capSkipRows=0;
   if(p.plan){
     const P=p.plan;
     if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
-    else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(P.newLegs);P.newLegs.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);}
-    if(!p.rows.length){closeModal('mImport');document.getElementById('import-csv').value='';_importParsed=null;importPreview();render();return;}
+    else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));const cap=capNewLeaps(db.opts,P.newLegs);capSkipLeaps+=cap.droppedLeaps;db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(cap.keep);cap.keep.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);}
+    if(!p.rows.length){closeModal('mImport');document.getElementById('import-csv').value='';_importParsed=null;importPreview();render();if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
   }
   if(!(p.rows.length||(p.optionFills||[]).length))return;
   if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
   else if((p.optionFills||[]).length){
-    const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
+    const before=db.opts||[];const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
+    const cap=capNewLeaps(before,r.created);if(cap.dropped){const k=new Set(cap.keep.map(l=>l.id));const cr=new Set(r.created.map(l=>l.id));r.legs=r.legs.filter(l=>!cr.has(l.id)||k.has(l.id));r.created=cap.keep;capSkipLeaps+=cap.droppedLeaps;}
     db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));
     if(r.unmatched.length)console.warn('Option closes with no open long leg:',r.unmatched);
   }
@@ -6058,6 +6069,7 @@ function doImport(){
     if(!p.plan&&existingFingerprints.has(fp)){dupes++;continue;}
     existingFingerprints.add(fp);
     let wheel=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
+    if(!wheel&&!wheelCapOk(ticker,db.wheels)){capSkipTickers.add(ticker);capSkipRows++;continue;}
     if(!wheel){
       const existing=db.wheels.filter(w=>w.ticker===ticker).length;
       const now=new Date();
@@ -6085,7 +6097,9 @@ function doImport(){
   const parts=[`${imported} imported`];
   if(dupes>0)parts.push(`${dupes} duplicates skipped`);
   if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in ${_brandName()}`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
+  if(capSkipRows)parts.push(`${capSkipRows} trades for ${[...capSkipTickers].join(', ')} skipped (free plan limit)`);if(capSkipLeaps)parts.push(`${capSkipLeaps} LEAP${capSkipLeaps>1?'s':''} skipped (free plan limit)`);
   alert(`Import complete: ${parts.join(', ')}.`);
+  if(capSkipRows||capSkipLeaps)openUpgrade('unlimited',capSkipRows?capMsg('wheel'):capMsg('leap'));
 }
 // ── Realised P&L chart (READ-ONLY). Closed trades only, booked on their close date, split the same way as the
 // Monthly P&L / Shares & LEAPs P&L tables: option credits vs buybacks, share sales and closed LEAPs by sign, dividends.
@@ -6563,7 +6577,7 @@ function savePMTrade(){
   let wheelId=document.getElementById('pm-wheel').value;
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
-    if(ex){wheelId=ex.id;}else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
+    if(ex){wheelId=ex.id;}else{if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
   const premium=parseFloat(document.getElementById('pm-premium').value)||0;
   const shares=parseFloat(document.getElementById('pm-shares').value)||0;
@@ -6991,7 +7005,7 @@ function confirmParsed(){
     if(wheelId==='new'||!wheelId){
       const ex=db.wheels.find(w=>w.ticker===trades[0].ticker&&w.status==='open');
       if(ex){wheelId=ex.id;}
-      else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
+      else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
     trades.forEach(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
@@ -7010,7 +7024,7 @@ function confirmParsed(){
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===p.ticker&&w.status==='open');
     if(ex){wheelId=ex.id;}
-    else{const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:p.ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:p.entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
+    else{if(!wheelCapOk(p.ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:p.ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:p.entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
   const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
@@ -7163,16 +7177,25 @@ function isPro(ent,err){return !!(err||(ent&&(ent.plan==='pro'||ent.founder))); 
 function canUse(feature,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(!(cfg.paidFeatures||[]).includes(feature))return true;
   return isPro(ent===undefined?_ent:ent,err===undefined?_entErr:err);}
 function underLimit(kind,count,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const f=cfg.free||{};const lim=kind==='wheel'?f.maxWheelTickers:f.maxOpenLeaps;return lim==null||count<lim;}
+// Free caps. Existing data is never touched — only creating a NEW open wheel ticker / open LEAP past the cap is blocked.
+function wheelCapOk(ticker,wheels,cfg,ent,err){const s=new Set((wheels||[]).filter(w=>w.status==='open').map(w=>w.ticker));if(ticker&&s.has(ticker))return true;return underLimit('wheel',s.size,cfg,ent,err);}
+function leapCapOk(adding,legs,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const lim=(cfg.free||{}).maxOpenLeaps;if(lim==null)return true;
+  return (legs||[]).filter(l=>l.status==='open'&&l.side==='long').length+(adding||1)<=lim;}
+// Imports: keep new legs up to the open-LEAP cap; drop the excess open LEAPs plus any new calls sold against them.
+function capNewLeaps(existing,newLegs,cfg,ent,err){const drop=new Set();let n=(existing||[]).filter(l=>l.status==='open'&&l.side==='long').length;
+  (newLegs||[]).forEach(l=>{if(l.side==='long'&&l.status==='open'){if(leapCapOk(1,Array(n).fill({status:'open',side:'long'}),cfg,ent,err))n++;else drop.add(l.id);}});
+  const keep=(newLegs||[]).filter(l=>!drop.has(l.id)&&!(l.parentLeapId&&drop.has(l.parentLeapId)));return{keep,dropped:(newLegs||[]).length-keep.length,droppedLeaps:drop.size};}
+function capMsg(kind){const f=planCfg().free||{};return kind==='wheel'?`Free plan: up to ${f.maxWheelTickers} open tickers. Your existing ones are kept — upgrade to add more.`:`Free plan: up to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. Your existing ones are kept — upgrade to add more.`;}
 async function loadEntitlement(uid){try{const sn=await getDoc(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}}
 async function _pollUpgrade(uid){for(let i=0;i<6&&!isPro(_ent,false);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPro(_ent,false)){alert('Thanks! Pro is now on for your account.');render();}}
 function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';if(isPro(_ent,false))return 'Pro';return 'Free';}
-function openUpgrade(feature){
+function openUpgrade(feature,msg){
   const B=window.BRAND||{},P=planCfg(),N=B.featureNames||{};
   document.getElementById('upg-feature').textContent=N[feature]?N[feature]+' is part of Pro.':'That is part of Pro.';
   document.getElementById('upg-list').innerHTML=(P.paidFeatures||[]).map(k=>`<li>${esc(N[k]||k)}</li>`).join('');
   document.getElementById('upg-monthly').textContent=`${P.currency||'£'}${P.priceMonthly} a month`;
   document.getElementById('upg-yearly').textContent=`${P.currency||'£'}${P.priceYearly} a year`;
-  document.getElementById('upg-msg').textContent='';openModal('mUpgrade');
+  document.getElementById('upg-msg').textContent=msg||'';openModal('mUpgrade');
 }
 async function _billingCall(fn,payload){
   if(APP_DEMO){location.href='/start';throw new Error('Opening sign-up…');}
