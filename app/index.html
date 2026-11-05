@@ -4521,8 +4521,12 @@ function renderLog(){
 // One lifecycle walk per rotation: tracks open option legs + a running share ledger.
 // wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
 function allDataHealth(){
-  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+esc(i.text)}));}catch(e){console.warn('options health',e);}
-  return runDataHealth().concat(o);
+  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+esc(i.text)}));}
+  catch(e){console.warn('options health',e);o=[{sev:'amber',text:'Options · LEAP/options checks could not run — those positions were not checked. Reload to retry.'}];}
+  // never report "all clear" when the options legs never loaded — say they weren't checked
+  if(_optsLoadError)o.unshift({sev:'amber',text:`Options · Your LEAP/options positions couldn't load (${esc(_optsLoadError)}), so they weren't checked. Reload to retry.`});
+  const order={red:0,amber:1,grey:2};
+  return runDataHealth().concat(o).sort((a,b)=>order[a.sev]-order[b.sev]);
 }
 function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
 function runDataHealth(){
@@ -4772,7 +4776,7 @@ function renderStatsOverview(){
     ${health.length?`<div class="d-panel-body">
       ${tradeTableHead()}
       ${healthRows}
-    </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades verified — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
+    </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades${(db.opts||[]).length?` and ${(db.opts||[]).length} option legs`:''} checked — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
   </div>`;
 
   // Capital utilisation
