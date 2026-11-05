@@ -17,7 +17,7 @@ window.BRAND = {
   // ── Plans and payments. Gating is OFF: everyone gets everything until Marc sets gating: true.
   // Founders (Marc, his brother) are kept on Pro by entitlement docs (see SETUP.md) and are never locked out.
   plans: {
-    gating: false,
+    gating: true,
     currency: '£',
     priceMonthly: 9,
     priceYearly: 79,
