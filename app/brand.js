@@ -21,7 +21,7 @@ window.BRAND = {
     currency: '£',
     priceMonthly: 9,
     priceYearly: 79,
-    free: { maxWheelTickers: 3, maxOpenLeaps: 1 },   // limits on the free plan
+    free: { maxWheelTickers: 2, maxOpenLeaps: 1 },   // limits on the free plan
     // Paid-only features. Remove a line to make it free; add it back to make it paid.
     paidFeatures: [
       'unlimited',        // more than the free limits above

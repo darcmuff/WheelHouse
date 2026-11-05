@@ -1,4 +1,4 @@
-// freecaps.test.js — Free caps (3 open wheel tickers, 1 open LEAP) on every creation route; Pro/founder unlimited; over-limit data kept.
+// freecaps.test.js — Free caps (2 open wheel tickers, 1 open LEAP) on every creation route; Pro/founder unlimited; over-limit data kept.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path'),vm=require('vm');
 const{extractFn}=require('./extract');const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app','brand.js'),'utf8'),ctx);const ON=ctx.window.BRAND.plans,OFF={...ON,gating:false};
@@ -6,10 +6,10 @@ const G=new Function("let _ent=null,_entErr=false;"+['planCfg','isPro','canUse',
 const FREE={plan:'free'},PRO={plan:'pro'},FOUNDER={founder:true};
 const W=n=>Array.from({length:n},(_,i)=>({id:'w'+i,ticker:'T'+i,status:'open'}));
 const LEAP=(id,st='open')=>({id,side:'long',type:'C',status:st});
-test('free limits are 3 tickers / 1 LEAP',()=>{assert.strictEqual(ON.free.maxWheelTickers,3);assert.strictEqual(ON.free.maxOpenLeaps,1);});
+test('free limits are 2 tickers / 1 LEAP',()=>{assert.strictEqual(ON.free.maxWheelTickers,2);assert.strictEqual(ON.free.maxOpenLeaps,1);});
 test('gating off: no caps',()=>{assert.ok(G.wheelCapOk('NEW',W(10),OFF,FREE,false));assert.ok(G.leapCapOk(1,[LEAP('a'),LEAP('b')],OFF,FREE,false));});
-test('free: 3rd wheel ok, 4th blocked; closed wheels do not count',()=>{assert.ok(G.wheelCapOk('NEW',W(2),ON,FREE,false));assert.ok(!G.wheelCapOk('NEW',W(3),ON,FREE,false));
-  assert.ok(G.wheelCapOk('NEW',[...W(2),{id:'c',ticker:'OLD',status:'closed'}],ON,FREE,false));});
+test('free: 2nd wheel ok, 3rd blocked; closed wheels do not count',()=>{assert.ok(G.wheelCapOk('NEW',W(1),ON,FREE,false));assert.ok(!G.wheelCapOk('NEW',W(2),ON,FREE,false));
+  assert.ok(G.wheelCapOk('NEW',[...W(1),{id:'c',ticker:'OLD',status:'closed'}],ON,FREE,false));});
 test('free: 1 LEAP ok, 2nd blocked; closed LEAPs do not count',()=>{assert.ok(G.leapCapOk(1,[LEAP('x','closed')],ON,FREE,false));assert.ok(!G.leapCapOk(1,[LEAP('a')],ON,FREE,false));});
 test('pro and founder unlimited',()=>{[PRO,FOUNDER].forEach(e=>{assert.ok(G.wheelCapOk('NEW',W(20),ON,e,false));assert.ok(G.leapCapOk(1,[LEAP('a'),LEAP('b')],ON,e,false));});});
 test('entitlement read failure stays fail-open (treated as Pro)',()=>{assert.ok(G.wheelCapOk('NEW',W(9),ON,null,true));});

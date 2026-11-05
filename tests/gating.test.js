@@ -7,7 +7,7 @@ test('gating is ON in brand.js; with gating off everyone gets everything',()=>{a
 test('prices and split live in brand.js',()=>{assert.strictEqual(B.plans.priceMonthly,9);assert.strictEqual(B.plans.priceYearly,79);assert.strictEqual(B.plans.currency,'£');
   ['unlimited','leaps-full','live-refresh','extended-hours','robinhood-import','analytics'].forEach(f=>assert.ok(B.plans.paidFeatures.includes(f),f));B.plans.paidFeatures.forEach(f=>assert.ok(B.featureNames[f],f));});
 test('gating on: free user is limited, Pro and founders are not',()=>{assert.ok(!G.canUse('analytics',on,{plan:'free'},false));assert.ok(G.canUse('analytics',on,{plan:'pro'},false));assert.ok(G.canUse('analytics',on,{founder:true},false));
-  assert.ok(G.underLimit('wheel',2,on,null,false));assert.ok(!G.underLimit('wheel',3,on,null,false));assert.ok(!G.underLimit('leap',1,on,null,false));assert.ok(G.underLimit('wheel',50,on,{founder:true},false));});
+  assert.ok(G.underLimit('wheel',1,on,null,false));assert.ok(!G.underLimit('wheel',2,on,null,false));assert.ok(!G.underLimit('leap',1,on,null,false));assert.ok(G.underLimit('wheel',50,on,{founder:true},false));});
 test('free features stay free even with gating on',()=>{assert.ok(G.canUse('smartscan',on,null,false));});
 test('if the entitlement cannot be read, nobody is locked out',()=>{assert.ok(G.canUse('analytics',on,null,true));assert.ok(G.underLimit('wheel',99,on,null,true));});
 test('the gates are wired in',()=>{assert.ok(/fetchExtQuotes\(syms\)\{\n  if\(!syms\.length\|\|!canUse\('extended-hours'\)\)/.test(SRC));assert.ok(SRC.includes("!canUse('live-refresh'))return"));
