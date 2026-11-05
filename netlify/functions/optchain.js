@@ -13,7 +13,7 @@ function pick(raw, wanted) {
   for (const o of d.options || []) {
     const hit = matchWanted(String(o.option || ''), want);
     if (!hit) continue;
-    contracts[hit] = { src: 'cboe', bid: o.bid, ask: o.ask, last: o.last_trade_price, iv: o.iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.open_interest, volume: o.volume };
+    contracts[hit] = { src: 'cboe', bid: o.bid, ask: o.ask, last: o.last_trade_price, prevClose: o.prev_day_close > 0 ? o.prev_day_close : null, iv: o.iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.open_interest, volume: o.volume };
   }
   return { asOf: raw && raw.timestamp ? raw.timestamp.replace(' ', 'T') + 'Z' : null, spot: d.current_price ?? d.close ?? null, contracts };
 }
@@ -25,7 +25,7 @@ function pickFinnhub(raw, wanted) {
       const hit = matchWanted(String(o.contractName || '').replace(/\s+/g, ''), want);
       if (!hit) continue;
       let iv = o.impliedVolatility; if (iv > 3) iv = iv / 100; // Finnhub reports IV in percent
-      contracts[hit] = { src: 'finnhub', bid: o.bid, ask: o.ask, last: o.lastPrice, iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.openInterest, volume: o.volume };
+      contracts[hit] = { src: 'finnhub', bid: o.bid, ask: o.ask, last: o.lastPrice, prevClose: o.previousClose > 0 ? o.previousClose : null, iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.openInterest, volume: o.volume };
     }
   }
   return { spot: raw && raw.lastTradePrice || null, contracts };
