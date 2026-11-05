@@ -24,3 +24,4 @@ test('Home PMCC calls this month = sum of every card\'s month line',()=>{
 test('open calls excluded from both; year PMCC = sum of cards all-time',()=>{
   const rows=T.calcMonthlyRealised([],T.monthlyExtraSources(legs),today);const F=T.homeFigures(rows,today);
   assert.strictEqual(F.year.pmcc,[L,L2].reduce((a,l)=>a+T.pmccStats(l,legs,today).net,0));});
+test('LEAP card shows one Calls collected total (no all-time / month split)',()=>{const s=require('fs').readFileSync(require('path').join(__dirname,'../app/index.html'),'utf8');const i=s.indexOf('Calls collected ${P.net<0');const seg=s.slice(i,s.indexOf('</div></div>',i));assert.ok(i>0&&!seg.includes('all time')&&!seg.includes('P.month'));});
