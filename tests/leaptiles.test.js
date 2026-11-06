@@ -48,5 +48,5 @@ test('tiles: Total value, Unrealised P&L, Calls banked, Next to act; card header
   const a=SRC.indexOf('function renderOptions('),h=SRC.slice(a,SRC.indexOf('\n}\n',a));
   ['Total value','Unrealised P&amp;L','Calls banked','Next to act','This month','Nothing due',"goToLeap("].forEach(x=>assert.ok(h.includes(x),x));
   ['`LEAP cost','`Value now','`Calls collected','`Cost after calls'].forEach(x=>assert.ok(!h.includes(x),x));
-  assert.ok(SRC.includes('<div class="lc-k">Cost after calls')&&SRC.includes('<div class="lc-v lc-mut">${m0(P.adj)}</div></div>'));
+  assert.ok(SRC.includes('<div class="lc-k">Cost after calls')&&SRC.includes('<div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>'));
   assert.ok(!SRC.includes('Calls collected ${P.net<0'));});
