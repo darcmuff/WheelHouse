@@ -8,13 +8,13 @@ window.BRAND = {
   accent: '#111111',                  // manifest theme colour (brand accent #FF5A36 lives in the CSS :root block)
   background: '#111111',
   cachePrefix: 'optrack',             // service-worker cache name prefix (lowercase, no spaces)
-  siteUrl: 'https://wheelhouse-tracker.netlify.app',   // placeholder until a domain is bought (optrack.app / getoptrack.com)
+  siteUrl: 'https://optrack.app',                    // live public domain
   shareImage: 'optrack-share.png',
   icons: { favicon: 'favicon.ico', apple: 'apple-touch-icon.png', i16: 'icon-16.png', i32: 'icon-32.png', i192: 'icon-192.png', i512: 'icon-512.png',
            m192: 'icon-maskable-192.png', m512: 'icon-maskable-512.png', mark: 'logo-mark.svg', horizontal: 'logo-horizontal.svg' },
   supportEmail: '',                   // set before going public
 
-  // ── Plans and payments. Gating is OFF: everyone gets everything until Marc sets gating: true.
+  // ── Plans and payments. Gating is ON: Free caps apply; Pro unlocks paidFeatures.
   // Founders (Marc, his brother) are kept on Pro by entitlement docs (see SETUP.md) and are never locked out.
   plans: {
     gating: true,

@@ -1,7 +1,7 @@
 // Only our own sites may use these functions. Anyone else (other websites, scripts, curl) gets 403,
 // so they can't spend our Finnhub/Cboe/Yahoo quota.
-// Extra origins (e.g. the custom domain once chosen) can be added with the ALLOWED_ORIGINS env var, comma-separated.
-const BASE = ['https://wheelhouse-tracker.netlify.app', 'https://darcmuff.github.io'];
+// Live domain is baked in. Extra origins can still be added with ALLOWED_ORIGINS (comma-separated).
+const BASE = ['https://optrack.app', 'https://www.optrack.app', 'https://wheelhouse-tracker.netlify.app', 'https://darcmuff.github.io'];
 function originOf(headers) {
   const h = {}; for (const k in (headers || {})) h[k.toLowerCase()] = headers[k];
   if (h.origin && h.origin !== 'null') return h.origin;
