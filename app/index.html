@@ -2126,7 +2126,17 @@ let quotes={};
 let sparks={};
 let fetching=false;
 let _pollHandle=null; // quote-poll interval — cleared on sign-out so it never stacks
-let logos={};  // ticker → logo URL (cached per session)
+// Company logos: cached in memory + localStorage so they paint on first render and survive closed wheels.
+function _loadLogoCache(){try{const o=JSON.parse(localStorage.getItem('wh-logos')||'{}');return o&&typeof o==='object'?o:{};}catch(e){return{};}}
+function _saveLogoCache(){try{const o={};for(const k in logos)if(logos[k])o[k]=logos[k];localStorage.setItem('wh-logos',JSON.stringify(o));}catch(e){}}
+let logos=_loadLogoCache();  // ticker → logo URL
+
+// Logos for every ticker we show — open or closed wheels, open or closed LEAPs. Quotes stay open-only.
+function logoSyms(){
+  const w=(db.wheels||[]).map(x=>x&&x.ticker).filter(Boolean);
+  const o=(db.opts||[]).map(l=>l&&l.underlying).filter(Boolean);
+  return[...new Set([...w,...o].map(s=>String(s).toUpperCase()))];
+}
 
 async function fetchSymbol(sym){
   // Finnhub doesn't support index symbols like ^VIX — skip them
@@ -2155,13 +2165,15 @@ function extLine(sym,now){
 }
 function extHtml(sym,style){const t=extLine(sym);return t?`<span class="ext-px" style="color:var(--text3);font-size:0.6875rem;font-weight:400;white-space:nowrap;${style||''}">${t}</span>`:'';}
 async function fetchLogo(sym){
-  if(sym.startsWith('^')||logos[sym]!==undefined)return;
+  sym=String(sym||'').toUpperCase();
+  if(!sym||sym.startsWith('^')||logos[sym]!==undefined)return;
   try{
     const url=`/.netlify/functions/profile?symbol=${encodeURIComponent(sym)}`;
     const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
     if(r.ok){
       const j=await r.json();
       logos[sym]=j.logo||null;
+      if(logos[sym])_saveLogoCache();
     }else{logos[sym]=null;}
   }catch(e){
     console.warn('Logo fetch:',sym,e.message);
@@ -2175,17 +2187,17 @@ async function fetchAllQuotes(){
   try{
     const wheelSyms=db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
     const optSyms=(db.opts||[]).filter(l=>l.status==='open').map(l=>l.underlying).filter(Boolean);
-    const allSyms=[...new Set([...wheelSyms,...optSyms])];
-    // Fetch logos in parallel (fire-and-forget, don't block quotes)
-    const logoPromises=allSyms.map(sym=>fetchLogo(sym));
+    const allSyms=[...new Set([...wheelSyms,...optSyms].map(s=>String(s).toUpperCase()))];
+    // Logos for every ticker we display (incl. closed) — fire first, re-render as soon as they land
+    const logoPromises=logoSyms().map(sym=>fetchLogo(sym));
+    const logosDone=Promise.allSettled(logoPromises).then(()=>{if(Object.values(logos).some(Boolean))render();});
     for(const sym of allSyms){
       try{await fetchSymbol(sym);}catch(e){console.warn('Quote fetch:',sym,e.message);}
       if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
     }
     await fetchExtQuotes(allSyms);
     _applyWheelMarks();
-    // Wait for logos to finish too
-    await Promise.allSettled(logoPromises);
+    await logosDone;
     const nOk=Object.keys(quotes).length;
     if(nOk>0){
       db.wheels.forEach(w=>{
@@ -2194,7 +2206,7 @@ async function fetchAllQuotes(){
         }
       });
       render();
-    }else if(Object.keys(logos).length>0){
+    }else if(Object.values(logos).some(Boolean)){
       render(); // re-render even if no quotes, so logos appear
     }
   }catch(e){
@@ -2693,7 +2705,7 @@ function leapOptHtml(mark,prevClose,dayOpen){
   let mv='';if(base){const ch=mark-base,pct=ch/base*100,up=ch>=0;mv=` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}% (${up?'+':'-'}$${Math.abs(ch).toFixed(2)})</span> <span style="color:var(--text3);font-weight:400">today</span>`;}
   return `<span class="lc-opt" style="margin-left:0.75rem;font-size:0.7rem;font-weight:600"><span style="color:var(--text3);font-weight:400">Option</span> $${(+mark).toFixed(2)}${mv}</span>`;
 }
-function leapLogoHtml(sym,open){const u=logos[sym];return u?`<img src="${u}" class="rot-logo lc-logo ${open?'':'cn'}" alt="${esc(sym)}" style="vertical-align:middle;margin-right:0.375rem" onerror="this.style.display='none'">`:'';}
+function leapLogoHtml(sym,open){const u=logos[String(sym||'').toUpperCase()];return u?`<img src="${u}" class="rot-logo lc-logo ${open?'':'cn'}" alt="${esc(sym)}" style="vertical-align:middle;margin-right:0.375rem" onerror="this.style.display='none'">`:'';}
 function renderLeapCard(l,spot,today){
   const S=leapStats(l,spot,today),open=l.status==='open';
   const plH=S.pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${S.pl>=0?'g':'r'}">${S.pl>=0?'+':''}${fmtMoney(S.pl).replace(/\.\d\d$/,'')}${S.cost>0?` <small>(${S.pl>=0?'+':''}${(S.pl/S.cost*100).toFixed(1)}%)</small>`:''}</span>`;
@@ -3576,7 +3588,7 @@ function renderPositions(){
 }
 
 function rotNumHtml(wheel,isOpen){
-  const logoUrl=logos[wheel.ticker];
+  const logoUrl=logos[String(wheel.ticker||'').toUpperCase()];
   if(logoUrl)return`<img src="${logoUrl}" class="rot-logo ${isOpen?'':'cn'}" alt="${esc(wheel.ticker)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rot-num ${isOpen?'':'cn'}" style="display:none">${wheel.sortOrder||'?'}</div>`;
   return`<div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>`;
 }
@@ -7376,16 +7388,17 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
     window._db=db;
     render();
 
-    // Fetch quotes and logos
+    // Logos first (every ticker we show, open or closed) so cards paint with logos ASAP; quotes stay open-only
     loadingBar.style.width = '50%';
     const wheelSyms = db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
     const optSyms = (db.opts||[]).filter(l=>l.status==='open').map(l=>l.underlying).filter(Boolean);
-    const allSyms = [...new Set([...wheelSyms, ...optSyms])];
+    const allSyms = [...new Set([...wheelSyms, ...optSyms].map(s=>String(s).toUpperCase()))];
     const totalSteps = allSyms.length;
     let completed = 0;
 
-    // Fire logo fetches in parallel
-    const logoPromises = allSyms.map(sym => fetchLogo(sym));
+    const logoPromises = logoSyms().map(sym => fetchLogo(sym));
+    // Re-render as soon as logos land — do not wait for the quote loop
+    Promise.allSettled(logoPromises).then(() => { if (Object.values(logos).some(Boolean)) render(); });
 
     // Fetch quotes sequentially with progress
     for (const sym of allSyms) {
@@ -7397,7 +7410,6 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
       if (allSyms.length > 1) await new Promise(r => setTimeout(r, 200));
     }
 
-    // Wait for logos
     await Promise.allSettled(logoPromises);
     loadingBar.style.width = '100%';
     loadingText.textContent = 'Ready';
