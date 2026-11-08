@@ -1,0 +1,29 @@
+# NOTES.md — OpTrack (repo WheelHouse)
+
+Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
+
+Notes written 2026-11-08. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v158` (`app/sw.js`).
+
+## Current state (checked in git on 2026-11-08)
+
+- `origin/main` `111cc7e` (2026-11-06) merges dev through sw v157: `siteUrl` https://optrack.app, ticker logos fetched with an `optrack.app` origin allowlist and cached for instant paint, LEAP card "Cost after calls" ▲/▼ % versus original cost.
+- `dev` adds only `d2d29d7` (2026-11-06, sw v158): a new service worker shows "New version — Refresh when you're ready" instead of auto-reload. Refresh reloads only when tapped (`app/index.html`, `tests/authboot.test.js`).
+- `app/brand.js`: `supportEmail` is still `''`. `plans.gating` is `true` (free caps: 2 open wheel tickers, 1 open LEAP). Prices in brand config are £9 monthly / £79 yearly.
+- `app/legal.html` still shows the DRAFT banner (for Marc to read and approve; not lawyer-reviewed). The page says last updated 1 November 2026.
+- Stripe code refuses live secret keys unless `STRIPE_ALLOW_LIVE=1` (`netlify/lib/stripe.js`). A 2026-11-06 working note said Stripe was live then. The Stripe dashboard, webhook, and Netlify env are external; this file does not assert them.
+- Founder Pro (never downgraded) is a Firestore `entitlements/{uid}` write via `tools/grant-founder.js` (see SETUP.md). Not confirmed from git. Do not put UIDs or keys in this file.
+- In-repo cookie-free analytics stays off (`analytics.provider` is `''` in `app/brand.js`). A 2026-11-07 working note said app tracking and Netlify Analytics were disabled then. The Netlify toggle is not in git; do not assert it from the repo.
+- Other remote branches exist (`onboarding`, `overhaul`, `skunkworks`). This notes commit does not touch them.
+
+## What's next
+
+Source-backed only. Not a new roadmap.
+
+- SETUP.md is still open in code: set `supportEmail` (landing, legal, and settings read it); Marc approves legal and the DRAFT banner comes off; the founder grant is an operator step before treating Pro as applied.
+- SETUP.md §3–4 (publish `firestore.rules`, Firebase service account in Netlify) are operator steps. Do not assume they are done.
+- `tests/README.md` lists parser edge cases as not yet fixed: a paste dated today can be classed as past and steal the `entered` slot; "Jul 10 Put" (date before type) is blocked by the rx2b lookahead. Robinhood type-before-date is unaffected.
+- `tests/README.md` still says `datahealth.test.js` is "to be ported", but that file exists and describes a ported `runDataHealth` suite. Treat the README line as stale unless a later check shows otherwise.
+
+## Working agreement
+
+Land work on `dev`. Do not merge `main` until Marc explicitly approves. No secrets or customer details in this file. The simulation snapshot is a different repo (`darcmuff/wheelhouse-sim`); do not treat it as this tree.
