@@ -276,6 +276,19 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
   min-width:0;
 }
 .trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 0.1875rem 0 0 var(--teal,var(--orange2));}
+.trow{position:relative}
+.sel-mark{display:none}
+body.sel-mode .trow{user-select:none;-webkit-user-select:none}
+body.sel-mode .trow.sel{background:var(--orangeL);box-shadow:inset 0.2rem 0 0 var(--orange)}
+body.sel-mode .trow.sel .sel-mark{display:flex;position:absolute;left:0.2rem;top:0.28rem;width:0.8rem;height:0.8rem;border-radius:0.2rem;background:var(--orange);color:#fff;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;pointer-events:none}
+body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
+#sel-bar{position:fixed;z-index:65;left:0;right:0;bottom:0;display:flex;align-items:center;gap:0.625rem;padding:0.625rem 0.875rem;background:var(--bg2);border-top:1px solid var(--border);box-shadow:0 -4px 16px rgba(20,24,20,.08)}
+#sel-bar[hidden]{display:none}
+#sel-bar .sel-main{display:flex;flex-direction:column;min-width:0;flex:1}
+#sel-bar .sel-main b{font-size:1rem;line-height:1.1}
+#sel-bar .sel-sub{font-size:0.6875rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.sel-mode #content{padding-bottom:7rem!important}
+@media(max-width:700px){#sel-bar{bottom:3.4rem}}
 .trow{
   display:grid;
   grid-template-columns:minmax(0,52fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,48fr) minmax(0,78fr) minmax(0,46fr) minmax(0,78fr) minmax(0,52fr) minmax(0,36fr);
@@ -928,6 +941,11 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 </div>
 
+<div id="sel-bar" hidden>
+  <div class="sel-main"><b id="sel-net">$0.00</b><span class="sel-sub" id="sel-sub">0 trades</span></div>
+  <button type="button" class="btn btn-ghost btn-sm" onclick="selClear()">Clear</button>
+  <button type="button" class="btn btn-primary btn-sm" onclick="selDone()">Done</button>
+</div>
 
 <!-- MODAL: Rotation -->
 <div class="mb" id="mWheel">
@@ -1481,6 +1499,9 @@ const CREDITS=new Set(['CSP','STOC','STO','STC','OUT','DIV']); // STC receives c
 const OPTIONS=new Set(['CSP','BTC','STOC','STC']);
 const STOCKS=new Set(['IN','OUT']);
 function isCredit(a){return CREDITS.has(a);}
+function selCash(action,total){const n=+total||0;if(n<0)return Math.round(n*100)/100;return Math.round((isCredit(action)?n:-n)*100)/100;}
+function selSummary(items){let net=0,min='',max='';(items||[]).forEach(x=>{net+=+x.cash||0;const d=x.date||'';if(d){if(!min||d<min)min=d;if(!max||d>max)max=d;}});return{net:Math.round(net*100)/100,n:(items||[]).length,min,max};}
+let _selOn=false,_selSkip=false,_selPop=false;const _sel=new Map();
 function computeTotal(action,premium,shares,fees){
   fees=fees||0;premium=premium||0;shares=shares||0;
   const gross=premium*shares;
@@ -2342,6 +2363,7 @@ function render(){
   if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
   if(view==='options'){c.innerHTML=renderOptions();fetchOptionMarks(false);}
+  if(typeof selPaint==='function')selPaint();
 }
 
 // ════════════════════════════════════════════════════════
@@ -2654,7 +2676,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
   }
   if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
   const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
-  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}" data-pmid="${esc(e.id)}">
+  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}"><span class="sel-mark" aria-hidden="true"></span>
     <span class="action-cell"><span class="roll-slot">${rolled?'<span class="roll-badge">↻</span>':''}</span><span class="ab ab-${e.action}">${e.action}</span></span>
     <span>${fmtDateFull(e.entered)}</span>
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
@@ -4461,7 +4483,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
   if(opts.chainOut&&chainHtml&&cIdx!=null){opts.chainOut[cIdx]=chainHtml;chainHtml='';}
-  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
+  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}"><span class="sel-mark" aria-hidden="true"></span>
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
@@ -7644,6 +7666,19 @@ window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;
 window.confirmParsed = confirmParsed;
 window.confirmRoll = confirmRoll;window.declineRoll = declineRoll;
+function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');try{history.pushState({whSel:1},'');}catch(e){}selPaint();}
+function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const bar=document.getElementById('sel-bar');if(bar)bar.hidden=true;}
+function selDone(){if(_selOn&&history.state&&history.state.whSel){_selPop=true;history.back();return;}selExit();}
+function selClear(){_sel.clear();selPaint();}
+function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_sel.has(k))_sel.delete(k);else _sel.set(k,{cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||''});row.classList.toggle('sel',_sel.has(k));selBar();}
+function selPaint(){document.querySelectorAll('.trow[data-sel]').forEach(el=>el.classList.toggle('sel',_sel.has(el.getAttribute('data-sel'))));selBar();}
+function selBar(){const bar=document.getElementById('sel-bar');if(!bar)return;if(!_selOn){bar.hidden=true;return;}bar.hidden=false;const s=selSummary([..._sel.values()]);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub');if(net){net.textContent=(s.net<0?'-':'+')+fmtMoney(Math.abs(s.net));net.className=s.net<0?'r':'g';}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');}
+window.selClear=selClear;window.selDone=selDone;
+document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;const x=e.clientX,y=e.clientY;const timer=setTimeout(()=>{_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}setTimeout(()=>{_selSkip=false;},500);},450);const cancel=()=>{clearTimeout(timer);row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel();};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
+document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
+document.addEventListener('contextmenu',e=>{const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;e.preventDefault();if(!_selOn)selEnter();selToggle(row);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_selOn){e.preventDefault();selDone();}});
+window.addEventListener('popstate',()=>{if(_selPop){_selPop=false;selExit();return;}if(_selOn)selExit();});
 window.doImport = doImport;
 window.openPasteTrade = openPasteTrade;
 window.openEditWheel = openEditWheel;
