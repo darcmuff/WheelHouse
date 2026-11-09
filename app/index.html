@@ -1055,9 +1055,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 <!-- MODAL: Roll Confirm -->
 <div class="mb" id="mRoll">
   <div class="mbox sm">
-    <div class="mtitle"><span>↻ Link as Roll?</span><span class="mx" onclick="closeModal('mRoll')">✕</span></div>
-    <p id="mRoll-msg" style="font-size:0.8125rem;color:var(--text2);margin-bottom:1.125rem;line-height:1.5"></p>
-    <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mRoll')">Skip</button><button class="btn btn-primary" onclick="confirmRoll()">↻ Link</button></div>
+    <div class="mtitle"><span>Mark as roll?</span><span class="mx" onclick="declineRoll()">✕</span></div>
+    <div id="mRoll-msg" style="font-size:0.8125rem;color:var(--text2);margin-bottom:1.125rem;line-height:1.5"></div>
+    <div class="mfoot"><button type="button" class="btn btn-ghost" id="mRoll-no" onclick="declineRoll()">No</button><button type="button" class="btn btn-primary" id="mRoll-yes" onclick="confirmRoll()">Yes</button></div>
   </div>
 </div>
 
@@ -3045,13 +3045,13 @@ function pmccRollScan(text,today){
   return{error:`This roll has ${t.map(x=>x.action).join(' + ')} — a LEAP roll needs a buy back plus a new sell, or a sale of the LEAP plus a new buy.`};
 }
 // Apply a scanned roll to this LEAP → {save:[legs]} or {err}. Never touches wheel data.
-function pmccRollApply(r,leap,legs,newId){
+function pmccRollApply(r,leap,legs,newId,link){
   if(!leap)return{err:'LEAP not found'};
   if(r.close.ticker&&r.close.ticker!==leap.underlying)return{err:`The paste is for ${r.close.ticker}, but this LEAP is ${leap.underlying}.`};
   if(r.kind==='short'){
     const b=pmccBuyBack(r.close,leap,legs);if(b.err)return{err:b.err};
     const n=pmccFormLeg({...r.open,newId},leap);if(n.err)return{err:n.err};
-    n.leg.rolledFrom=b.leg.id;const now=new Date().toISOString();b.leg.closeTs=now;n.leg.ts=now;
+    if(link!==false)n.leg.rolledFrom=b.leg.id;const now=new Date().toISOString();b.leg.closeTs=now;n.leg.ts=now;
     return{save:[b.leg,n.leg]};
   }
   if(leap.status!=='open')return{err:'This LEAP is already closed.'};
@@ -3074,11 +3074,13 @@ function pmccRollPreview(r){
 }
 function pmccSaveRoll(){
   const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
-  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid());
+  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),false);
   if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
   db.opts=db.opts||[];
   a.save.forEach(l=>{const i=db.opts.findIndex(x=>x.id===l.id);if(i>=0)db.opts[i]=l;else db.opts.push(l);_saveOpt(l);});
+  const closed=a.save.find(l=>l.status!=='open'),sto=a.save.find(l=>l.status==='open'&&l.side==='short');
   _pmccRoll=null;closeModal('mPmcc');render();
+  if(closed&&sto)openRollPrompt({kind:'leap',stoId:sto.id,closedId:closed.id,btc:{strike:closed.strike,expiry:closed.expiry,total:(+closed.closePrice||0)*(+closed.qty||0)*100+(+closed.closeFees||0),action:'BTC'},sto:{strike:sto.strike,expiry:sto.expiry,total:(+sto.entryPrice||0)*(+sto.qty||0)*100-(+sto.fees||0),action:'STOC'},yesDefault:true});
 }
 function pmccRunScan(){
   const msg=document.getElementById('pcc-scan-msg'),pick=document.getElementById('pcc-pick');pick.innerHTML='';
@@ -3132,6 +3134,8 @@ function savePmcc(){
   const d=pmccDupOf(r.leg,db.opts);
   if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
   r.leg.ts=new Date().toISOString();db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
+  const prev=leapRollMatch(db.opts,r.leg);
+  if(prev)openRollPrompt({kind:'leap',stoId:r.leg.id,closedId:prev.id,btc:{strike:prev.strike,expiry:prev.expiry,total:(+prev.closePrice||0)*(+prev.qty||0)*100+(+prev.closeFees||0),action:'BTC'},sto:{strike:r.leg.strike,expiry:r.leg.expiry,total:(+r.leg.entryPrice||0)*(+r.leg.qty||0)*100-(+r.leg.fees||0),action:'STOC'},yesDefault:false});
 }
 function pmccClose(id,mode){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
@@ -3856,10 +3860,7 @@ function openOptionLegs(wheelTrades){
 // original fresh entry. Chains can MERGE — one 8-lot closer consuming two 4-lot legs —
 // so ancestry is a tree walked with a seen-set, not a simple linked list.
 // Returns {trades, rolls, net, live, breakeven} or null if the leg isn't part of a chain.
-// ── Roll inference (read-time only, never writes) ──
-// Marc's rule: buyback(s) and a sell-to-open on the SAME day, same put/call side, at the
-// same strike or the next one, whose shares add up exactly, are one roll — even when it
-// takes two buybacks to make the shares (a merge roll). Stored rollIds are kept and topped up.
+// Stored rollIds only. A buy-to-close and a later sell are not a roll unless the user said Yes.
 function strikeStep(k){k=Math.abs(+k)||0;return k<25?1:k<200?5:10;}
 function nearStrike(a,b){a=+a;b=+b;if(!(a>0&&b>0))return a===b;return Math.abs(a-b)<=Math.max(strikeStep(a),strikeStep(b))+1e-9;}
 // Smallest subset of items whose sizes add to exactly target (first 12 candidates), else null.
@@ -3873,29 +3874,8 @@ const _effRollCache=new WeakMap();
 // Returns copies of wheelTrades carrying their effective rollId (stored or inferred); ._rid maps id → rollId.
 function withInferredRolls(wheelTrades){
   if(_effRollCache.has(wheelTrades))return _effRollCache.get(wheelTrades);
-  const{pairs}=walkLegPairs(wheelTrades);
-  const byId={};wheelTrades.forEach(t=>{byId[t.id]=t;});
-  const isCl=t=>t.action==='BTC'||t.action==='STC';
-  const side=t=>{
-    if(t.action==='CSP')return'P';if(t.action==='STOC')return'C';
-    const a=(pairs[t.id]||[]).map(p=>byId[p.legId]&&byId[p.legId].action);
-    if(a.length&&a.every(x=>x==='CSP'))return'P';if(a.length&&a.every(x=>x==='STOC'))return'C';return null;
-  };
   const rid={};wheelTrades.forEach(t=>{if(t.rollId)rid[t.id]=t.rollId;});
-  const used=new Set();
-  wheelTrades.filter(t=>t.action==='CSP'||t.action==='STOC')
-    .sort((a,b)=>(a.entered||'').localeCompare(b.entered||'')).forEach(o=>{
-    const have=o.rollId?wheelTrades.filter(t=>isCl(t)&&t.rollId===o.rollId).reduce((x,t)=>x+(+t.shares||0),0):0;
-    const need=(+o.shares||0)-have;
-    if(need<=0)return;
-    const k=side(o);
-    const cands=wheelTrades.filter(t=>isCl(t)&&!t.rollId&&!used.has(t.id)&&t.entered&&t.entered===o.entered&&side(t)===k&&nearStrike(t.strike,o.strike));
-    const pick=exactSubset(cands,t=>+t.shares||0,need);
-    if(!pick)return;
-    const key=o.rollId||('inf_'+o.id);
-    rid[o.id]=key;pick.forEach(t=>{rid[t.id]=key;used.add(t.id);});
-  });
-  const out=wheelTrades.map(t=>(rid[t.id]||null)!==(t.rollId||null)?{...t,rollId:rid[t.id]}:t);
+  const out=wheelTrades.map(t=>t);
   out._rid=rid;
   _effRollCache.set(wheelTrades,out);
   return out;
@@ -4462,7 +4442,8 @@ function renderTradeRow(t,wheelTrades,opts){
           ?`<span class="chain-be">breakeven buyback ≤ $${fmtPrem(c.breakeven)} — close cheaper and the whole chain is green</span>`
           :`<span class="chain-be">chain is underwater — no green buyback exists at any price</span>`)
         :`<span class="chain-be">chain complete</span>`;
-      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span><span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
+      const move=rollMoveText(c.trades,t);
+      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span>${move?`<span>${move}</span>`:''}<span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
     }
   }
   if(opts.list){const lc=wheelListCells(t,opts.list);opts={...opts,rocHtml:lc.cap,rocColor:lc.capColor,ppdHtml:lc.ppd,extraAfterStrike:`<span class="to-strike m">${esc(lc.ts)}</span>`,editBtn:true};}
@@ -6708,25 +6689,78 @@ function showPasteStep1(){
 }
 
 // ── Roll detection ──
-let pendingRollData=null;
-function checkRollCandidate(newTrade,wheelId,entered,action){
-  if(action!=='CSP'&&action!=='STOC')return;
-  const twoAgo=new Date(entered);twoAgo.setDate(twoAgo.getDate()-2);
-  const twoAgoStr=twoAgo.toISOString().slice(0,10);
-  const prevClose=db.trades.find(t=>t.wheelId===wheelId&&(t.action==='BTC'||t.action==='STC')&&t.entered>=twoAgoStr&&t.entered<=entered&&t.id!==newTrade.id&&!t.rollId);
-  if(prevClose){
-    pendingRollData={rid:'roll_'+uid(),newId:newTrade.id,prevId:prevClose.id};
-    document.getElementById('mRoll-msg').textContent=`Link this ${action} to the ${prevClose.action} on ${fmtDateFull(prevClose.entered)} as a roll? Linked trades will be highlighted together in the trade log.`;
-    setTimeout(()=>openModal('mRoll'),200);
-  }
+// A buy-to-close counts only on the sell-to-open's calendar day or the calendar day before.
+const ROLL_WINDOW_DAYS=1;
+function withinRollWindow(closeDate,openDate){
+  if(!closeDate||!openDate)return false;
+  const d=Math.round((Date.parse(String(openDate).slice(0,10))-Date.parse(String(closeDate).slice(0,10)))/864e5);
+  return d>=0&&d<=ROLL_WINDOW_DAYS;
 }
+function closedOptionSide(btc,pairs,byId){
+  const legs=(pairs[btc.id]||[]).map(p=>byId[p.legId]).filter(Boolean);
+  if(legs.some(x=>x.action==='CSP'))return 'P';
+  if(legs.some(x=>x.action==='STOC'))return 'C';
+  return null;
+}
+// Newest unmatched buy-to-close of the same wheel and the same put/call side, inside the window. Null if none.
+function rollMatch(existing,sto){
+  if(!sto||(sto.action!=='CSP'&&sto.action!=='STOC')||!sto.entered)return null;
+  const want=sto.action==='CSP'?'P':'C';
+  const list=(existing||[]).filter(t=>t&&t.id!==sto.id);
+  const {pairs}=walkLegPairs(list);
+  const byId={};list.forEach(t=>{byId[t.id]=t;});
+  const hits=list.filter(t=>{
+    if(t.action!=='BTC'||t.rollId)return false;
+    if(sto.wheelId&&t.wheelId&&t.wheelId!==sto.wheelId)return false;
+    if(sto.ticker&&t.ticker&&t.ticker!==sto.ticker)return false;
+    if(!withinRollWindow(t.entered,sto.entered))return false;
+    return closedOptionSide(t,pairs,byId)===want;
+  });
+  hits.sort((a,b)=>String(b.entered).localeCompare(String(a.entered)));
+  return hits[0]||null;
+}
+function leapRollMatch(legs,sto){
+  if(!sto||sto.side!=='short'||sto.type!=='C'||!sto.entryDate)return null;
+  const taken=new Set((legs||[]).filter(l=>l&&l.rolledFrom).map(l=>l.rolledFrom));
+  const hits=(legs||[]).filter(l=>l&&l.id!==sto.id&&l.side==='short'&&l.type==='C'&&l.parentLeapId===sto.parentLeapId&&l.status!=='open'&&l.closeDate&&!taken.has(l.id)&&withinRollWindow(l.closeDate,sto.entryDate));
+  hits.sort((a,b)=>String(b.closeDate).localeCompare(String(a.closeDate)));
+  return hits[0]||null;
+}
+function rollMoveText(trades,tip){
+  if(!tip||!tip.rollId)return '';
+  const btc=(trades||[]).find(t=>(t.action==='BTC'||t.action==='STC')&&t.rollId===tip.rollId);
+  if(!btc)return '';
+  const bit=t=>`$${fmt2(t.strike).replace(/\.00$/,'')}${t.expiry?' '+fmtDateShort(t.expiry):''}`;
+  return `${bit(btc)} → ${bit(tip)}`;
+}
+function rollLegNet(btc,sto){return Math.round((((+sto.total)||0)-((+btc.total)||0))*100)/100;}
+let pendingRollData=null;
+function openRollPrompt(info){
+  pendingRollData=info;
+  const btc=info.btc,sto=info.sto,net=rollLegNet(btc,sto);
+  const bit=t=>`$${fmt2(t.strike).replace(/\.00$/,'')}${t.expiry?' '+fmtDateShort(t.expiry):''}`;
+  const kind=sto.action==='CSP'||info.put?' put':' call';
+  document.getElementById('mRoll-msg').innerHTML=`<b>Mark as roll?</b><div style="margin-top:0.5rem">${esc(bit(btc)+kind)} → ${esc(bit(sto)+kind)}</div><div style="margin-top:0.375rem;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit +':'Net debit −'}${fmtMoney(Math.abs(net))}</div>${info.yesDefault?'<div style="margin-top:0.375rem;color:var(--text3)">This confirmation has both legs.</div>':''}`;
+  openModal('mRoll');
+  if(info.yesDefault)setTimeout(()=>{const y=document.getElementById('mRoll-yes');if(y)y.focus();},30);
+}
+function checkRollCandidate(newTrade,wheelId){
+  const prev=rollMatch((db.trades||[]).filter(t=>t.wheelId===wheelId&&t.id!==newTrade.id),newTrade);
+  if(!prev)return;
+  openRollPrompt({kind:'wheel',ids:[prev.id,newTrade.id],btc:prev,sto:newTrade,yesDefault:false});
+}
+function declineRoll(){pendingRollData=null;closeModal('mRoll');}
 function confirmRoll(){
   if(!pendingRollData)return;
-  const{rid,newId,prevId}=pendingRollData;
-  const nt=db.trades.find(t=>t.id===newId);
-  const pt=db.trades.find(t=>t.id===prevId);
-  if(nt){nt.rollId=rid;_saveTrade(nt);}if(pt){pt.rollId=rid;_saveTrade(pt);}
-  render();closeModal('mRoll');pendingRollData=null;
+  const p=pendingRollData;pendingRollData=null;
+  if(p.kind==='leap'){
+    const sto=(db.opts||[]).find(x=>x.id===p.stoId);
+    if(sto&&p.closedId){sto.rolledFrom=p.closedId;_saveOpt(sto);}
+  }else{
+    const rid='roll_'+uid();
+    (p.ids||[]).forEach(id=>{const t=(db.trades||[]).find(x=>x.id===id);if(t){t.rollId=rid;_saveTrade(t);}});
+  }
+  closeModal('mRoll');render();
 }
 
 // ── SmartScan — broker-agnostic pattern hunter ──
@@ -7028,8 +7062,8 @@ function showRollPreview(trades){
   const net=trades.reduce((s,t)=>s+(isCredit(t.action)?t.total:-t.total),0);
   document.getElementById('paste-preview').innerHTML=`
     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6875rem">
-      <span style="background:rgba(255,90,54,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">↻ ROLL DETECTED</span>
-      <span style="font-size:0.6875rem;color:var(--text3)">Both trades linked automatically</span>
+      <span style="background:rgba(255,90,54,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">↻ BOTH LEGS</span>
+      <span style="font-size:0.6875rem;color:var(--text3)">After you save, you can mark this as a roll</span>
       <span style="margin-left:auto;font-size:0.875rem;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit: +':'Net debit: -'}$${Math.abs(net).toFixed(2)}</span>
     </div>
     <div style="display:flex;gap:0.5rem;align-items:stretch;margin-bottom:0.75rem">
@@ -7105,15 +7139,18 @@ function confirmParsed(){
       if(ex){wheelId=ex.id;}
       else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
+    const saved=[];
     trades.forEach(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-        rollId:p.rollId,verified:false,comment:'via SmartScan (roll)'};
-      db.trades.push(nt);_saveTrade(nt); // save only what was touched
+        rollId:null,verified:false,comment:'via SmartScan'};
+      db.trades.push(nt);saved.push(nt);_saveTrade(nt);
     });
     expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
+    const btc=saved.find(t=>t.action==='BTC'),sto=saved.find(t=>t.action==='CSP'||t.action==='STOC');
     try{render();}catch(e){console.error('SmartScan roll render error:',e);}
+    if(btc&&sto)openRollPrompt({kind:'wheel',ids:[btc.id,sto.id],btc,sto,yesDefault:true});
     return;
   }
   // ── Single trade ──
@@ -7132,6 +7169,7 @@ function confirmParsed(){
   expanded.add(wheelId);
   closeModal('mPaste');parsedTradeData=null;
   try{render();}catch(e){console.error('SmartScan render error:',e);alert('Trade saved but display error: '+e.message+'\n\nRefresh the page to see your trade.');}
+  checkRollCandidate(nt,wheelId);
 }
 
 // ════════════════════════════════════════════════════════
@@ -7605,7 +7643,7 @@ window.parsePaste = parsePaste;
 window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;
 window.confirmParsed = confirmParsed;
-window.confirmRoll = confirmRoll;
+window.confirmRoll = confirmRoll;window.declineRoll = declineRoll;
 window.doImport = doImport;
 window.openPasteTrade = openPasteTrade;
 window.openEditWheel = openEditWheel;
