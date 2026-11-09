@@ -3,31 +3,53 @@
 // on any failure/unauthorised)  3) nothing → the app falls back to manual marks + local Black-Scholes.
 // GET /.netlify/functions/optchain?symbol=TSLA&contracts=TSLA251114C00450000,TSLA251121C00400000
 const INDEX = new Set(['SPX', 'SPXW', 'NDX', 'RUT', 'VIX', 'XSP', 'DJX', 'OEX', 'XEO']);
-const root = w => (w.match(/^[A-Z.]+/) || [''])[0];
-const matchWanted = (sym, want) => want.has(sym) ? sym : [...want].find(w => sym.startsWith(root(w)) && sym.endsWith(w.slice(root(w).length)));
+// OCC root + expiry/right/strike. Matching is exact on that tail. A shorter root that merely
+// shares a prefix (F vs FCX) is a different contract and must not be used.
+const PARTS = /^([A-Z.]+)(\d{6}[CP]\d{8})$/;
+const parts = sym => { const m = PARTS.exec(sym); return m ? { root: m[1], tail: m[2] } : null; };
+const rootsMatch = (a, b) => a === b || ([a, b].sort().join() === 'SPX,SPXW'); // Cboe lists SPX weeklies under SPXW
+function matchWanted(sym, want) {
+  sym = String(sym || '').replace(/\s+/g, '');
+  if (want.has(sym)) return sym;
+  const got = parts(sym); if (!got) return undefined;
+  for (const w of want) {
+    const need = parts(w);
+    if (need && need.tail === got.tail && rootsMatch(need.root, got.root)) return w;
+  }
+  return undefined;
+}
+// Exact root wins over an alias. An alias never replaces a quote already stored for that contract.
+function take(list, want, symOf, rowOf) {
+  const contracts = {}, exact = new Set();
+  for (const o of list) {
+    const sym = String(symOf(o) || '').replace(/\s+/g, '');
+    const hit = matchWanted(sym, want);
+    if (!hit || exact.has(hit)) continue;
+    if (sym === hit) exact.add(hit);
+    else if (contracts[hit]) continue;
+    contracts[hit] = rowOf(o);
+  }
+  return contracts;
+}
 
 // Cboe's timestamp is UTC (checked 21 Oct 2026 against wall clock)
 function pick(raw, wanted) {
   const d = raw && raw.data ? raw.data : {};
-  const want = new Set(wanted), contracts = {};
-  for (const o of d.options || []) {
-    const hit = matchWanted(String(o.option || ''), want);
-    if (!hit) continue;
-    contracts[hit] = { src: 'cboe', bid: o.bid, ask: o.ask, last: o.last_trade_price, prevClose: o.prev_day_close > 0 ? o.prev_day_close : null, iv: o.iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.open_interest, volume: o.volume };
-  }
+  const want = new Set(wanted);
+  const contracts = take(d.options || [], want, o => o.option, o => (
+    { src: 'cboe', bid: o.bid, ask: o.ask, last: o.last_trade_price, prevClose: o.prev_day_close > 0 ? o.prev_day_close : null, iv: o.iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.open_interest, volume: o.volume }));
   return { asOf: raw && raw.timestamp ? raw.timestamp.replace(' ', 'T') + 'Z' : null, spot: d.current_price ?? d.close ?? null, contracts };
 }
 // Finnhub /stock/option-chain shape: {lastTradePrice?, data:[{expirationDate, options:{CALL:[...], PUT:[...]}}]}
 function pickFinnhub(raw, wanted) {
-  const want = new Set(wanted), contracts = {};
+  const want = new Set(wanted), list = [];
   for (const exp of (raw && raw.data) || []) {
-    for (const side of ['CALL', 'PUT']) for (const o of ((exp.options || {})[side]) || []) {
-      const hit = matchWanted(String(o.contractName || '').replace(/\s+/g, ''), want);
-      if (!hit) continue;
-      let iv = o.impliedVolatility; if (iv > 3) iv = iv / 100; // Finnhub reports IV in percent
-      contracts[hit] = { src: 'finnhub', bid: o.bid, ask: o.ask, last: o.lastPrice, prevClose: o.previousClose > 0 ? o.previousClose : null, iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.openInterest, volume: o.volume };
-    }
+    for (const side of ['CALL', 'PUT']) for (const o of ((exp.options || {})[side]) || []) list.push(o);
   }
+  const contracts = take(list, want, o => o.contractName, o => {
+    let iv = o.impliedVolatility; if (iv > 3) iv = iv / 100; // Finnhub reports IV in percent
+    return { src: 'finnhub', bid: o.bid, ask: o.ask, last: o.lastPrice, prevClose: o.previousClose > 0 ? o.previousClose : null, iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.openInterest, volume: o.volume };
+  });
   return { spot: raw && raw.lastTradePrice || null, contracts };
 }
 async function getMarks(sym, wanted, { fetchImpl = fetch, finnhubKey } = {}) {
@@ -52,7 +74,7 @@ const _handler = async (event) => {
   const wanted = String(q.contracts || '').toUpperCase().split(',').map(s => s.trim()).filter(s => /^[A-Z.]+\d{6}[CP]\d{8}$/.test(s)).slice(0, 60);
   if (!sym || !wanted.length) return { statusCode: 400, body: JSON.stringify({ error: 'symbol and contracts required' }) };
   const out = await getMarks(sym, wanted, { finnhubKey: process.env.FINNHUB_KEY });
-  // 200 even when empty: the app then keeps manual marks / local greeks
+  // 200 even when empty: the app shows "no quote" for that contract. A manual mark is left alone.
   return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=60', 'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=60' }, body: JSON.stringify(out) };
 };
 

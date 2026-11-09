@@ -20,3 +20,14 @@ test('nothing wipes auth storage or signs out on service-worker updates', () => 
   assert.ok(!/signOut|indexedDB|localStorage\.clear|unregister/.test(swReg));
   assert.strictEqual((SRC.match(/signOut\(_auth\)/g) || []).length, 1); // only the Sign out button
 });
+
+test('SW update shows a Refresh prompt instead of auto-reloading the page', () => {
+  const swReg = SRC.slice(SRC.indexOf('// Register the offline service worker'));
+  assert.ok(/controllerchange[\s\S]*?showSwUpdate/.test(swReg), 'controllerchange shows the prompt');
+  assert.ok(!/controllerchange[\s\S]{0,120}location\.reload\(\)/.test(swReg), 'controllerchange must not auto-reload');
+  assert.ok(swReg.includes("getElementById('sw-update')"));
+  assert.ok(/New version/.test(swReg));
+  assert.ok(/sw-update-btn[\s\S]{0,80}location\.reload\(\)/.test(swReg), 'Refresh button still reloads on tap');
+  const sw = fs.readFileSync(path.join(__dirname, '..', 'app', 'sw.js'), 'utf8');
+  assert.ok(sw.includes('skipWaiting') && sw.includes('clients.claim'), 'new SW still ready before the user taps Refresh');
+});
