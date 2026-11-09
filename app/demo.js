@@ -45,6 +45,7 @@
       if(fn==='extquote')return J({});
       if(fn==='profile')return J({logo:null});
       if(fn==='earnings')return J({});
+      if(fn==='symbol'){var q=(u.searchParams.get('q')||'').toLowerCase();var all=[{symbol:'KO',name:'Coca-Cola'},{symbol:'AMD',name:'Advanced Micro Devices'},{symbol:'SOFI',name:'SoFi'},{symbol:'AAPL',name:'Apple'},{symbol:'MSFT',name:'Microsoft'},{symbol:'TSLA',name:'Tesla'},{symbol:'SPCX',name:'Space Exploration Technologies'}];return J({results:all.filter(function(x){return x.symbol.toLowerCase().indexOf(q)>=0||x.name.toLowerCase().indexOf(q)>=0;}).slice(0,8)});}
       return J({error:'Not available in the demo.'},503);
     }
     return realFetch(input,init);
