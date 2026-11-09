@@ -147,6 +147,18 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   check('optchain pick: only requested contracts, spot, UTC asOf', Object.keys(r.contracts).length === 1 && r.contracts.TSLA261120C00400000.delta === 0.41 && r.spot === 378.5 && r.asOf === '2026-10-21T12:00:20Z', r);
   const ix = pick(raw, ['SPX261120C05000000']);
   check('optchain pick: SPX matches SPXW root', ix.contracts.SPX261120C05000000 && ix.contracts.SPX261120C05000000.bid === 1, ix);
+  const both = pick({ data: { options: [
+    { option: 'SPXW261120C05000000', bid: 1, ask: 2 },
+    { option: 'SPX261120C05000000', bid: 3, ask: 3.2 } ] } }, ['SPX261120C05000000']);
+  check('optchain pick: exact root beats the SPXW alias', both.contracts.SPX261120C05000000.bid === 3, both);
+  const wrong = pick({ data: { options: [
+    { option: 'SPCX261113P00130000', bid: 2.16, ask: 2.2, delta: -0.26 },
+    { option: 'SPCX261120P00125000', bid: 2.51, ask: 2.55, delta: -0.22 },
+    { option: 'SPCX261113C00130000', bid: 9.25, ask: 9.35, delta: 0.74 },
+    { option: 'FCX261113P00010000', bid: 1, ask: 1.1 } ] } }, ['SPCX261113P00130000', 'F261113P00010000']);
+  check('optchain pick: exact put only — not the other expiry, the call, or a prefixed root',
+    wrong.contracts.SPCX261113P00130000 && wrong.contracts.SPCX261113P00130000.bid === 2.16
+    && Object.keys(wrong.contracts).length === 1 && !wrong.contracts.F261113P00010000, wrong);
 }
 // ── marks fallback order: Cboe → Finnhub → none (manual + BS) ──
 const _mk = async () => {

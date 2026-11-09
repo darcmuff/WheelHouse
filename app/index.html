@@ -2604,6 +2604,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=ppdCellHtml(t.total/t.days,t.days);
       const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
       if(mark!=null&&sold>0){const cc=capturedCellHtml(Math.round((sold-mark)/sold*100),pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),true);cap=`<span title="${esc(c.markNote||('Buy-back price $'+(+mark).toFixed(2)))}">${cc.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;capColor=cc.color;}
+      else if(c.markWhy==='none')cap=`<span title="${esc(c.markNote||'No reliable quote for this contract')}">no quote</span>`;
     }else{
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
@@ -3448,41 +3449,50 @@ function isRegularSession(now){
   const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(now||new Date()).map(x=>[x.type,x.value]));
   if(p.weekday==='Sat'||p.weekday==='Sun')return false;const m=(+p.hour%24)*60+(+p.minute);return m>=570&&m<960;
 }
-// Steady, honest buy-back price for a short option. Pure.
-// c = contract quote {bid,ask,last,delta,gamma}; prev = last mark shown (or null); o = {strike,type:'P'|'C',regular:bool}.
-// 1) Good quote only: bid>0, ask>0, spread ≤ 60% of mid (or ≤ $0.10). Else keep the last good mark; only with none, use the last trade.
-// 2) Delta/gamma move only in regular hours, only for stock moves ≤ 4%, and the result stays within a band around the quote.
-// 3) Never below intrinsic value or a cent. 4) Ignore wiggles under max($0.02, 1%) so the figure doesn't flicker.
+// Buy-back price for one exact contract. Pure.
+// c = that contract's quote {bid,ask,delta,gamma}; prev = last mark shown (or null); o = {strike,type:'P'|'C',regular}.
+// A usable quote is a two-sided market (bid>0, ask>=bid, spread ≤ $0.10 or ≤ 60% of mid). Anything else returns null
+// so the card says "no quote" instead of keeping a stale mark or an old last trade.
+// In the regular session the mid is brought forward to the live stock with this quote's own delta and gamma.
+// A spot gap over 12%, or a greek with the wrong sign for the call/put, cannot be brought forward honestly:
+// return null rather than show the delayed mid against a different stock price. Outside the regular session the
+// two spots are not the same moment, so the mid is shown unadjusted. Never below intrinsic. Wiggles under
+// max($0.02, 1%) stay put so the figure doesn't flicker.
 function steadyMark(c,quoteSpot,liveSpot,prev,o){
   o=o||{};const r2=n=>Math.round(n*100)/100;
-  if(!c)return prev!=null?{mark:prev,why:'held'}:null;
+  if(!c)return null;
   const b=+c.bid,a=+c.ask,good=b>0&&a>=b&&((a-b)<=0.10||(a-b)/((a+b)/2)<=0.6);
-  let mid,why;
-  if(good){mid=(a+b)/2;why='mid';}
-  else if(prev!=null)return{mark:prev,why:'held'};
-  else if(+c.last>0){mid=+c.last;why='last';}
-  else return null;
-  let m=mid;
-  if(good&&o.regular&&quoteSpot>0&&liveSpot>0&&c.delta!=null&&!isNaN(+c.delta)&&Math.abs(liveSpot-quoteSpot)/quoteSpot<=0.04){
-    const adj=adjMark(mid,c.delta,c.gamma,quoteSpot,liveSpot);const band=Math.max(a-b,0.15*mid,0.05);
-    m=Math.min(a+band,Math.max(b-band,adj));if(r2(m)!==r2(mid))why='adjusted';
+  if(!good)return null;
+  const mid=(a+b)/2;let m=mid,why='mid';
+  if(o.regular&&quoteSpot>0&&liveSpot>0&&liveSpot!==quoteSpot){
+    const gap=Math.abs(liveSpot-quoteSpot)/quoteSpot;
+    const signOk=o.type==='P'?+c.delta<=0.02:o.type==='C'?+c.delta>=-0.02:true;
+    const dOk=c.delta!=null&&!isNaN(+c.delta)&&Math.abs(+c.delta)<=1&&signOk;
+    if(!(gap<=0.12&&dOk)){if(gap>0.005)return null;}
+    else{
+      let d=+c.delta,g=isNaN(+c.gamma)||+c.gamma<0?0:+c.gamma,dS=liveSpot-quoteSpot;
+      const lo=o.type==='C'?0:-1,hi=o.type==='C'?1:0;
+      if(o.type==='C'||o.type==='P'){d=Math.min(hi,Math.max(lo,d));if(d+g*dS<lo||d+g*dS>hi)g=0;}
+      const adj=adjMark(mid,d,g,quoteSpot,liveSpot),room=Math.abs(dS);
+      m=Math.min(mid+room,Math.max(mid-room,adj));if(r2(m)!==r2(mid))why='adjusted';
+    }
   }
   if(o.strike>0&&liveSpot>0)m=Math.max(m,o.type==='C'?liveSpot-o.strike:o.strike-liveSpot);
   m=Math.max(0.01,r2(m));
-  if(prev!=null&&why!=='last'&&Math.abs(m-prev)<Math.max(0.02,prev*0.01))return{mark:prev,why:'held-small'};
+  if(prev!=null&&Math.abs(m-prev)<Math.max(0.02,prev*0.01))return{mark:prev,why:'held-small'};
   return{mark:m,why};
 }
 function _applyWheelMarks(){const reg=isRegularSession();Object.entries(_wheelMarkRaw).forEach(([k,r])=>{const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
-  const s=steadyMark(r.c,r.spot,live,_wheelMarks[k]??null,{strike:r.strike,type:r.type,regular:reg});if(s){_wheelMarks[k]=s.mark;r.why=s.why;}});}
-function wheelMarkNote(k){const r=_wheelMarkRaw[k];if(!r)return'';const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
+  const s=steadyMark(r.c,r.spot,live,_wheelMarks[k]??null,{strike:r.strike,type:r.type,regular:reg});
+  if(s){_wheelMarks[k]=s.mark;r.why=s.why;}else{_wheelMarks[k]=null;r.why='none';}});}
+function wheelMarkNote(k){const r=_wheelMarkRaw[k];if(!r)return'';if(_wheelMarks[k]==null)return'No reliable quote for this contract';
+  const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
   return markNote(_wheelMarks[k],r.why,r.u,live,r.c);}
 // Plain words for the buy-back price actually used and where it came from.
 function markNote(mark,why,u,live,c){if(mark==null)return'';const q=c&&c.bid>0&&c.ask>0?` (bid $${(+c.bid).toFixed(2)} / ask $${(+c.ask).toFixed(2)})`:'';
   const base=`Buy-back price $${(+mark).toFixed(2)}: `;
   return base+(why==='adjusted'?`15-min delayed option quote${q}, adjusted to ${u} at $${(+live).toFixed(2)}`
-    :why==='held'?`last good quote kept: the latest quote had no usable bid/ask${q}`
     :why==='held-small'?`15-min delayed option quote${q}; small change ignored to keep it steady`
-    :why==='last'?`last traded price (no bid/ask right now)`
     :`15-min delayed option quote${q}${isRegularSession()?'':', market closed so not adjusted'}`);}
 async function fetchWheelMarks(force){
   if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
@@ -3493,7 +3503,7 @@ async function fetchWheelMarks(force){
     try{
       const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${[...set].join(',')}`,{signal:AbortSignal.timeout(15000)});
       if(!r.ok)continue;const j=await r.json();
-      set.forEach(k=>{const c=j.contracts&&j.contracts[k];const mid=c?(c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last>0?c.last:null)):null;if(mid!=null){_wheelMarkRaw[k]={u,c,strike:+k.slice(-8)/1000,type:k.slice(-9,-8),mid,delta:c.delta??null,gamma:c.gamma??null,spot:j.spot>0?j.spot:null};changed=true;}});
+      set.forEach(k=>{const c=j.contracts&&j.contracts[k]||null;_wheelMarkRaw[k]={u,c,strike:+k.slice(-8)/1000,type:k.slice(-9,-8),spot:j.spot>0?j.spot:null};changed=true;});
     }catch(e){console.warn('Wheel marks:',u,e.message);}
   }
   _applyWheelMarks();
@@ -3515,16 +3525,14 @@ async function fetchOptionMarks(force){
       const j=await r.json();
       if(j.spot>0)quotes[u]=quotes[u]||{price:j.spot,prev:j.spot,change:0,pct:0,state:'DELAYED'};
       ls.forEach(l=>{
-        const c=j.contracts&&j.contracts[OPTS.occ(l)];
-        if(!c){miss++;return;}
-        const mid=c.bid>0&&c.ask>0?(c.bid+c.ask)/2:(c.last||null);
-        if(mid==null){miss++;return;}
-        if(l.markSrc==='manual'&&!force)return; // a manual mark wins until the user refreshes explicitly
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
+        if(l.markSrc==='manual'&&!force)return; // a manual mark wins until the user refreshes explicitly
+        const c=j.contracts&&j.contracts[OPTS.occ(l)];
         const live=quotes[u]&&quotes[u].state!=='DELAYED'?quotes[u].price:null;
-        const prevM=l.markSrc&&l.markSrc!=='manual'&&l.mark!=null?+l.mark:null;
-        const sm=steadyMark(c,j.spot,live,prevM,{strike:+l.strike,type:l.type,regular:isRegularSession()});if(!sm){miss++;return;}
+        const prevM=l.mark!=null&&l.mark!==''?+l.mark:null;
+        const sm=c?steadyMark(c,j.spot,live,prevM,{strike:+l.strike,type:l.type,regular:isRegularSession()}):null;
+        if(!sm){l.mark=null;l.markSrc=null;l.markWhy='none';l.markNote='No reliable quote for this contract';miss++;return;}
         l.markWhy=sm.why;l.markNote=markNote(sm.mark,sm.why,u,live,c);
         Object.assign(l,{mark:sm.mark,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),prevClose:c.prevClose>0?+c.prevClose:null,dayOpen:typeof leapDayOpen==='function'?leapDayOpen(OPTS.occ(l),sm.mark):null,iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
         ok++; // in memory only — live marks are never saved
@@ -4243,12 +4251,13 @@ function renderRotationWindow(wheel){
   const _f2=_cs.held
     ?`<div class="wl-f wl-be"><span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>${_cs.assignedAt!=null?`<small>Assigned at $${fmt2(_cs.assignedAt)}</small>`:''}</div>`
     :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
-  const _curOpt=isOpen?wheelCurrentOption(wheel.ticker,m.trades):null,_curVal=_curOpt?wheelCurrentValue(_curOpt,_wheelMarks[_curOpt.occ]):null;
+  const _curOpt=isOpen?wheelCurrentOption(wheel.ticker,m.trades):null,_markKnown=!!(_curOpt&&Object.prototype.hasOwnProperty.call(_wheelMarks,_curOpt.occ));
+  const _curVal=_markKnown&&_wheelMarks[_curOpt.occ]!=null?wheelCurrentValue(_curOpt,_wheelMarks[_curOpt.occ]):null;
   let _curPct=wheelCurrentPct(_curOpt,_curVal);
   const _curChain=wheelChainProfit(m.trades,_curOpt,_curVal);
   const _curPft=_curChain?_curChain.profit:wheelCurrentProfit(_curOpt,_curVal);
   if(_curChain)_curPct=_curChain.pct;
-  const _fCur=_curPft!=null&&_curPct!=null?`<div class="wl-f wl-cur"><span>Profit</span><b class="${_curPft>=0?'g':'r'}">${_curPft>=0?'+':'-'}${fmtMoney(Math.abs(_curPft))}</b><small class="${_curPct>=0?'g':'r'}">${_curPct>=0?'+':'-'}${Math.round(Math.abs(_curPct))}%</small></div>`:'';
+  const _fCur=_curPft!=null&&_curPct!=null?`<div class="wl-f wl-cur"><span>Profit</span><b class="${_curPft>=0?'g':'r'}">${_curPft>=0?'+':'-'}${fmtMoney(Math.abs(_curPft))}</b><small class="${_curPct>=0?'g':'r'}">${_curPct>=0?'+':'-'}${Math.round(Math.abs(_curPct))}%</small></div>`:(_markKnown?`<div class="wl-f wl-cur"><span>Profit</span><b class="m">no quote</b></div>`:'');
   const _f3=m.sharesHeld>0
     ?_fact('Unrealised',_rss.unrealised==null?'no price':fmtMoney(_rss.unrealised),_rss.unrealised==null?'m':colorN(_rss.unrealised))
     :'';
@@ -4393,7 +4402,9 @@ function wheelListCells(t,L){
   if(L.openIds.has(t.id)){
     r.ts=toStrike(L.spot,+t.strike).text;
     const d=dd(L.today,t.entered);if(d&&t.total)r.ppd=ppdCellHtml(t.total/d,d);
-    const mark=L.marks?L.marks[wheelLegOcc(L.ticker,t)]:null;
+    const occ=wheelLegOcc(L.ticker,t),known=!!(L.marks&&Object.prototype.hasOwnProperty.call(L.marks,occ));
+    const mark=L.marks?L.marks[occ]:null;
+    if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:(+t.shares||0)/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
       const c=capturedCellHtml(Math.round((prem-mark)/prem*100),pf,true);r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(wheelLegOcc(L.ticker,t)):'')}">${c.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;r.capColor=c.color;}
