@@ -684,6 +684,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 .lc-lbl{font-size:0.55rem;padding:0.1rem 0.45rem;border-radius:1rem;margin-left:0.25rem;font-weight:600}.lc-lbl.r{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}.lc-lbl.a{background:color-mix(in srgb,var(--yellow) 14%,transparent);color:var(--yellow)}.lc-lbl.g{background:var(--orangeL);color:var(--green)}
 .lc-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.625rem}
+.trade-body>.lc-acts{margin:0.875rem 0 0.5rem 0.875rem}
 
 .act-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin:0.25rem 0 0.875rem}.act-head h1{font-size:1.375rem;font-weight:600}.act-head p{color:var(--text3);font-size:0.7rem}
 .act-btns{display:flex;flex-wrap:wrap;gap:0.375rem}
@@ -2671,13 +2672,13 @@ function listMoreBtn(id,n,shown){
   return`<div class="list-more" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" style="color:var(--text3)" onclick="toggleListAll('${esc(id)}')">${on?'Show less':`Show all (${n})`}</button></div>`;
 }
 function toggleListAll(id){listShowAll.has(id)?listShowAll.delete(id):listShowAll.add(id);render();}
-function renderPmcc(leap,today,spot){
+function renderPmcc(leap,today,spot,add){
   const ev=pmccShortEvents(leap,db.opts||[]);
   const cmap=pmccChainMap(ev);
   const keep=listCut(ev.length,ev.map(e=>cmap[e.legId]!=null?'c'+cmap[e.legId]:'l'+e.legId),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
   const chainOut={},rowHtml=evS.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
   const rows=hoistChainLines(evS.map(e=>cmap[e.legId]),rowHtml,chainOut)+listMoreBtn(leap.id,ev.length,keep.length);
-  return`<div class="trade-body open pmcc-open pmcc-trades">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button></div>`:''}${tradeTableHead({lastCol:'Captured',toStrike:true})}
     ${rows||'<div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3)">No short calls yet.</span></div>'}
   </div>`;
 }
@@ -2771,8 +2772,7 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
-  <div class="lc-acts"><button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Add trade</button></div>
-  ${renderPmcc(l,today,spot)}
+  ${renderPmcc(l,today,spot,true)}
 `:''}</div>`;
   }
   return`<div class="leap-card ${!open?'cn':''}" data-leap="${esc(l.id)}">
@@ -4333,7 +4333,7 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
-      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
+      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
       ${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
