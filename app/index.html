@@ -325,7 +325,17 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 }
 .btn:hover{opacity:.85}.btn:active{transform:scale(.97)}
 .btn-primary{background:var(--orange);color:#fff}
-#new-rot-ticker-top::placeholder{color:#fff;opacity:1}
+.nw{position:relative}
+.nw-box{position:relative}
+#new-rot-ticker-top{width:11rem;box-sizing:border-box;background:#fff;color:#111;border:1px solid var(--border);border-radius:0.375rem;padding:0.3125rem 0.625rem;font-size:0.6875rem;font-weight:600;outline:none}
+#new-rot-ticker-top::placeholder{color:#8a908b;opacity:1}
+#new-rot-ticker-top:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,90,54,.35)}
+.nw-list{position:absolute;z-index:40;top:calc(100% + 0.25rem);left:0;min-width:16rem;max-height:14rem;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;box-shadow:var(--shadow)}
+.nw-item,.nw-note{display:flex;gap:0.5rem;align-items:baseline;width:100%;text-align:left;background:none;border:0;padding:0.4rem 0.55rem;font-size:0.6875rem;color:var(--text);cursor:pointer}
+.nw-item.on,.nw-item:hover{background:var(--bg3)}
+.nw-sym{font-weight:700;min-width:3.2rem}
+.nw-name{color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nw-note{color:var(--text3);cursor:default}
 .btn-success{background:#0d2218;color:var(--green);border:1px solid #1a3d2a}
 .btn-danger{background:#2a0d0d;color:var(--red);border:1px solid #3d1a1a}
 .btn-warn{background:#2a1800;color:var(--orange2);border:1px solid #3d2600}
@@ -2323,10 +2333,11 @@ function _saveUIState(){
 
 function render(){
   {const b=document.querySelector('.tn-paste');if(b)b.style.display=(view==='dash'||view==='positions'||view==='options')?'none':'';} // Home: no Add trade; Wheel tab: cards have their own Add trade; LEAPs tab: has + LEAP
+  const _nwKeep=view==='positions'&&_nwOpen, _nwWas=document.getElementById('new-rot-ticker-top'), _nwTyped=_nwWas?_nwWas.value:'', _nwFocus=document.activeElement===_nwWas;
   _saveUIState();
   renderSidebar();
   const c=document.getElementById('content');
-  if(view==='positions'){c.innerHTML=renderPositions();fetchWheelMarks(false);}
+  if(view==='positions'){c.innerHTML=renderPositions();fetchWheelMarks(false);if(_nwKeep){showNewWheel();const inp=document.getElementById('new-rot-ticker-top');if(inp){inp.value=_nwTyped;if(_nwFocus)inp.focus();}renderNwList();}}
   if(view==='log')c.innerHTML=renderActivityHead()+renderLog();
   if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
@@ -3609,7 +3620,7 @@ function renderPositions(){
       <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
     </div>
     <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg></button>
-    <input id="new-rot-ticker-top" type="text" placeholder="+ Ticker" style="width:5rem;text-transform:uppercase;background:var(--orange);color:#fff;border:1px solid var(--orange);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;letter-spacing:.5px" onkeydown="if(event.key==='Enter')quickAddRotation('new-rot-ticker-top')">
+    <div class="nw" id="new-wheel"><button type="button" class="btn btn-primary btn-sm" id="new-wheel-btn" onclick="openNewWheel()">New wheel</button><div class="nw-box" id="new-wheel-box" hidden><input id="new-rot-ticker-top" type="text" placeholder="Ticker or company" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="new-wheel-list" oninput="nwInput()" onkeydown="nwKey(event)" onblur="nwBlur()"><div class="nw-list" id="new-wheel-list" hidden></div></div></div>
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
@@ -5220,10 +5231,44 @@ function goToRotation(id){
 }
 function sortLog(col){logSort.dir=logSort.col===col?(logSort.dir==='asc'?'desc':'asc'):'asc';logSort.col=col;render();}
 
-function quickAddRotation(inputId){
-  const inp=document.getElementById(inputId||'new-rot-ticker');
-  const ticker=inp.value.toUpperCase().trim();
-  if(!ticker){inp.focus();return;}
+let _nwOpen=false,_nwTimer=0,_nwSeq=0,_nwHits=[],_nwHi=-1,_nwState='';
+function nwTicker(s){const t=String(s||'').toUpperCase().trim();return /^[A-Z][A-Z0-9.\-]{0,9}$/.test(t)?t:'';}
+function openNewWheel(){_nwOpen=true;_nwHits=[];_nwHi=-1;_nwState='';showNewWheel();const inp=document.getElementById('new-rot-ticker-top');if(inp){inp.value='';inp.focus();}}
+function showNewWheel(){const b=document.getElementById('new-wheel-btn'),box=document.getElementById('new-wheel-box');if(b)b.hidden=true;if(box)box.hidden=false;}
+function closeNewWheel(){_nwOpen=false;clearTimeout(_nwTimer);_nwSeq++;_nwHits=[];_nwHi=-1;const b=document.getElementById('new-wheel-btn'),box=document.getElementById('new-wheel-box'),list=document.getElementById('new-wheel-list');if(b)b.hidden=false;if(box)box.hidden=true;if(list)list.hidden=true;}
+function renderNwList(){const list=document.getElementById('new-wheel-list');if(!list)return;
+  if(!_nwOpen){list.hidden=true;return;}
+  const inp=document.getElementById('new-rot-ticker-top');const q=inp?inp.value.trim():'';
+  if(!q){list.hidden=true;list.innerHTML='';return;}
+  list.hidden=false;
+  if(_nwState==='err'){list.innerHTML=`<div class="nw-note">${nwTicker(q)?"Couldn't look up names. Press Enter to use the ticker.":"Couldn't look up names."}</div>`;return;}
+  if(_nwState!=='ok'){list.hidden=true;list.innerHTML='';return;}
+  if(!_nwHits.length){list.innerHTML=`<div class="nw-note">No matches${nwTicker(q)?' — press Enter to use '+esc(nwTicker(q)):''}</div>`;return;}
+  list.innerHTML=_nwHits.map((h,i)=>`<button type="button" class="nw-item${i===_nwHi?' on':''}" onmousedown="event.preventDefault()" onclick="commitNewWheel('${esc(h.symbol)}')"><span class="nw-sym">${esc(h.symbol)}</span><span class="nw-name">${esc(h.name||'')}</span></button>`).join('');
+}
+function nwInput(){const inp=document.getElementById('new-rot-ticker-top');const q=inp?inp.value.trim():'';clearTimeout(_nwTimer);const seq=++_nwSeq;_nwHits=[];_nwHi=-1;_nwState='';
+  if(q.length<1){renderNwList();return;}
+  renderNwList();
+  _nwTimer=setTimeout(()=>nwSearch(q,seq),300);
+}
+async function nwSearch(q,seq){try{const r=await fetch('/.netlify/functions/symbol?q='+encodeURIComponent(q),{signal:AbortSignal.timeout(8000)});if(seq!==_nwSeq)return;if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(seq!==_nwSeq)return;if(j.error)throw new Error('lookup');_nwHits=Array.isArray(j.results)?j.results.slice(0,8):[];_nwHi=_nwHits.length?0:-1;_nwState='ok';}catch(e){if(seq!==_nwSeq)return;_nwHits=[];_nwHi=-1;_nwState='err';}renderNwList();}
+function nwKey(e){if(e.key==='Escape'){e.preventDefault();closeNewWheel();return;}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){if(!_nwHits.length)return;e.preventDefault();_nwHi=e.key==='ArrowDown'?Math.min(_nwHits.length-1,_nwHi+1):Math.max(0,_nwHi-1);renderNwList();return;}
+  if(e.key==='Enter'){e.preventDefault();commitNewWheel();}}
+function nwBlur(){setTimeout(()=>{const inp=document.getElementById('new-rot-ticker-top');if(!inp||document.activeElement===inp)return;const box=document.getElementById('new-wheel-box');if(box&&box.contains(document.activeElement))return;if(!inp.value.trim())closeNewWheel();},160);}
+async function commitNewWheel(symbol){
+  if(symbol){quickAddRotation(symbol);return;}
+  const inp=document.getElementById('new-rot-ticker-top');const typed=inp?inp.value.trim():'';if(!typed)return;
+  if(_nwTimer){clearTimeout(_nwTimer);_nwTimer=0;await nwSearch(typed,_nwSeq);}
+  const hit=_nwHi>=0&&_nwHits[_nwHi]?_nwHits[_nwHi].symbol:(_nwHits[0]&&_nwHits[0].symbol);
+  const sym=hit||nwTicker(typed);
+  if(!sym){if(_nwState!=='err')_nwState='ok';renderNwList();return;}
+  quickAddRotation(sym);
+}
+function quickAddRotation(symbol){
+  const inp=document.getElementById('new-rot-ticker-top');
+  const ticker=nwTicker(symbol!=null&&symbol!==''?symbol:(inp&&inp.value)||'');
+  if(!ticker){if(inp)inp.focus();return;}
   if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
   const existing=db.wheels.filter(w=>w.ticker===ticker).length;
   const now=new Date();
@@ -5233,7 +5278,7 @@ function quickAddRotation(inputId){
   const wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:now.toISOString().slice(0,10),sortOrder:mo+1};
   db.wheels.push(wheel);
   _saveWheel(wheel);
-  inp.value='';
+  closeNewWheel();
   render();
   // Fetch price and logo in background
   fetchSymbol(ticker).then(()=>{
@@ -7547,6 +7592,7 @@ window.fetchOptionMarks = fetchOptionMarks;
 
 window.openNewPos = openNewPos;
 window.quickAddRotation = quickAddRotation;
+window.openNewWheel = openNewWheel;window.nwInput = nwInput;window.nwKey = nwKey;window.nwBlur = nwBlur;window.commitNewWheel = commitNewWheel;
 window.closeModal = closeModal;
 window.saveWheel = saveWheel;
 window.deleteTrade = deleteTrade;
