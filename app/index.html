@@ -6740,7 +6740,7 @@ function openRollPrompt(info){
   const btc=info.btc,sto=info.sto,net=rollLegNet(btc,sto);
   const bit=t=>`$${fmt2(t.strike).replace(/\.00$/,'')}${t.expiry?' '+fmtDateShort(t.expiry):''}`;
   const kind=sto.action==='CSP'||info.put?' put':' call';
-  document.getElementById('mRoll-msg').innerHTML=`<b>Mark as roll?</b><div style="margin-top:0.5rem">${esc(bit(btc)+kind)} → ${esc(bit(sto)+kind)}</div><div style="margin-top:0.375rem;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit +':'Net debit −'}${fmtMoney(Math.abs(net))}</div>${info.yesDefault?'<div style="margin-top:0.375rem;color:var(--text3)">This confirmation has both legs.</div>':''}`;
+  document.getElementById('mRoll-msg').innerHTML=`<div>${esc(bit(btc)+kind)} → ${esc(bit(sto)+kind)}</div><div style="margin-top:0.375rem;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit +':'Net debit −'}${fmtMoney(Math.abs(net))}</div>${info.yesDefault?'<div style="margin-top:0.375rem;color:var(--text3)">This confirmation has both legs.</div>':''}`;
   openModal('mRoll');
   if(info.yesDefault)setTimeout(()=>{const y=document.getElementById('mRoll-yes');if(y)y.focus();},30);
 }
