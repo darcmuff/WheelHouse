@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v168` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v169` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 
@@ -17,6 +17,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `dev` does not auto-link a buy-to-close and a later sell into a roll (sw v165–v166). After SmartScan is accepted, a same-day or previous-calendar-day match asks “Mark as roll?”. Yes writes the existing `rollId` (wheels) or `rolledFrom` (LEAPs). A Robinhood confirmation with both legs asks the same question and focuses Yes. No leaves the trades separate.
 - `dev` lets you long-press (or right-click / Ctrl-click) trade rows on wheel and LEAP cards to select across cards (sw v167). A bottom bar shows the net cash, the count, and the date range. It does not save or link anything. Escape, Back, or Done leaves select mode.
 - `dev` refreshes open LEAP and option marks on login and on the same minute timer as wheel quotes, and saves the new price and date (sw v168). A quote that cannot be fetched stays off Home and shows on the LEAP card. Every Needs you / Data Health row explains what is wrong, why, and how to fix it, and can be dismissed until that issue changes.
+- `dev` turns the New wheel pill into the text field in the same spot (sw v169). Suggestions are US stocks and ETFs only. A built-in list of the most traded names (Tesla first for “t” and “tes”) shows at once, then Finnhub fills in underneath.
 - `app/brand.js`: `supportEmail` is still `''`. `plans.gating` is `true` (free caps: 2 open wheel tickers, 1 open LEAP). Prices in brand config are £9 monthly / £79 yearly.
 - `app/legal.html` still shows the DRAFT banner (for Marc to read and approve; not lawyer-reviewed). The page says last updated 1 November 2026.
 - Stripe code refuses live secret keys unless `STRIPE_ALLOW_LIVE=1` (`netlify/lib/stripe.js`). A 2026-11-06 working note said Stripe was live then. The Stripe dashboard, webhook, and Netlify env are external; this file does not assert them.

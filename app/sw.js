@@ -1,9 +1,9 @@
 // WheelHouse service worker. Bump CACHE on every release.
-const CACHE='optrack-v168';
+const CACHE='optrack-v169';
 // Caches from earlier app names, deleted on update. Only the service-worker cache: your data and settings are untouched.
 const LEGACY = ['wheelhouse-'];
 const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
-const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './demo.js', './analytics.js', './legal.html', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg', './logo-horizontal.svg'];
+const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './demo.js', './popular.js', './analytics.js', './legal.html', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg', './logo-horizontal.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting()));
