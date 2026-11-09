@@ -660,7 +660,14 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .hb-v{font-size:0.575rem;color:var(--text2)}.hb-m{font-size:0.575rem;color:var(--text3)}.hb-m.now{color:var(--text);font-weight:600}
 .hb-leg{display:flex;gap:1rem;font-size:0.6rem;color:var(--text2);margin-top:0.625rem}.hb-leg i{display:inline-block;width:0.5rem;height:0.5rem;border-radius:0.125rem;margin-right:0.3rem}
 .ny-row{display:flex;align-items:center;gap:0.5rem;font-size:0.6875rem;padding:0.4375rem 0;border-top:1px solid var(--bg3)}.ny-row:first-of-type{border-top:0}.ny-row a{margin-left:auto;color:var(--orange);cursor:pointer;font-size:0.625rem}
-.ny-dot{width:0.4375rem;height:0.4375rem;border-radius:50%;flex-shrink:0}.ny-dot.r{background:var(--red)}.ny-dot.a{background:var(--yellow)}.ny-dot.g{background:var(--green)}
+.ny-dot{width:0.4375rem;height:0.4375rem;border-radius:50%;flex-shrink:0;margin-top:0.3rem}.ny-dot.r{background:var(--red)}.ny-dot.a{background:var(--yellow)}.ny-dot.g{background:var(--text3)}
+.hy{border-top:1px solid var(--bg3)}.hy-sum{display:flex;align-items:flex-start;gap:0.5rem;width:100%;background:none;border:0;padding:0.45rem 0;cursor:pointer;text-align:left;color:inherit;font:inherit}
+.hy-what{flex:1;font-size:0.75rem;line-height:1.4;color:var(--text)}
+.hy-more{display:none;padding:0 0 0.55rem 1rem;font-size:0.6875rem;color:var(--text2);line-height:1.45}
+.hy.open .hy-more{display:block}.hy-more div+div{margin-top:0.15rem}
+.hy-acts{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem}
+.lc-quiet{font-size:0.6875rem;color:var(--text3);padding:0.15rem 1rem 0.35rem;display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap}
+.lc-quiet .btn{padding:0.15rem 0.45rem;font-size:0.625rem}
 .ny-none{color:var(--text3);font-size:0.6875rem;padding:0.25rem 0 0.5rem}
 .hc-links{display:flex;flex-direction:column;gap:0.375rem;margin-top:0.875rem;padding-top:0.625rem;border-top:1px solid var(--bg3)}.hc-links a{color:var(--orange);font-size:0.65rem;cursor:pointer}
 .ms-head{display:flex;align-items:baseline;gap:1rem;margin:0.25rem 0 0.5rem 1rem}.ms-head a{color:var(--orange);cursor:pointer;font-size:0.65rem}.ms-head h1{font-size:1.25rem;font-weight:600}
@@ -1453,11 +1460,11 @@ function _saveTrade(trade){
     .catch(e=>console.error('Trade save failed:',e));
 }
 let _optsLoadError='';
-// Live prices (optchain/Cboe/Finnhub marks + greeks) live in memory only — never written to Firestore.
-// Only a mark the user typed (markSrc==='manual') is persisted.
+// A quote we actually received is saved with its date, same as a price you type.
+// Display-only notes (why the number moved) are not stored.
 function _persistableLeg(leg){
-  if(!leg||leg.markSrc==='manual')return leg;
-  const o={...leg};o.mark=null;o.markSrc=null;o.markAt=null;o.delta=null;o.theta=null;o.iv=null;delete o.markWhy;delete o.markNote;return o;
+  if(!leg)return leg;
+  const o={...leg};delete o.markWhy;delete o.markNote;return o;
 }
 function _saveOpt(leg){
   if(APP_DEMO){OT_DEMO.save(db);return;}
@@ -1648,7 +1655,7 @@ function optionsLib(){
       if(l.parentLeapId&&!legs.some(x=>x.id===l.parentLeapId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} was sold against a LEAP that no longer exists — shown under Other options`});
       if(l.wheelId&&!wheels.some(w=>w.id===l.wheelId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is attached to a rotation that no longer exists`});
       if(l.wheelId){const w=wheels.find(w=>w.id===l.wheelId);if(w&&w.ticker&&w.ticker!==l.underlying)out.push({sev:'grey',legId:l.id,text:`${nm(l)} is attached to the ${w.ticker} rotation — different underlying`});}
-      if(l.status==='open'&&l.markAt&&(Date.parse(today)-Date.parse(l.markAt.slice(0,10)))/DAY>5)out.push({sev:'grey',legId:l.id,text:`${nm(l)} mark is stale (${l.markAt.slice(0,10)})`});
+      // A missing quote is shown on the LEAP card, not as a Home nag. The saved date moves when a quote arrives.
       const fp=`${l.underlying}|${l.type}|${l.strike}|${l.expiry}|${l.side}|${l.entryDate}|${l.qty}|${l.entryPrice}`;(seen[fp]=seen[fp]||[]).push(l);
     });
     Object.values(seen).forEach(a=>{if(a.length>1)out.push({sev:'grey',legId:a[0].id,text:`${nm(a[0])} appears ${a.length}× with identical details — duplicates?`});});
@@ -2250,6 +2257,7 @@ async function fetchAllQuotes(){
     }
     await fetchExtQuotes(allSyms);
     _applyWheelMarks();
+    await fetchOptionMarks(false);
     await logosDone;
     const nOk=Object.keys(quotes).length;
     if(nOk>0){
@@ -2290,6 +2298,7 @@ function buildSpark(prices,isUp,w=52,h=20){
 // VIEW STATE
 // ════════════════════════════════════════════════════════
 let view='positions'; // every app open/reload lands on the Wheel tab (saved tab ignored at startup)
+let _nyOpen=false;
 let expanded=new Set(JSON.parse(localStorage.getItem('wh-expanded')||'[]'));
 let collapsedWheels=new Set(JSON.parse(localStorage.getItem('wh-collapsedWheels')||'[]')); // wheel cards default to expanded, like LEAP cards
 let collapsedLeaps=new Set(JSON.parse(localStorage.getItem('wh-collapsedLeaps')||'[]')); // LEAP cards default to expanded; only an explicit ▾ tap collapses
@@ -2449,8 +2458,8 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
       <td>${thOk?money(th)+'<small style="color:var(--text3)">/d</small>':'—'}</td>
       <td style="white-space:nowrap">${acts}<button class="btn btn-ghost btn-icon" onclick="openOptEdit('${g.id}')">•••</button></td>
     </tr>`;}).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:2.5rem">${legs.length?'No positions match these filters':'No option positions yet — add one, or import a broker file with buy-to-open fills.'}</td></tr>`;
-  const issues=OPTS.health(legs,db.wheels,today,db.trades);
-  const healthH=issues.length?`<div style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.625rem 0.75rem"><div style="font-size:0.75rem;color:var(--text3);margin-bottom:0.375rem">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(i=>`<div style="font-size:0.75rem;padding:2px 0;color:${i.sev==='red'?'var(--red)':i.sev==='amber'?'var(--yellow)':'var(--text3)'}">● ${esc(i.text)}</div>`).join('')}</div>`:'';
+  const issues=shownHealth(OPTS.health(legs,db.wheels,today,db.trades));
+  const healthH=issues.length?`<div class="hy-box" style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.25rem 0.75rem 0.5rem"><div style="font-size:0.75rem;color:var(--text3);margin:0.375rem 0">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(healthItemHtml).join('')}</div>`:'';
   // linked-to-rotation summary (display only; wheel P&L untouched)
   const byW={};legs.filter(l=>l.wheelId).forEach(l=>{const p=OPTS.legPnL(l);const o=byW[l.wheelId]=byW[l.wheelId]||{r:0,u:0};o.r+=p.realized;if(p.unrealized!=null)o.u+=p.unrealized;});
   const linkH=Object.keys(byW).length?`<div style="margin-top:0.875rem;font-size:0.75rem;color:var(--text3)">Attached to rotations (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
@@ -2799,7 +2808,8 @@ function renderLeapCard(l,spot,today){
     const leapExp=!collapsedLeaps.has(l.id);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
   <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
-  ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
+  ${l.markWhy==='none'?`<div class="lc-quiet" onclick="event.stopPropagation()">No fresh quote${l.mark!=null&&l.markAt?` · last price $${Number(l.mark).toFixed(2)} on ${_fdShort(String(l.markAt).slice(0,10))}`:''}. <button type="button" class="btn btn-ghost btn-sm" onclick="refreshLegMark('${esc(l.id)}')">Refresh price</button><button type="button" class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Enter mark manually</button></div>`:''}
+    ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
@@ -2870,8 +2880,8 @@ function renderOptions(){
   // non-long-call legs never vanish silently
   const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
   const otherH=og.length?`<details class="leap-other"><summary>Other options (${og.length}) — spreads, puts and short legs, kept as recorded</summary>${og.map(g=>`<div style="display:flex;gap:0.625rem;align-items:center;border-top:1px solid var(--border);padding:0.375rem 0;margin-top:0.375rem"><div style="flex:1;min-width:0;overflow-x:auto"><div style="font-size:0.6875rem;color:var(--text3)">${esc(g.strategy)} · ${esc(g.status)}</div>${g.legs.map(_legLine).join('')}</div><button class="btn btn-ghost btn-icon" onclick="openOptEdit('${esc(g.id)}')">•••</button></div>`).join('')}</details>`:'';
-  const issues=OPTS.health(legs,db.wheels,today,db.trades);
-  const healthH=issues.length?`<div style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.625rem 0.75rem"><div style="font-size:0.75rem;color:var(--text3);margin-bottom:0.375rem">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(i=>`<div style="font-size:0.75rem;padding:2px 0;color:${i.sev==='red'?'var(--red)':i.sev==='amber'?'var(--yellow)':'var(--text3)'}">● ${esc(i.text)}</div>`).join('')}</div>`:'';
+  const issues=shownHealth(OPTS.health(legs,db.wheels,today,db.trades));
+  const healthH=issues.length?`<div class="hy-box" style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.25rem 0.75rem 0.5rem"><div style="font-size:0.75rem;color:var(--text3);margin:0.375rem 0">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(healthItemHtml).join('')}</div>`:'';
   const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
   const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample LEAPs shown <b>instead of</b> your real ones. Nothing here is saved. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
   return`${err}${demoH}
@@ -3565,13 +3575,18 @@ async function fetchWheelMarks(force){
 }
 // ── Live marks: CBOE delayed chain via Netlify proxy; graceful fallback to manual marks + local BS greeks ──
 let _optMarksAt=0;
-async function fetchOptionMarks(force){
-  const open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
-  if(!open.length){_optMarkStatus='';return;}
-  if(!force&&_optMarksAt&&!canUse('live-refresh'))return; // free plan: marks once per visit, no auto refresh
-  if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
+function _markStamp(l){return String(l.markAt||'').slice(0,10)+'|'+(l.mark==null?'':l.mark)+'|'+(l.markSrc||'');}
+async function fetchOptionMarks(force, onlyId){
+  let open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
+  if(onlyId)open=open.filter(l=>l.id===onlyId);
+  if(!open.length){if(!onlyId)_optMarkStatus='';return;}
+  if(!onlyId){
+    if(!force&&_optMarksAt&&!canUse('live-refresh'))return; // free plan: marks once per visit, no auto refresh
+    if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
+  }
   const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
-  let ok=0,miss=0,failU=[];
+  let ok=0,miss=0,failU=[],changed=false;
+  const noteFail=l=>{if(l.markWhy!=='none'){l.markWhy='none';l.markNote='No reliable quote for this contract';changed=true;}};
   for(const[u,ls]of Object.entries(byU)){
     try{
       const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${ls.map(OPTS.occ).join(',')}`,{signal:AbortSignal.timeout(15000)});
@@ -3581,27 +3596,31 @@ async function fetchOptionMarks(force){
       ls.forEach(l=>{
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
-        if(l.markSrc==='manual'&&!force)return; // a manual mark wins until the user refreshes explicitly
+        // a price typed in the last 5 days stays until Refresh. An older typed price does not block the quote.
+        if(!force&&l.markSrc==='manual'&&l.markAt&&(Date.now()-Date.parse(l.markAt))/864e5<5)return;
         const c=j.contracts&&j.contracts[OPTS.occ(l)];
         const live=quotes[u]&&quotes[u].state!=='DELAYED'?quotes[u].price:null;
         const prevM=l.mark!=null&&l.mark!==''?+l.mark:null;
         const sm=c?steadyMark(c,j.spot,live,prevM,{strike:+l.strike,type:l.type,regular:isRegularSession()}):null;
-        if(!sm){l.mark=null;l.markSrc=null;l.markWhy='none';l.markNote='No reliable quote for this contract';miss++;return;}
+        if(!sm){noteFail(l);miss++;return;} // keep the last price; the card says there is no fresh quote
+        const before=_markStamp(l);
         l.markWhy=sm.why;l.markNote=markNote(sm.mark,sm.why,u,live,c);
         Object.assign(l,{mark:sm.mark,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),prevClose:c.prevClose>0?+c.prevClose:null,dayOpen:typeof leapDayOpen==='function'?leapDayOpen(OPTS.occ(l),sm.mark):null,iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
-        ok++; // in memory only — live marks are never saved
+        if(_markStamp(l)!==before){_saveOpt(l);changed=true;}
+        ok++;
       });
-    }catch(e){failU.push(u);console.warn('Option marks:',u,e.message);}
+    }catch(e){failU.push(u);ls.forEach(l=>{const cur=(db.opts||[]).find(x=>x.id===l.id);if(cur)noteFail(cur);});console.warn('Option marks:',u,e.message);}
   }
-  _optMarkStatus=failU.length&&!ok?'Live marks unavailable — using manual marks':`Marks: ${ok} updated (delayed)${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
-  if(view==='options')render();
+  _optMarkStatus=failU.length&&!ok?'Live marks unavailable — using the last saved price':`Marks: ${ok} updated (delayed)${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
+  if(changed||view==='options')render();
 }
+async function refreshLegMark(id){await fetchOptionMarks(true,id);}
 
 function renderSidebar(){
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
   // Health badge on the Dashboard nav item — visible from any view
   document.querySelectorAll('.nav-health-badge').forEach(_hb=>{
-    const _hi=allDataHealth();
+    const _hi=openHealth();
     if(_hi.length){
       const worst=_hi.some(i=>i.sev==='red')?'var(--red)':_hi.some(i=>i.sev==='amber')?'var(--yellow)':'var(--text3)';
       _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:0.625rem;font-weight:600;border-radius:0.5625rem;padding:1px 0.4375rem;line-height:1.4">${_hi.length}</span>`;
@@ -4591,12 +4610,80 @@ function renderLog(){
 // One lifecycle walk per rotation: tracks open option legs + a running share ledger.
 // wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
 function allDataHealth(){
-  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+esc(i.text)}));}
+  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+i.text}));}
   catch(e){console.warn('options health',e);o=[{sev:'amber',text:'Options · LEAP/options checks could not run — those positions were not checked. Reload to retry.'}];}
   // never report "all clear" when the options legs never loaded — say they weren't checked
   if(_optsLoadError)o.unshift({sev:'amber',text:`Options · Your LEAP/options positions couldn't load (${esc(_optsLoadError)}), so they weren't checked. Reload to retry.`});
   const order={red:0,amber:1,grey:2};
   return runDataHealth().concat(o).sort((a,b)=>order[a.sev]-order[b.sev]);
+}
+// One sentence each: what is already i.text, then why it happened, then how to fix it.
+function explainHealth(text){
+  const t=String(text||'').replace(/^Options( \(DEMO\))? · /,'');
+  const row=(why,how,act)=>({why,how,act});
+  if(/couldn't load|could not run|weren't checked/.test(t))return row('The options list did not load, so those checks were skipped.','Reload the page. If it keeps happening, the connection needs a look.','reload');
+  if(/has no underlying/.test(t))return row('This was saved without a ticker.','Edit the position and enter the ticker.','edit-leg');
+  if(/has no strike/.test(t))return row('The strike was blank when this was saved or imported.','Edit it and enter the strike. Collateral and profit need it.','edit');
+  if(/has no share count/.test(t))return row('The share count was blank, so collateral and profit cannot be worked out.','Edit the trade and enter how many shares.','edit-trade');
+  if(/has no expiry/.test(t))return row('No expiry was recorded, so a close or assignment cannot be matched to it.','Edit it and set the expiry date.','edit');
+  if(/has no contract quantity/.test(t))return row('The number of contracts was blank.','Edit the position and enter the contracts.','edit-leg');
+  if(/neither call nor put/.test(t))return row('It was not saved as a call or a put.','Edit the position and choose call or put.','edit-leg');
+  if(/no long\/short side/.test(t))return row('It is not marked long or short, so profit is calculated the wrong way.','Edit the position and set long or short.','edit-leg');
+  if(/no entry premium/.test(t))return row('The price paid or received was not recorded.','Edit the position and enter the premium.','edit-leg');
+  if(/LEAP expired — close it/.test(t))return row('The expiry date has passed and the LEAP is still open.','Close it, or mark it expired, so it leaves your open positions.','close-leap');
+  if(/still open/.test(t))return row('The expiry has passed but nothing recorded the outcome.','Close it, mark it expired, or record the assignment.','edit-leg');
+  if(/no close price/.test(t))return row('It is marked closed but the close price or date is missing.','Edit it and fill in the close.','edit-leg');
+  if(/closed before it was opened/.test(t))return row('The close date is earlier than the open date.','Edit the dates so the close is on or after the open.','edit-leg');
+  if(/opened after its expiry/.test(t))return row('The open date is after the expiry, which cannot happen.','Edit the dates.','edit-leg');
+  if(/no longer exists/.test(t)&&/LEAP/.test(t))return row('This call was sold against a LEAP that has been deleted.','Edit the call and attach it to a LEAP, or close it.','edit-leg');
+  if(/rotation that no longer exists/.test(t))return row('It points at a wheel that was deleted.','Edit it and clear or change the wheel.','edit-leg');
+  if(/different underlying/.test(t))return row('The option ticker and the wheel ticker are not the same.','Edit the link so both use the same ticker.','edit-leg');
+  if(/identical details/.test(t))return row('The same details were saved more than once, often by importing twice.','Delete the extra copy, or leave it if they are real partial fills.','edit');
+  if(/same fill recorded twice/.test(t))return row('A wheel trade and an option leg share the ticker, strike, expiry and day.','Check both and delete the one you did not mean to keep. Nothing is removed for you.','edit');
+  if(/closes nothing|orphan/.test(t))return row('This close has no matching open option.','Edit the strike, expiry or date so it matches the open trade, or delete it if it was a bad import.','edit-trade');
+  if(/can't be both/.test(t))return row('It is flagged expired-worthless and also closed or assigned. Only one of those is true.','Edit the trade and clear the flag that is wrong.','edit-trade');
+  if(/shares appeared from nowhere|no open CSP/.test(t))return row('Shares were added without a put that was assigned.','Edit the assignment so it matches the put, or add the missing put.','edit-trade');
+  if(/only \d+ held/.test(t))return row('More shares were sold than this wheel held on that date.','Edit the share count, or add the missing buy.','edit-trade');
+  if(/never closed, assigned, or marked expired/.test(t))return row('The expiry passed and nothing recorded what happened to the option.','Open the trade and mark it expired, closed, or assigned.','edit-trade');
+  return row('Something in this record does not add up.','Open it and correct the field that is wrong.','edit');
+}
+function healthKey(i){
+  const t=String(i.text||'').replace(/<[^>]+>/g,'').replace(/\d+d ago/g,'Nd ago').replace(/^Options( \(DEMO\))? · /,'');
+  return (i.tradeId||i.legId||'')+'|'+t;
+}
+function shownHealth(list){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  const d=new Set(raw);
+  return (list||[]).filter(i=>!d.has(healthKey(i)));
+}
+function openHealth(){return shownHealth(allDataHealth());}
+function dismissHealth(key){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  const s=new Set(raw);s.add(key);
+  localStorage.setItem('wh-health-dismiss',JSON.stringify([...s].slice(-200)));
+  _nyOpen=true;render();
+}
+function healthAction(i){
+  const e=explainHealth(i.text);
+  const q=s=>String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  if(e.act==='reload')return {label:'Reload',fn:'location.reload()'};
+  if(e.act==='edit-trade'&&i.tradeId)return {label:'Edit trade',fn:`openEditTrade('${q(i.tradeId)}')`};
+  if(i.legId){
+    const l=(db.opts||[]).find(x=>x.id===i.legId);
+    if(l&&e.act==='close-leap')return {label:'Close it',fn:`openOptClose('${q(l.groupId||l.id)}','close')`};
+    if(l&&l.side==='long'&&l.type==='C'&&!l.parentLeapId)return {label:'Edit LEAP',fn:`openLeapEdit('${q(l.id)}')`};
+    if(l)return {label:'Edit position',fn:`openOptEdit('${q(l.groupId||l.id)}')`};
+    return {label:'Edit position',fn:`goToOpt('${q(i.legId)}')`};
+  }
+  if(i.tradeId)return {label:'Edit trade',fn:`openEditTrade('${q(i.tradeId)}')`};
+  return null;
+}
+function healthItemHtml(i){
+  const e=explainHealth(i.text);
+  const act=healthAction(i);
+  const key=healthKey(i).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const dot=i.sev==='red'?'r':i.sev==='amber'?'a':'g';
+  return `<div class="hy"><button type="button" class="hy-sum" onclick="this.parentElement.classList.toggle('open')"><span class="ny-dot ${dot}"></span><span class="hy-what">${esc(i.text)}</span></button><div class="hy-more"><div>${esc(e.why)}</div><div>${esc(e.how)}</div><div class="hy-acts">${act?`<button type="button" class="btn btn-primary btn-sm" onclick="${act.fn}">${esc(act.label)}</button>`:''}<button type="button" class="btn btn-ghost btn-sm" onclick="dismissHealth('${key}')">Dismiss</button></div></div></div>`;
 }
 function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
 function runDataHealth(){
@@ -4819,22 +4906,16 @@ function renderStatsOverview(){
   const recentTrades=[...db.trades].sort((a,b)=>b.entered.localeCompare(a.entered)).slice(0,8);
 
   // ── Data Health panel ──
-  const health=allDataHealth();
+  const health=openHealth();
   const hRed=health.filter(i=>i.sev==='red').length;
   const hAmber=health.filter(i=>i.sev==='amber').length;
   const hGrey=health.filter(i=>i.sev==='grey').length;
-  const sevDot={red:'var(--red)',amber:'var(--yellow)',grey:'var(--text3)'};
   const healthBadge=[hRed?`<span style="color:var(--red);font-size:0.6875rem;font-weight:600">${hRed} critical</span>`:'',
       hAmber?`<span style="color:var(--yellow);font-size:0.6875rem;font-weight:600">${hAmber} warning${hAmber>1?'s':''}</span>`:'',
       hGrey?`<span style="color:var(--text3);font-size:0.6875rem;font-weight:600">${hGrey} note${hGrey>1?'s':''}</span>`:''].filter(Boolean).join('');
   const healthRows=health.map(i=>{
     const t=db.trades.find(x=>x.id===i.tradeId);
-    return`<div style="border-top:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:0.625rem;padding:0.5625rem 1rem 0">
-        <span class="d-alert-dot" style="background:${sevDot[i.sev]};flex-shrink:0"></span>
-        <span style="font-size:0.75rem;color:var(--text2);line-height:1.5;flex:1">${i.text}</span>
-        ${i.tradeId?`<button class="btn btn-ghost" style="font-size:0.625rem;padding:0.1875rem 0.625rem;flex-shrink:0" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button>`:i.legId?`<button class="btn btn-ghost" style="font-size:0.625rem;padding:0.1875rem 0.625rem;flex-shrink:0" onclick="goToOpt('${i.legId}')">Go to</button>`:''}
-      </div>
+    return`<div style="padding:0 1rem;border-top:1px solid var(--border)">${healthItemHtml(i)}
       ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
     </div>`;
   }).join('');
@@ -5005,7 +5086,7 @@ function renderHome(){
   const un=calcAllUnrealised(db.wheels,db.trades,_priceOf,legs);
   const wheelLegs=db.wheels.filter(w=>w.status==='open').flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).map(l=>({...l,ticker:l.ticker||w.ticker,wheelId:w.id})));
   const nx=nextExpiry(wheelLegs,legs,today);
-  const health=allDataHealth();
+  const health=openHealth();
   const mName=new Date().toLocaleDateString('en-GB',{month:'long'});
   const wl=calcWinLoss();
   const caw=currentCapitalAtWork();
@@ -5026,11 +5107,11 @@ function renderHome(){
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="hk-grid hk-row2">
-    <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p)p.hidden=!p.hidden"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':''):'nothing to do'}</div></div>
+    <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p){p.hidden=!p.hidden;_nyOpen=!p.hidden}"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':''):'nothing to do'}</div></div>
     <div class="hk"><div class="hk-l">Return this month ${ii(`This month's realised profit from sold options, as a % of ${rs.base==='account'?'the account size you set':'money at work (LEAP cost + shares/put collateral)'}.${rs.target?` Target ${rs.target}%.`:''} Change this in Settings.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':'neg'):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'at work'}${rs.target?` · target ${rs.target}%`:''}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
-  <div class="hcard ny-panel" id="ny-panel" hidden><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(i=>`<div class="ny-row"><span class="ny-dot ${i.sev==='red'?'r':i.sev==='amber'?'a':'g'}"></span><span>${i.text}</span><a onclick="goToHealth()">Open</a></div>`).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
+  <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
   <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
   ${renderMonthlyRealised()}
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
@@ -7596,6 +7677,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
     // Start polling — clear any existing handle first so re-logins never stack intervals
     clearInterval(_pollHandle);
     _pollHandle = setInterval(fetchAllQuotes, 60000);
+    fetchOptionMarks(false);
   } else {
     _confirmedUid = null;_ent=null;_entErr=false;syncProBadge();
     clearInterval(_pollHandle);
@@ -7648,7 +7730,7 @@ window.saveOpt = saveOpt;
 window.deleteOptGroup = deleteOptGroup;
 window.openOptClose = openOptClose;
 window.saveOptClose = saveOptClose;
-window.fetchOptionMarks = fetchOptionMarks;
+window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth;
 
 window.openNewPos = openNewPos;
 window.quickAddRotation = quickAddRotation;
