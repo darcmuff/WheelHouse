@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v160` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v161` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 
@@ -10,6 +10,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `dev` through `d2d29d7` (2026-11-06, sw v158): a new service worker shows "New version — Refresh when you're ready" instead of auto-reload. Refresh reloads only when tapped (`app/index.html`, `tests/authboot.test.js`).
 - `dev` then fixes open-leg Captured (sw v159). The buy-back is the Cboe quote for that exact OCC contract, brought forward to the live stock with that quote's delta and gamma. It is not clamped to 15% of the delayed premium, and a spot gap over 4% is not a reason to keep the old mid. If the quote is not a two-sided market, the greek has the wrong sign, or the spot gap is over 12%, Captured and the card Profit say "no quote" instead of a stale number. Outside the regular session the mid is shown unadjusted, because the option spot and the stock price are not the same moment. Contract matching is exact on expiry, call/put and strike (SPX may use the SPXW root; a shorter prefix such as F vs FCX must not match).
 - `dev` adds a show/hide control on the password fields (sw v160). Sign in and create account share `#auth-password`. Delete account uses `#delete-password`, shown only for a password login. Landing and `/start` have no password field; they link to the app.
+- `dev` moves wheel-card and open LEAP-card Add trade above the trade rows (sw v161). `main` is still the v160 merge until Marc asks again.
 - `app/brand.js`: `supportEmail` is still `''`. `plans.gating` is `true` (free caps: 2 open wheel tickers, 1 open LEAP). Prices in brand config are £9 monthly / £79 yearly.
 - `app/legal.html` still shows the DRAFT banner (for Marc to read and approve; not lawyer-reviewed). The page says last updated 1 November 2026.
 - Stripe code refuses live secret keys unless `STRIPE_ALLOW_LIVE=1` (`netlify/lib/stripe.js`). A 2026-11-06 working note said Stripe was live then. The Stripe dashboard, webhook, and Netlify env are external; this file does not assert them.

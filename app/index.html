@@ -2767,8 +2767,8 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
-  ${renderPmcc(l,today,spot)}
   <div class="lc-acts"><button class="btn btn-ghost btn-sm" onclick="openPmccSell('${esc(l.id)}')">Add trade</button></div>
+  ${renderPmcc(l,today,spot)}
 `:''}</div>`;
   }
   return`<div class="leap-card ${!open?'cn':''}" data-leap="${esc(l.id)}">
@@ -4329,12 +4329,13 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
+      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
       ${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
     const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
     {const cm=wheelChainMap(m.trades),chainOut={};const keep=listCut(_ord.length,_ord.map(t=>cm[t.id]),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);const rh=_S.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_S.map(t=>cm[t.id]),rh,chainOut)+listMoreBtn(wheel.id,_ord.length,keep.length);}
-    expandedHtml+=`${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}</div>`;
+    expandedHtml+=`</div>`;
   }
 
   return`
