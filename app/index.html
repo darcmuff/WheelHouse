@@ -597,8 +597,12 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 /* ── Top navigation (desktop) + bottom tab bar (phone) ── */
 #content{margin-left:0!important;padding:1.25rem 1.5rem 3rem!important;max-width:72rem;margin:0 auto!important}
 #topnav{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:1.5rem;padding:0.625rem 1.5rem;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
-.tn-brand{display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:0.875rem;color:var(--text)}
-.tn-mark{width:1.375rem;height:1.375rem;display:block}
+.tn-brand{display:flex;align-items:center;gap:0.625rem;font-weight:600;font-size:1.5rem;letter-spacing:-0.03em;color:var(--text);flex-shrink:0;white-space:nowrap;line-height:1}
+.tn-mark{width:2.125rem;height:2.125rem;display:block}
+.tn-word{display:flex;flex-direction:column;align-items:flex-end}
+.tn-pro{margin-top:0.2rem;font-size:0.5625rem;font-weight:700;letter-spacing:0.06em;line-height:1;color:var(--orange)}
+.tn-pro[hidden]{display:none}
+#topnav{flex-wrap:nowrap}
 .tn-tabs{display:flex;gap:0.25rem}
 #topnav .nav-item,#tabbar .nav-item{border:0;padding:0.4375rem 0.875rem;border-radius:0.625rem;color:var(--text2);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:0.375rem;background:none}
 #topnav .nav-item.active{background:var(--bg2);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
@@ -899,7 +903,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
   <!-- SIDEBAR -->
   <header id="topnav">
-    <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg" alt=""><span data-brand="name">OpTrack</span></div>
+    <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg" alt=""><span class="tn-word"><span data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span></div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
     <div class="tn-right">
       <button class="btn btn-primary tn-paste" onclick="pasteFill()" title="Add a trade — SmartScan or Manual Entry">+ Add trade</button>
@@ -7223,6 +7227,9 @@ function pasteFill(){ if(view==='options'&&typeof openLeapAdd==='function')openL
 let _ent=null,_entErr=false;
 function planCfg(){return (typeof window!=='undefined'&&window.BRAND&&window.BRAND.plans)||{gating:false,paidFeatures:[],free:{}};}
 function isPro(ent,err){return !!(err||(ent&&(ent.plan==='pro'||ent.founder))); } // can't read it → never lock anyone out
+// Badge only: a real Pro entitlement (plan pro, or a founder). A failed read and the demo stay unmarked.
+function proBadgeOn(ent){return !!(ent&&ent.demo!==true&&(ent.plan==='pro'||ent.founder));}
+function syncProBadge(){const el=document.getElementById('tn-pro');if(el)el.hidden=!proBadgeOn(_ent);}
 function canUse(feature,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(!(cfg.paidFeatures||[]).includes(feature))return true;
   return isPro(ent===undefined?_ent:ent,err===undefined?_entErr:err);}
 function underLimit(kind,count,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const f=cfg.free||{};const lim=kind==='wheel'?f.maxWheelTickers:f.maxOpenLeaps;return lim==null||count<lim;}
@@ -7235,7 +7242,7 @@ function capNewLeaps(existing,newLegs,cfg,ent,err){const drop=new Set();let n=(e
   (newLegs||[]).forEach(l=>{if(l.side==='long'&&l.status==='open'){if(leapCapOk(1,Array(n).fill({status:'open',side:'long'}),cfg,ent,err))n++;else drop.add(l.id);}});
   const keep=(newLegs||[]).filter(l=>!drop.has(l.id)&&!(l.parentLeapId&&drop.has(l.parentLeapId)));return{keep,dropped:(newLegs||[]).length-keep.length,droppedLeaps:drop.size};}
 function capMsg(kind){const f=planCfg().free||{};return kind==='wheel'?`Free plan: up to ${f.maxWheelTickers} open tickers. Your existing ones are kept — upgrade to add more.`:`Free plan: up to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. Your existing ones are kept — upgrade to add more.`;}
-async function loadEntitlement(uid){try{const sn=await getDoc(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}}
+async function loadEntitlement(uid){try{const sn=await getDoc(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}syncProBadge();}
 async function _pollUpgrade(uid){for(let i=0;i<6&&!isPro(_ent,false);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPro(_ent,false)){alert('Thanks! Pro is now on for your account.');render();}}
 function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';if(isPro(_ent,false))return 'Pro';return 'Free';}
 function openUpgrade(feature,msg){
@@ -7362,7 +7369,7 @@ async function migrateLocalStorage(userId) {
 // ── Demo boot: made-up trades from demo.js, Pro features on, prices made up locally (no API calls). ──
 function demoBoot(){
   window._authResolved=true;_confirmedUid=null;
-  _ent={plan:'pro',demo:true};_entErr=false;
+  _ent={plan:'pro',demo:true};_entErr=false;syncProBadge();
   const d=OT_DEMO.load();db.wheels=d.wheels;db.trades=d.trades;db.opts=d.opts;window._db=db;
   document.getElementById('auth-overlay').style.display='none';
   document.documentElement.classList.add('ot-demo');
@@ -7485,7 +7492,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
     clearInterval(_pollHandle);
     _pollHandle = setInterval(fetchAllQuotes, 60000);
   } else {
-    _confirmedUid = null;
+    _confirmedUid = null;_ent=null;_entErr=false;syncProBadge();
     clearInterval(_pollHandle);
     _pollHandle = null;
     document.getElementById('loading-overlay').style.display = 'none';
