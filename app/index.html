@@ -283,19 +283,19 @@ body.sel-mode .trow{user-select:none;-webkit-user-select:none}
 body.sel-mode .trow.sel{background:var(--orangeL);box-shadow:inset 0.2rem 0 0 var(--orange)}
 body.sel-mode .trow.sel .sel-mark{display:flex;position:absolute;left:0.2rem;top:0.28rem;width:0.8rem;height:0.8rem;border-radius:0.2rem;background:var(--orange);color:#fff;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;pointer-events:none}
 body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
-#sel-bar{position:fixed;z-index:65;left:0;right:0;bottom:0;display:flex;align-items:center;gap:0.625rem;padding:0.625rem 0.875rem;background:var(--bg2);border-top:1px solid var(--border);box-shadow:0 -4px 16px rgba(20,24,20,.08)}
-#sel-bar[hidden]{display:none}
-#sel-bar .sel-main{display:flex;flex-direction:column;min-width:0;flex:1}
-#sel-bar .sel-main b{font-size:1rem;line-height:1.1}
-#sel-bar .sel-sub{font-size:0.6875rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sel-kind,.sel-desk{display:none}
-@media(min-width:701px){
-  #sel-bar{padding:0.5rem 1.25rem;gap:1rem}
-  #sel-bar .sel-main{flex-direction:row;align-items:baseline;gap:0.625rem;flex:0 0 auto}
-  #sel-kind{display:inline;font-size:0.75rem;font-weight:700;white-space:nowrap}
-  .sel-desk{display:flex;flex-wrap:wrap;align-items:center;gap:0.2rem 0.875rem;flex:1;min-width:0;font-size:0.75rem;color:var(--text2);line-height:1.35}
-  .sel-desk span{white-space:nowrap}
-}
+#sel-panel{position:fixed;z-index:70;top:7.25rem;right:1.25rem;width:22rem;max-height:calc(100vh - 8.5rem);overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:1.25rem;box-shadow:0 12px 40px rgba(20,24,20,.18);padding:1rem 1.125rem}
+@media(min-width:1100px){body.sel-mode #content{margin-right:23.5rem!important;max-width:none}}
+#sel-panel[hidden]{display:none !important}
+.sel-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem}
+.sel-h .sel-kind{font-size:0.8125rem;font-weight:700}
+.sel-x{border:0;background:transparent;color:var(--text3);cursor:pointer;font-size:1.25rem;line-height:1;padding:0}
+.sel-x:hover{color:var(--text)}
+#sel-net{font-size:1.75rem;font-weight:700;letter-spacing:-0.02em;line-height:1.1}
+#sel-sub{font-size:0.75rem;color:var(--text3);margin-top:0.2rem}
+.sel-bits{margin-top:0.75rem;font-size:0.75rem;color:var(--text2);line-height:1.45}
+.sel-list{margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.4rem}
+.sel-row{display:grid;grid-template-columns:4.2rem 1fr auto;gap:0.4rem;align-items:baseline;font-size:0.75rem;padding:0.28rem 0;color:var(--text)}
+.sel-row span:first-child{color:var(--text3)}
 .sel-tip{display:none}
 @media(min-width:701px){
   .sel-tip{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;margin:0 0 0.625rem;padding:0.4rem 0.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;font-size:0.75rem;color:var(--text2)}
@@ -304,8 +304,6 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .roll-opt{display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text2);margin:0.25rem 0 0.5rem}
 .roll-opt input{accent-color:var(--orange)}
 #tf-roll-box[hidden],#pm-roll-box[hidden],#pcc-roll-box[hidden],#paste-roll-box[hidden]{display:none !important}
-body.sel-mode #content{padding-bottom:7rem!important}
-@media(max-width:700px){#sel-bar{bottom:3.4rem}}
 .trow{
   display:grid;
   grid-template-columns:minmax(0,52fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,48fr) minmax(0,78fr) minmax(0,46fr) minmax(0,78fr) minmax(0,52fr) minmax(0,36fr);
@@ -969,11 +967,12 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 </div>
 
-<div id="sel-bar" hidden>
-  <div class="sel-main"><b id="sel-net">$0.00</b><span id="sel-kind" class="sel-kind"></span><span class="sel-sub" id="sel-sub">0 trades</span></div>
-  <div class="sel-desk" id="sel-desk"></div>
-  <button type="button" class="btn btn-ghost btn-sm" onclick="selClear()">Clear</button>
-  <button type="button" class="btn btn-primary btn-sm" onclick="selDone()">Done</button>
+<div id="sel-panel" hidden>
+  <div class="sel-h"><span id="sel-kind" class="sel-kind"></span><button type="button" class="sel-x" onclick="selDone()" aria-label="Close">✕</button></div>
+  <div id="sel-net">$0.00</div>
+  <div id="sel-sub">0 trades</div>
+  <div class="sel-bits" id="sel-bits"></div>
+  <div class="sel-list" id="sel-list"></div>
 </div>
 
 <!-- MODAL: Rotation -->
@@ -2713,7 +2712,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
   }
   if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
   const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
-  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}"><span class="sel-mark" aria-hidden="true"></span>
+  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}" data-act="${esc(e.action||'')}" data-strike="${e.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
     <span class="action-cell"><span class="roll-slot">${rolled?'<span class="roll-badge">↻</span>':''}</span><span class="ab ab-${e.action}">${e.action}</span></span>
     <span>${fmtDateFull(e.entered)}</span>
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
@@ -4531,7 +4530,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
   if(opts.chainOut&&chainHtml&&cIdx!=null){opts.chainOut[cIdx]=chainHtml;chainHtml='';}
-  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}"><span class="sel-mark" aria-hidden="true"></span>
+  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}" data-act="${esc(t.action||'')}" data-strike="${t.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
@@ -7718,7 +7717,7 @@ window.saveOpt = saveOpt;
 window.deleteOptGroup = deleteOptGroup;
 window.openOptClose = openOptClose;
 window.saveOptClose = saveOptClose;
-window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth; window.dismissSelTip = dismissSelTip; window.selStart = selStart;
+window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth; window.dismissSelTip = dismissSelTip; window.selStart = selStart; window.selDone = selDone;
 
 window.openNewPos = openNewPos;
 window.quickAddRotation = quickAddRotation;
@@ -7739,15 +7738,15 @@ function selTipHtml(){try{if(localStorage.getItem('wh-sel-tip')==='1')return '';
 function dismissSelTip(e){if(e){e.preventDefault();e.stopPropagation();}try{localStorage.setItem('wh-sel-tip','1');}catch(err){}document.querySelectorAll('.sel-tip').forEach(n=>n.remove());}
 function selStart(){if(!_selOn)selEnter();}
 function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');try{history.pushState({whSel:1},'');}catch(e){}selPaint();}
-function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const bar=document.getElementById('sel-bar');if(bar)bar.hidden=true;}
+function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const panel=document.getElementById('sel-panel');if(panel)panel.hidden=true;}
 function selDone(){if(_selOn&&history.state&&history.state.whSel){_selPop=true;history.back();return;}selExit();}
-function selClear(){_sel.clear();selPaint();}
-function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_sel.has(k))_sel.delete(k);else _sel.set(k,{cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||'',tk:row.getAttribute('data-tk')||'',fee:+row.getAttribute('data-fee')||0,ct:+row.getAttribute('data-ct')||0});row.classList.toggle('sel',_sel.has(k));selBar();}
+function selRead(row){return{cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||'',tk:row.getAttribute('data-tk')||'',fee:+row.getAttribute('data-fee')||0,ct:+row.getAttribute('data-ct')||0,act:row.getAttribute('data-act')||'',strike:row.getAttribute('data-strike')||''};}
+function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_sel.has(k))_sel.delete(k);else _sel.set(k,selRead(row));row.classList.toggle('sel',_sel.has(k));if(!_sel.size){selDone();return;}selBar();}
 function selPaint(){document.querySelectorAll('.trow[data-sel]').forEach(el=>el.classList.toggle('sel',_sel.has(el.getAttribute('data-sel'))));selBar();}
-function selBar(){const bar=document.getElementById('sel-bar');if(!bar)return;if(!_selOn){bar.hidden=true;return;}bar.hidden=false;const s=selSummary([..._sel.values()]);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),kind=document.getElementById('sel-kind'),desk=document.getElementById('sel-desk');if(net){net.textContent=(s.net<0?'-':'+')+fmtMoney(Math.abs(s.net));net.className=s.net<0?'r':'g';}if(kind){kind.textContent=s.net<0?'Net debit':s.net>0?'Net credit':'Even';kind.className='sel-kind '+(s.net<0?'r':'g');}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(desk){const bits=[`Collected ${fmtMoney(s.credits)} · Paid ${fmtMoney(s.debits)} · Fees ${fmtMoney(s.fees)}`];if(s.tickers.length>1)bits.push(s.tickers.map(t=>`${esc(t.tk)} ${(t.cash<0?'−':'+')+fmtMoney(Math.abs(t.cash))}`).join(' · '));if(s.contracts>0)bits.push(`${s.contracts} contract${s.contracts===1?'':'s'} · ${(s.per<0?'−':'+')+fmtMoney(Math.abs(s.per))} each`);desk.innerHTML=bits.map(b=>`<span>${b}</span>`).join('');}}
-window.selClear=selClear;window.selDone=selDone;
-document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;const x=e.clientX,y=e.clientY;const timer=setTimeout(()=>{_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}setTimeout(()=>{_selSkip=false;},500);},450);const cancel=()=>{clearTimeout(timer);row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel();};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
+function selBar(){const panel=document.getElementById('sel-panel');if(!panel)return;if(!_selOn||!_sel.size){panel.hidden=true;return;}panel.hidden=false;const items=[..._sel.values()];const s=selSummary(items);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),kind=document.getElementById('sel-kind'),bits=document.getElementById('sel-bits'),list=document.getElementById('sel-list');const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));if(net){net.textContent=money(s.net);net.className=s.net<0?'r':'g';}if(kind){kind.textContent=s.net<0?'Net debit':s.net>0?'Net credit':'Even';kind.className='sel-kind '+(s.net<0?'r':'g');}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(bits){const lines=[`Collected ${fmtMoney(s.credits)}` ,`Paid ${fmtMoney(s.debits)}`,`Fees ${fmtMoney(s.fees)}`];if(s.tickers.length>1)lines.push(s.tickers.map(t=>`${esc(t.tk)} ${money(t.cash)}`).join(' · '));if(s.contracts>0)lines.push(`${s.contracts} contract${s.contracts===1?'':'s'} · ${money(s.per)} each`);bits.innerHTML=lines.map(l=>`<div>${l}</div>`).join('');}if(list){list.innerHTML=items.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>{const k=t.strike?` $${fmt2(+t.strike).replace(/\.00$/,'')}`:'';return `<div class="sel-row"><span>${t.date?fmtDateShort(t.date):''}</span><span>${esc((t.act||'')+k)}</span><span class="${t.cash<0?'r':'g'}">${money(t.cash)}</span></div>`;}).join('');}}
+document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();_selSkip=true;if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;const x=e.clientX,y=e.clientY;const timer=setTimeout(()=>{_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}setTimeout(()=>{_selSkip=false;},500);},450);const cancel=()=>{clearTimeout(timer);row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel();};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
 document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
+document.addEventListener('click',e=>{if(!_selOn)return;const t=e.target;if(t.closest&&(t.closest('.trow[data-sel]')||t.closest('#sel-panel')))return;selDone();});
 document.addEventListener('contextmenu',e=>{const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;e.preventDefault();if(!_selOn)selEnter();selToggle(row);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_selOn){e.preventDefault();selDone();}});
 window.addEventListener('popstate',()=>{if(_selPop){_selPop=false;selExit();return;}if(_selOn)selExit();});

@@ -29,6 +29,7 @@ test('one ticker omits the split, and shares become contracts',()=>{
 test('rows carry a selection key and the bar is hidden until select mode',()=>{
   assert.ok(SRC.includes('data-sel="w:'));
   assert.ok(SRC.includes('data-sel="p:'));
-  assert.ok(SRC.includes('id="sel-bar" hidden'));
+  assert.ok(SRC.includes('id="sel-panel" hidden'));
+  assert.ok(!SRC.includes('id="sel-bar"'));
   assert.ok(SRC.includes("e.key==='Escape'&&_selOn"));
 });
