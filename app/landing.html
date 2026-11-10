@@ -22,7 +22,9 @@
 :root{--bg:#FAF9F6;--card:#FFFFFF;--text:#111111;--text2:#3d3d40;--text3:#6b6b70;--line:#E4E1DA;--green:#FF5A36;--green2:rgba(255,90,54,.10);--profit:#1A9E5A;--loss:#D93A3A}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 a{color:var(--green)}.wrap{max-width:72rem;margin:0 auto;padding:0 2rem}
-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0}.logo{display:flex;align-items:center}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:900;font-display:swap;src:url('nunito-900.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+.wm{font-family:Nunito,sans-serif;font-weight:900;font-size:1.75rem;letter-spacing:normal;line-height:1;display:inline-block;color:var(--text);transform:skewX(-9deg);transform-origin:center bottom}
+header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0}.logo{display:flex;align-items:center;gap:.5rem}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .btn{display:inline-block;padding:.8rem 1.4rem;border-radius:.5rem;text-decoration:none;font-weight:600;font-size:1rem}.btn.p{background:var(--green);color:#FFFFFF}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
 .hero{padding:3.5rem 0 2.5rem;max-width:46rem}.hero h1{font-size:3.25rem;line-height:1.1;margin:0 0 1rem;letter-spacing:-.03em}.hero p{color:var(--text2);font-size:1.2rem;margin:0}
 .cta{display:flex;gap:.75rem;flex-wrap:wrap;margin:1.75rem 0 .75rem}.small{font-size:.85rem;color:var(--text3)}
@@ -51,7 +53,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
 </head>
 <body>
 <div class="wrap">
-  <header><div class="logo"><img src="logo-horizontal-dark.svg" alt="OpTrack" width="128" height="40"><span class="vh" data-brand="name">OpTrack</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
+  <header><div class="logo"><img src="logo-mark.svg" alt="" width="40" height="40"><span class="wm" data-brand="name">OpTrack</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
 
   <section class="hero">
     <h1>An options tracker that tells you the truth.</h1>
