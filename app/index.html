@@ -288,6 +288,14 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 #sel-bar .sel-main{display:flex;flex-direction:column;min-width:0;flex:1}
 #sel-bar .sel-main b{font-size:1rem;line-height:1.1}
 #sel-bar .sel-sub{font-size:0.6875rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sel-kind,.sel-desk{display:none}
+@media(min-width:701px){
+  #sel-bar{padding:0.5rem 1.25rem;gap:1rem}
+  #sel-bar .sel-main{flex-direction:row;align-items:baseline;gap:0.625rem;flex:0 0 auto}
+  #sel-kind{display:inline;font-size:0.75rem;font-weight:700;white-space:nowrap}
+  .sel-desk{display:flex;flex-wrap:wrap;align-items:center;gap:0.2rem 0.875rem;flex:1;min-width:0;font-size:0.75rem;color:var(--text2);line-height:1.35}
+  .sel-desk span{white-space:nowrap}
+}
 body.sel-mode #content{padding-bottom:7rem!important}
 @media(max-width:700px){#sel-bar{bottom:3.4rem}}
 .trow{
@@ -954,7 +962,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 </div>
 
 <div id="sel-bar" hidden>
-  <div class="sel-main"><b id="sel-net">$0.00</b><span class="sel-sub" id="sel-sub">0 trades</span></div>
+  <div class="sel-main"><b id="sel-net">$0.00</b><span id="sel-kind" class="sel-kind"></span><span class="sel-sub" id="sel-sub">0 trades</span></div>
+  <div class="sel-desk" id="sel-desk"></div>
   <button type="button" class="btn btn-ghost btn-sm" onclick="selClear()">Clear</button>
   <button type="button" class="btn btn-primary btn-sm" onclick="selDone()">Done</button>
 </div>
@@ -1512,7 +1521,19 @@ const OPTIONS=new Set(['CSP','BTC','STOC','STC']);
 const STOCKS=new Set(['IN','OUT']);
 function isCredit(a){return CREDITS.has(a);}
 function selCash(action,total){const n=+total||0;if(n<0)return Math.round(n*100)/100;return Math.round((isCredit(action)?n:-n)*100)/100;}
-function selSummary(items){let net=0,min='',max='';(items||[]).forEach(x=>{net+=+x.cash||0;const d=x.date||'';if(d){if(!min||d<min)min=d;if(!max||d>max)max=d;}});return{net:Math.round(net*100)/100,n:(items||[]).length,min,max};}
+function selCt(action,shares){if(action!=='CSP'&&action!=='BTC'&&action!=='STOC'&&action!=='STC'&&action!=='STO')return 0;const sh=+shares||0;return sh>0?Math.round(sh)/100:0;}
+function selSummary(items){
+  let net=0,min='',max='',fees=0,credits=0,debits=0,optCash=0,contracts=0;const by={};
+  (items||[]).forEach(x=>{
+    const c=+x.cash||0;net+=c;if(c>0)credits+=c;else if(c<0)debits+=-c;fees+=+x.fee||0;
+    const d=x.date||'';if(d){if(!min||d<min)min=d;if(!max||d>max)max=d;}
+    const tk=x.tk||'';if(tk)by[tk]=(by[tk]||0)+c;
+    const q=+x.ct||0;if(q>0){contracts+=q;optCash+=c;}
+  });
+  const r=n=>Math.round(n*100)/100;
+  const names=Object.keys(by);
+  return{net:r(net),n:(items||[]).length,min,max,credits:r(credits),debits:r(debits),fees:r(fees),contracts:r(contracts),per:contracts?r(optCash/contracts):null,tickers:names.length>1?names.sort().map(t=>({tk:t,cash:r(by[t])})):[]};
+}
 let _selOn=false,_selSkip=false,_selPop=false;const _sel=new Map();
 function computeTotal(action,premium,shares,fees){
   fees=fees||0;premium=premium||0;shares=shares||0;
@@ -2690,7 +2711,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
   }
   if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
   const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
-  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}"><span class="sel-mark" aria-hidden="true"></span>
+  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}"><span class="sel-mark" aria-hidden="true"></span>
     <span class="action-cell"><span class="roll-slot">${rolled?'<span class="roll-badge">↻</span>':''}</span><span class="ab ab-${e.action}">${e.action}</span></span>
     <span>${fmtDateFull(e.entered)}</span>
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
@@ -4507,7 +4528,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
   if(opts.chainOut&&chainHtml&&cIdx!=null){opts.chainOut[cIdx]=chainHtml;chainHtml='';}
-  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}"><span class="sel-mark" aria-hidden="true"></span>
+  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}"><span class="sel-mark" aria-hidden="true"></span>
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
@@ -7758,9 +7779,9 @@ function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('se
 function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const bar=document.getElementById('sel-bar');if(bar)bar.hidden=true;}
 function selDone(){if(_selOn&&history.state&&history.state.whSel){_selPop=true;history.back();return;}selExit();}
 function selClear(){_sel.clear();selPaint();}
-function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_sel.has(k))_sel.delete(k);else _sel.set(k,{cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||''});row.classList.toggle('sel',_sel.has(k));selBar();}
+function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_sel.has(k))_sel.delete(k);else _sel.set(k,{cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||'',tk:row.getAttribute('data-tk')||'',fee:+row.getAttribute('data-fee')||0,ct:+row.getAttribute('data-ct')||0});row.classList.toggle('sel',_sel.has(k));selBar();}
 function selPaint(){document.querySelectorAll('.trow[data-sel]').forEach(el=>el.classList.toggle('sel',_sel.has(el.getAttribute('data-sel'))));selBar();}
-function selBar(){const bar=document.getElementById('sel-bar');if(!bar)return;if(!_selOn){bar.hidden=true;return;}bar.hidden=false;const s=selSummary([..._sel.values()]);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub');if(net){net.textContent=(s.net<0?'-':'+')+fmtMoney(Math.abs(s.net));net.className=s.net<0?'r':'g';}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');}
+function selBar(){const bar=document.getElementById('sel-bar');if(!bar)return;if(!_selOn){bar.hidden=true;return;}bar.hidden=false;const s=selSummary([..._sel.values()]);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),kind=document.getElementById('sel-kind'),desk=document.getElementById('sel-desk');if(net){net.textContent=(s.net<0?'-':'+')+fmtMoney(Math.abs(s.net));net.className=s.net<0?'r':'g';}if(kind){kind.textContent=s.net<0?'Net debit':s.net>0?'Net credit':'Even';kind.className='sel-kind '+(s.net<0?'r':'g');}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(desk){const bits=[`Collected ${fmtMoney(s.credits)} · Paid ${fmtMoney(s.debits)} · Fees ${fmtMoney(s.fees)}`];if(s.tickers.length>1)bits.push(s.tickers.map(t=>`${esc(t.tk)} ${(t.cash<0?'−':'+')+fmtMoney(Math.abs(t.cash))}`).join(' · '));if(s.contracts>0)bits.push(`${s.contracts} contract${s.contracts===1?'':'s'} · ${(s.per<0?'−':'+')+fmtMoney(Math.abs(s.per))} each`);desk.innerHTML=bits.map(b=>`<span>${b}</span>`).join('');}}
 window.selClear=selClear;window.selDone=selDone;
 document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;const x=e.clientX,y=e.clientY;const timer=setTimeout(()=>{_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}setTimeout(()=>{_selSkip=false;},500);},450);const cancel=()=>{clearTimeout(timer);row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel();};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
 document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
