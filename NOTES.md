@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v170` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v171` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 
@@ -14,7 +14,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `dev` enlarges the signed-in top-bar wordmark and shows a Pro badge under the end of “Track” only for an entitlement with `plan: pro` or `founder` (sw v162). Free accounts and the demo do not show it. A failed entitlement read still unlocks features but does not show the badge.
 - `dev` insets the wheel and LEAP Add trade buttons to the table padding and fills them orange (sw v163).
 - `dev` replaces the Wheel-tab ticker box with a New wheel button that becomes a white “Ticker or company” field and looks up symbols through `/.netlify/functions/symbol` (Finnhub search, sw v164). A plain ticker still creates the wheel if the lookup fails. Free caps stay on `quickAddRotation`.
-- `dev` does not auto-link a buy-to-close and a later sell into a roll (sw v165–v166). After SmartScan is accepted, a same-day or previous-calendar-day match asks “Mark as roll?”. Yes writes the existing `rollId` (wheels) or `rolledFrom` (LEAPs). A Robinhood confirmation with both legs asks the same question and focuses Yes. No leaves the trades separate.
+- `dev` no longer suggests or auto-links rolls (sw v171). A close and an open stay separate. Saved `rollId` and `rolledFrom` values still show. Pressing Save roll on a LEAP still writes that link. The Wheel and LEAPs tabs have a one-time tip and a Select button so you can total any trades. The landing page leads with that.
 - `dev` lets you long-press (or right-click / Ctrl-click) trade rows on wheel and LEAP cards to select across cards (sw v167). A bottom bar shows the net cash, the count, and the date range. It does not save or link anything. Escape, Back, or Done leaves select mode.
 - `dev` adds the desktop detail on that bar (sw v170): collected versus paid, fees, a per-ticker split when more than one ticker is selected, and for option legs the contract count and net per contract. The net is labelled credit or debit. The phone bar is unchanged.
 - `dev` refreshes open LEAP and option marks on login and on the same minute timer as wheel quotes, and saves the new price and date (sw v168). A quote that cannot be fetched stays off Home and shows on the LEAP card. Every Needs you / Data Health row explains what is wrong, why, and how to fix it, and can be dismissed until that issue changes.

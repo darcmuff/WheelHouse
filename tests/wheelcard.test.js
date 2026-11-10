@@ -43,7 +43,7 @@ test('card markup: breakeven box first, memo with tip, no Last action / Cycle re
   assert.ok(SRC.includes('<span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>'));
   assert.ok(SRC.includes('Your breakeven after all premium and dividends. Calls struck above this lock in a profit if called away.'));
   assert.ok(!SRC.includes("_fact('Last action',lastAct)"));
-  assert.ok(SRC.includes(`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('\${wheel.id}')">Add trade</button></div>`));
+  assert.ok(SRC.includes(`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('\${wheel.id}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`));
   assert.ok(SRC.includes('Holding ${m.sharesHeld} shares · no call yet'));
 });
 
