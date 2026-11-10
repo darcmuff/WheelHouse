@@ -728,13 +728,13 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   grid-template-columns:minmax(0,52fr) minmax(0,70fr) minmax(0,70fr) minmax(0,52fr) minmax(0,92fr) minmax(0,52fr) minmax(0,44fr) minmax(0,72fr) minmax(0,42fr) minmax(0,72fr) minmax(0,48fr) minmax(0,36fr);
 }
 .cap-at{color:var(--text3);font-weight:400;font-size:0.6rem}
-.pmcc-open .trow.has-to-strike > span:nth-last-child(2){min-width:0;overflow:hidden}
-.pmcc-open .trow.has-to-strike > span:last-child{position:relative;z-index:1}
 @media(min-width:701px){
-  .pmcc-open .thead-row.has-to-strike,.pmcc-open .trow.has-to-strike{
-    grid-template-columns:minmax(0,46fr) minmax(0,62fr) minmax(0,62fr) minmax(0,46fr) minmax(0,70fr) minmax(0,44fr) minmax(0,38fr) minmax(0,62fr) minmax(0,36fr) minmax(0,56fr) minmax(9.5rem,120fr) minmax(3.6rem,36fr);
-  }
-  .pmcc-open .trow.has-to-strike{min-height:3.15rem}
+  .pmcc-open .tgrid{display:grid;grid-template-columns:repeat(11,minmax(max-content,1fr)) max-content;column-gap:0.75rem;align-items:center;width:100%}
+  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.75rem}
+  .pmcc-open .tgrid>.chain-row,.pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
+  .pmcc-open .tgrid>.trow.has-to-strike{min-height:3.15rem}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(3),.pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(2){white-space:nowrap}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:last-child{justify-self:end}
 }
 .pmcc-open .to-strike{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:0.65rem}
 .pmcc-open .to-strike.m{color:var(--text3)}
@@ -2757,9 +2757,9 @@ function renderPmcc(leap,today,spot,add){
   const keep=listCut(ev.length,ev.map(e=>cmap[e.legId]!=null?'c'+cmap[e.legId]:'l'+e.legId),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
   const chainOut={},rowHtml=evS.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
   const rows=hoistChainLines(evS.map(e=>cmap[e.legId]),rowHtml,chainOut)+listMoreBtn(leap.id,ev.length,keep.length);
-  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}${tradeTableHead({lastCol:'Captured',toStrike:true})}
-    ${rows||'<div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3)">No short calls yet.</span></div>'}
-  </div>`;
+  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+    ${rows||'<div class="trow trow-empty"><span style="color:var(--text3)">No short calls yet.</span></div>'}
+  </div></div>`;
 }
 // Per-row Edit: one short call leg. Pure helpers never write; UI wrappers save/delete exactly that leg id.
 function pmccDeleteLegFrom(legs,id){return(legs||[]).filter(x=>x.id!==id);}
@@ -4404,12 +4404,12 @@ function renderRotationWindow(wheel){
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
       ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}
-      ${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
+      <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
     const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
     {const cm=wheelChainMap(m.trades),chainOut={};const keep=listCut(_ord.length,_ord.map(t=>cm[t.id]),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);const rh=_S.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_S.map(t=>cm[t.id]),rh,chainOut)+listMoreBtn(wheel.id,_ord.length,keep.length);}
-    expandedHtml+=`</div>`;
+    expandedHtml+=`</div></div>`;
   }
 
   return`
@@ -4452,7 +4452,7 @@ function capturedCellHtml(pct,dollars,open){
   let html=pct+'%';if(dollars!=null)html+=` <span class="${dollars>=0?'g':'r'}">${dollars>=0?'+':'-'}${fmtMoney(Math.abs(dollars))}</span>`;
   return{html,color};
 }
-function ppdCellHtml(v,d){return v!=null&&d>0?`$${fmt2(v)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`:'—';}
+function ppdCellHtml(v,d){return v!=null&&d>0?`${fmtMoney(v)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`:'—';}
 // Pure (READ-ONLY): closed wheel sells (CSP/STOC) → {kept %, realised net $, end date}. Open or part-closed sells are absent.
 // Bought back: net = sell total − buy-back total; expired / assigned / called away: whole premium kept.
 function wheelSellOutcomes(trades){
