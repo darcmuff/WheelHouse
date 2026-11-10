@@ -2691,7 +2691,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       ts=toStrike(spot,+c.strike).text;
       const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=ppdCellHtml(t.total/t.days,t.days);
       const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
-      if(mark!=null&&sold>0){const cc=capturedCellHtml(Math.round((sold-mark)/sold*100),pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),true);cap=`<span title="${esc(c.markNote||('Buy-back price $'+(+mark).toFixed(2)))}">${cc.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;capColor=cc.color;}
+      if(mark!=null&&sold>0){const pct=Math.round((sold-mark)/sold*100),dl=pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),cc=capturedCellHtml(pct,dl,true);cap=`<div style="white-space:nowrap" title="${esc(c.markNote||('Buy-back price $'+(+mark).toFixed(2)))}">${pct}% <span style="color:var(--text3);font-weight:400">· at $${(+mark).toFixed(2)}</span></div><div style="white-space:nowrap">${cc.html.replace(/^-?\d+% /,'')}</div>`;capColor=cc.color;}
       else if(c.markWhy==='none')cap=`<span title="${esc(c.markNote||'No reliable quote for this contract')}">no quote</span>`;
     }else{
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
@@ -4486,7 +4486,7 @@ function wheelListCells(t,L){
     if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:(+t.shares||0)/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
-      const c=capturedCellHtml(Math.round((prem-mark)/prem*100),pf,true);r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(wheelLegOcc(L.ticker,t)):'')}">${c.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;r.capColor=c.color;}
+      const pct=Math.round((prem-mark)/prem*100),c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap" title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'')}">${pct}% <span style="color:var(--text3);font-weight:400">· at $${(+mark).toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;}
     return r;
   }
   const o=L.outcomes[t.id];if(!o)return r;

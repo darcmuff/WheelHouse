@@ -6,5 +6,5 @@ const t={id:'p',ticker:'SPCX',action:'CSP',entered:'2026-10-26',expiry:'2026-11-
 t.total=L.computeTotal('CSP',t.premium,t.shares,t.fees);
 const ctx={ticker:'SPCX',spot:137.8,today:'2026-10-30',marks:new Proxy({},{get:()=>2.61}),trades:[t],openIds:new Set(['p']),outcomes:{}};
 test('total = 4 × 100 × $1.74 − $2.16 fees',()=>assert.strictEqual(t.total,693.84));
-test('captured matches Robinhood: −50% / −$348 (premium in − cost to buy back now)',()=>assert.ok(L.wheelListCells(t,ctx).cap.includes('-50% <span class="r">-$348.00</span>')));
+test('captured matches Robinhood: −50% / −$348 (premium in − cost to buy back now)',()=>{const cap=L.wheelListCells(t,ctx).cap;assert.ok(cap.includes('-50%')&&cap.includes('<span class="r">-$348.00</span>'),cap);});
 test('PPD counts days since the sale date (4 days on 30 Oct)',()=>assert.ok(L.wheelListCells(t,ctx).ppd.startsWith('$173.46')));
