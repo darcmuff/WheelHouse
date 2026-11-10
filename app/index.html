@@ -301,6 +301,9 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
   .sel-tip{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;margin:0 0 0.625rem;padding:0.4rem 0.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;font-size:0.75rem;color:var(--text2)}
   .sel-tip-x{border:0;background:transparent;color:var(--text3);cursor:pointer;font-size:0.875rem;line-height:1}
 }
+.roll-opt{display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text2);margin:0.25rem 0 0.5rem}
+.roll-opt input{accent-color:var(--orange)}
+#tf-roll-box[hidden],#pm-roll-box[hidden],#pcc-roll-box[hidden],#paste-roll-box[hidden]{display:none !important}
 body.sel-mode #content{padding-bottom:7rem!important}
 @media(max-width:700px){#sel-bar{bottom:3.4rem}}
 .trow{
@@ -995,7 +998,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mTradeTitle">Add Trade</span><span class="mx" onclick="closeModal('mTrade')">✕</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
       <div class="fld"><label>Ticker</label><input id="tf-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase" oninput="onTickerInput()"></div>
-      <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="tf-wheel"></select></div>
+      <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="tf-wheel" onchange="fillRollSelect('tf-roll-from',this.value,document.getElementById('tf-id').value)"></select></div>
       <div class="fld"><label>Action</label>
         <select id="tf-action" onchange="onActionChange()">
           <option value="CSP">CSP — Cash Secured Put</option>
@@ -1018,6 +1021,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>DTE <small style="color:#555">auto</small></label><input id="tf-days" type="number" step="1" oninput="autoCalcPPD()"></div>
       <div class="fld"><label>PPD ($) <small style="color:#555">auto</small></label><input id="tf-ppd" type="number" step="0.01" readonly></div>
       <div class="fld" style="grid-column:span 3"><label>Comment</label><textarea id="tf-comment" rows="1"></textarea></div>
+      <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="tf-roll" onchange="document.getElementById('tf-roll-box').hidden=!this.checked"> Mark as roll</label><div id="tf-roll-box" hidden class="fld"><label>Rolls from</label><select id="tf-roll-from"><option value="">Choose a trade</option></select></div></div>
       <div class="fld" style="grid-column:span 3;display:none" id="tg-created-at"><label>Date Added <small style="color:#555">auto</small></label><input id="tf-created-at" type="text" readonly style="color:var(--text3);background:var(--bg3);cursor:default"></div>
     </div>
     <input type="hidden" id="tf-id">
@@ -1063,7 +1067,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div id="paste-panel-manual" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5625rem;margin-bottom:0.5625rem">
           <div class="fld"><label>Ticker</label><input id="pm-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase" oninput="onPMTickerInput()"></div>
-          <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="pm-wheel"></select></div>
+          <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="pm-wheel" onchange="fillRollSelect('pm-roll-from',this.value)"></select></div>
           <div class="fld"><label>Action</label>
             <select id="pm-action" onchange="onPMActionChange()">
               <option value="CSP">CSP — Cash Secured Put</option>
@@ -1084,6 +1088,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
           <div class="fld"><label>Fees ($)</label><input id="pm-fees" type="number" step="0.01" value="0" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="pm-total" type="number" step="0.01" readonly></div>
           <div class="fld"><label>Comment</label><input id="pm-comment" type="text"></div>
+          <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="pm-roll" onchange="document.getElementById('pm-roll-box').hidden=!this.checked"> Mark as roll</label><div id="pm-roll-box" hidden class="fld"><label>Rolls from</label><select id="pm-roll-from"><option value="">Choose a trade</option></select></div></div>
         </div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="savePMTrade()">Save Trade</button></div>
       </div>
@@ -1194,6 +1199,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label id="pcc-date-lbl">Date sold</label><input id="pcc-date" type="date"></div>
       <div class="fld"><label>Fees total ($)</label><input id="pcc-fees" type="number" step="0.01" value="0"></div>
       <div class="fld" style="grid-column:span 2"><label>Notes</label><input id="pcc-notes" type="text"></div>
+      <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="pcc-roll" onchange="document.getElementById('pcc-roll-box').hidden=!this.checked"> Mark as roll</label><div id="pcc-roll-box" hidden class="fld"><label>Rolls from</label><select id="pcc-roll-from"><option value="">Choose a trade</option></select></div></div>
     </div>
     <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="savePmcc()">Save</button></div>
     </div>
@@ -3026,6 +3032,7 @@ function openPmccSell(leapId){
   document.getElementById('mPmccTitle').textContent=`Add trade · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
   document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
   ['pcc-scan-msg','pcc-filled','pcc-err'].forEach(k=>document.getElementById(k).style.display='none');pmccSide('sto');document.getElementById('pcc-pick').innerHTML='';
+  const pr=document.getElementById('pcc-roll');if(pr){pr.checked=false;document.getElementById('pcc-roll-box').hidden=true;fillLeapRollSelect(L);}
   ['pcc-price','pcc-date','pcc-qty','pcc-fees','pcc-expiry'].forEach(k=>document.getElementById(k).style.borderColor='');
   _pmccMode='trade';document.getElementById('pcc-scan-btn').style.display='';
   pmccTab('smartscan');initPmccDrop();openModal('mPmcc');
@@ -3125,11 +3132,13 @@ function pmccRollPreview(r){
   const cash=x=>(x.price||0)*(x.qty||0)*100,net=(cash(r.kind==='short'?r.open:r.close)-cash(r.kind==='short'?r.close:r.open))-(r.close.fees||0)-(r.open.fees||0);
   return`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem"><span style="border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem">↻ ROLL</span><span style="margin-left:auto;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit +':'Net debit -'}$${Math.abs(net).toFixed(2)}</span></div>
   <div style="display:flex;gap:0.5rem;align-items:stretch">${card(r.close,nm[0])}<div style="align-self:center;color:var(--orange)">→</div>${card(r.open,nm[1])}</div>
-  <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save roll</button>`;
+  <label class="roll-opt"><input type="checkbox" id="pcc-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>
+  <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save</button>`;
 }
 function pmccSaveRoll(){
   const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
-  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid());
+  const pair=document.getElementById('pcc-roll-pair');
+  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),pair&&pair.checked?true:false);
   if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
   db.opts=db.opts||[];
   a.save.forEach(l=>{const i=db.opts.findIndex(x=>x.id===l.id);if(i>=0)db.opts[i]=l;else db.opts.push(l);_saveOpt(l);});
@@ -3186,6 +3195,7 @@ function savePmcc(){
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
   const d=pmccDupOf(r.leg,db.opts);
   if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
+  if(document.getElementById('pcc-roll').checked&&document.getElementById('pcc-roll-from').value)r.leg.rolledFrom=document.getElementById('pcc-roll-from').value;
   r.leg.ts=new Date().toISOString();db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
 }
 function pmccClose(id,mode){
@@ -5488,6 +5498,7 @@ function populateWheelSelect(selectedId,ticker){
   });
   if(selectedId)sel.value=selectedId;
   else if(ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
+  fillRollSelect('tf-roll-from',sel.value,document.getElementById('tf-id').value);
 }
 function openAddTrade(wheelId){
   document.getElementById('tf-id').value='';
@@ -5495,6 +5506,7 @@ function openAddTrade(wheelId){
   document.getElementById('tf-entered').value=new Date().toISOString().slice(0,10);
   ['tf-expiry','tf-strike','tf-delta','tf-premium','tf-shares','tf-total','tf-days','tf-ppd','tf-comment'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('tf-fees').value='0';
+  const tr=document.getElementById('tf-roll');if(tr){tr.checked=false;document.getElementById('tf-roll-box').hidden=true;}
   document.getElementById('tf-delete-btn').style.display='none';
   document.getElementById('tf-expired-btn').style.display='none';
   document.getElementById('tg-created-at').style.display='none';
@@ -5517,6 +5529,7 @@ function openEditTrade(id){
   document.getElementById('tf-fees').value=t.fees||0;document.getElementById('tf-total').value=t.total||'';
   document.getElementById('tf-days').value=t.days||'';document.getElementById('tf-ppd').value=t.ppd||'';
   document.getElementById('tf-comment').value=t.comment||'';
+  const tr=document.getElementById('tf-roll');if(tr){tr.checked=false;document.getElementById('tf-roll-box').hidden=true;}
   document.getElementById('tf-delete-btn').style.display='inline-flex';
   document.getElementById('mTradeTitle').textContent='Edit Trade';
   const _expBtn=document.getElementById('tf-expired-btn');
@@ -5596,16 +5609,18 @@ function saveTrade(){
     if(idx>=0){
       const old=db.trades[idx];
       const updated={id,...data,createdAt:old.createdAt||new Date().toISOString()};
-      if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
+      if(document.getElementById('tf-roll').checked&&document.getElementById('tf-roll-from').value)linkWheelRoll(updated,document.getElementById('tf-roll-from').value);
+      else if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
       if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
       updated.verified=old.verified||false;                    // preserve verification status
       db.trades[idx]=updated;
     }
   }
   else{
-    db.trades.push({id:uid(),createdAt:new Date().toISOString(),...data});
+    const newTrade={id:uid(),createdAt:new Date().toISOString(),...data};
+    if(document.getElementById('tf-roll').checked)linkWheelRoll(newTrade,document.getElementById('tf-roll-from').value);
+    db.trades.push(newTrade);
     expanded.add(wheelId);
-    const newTrade=db.trades[db.trades.length-1];
     _saveTrade(newTrade);closeModal('mTrade');render();
     return;
   }
@@ -6740,6 +6755,7 @@ function switchPasteTab(tab){
     document.getElementById('pm-action').value='CSP';
     ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('pm-fees').value='0';
+    const pr=document.getElementById('pm-roll');if(pr){pr.checked=false;document.getElementById('pm-roll-box').hidden=true;}
     populatePMWheelSelect(wheelId,ticker);
     onPMActionChange();
   }
@@ -6751,6 +6767,7 @@ function populatePMWheelSelect(wheelId,ticker){
     sel.innerHTML+=`<option value="${w.id}" ${w.id===wheelId?'selected':''}>${esc(w.label||w.ticker)} ${w.status==='open'?'(Open)':'(Closed)'}</option>`;
   });
   if(!wheelId&&ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
+  fillRollSelect('pm-roll-from',sel.value,'');
 }
 function onPMTickerInput(){const tk=document.getElementById('pm-ticker').value.toUpperCase().trim();populatePMWheelSelect(null,tk);}
 function onPMActionChange(){
@@ -6791,6 +6808,7 @@ function savePMTrade(){
     delta:isNaN(deltaRaw)?null:deltaRaw,
     premium,fees,shares,total,days,ppd:days>0?total/days:0,
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
+  if(document.getElementById('pm-roll').checked)linkWheelRoll(newTrade,document.getElementById('pm-roll-from').value);
   db.trades.push(newTrade);expanded.add(wheelId);
   _saveTrade(newTrade);closeModal('mPaste');render();
 }
@@ -6809,6 +6827,23 @@ function showPasteStep1(){
   document.getElementById('paste-step2').style.display='none';
 }
 
+// A ticked "Mark as roll" shares one rollId with the trade the user picked. Nothing is chosen for them.
+function fillRollSelect(selId,wheelId,excludeId){
+  const sel=document.getElementById(selId);if(!sel)return;
+  const rows=(db.trades||[]).filter(t=>t&&t.wheelId===wheelId&&t.id!==excludeId).sort((a,b)=>String(b.entered||'').localeCompare(String(a.entered||'')));
+  sel.innerHTML='<option value="">Choose a trade</option>'+rows.map(t=>{const k=t.strike?` $${fmt2(t.strike).replace(/\.00$/,'')}`:'';const when=t.entered?` · ${fmtDateShort(t.entered)}`:'';return `<option value="${esc(t.id)}">${esc((t.action||'')+k+when)}</option>`;}).join('');
+}
+function linkWheelRoll(trade,fromId){
+  const from=(db.trades||[]).find(t=>t.id===fromId);if(!from||from.id===trade.id)return;
+  const rid=from.rollId||('roll_'+uid());
+  trade.rollId=rid;
+  if(from.rollId!==rid){from.rollId=rid;_saveTrade(from);}
+}
+function fillLeapRollSelect(leap){
+  const sel=document.getElementById('pcc-roll-from');if(!sel||!leap)return;
+  const rows=pmccShortsFor(leap,db.opts||[]).slice().sort((a,b)=>String(b.entryDate||b.closeDate||'').localeCompare(String(a.entryDate||a.closeDate||'')));
+  sel.innerHTML='<option value="">Choose a trade</option>'+rows.map(l=>`<option value="${esc(l.id)}">${esc((l.status==='open'?'Open':'Closed')+' $'+fmt2(l.strike).replace(/\.00$/,'')+' · '+_fdShort(l.entryDate||l.closeDate||''))}</option>`).join('');
+}
 // Stored roll links only. Nothing here guesses that a close and a later open belong together.
 function rollMoveText(trades,tip){
   if(!tip||!tip.rollId)return '';
@@ -7124,7 +7159,8 @@ function showRollPreview(trades){
       <div style="display:flex;align-items:center;color:var(--orange);font-size:1.25rem;font-weight:600;flex-shrink:0">→</div>
       ${tradeCard(trades[1])}
     </div>
-    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>`;
+    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>
+    <label class="roll-opt"><input type="checkbox" id="paste-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>`;
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
 }
@@ -7176,7 +7212,9 @@ function showPastePreview(p){
         <div><div class="mini-lbl">Fees</div><div class="fs-sm">$${(p.fees||0).toFixed(2)}</div></div>
       </div>
     </div>
-    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>`;
+    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel" onchange="fillRollSelect('paste-roll-from',this.value)">${opts}</select></div>
+    <label class="roll-opt"><input type="checkbox" id="paste-roll-on" onchange="document.getElementById('paste-roll-box').hidden=!this.checked"> Mark as roll</label><div id="paste-roll-box" hidden class="fld"><label>Rolls from</label><select id="paste-roll-from"><option value="">Choose a trade</option></select></div>`;
+  fillRollSelect('paste-roll-from',document.getElementById('paste-wheel-sel').value);
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
 }
@@ -7192,11 +7230,13 @@ function confirmParsed(){
       if(ex){wheelId=ex.id;}
       else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
+    const pair=document.getElementById('paste-roll-pair');
+    const rid=pair&&pair.checked?'roll_'+uid():null;
     trades.forEach(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-        rollId:null,verified:false,comment:'via SmartScan'};
+        rollId:rid,verified:false,comment:'via SmartScan'};
       db.trades.push(nt);_saveTrade(nt);
     });
     expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
@@ -7215,6 +7255,8 @@ function confirmParsed(){
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
     verified:false,comment:'via SmartScan'};
+  const on=document.getElementById('paste-roll-on');
+  if(on&&on.checked)linkWheelRoll(nt,document.getElementById('paste-roll-from').value);
   db.trades.push(nt);_saveTrade(nt); // save only what was touched
   expanded.add(wheelId);
   closeModal('mPaste');parsedTradeData=null;
