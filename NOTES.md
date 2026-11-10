@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v173` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v174` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 
@@ -17,7 +17,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `dev` no longer suggests or auto-links rolls (sw v171). A close and an open stay separate. Saved `rollId` and `rolledFrom` values still show. The Wheel and LEAPs tabs have a one-time tip and a Select button so you can total any trades. The landing page leads with that.
 - `dev` keeps a manual Mark as roll checkbox, off by default, on Add trade, the paste form, and the SmartScan review (sw v172). Tick it to choose which trade on that wheel or LEAP it rolls from, or, for a two-leg confirmation, to link those two legs. Nothing is chosen for you.
 - `dev` lets you long-press (or right-click / Ctrl-click) trade rows on wheel and LEAP cards to select across cards (sw v167). A bottom bar shows the net cash, the count, and the date range. It does not save or link anything. Escape, Back, or Done leaves select mode.
-- `dev` shows a selected-trade summary in a floating card, not a bottom bar (sw v173). It lists the net, collected, paid, fees, a per-ticker split, contracts, and each selected trade. A click outside the rows and the card, Escape, or the close mark clears the selection.
+- `dev` shows a selected-trade summary in a floating card, not a bottom bar (sw v173). It lists the net, collected, paid, fees, a per-ticker split, contracts, and each selected trade. A click outside the rows and the card, Escape, or the close mark clears the selection. The card is fixed and does not narrow the page (sw v174).
 - `dev` refreshes open LEAP and option marks on login and on the same minute timer as wheel quotes, and saves the new price and date (sw v168). A quote that cannot be fetched stays off Home and shows on the LEAP card. Every Needs you / Data Health row explains what is wrong, why, and how to fix it, and can be dismissed until that issue changes.
 - `dev` turns the New wheel pill into the text field in the same spot (sw v169). Suggestions are US stocks and ETFs only. A built-in list of the most traded names (Tesla first for “t” and “tes”) shows at once, then Finnhub fills in underneath.
 - `app/brand.js`: `supportEmail` is still `''`. `plans.gating` is `true` (free caps: 2 open wheel tickers, 1 open LEAP). Prices in brand config are £9 monthly / £79 yearly.
