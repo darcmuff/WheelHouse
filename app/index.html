@@ -7733,8 +7733,7 @@ window.parsePaste = parsePaste;
 window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;
 window.confirmParsed = confirmParsed;
-function selTipSeen(){try{return localStorage.getItem('wh-sel-tip')==='1';}catch(e){return false;}}
-function selTipHtml(){if(selTipSeen())return '';return `<div class="sel-tip"><span>Tip: long press or right-click trades to see their net</span><button type="button" class="sel-tip-x" onclick="dismissSelTip(event)" aria-label="Dismiss">✕</button></div>`;}
+function selTipHtml(){try{if(localStorage.getItem('wh-sel-tip')==='1')return '';}catch(e){}return `<div class="sel-tip"><span>Tip: long press or right-click trades to see their net</span><button type="button" class="sel-tip-x" onclick="dismissSelTip(event)" aria-label="Dismiss">✕</button></div>`;}
 function dismissSelTip(e){if(e){e.preventDefault();e.stopPropagation();}try{localStorage.setItem('wh-sel-tip','1');}catch(err){}document.querySelectorAll('.sel-tip').forEach(n=>n.remove());}
 function selStart(){if(!_selOn)selEnter();}
 function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');dismissSelTip();try{history.pushState({whSel:1},'');}catch(e){}selPaint();}
