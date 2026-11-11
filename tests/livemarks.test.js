@@ -5,23 +5,22 @@ const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'ut
 let pass = 0, fail = 0;
 const check = (n, ok) => { ok ? pass++ : fail++; console.log((ok ? '  ✓ ' : '  ✗ ') + n); };
 
-// 1. Automatic option-mark refresh never calls _saveOpt
+// 1. A fresh quote updates the leg and is saved, including the date
 const fom = extractFn('fetchOptionMarks');
-check('fetchOptionMarks does not call _saveOpt', !/_saveOpt\(/.test(fom));
-// run it with a fake fetch and a spy
+check('fetchOptionMarks saves a changed quote', /_saveOpt\(l\)/.test(fom));
 const saves = [];
 const run = new Function('db', 'fetch', 'quotes', 'OPTS', '_saveOpt', 'AbortSignal',
-  `let _optMarkStatus='',view='x';const render=()=>{};` + ['adjMark','isRegularSession','steadyMark','markNote'].map(extractFn).join('\n') + `\nasync ` + fom + `\nreturn fetchOptionMarks(true);`);
-const leg = { id: 'a', status: 'open', underlying: 'SPCX', expiry: '2027-12-17', strike: 150, type: 'C', side: 'long', markSrc: 'cboe', mark: 1 };
-run({ opts: [leg] }, async () => ({ ok: true, json: async () => ({ spot: 100, contracts: { K: { bid: 2, ask: 3 } } }) }), {},
+  `let _optMarkStatus='',view='x';const render=()=>{};` + ['adjMark','isRegularSession','steadyMark','markNote','_markStamp'].map(extractFn).join('\n') + `\nasync ` + fom + `\nreturn fetchOptionMarks(true);`);
+const leg = { id: 'a', status: 'open', underlying: 'SPCX', expiry: '2027-12-17', strike: 150, type: 'C', side: 'long', markSrc: 'cboe', mark: 1, markAt: '2026-10-29T15:00:00.000Z' };
+run({ opts: [leg] }, async () => ({ ok: true, json: async () => ({ asOf: '2026-11-09T19:28:27Z', spot: 140, contracts: { K: { bid: 30.3, ask: 31.1, delta: 0.6, gamma: 0.005, src: 'cboe' } } }) }), {},
   { occ: () => 'K' }, l => saves.push(l), { timeout: () => null }).then(() => {
-  check('refresh updates mark in memory', leg.mark === 2.5);
-  check('refresh made zero Firestore saves', saves.length === 0);
+  check('refresh updates mark in memory', leg.mark === 30.7);
+  check('refresh saves the new mark and date', saves.length === 1 && saves[0].mark === 30.7 && String(saves[0].markAt).slice(0,10) === '2026-11-09');
 
-  // 2. _persistableLeg strips live fields, keeps manual
+  // 2. _persistableLeg keeps a live quote and its date, drops display notes
   const P = new Function(extractFn('_persistableLeg') + '\nreturn _persistableLeg;')();
-  const live = P({ id: 'a', mark: 2.5, markSrc: 'cboe', delta: 0.5, theta: -1, iv: 0.4, strike: 150 });
-  check('live mark not persisted', live.mark === null && live.markSrc === null && live.delta === null && live.strike === 150);
+  const live = P({ id: 'a', mark: 30.7, markSrc: 'cboe', markAt: '2026-11-09T19:28:27Z', delta: 0.6, theta: -1, iv: 0.5, strike: 150, markWhy: 'mid', markNote: 'x' });
+  check('live mark is persisted and the note is not', live.mark === 30.7 && live.markSrc === 'cboe' && live.markAt === '2026-11-09T19:28:27Z' && live.delta === 0.6 && live.strike === 150 && live.markWhy === undefined);
   const man = P({ id: 'b', mark: 3, markSrc: 'manual' });
   check('manual mark still persisted', man.mark === 3 && man.markSrc === 'manual');
   check('_saveOpt writes through _persistableLeg', /_persistableLeg\(leg\)/.test(extractFn('_saveOpt')));

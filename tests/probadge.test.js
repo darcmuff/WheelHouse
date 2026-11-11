@@ -15,7 +15,7 @@ test('wordmark is larger and the badge sits at the end of the name, hidden until
   assert.match(SRC,/\.tn-brand\{[^}]*font-size:1\.5rem/);
   assert.match(SRC,/\.tn-word\{display:flex;flex-direction:column;align-items:flex-end\}/);
   assert.match(SRC,/\.tn-pro\{[^}]*color:var\(--orange\)/);
-  assert.ok(SRC.includes('<span class="tn-word"><span data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span>'));
+  assert.ok(SRC.includes('<span class="tn-word"><span class="wm" data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span>'));
   assert.ok(SRC.includes('syncProBadge();'));
   assert.ok(!/isPro\(_ent/.test(extractFn('syncProBadge')));
 });

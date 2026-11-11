@@ -22,7 +22,9 @@
 :root{--bg:#FAF9F6;--card:#FFFFFF;--text:#111111;--text2:#3d3d40;--text3:#6b6b70;--line:#E4E1DA;--green:#FF5A36;--green2:rgba(255,90,54,.10);--profit:#1A9E5A;--loss:#D93A3A}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 a{color:var(--green)}.wrap{max-width:72rem;margin:0 auto;padding:0 2rem}
-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0}.logo{display:flex;align-items:center}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:900;font-display:swap;src:url('nunito-900.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+.wm{font-family:Nunito,sans-serif;font-weight:900;font-size:1.75rem;letter-spacing:normal;line-height:1;display:inline-block;color:var(--text);transform:skewX(-9deg);transform-origin:center bottom}
+header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0}.logo{display:flex;align-items:center;gap:.5rem}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .btn{display:inline-block;padding:.8rem 1.4rem;border-radius:.5rem;text-decoration:none;font-weight:600;font-size:1rem}.btn.p{background:var(--green);color:#FFFFFF}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
 .hero{padding:3.5rem 0 2.5rem;max-width:46rem}.hero h1{font-size:3.25rem;line-height:1.1;margin:0 0 1rem;letter-spacing:-.03em}.hero p{color:var(--text2);font-size:1.2rem;margin:0}
 .cta{display:flex;gap:.75rem;flex-wrap:wrap;margin:1.75rem 0 .75rem}.small{font-size:.85rem;color:var(--text3)}
@@ -51,7 +53,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
 </head>
 <body>
 <div class="wrap">
-  <header><div class="logo"><img src="logo-horizontal-dark.svg" alt="OpTrack" width="128" height="40"><span class="vh" data-brand="name">OpTrack</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
+  <header><div class="logo"><img src="logo-mark.svg" alt="" width="40" height="40"><span class="wm" data-brand="name">OpTrack</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
 
   <section class="hero">
     <h1>An options tracker that tells you the truth.</h1>
@@ -74,7 +76,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
         <div class="row x"><span>Open premium, not counted yet</span><span>$260</span></div></div></div>
 
     <div class="u" id="usp-smartscan"><div class="k">SmartScan</div><h3>Paste a confirmation, it fills the trade in.</h3>
-      <p>Sells, buy-backs and rolls, with the strike, expiry, price and fees picked out for you. Check it and save.</p>
+      <p>Sells and buy-backs, with the strike, expiry, price and fees picked out for you. Check it and save. Link trades yourself if you want.</p>
       <div class="mock"><div class="lbl">Example</div>
         <div class="paste">Sold to open 2 XYZ 11/21 $45 Put @ 1.10<br>Fees $0.06</div>
         <div class="arrow">↓</div>
@@ -83,13 +85,13 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
 
   <h2>And the rest</h2>
   <div class="grid">
-    <div class="f"><b>Roll chains</b><span>Every roll stays linked to the trade it came from, so you see what the whole position made, not just the last leg.</span></div>
+    <div class="f"><b>Pick any trades. See the real net.</b><span>Rolls, rescues, a month of calls — select them and OpTrack shows collected, paid, fees and net, per ticker and per contract. Link trades yourself if you want.</span></div>
     <div class="f"><b>The wheel and LEAPs together</b><span>Puts, assignment and covered calls, plus LEAPs and the calls you sell against them (PMCC), with those calls knocking down your LEAP cost.</span></div>
     <div class="f"><b>Live buy-back price</b><span>The cost to close each open option, refreshed every minute and adjusted for how the stock has moved, so you can see how much premium you've captured.</span></div>
     <div class="f"><b>Monthly return, your way</b><span>This month's banked return against the money you've got working or your account size, with your own target or none.</span></div>
     <div class="f"><b>Pre-market and after-hours</b><span>See where your tickers are trading before the open and after the close.</span></div>
   </div>
-  <figure><img class="shot" src="img/shot-rollchain.webp" width="1120" height="403" loading="lazy" alt="Calls sold against a LEAP, with a roll (buy back and sell a new call) linked as one chain and its net shown"><figcaption>A roll chain, linked with its net for the whole chain. Demo data, from the <a href="/demo#leaps">demo</a>.</figcaption></figure>
+  <figure><img class="shot" src="img/select-net.png" width="1120" height="180" loading="lazy" alt="Selected trades with a bar showing the net credit, collected, paid, fees, and the split by ticker and contract"><figcaption>Select any trades and the bar shows the real net. Demo data, from the <a href="/demo">demo</a>.</figcaption></figure>
 
   <h2>Free and Pro</h2>
   <div class="plans">

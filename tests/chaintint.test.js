@@ -73,15 +73,17 @@ const MARC = [
   { id: 'c4', action: 'CSP', entered: '2026-04-14', expiry: '2026-04-24', strike: 17, shares: 800, total: 278.64 },
   { id: 'x1', action: 'CSP', entered: '2026-05-01', expiry: '2026-05-15', strike: 15, shares: 400, total: 90 },
 ];
-test('merge roll: whole chain recognised, counts and net over every leg', () => {
-  assert.ok(isChainTip(MARC, MARC.find(t => t.id === 'c4')));
-  assert.ok(!isChainTip(MARC, MARC.find(t => t.id === 'c3')));
-  const c = buildRollChain(MARC, 'c4');
-  assert.equal(c.rolls, 2);
-  assert.equal(c.trades.length, 7);
-  assert.equal(Math.round(c.net * 100) / 100, 965.36);
+test('unstored same-day buyback and sale are not a roll; only the stored rollId links', () => {
+  assert.equal(isChainTip(MARC, MARC.find(t => t.id === 'c4')), false);
+  assert.ok(isChainTip(MARC, MARC.find(t => t.id === 'c3')));
+  const c = buildRollChain(MARC, 'c3');
+  assert.equal(c.rolls, 1);
+  assert.ok(c.trades.some(t => t.id === 'b1') && c.trades.some(t => t.id === 'c3'));
+  assert.ok(!c.trades.some(t => t.id === 'b2'), 'the second same-day buyback is not silently added');
+  assert.ok(!c.trades.some(t => t.id === 'c4'), 'the later same-day sale is not a roll');
   const m = wheelChainMap(MARC);
-  ['c1', 'c2', 'b1', 'b2', 'c3', 'b3', 'c4'].forEach(id => assert.equal(m[id], 0, id + ' tinted'));
+  assert.equal(m.b2, undefined);
+  assert.equal(m.c4, undefined);
   assert.equal(m.x1, undefined);
 });
 test('no over-linking: different shares, different day or far strike stay separate', () => {

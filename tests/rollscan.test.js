@@ -62,7 +62,8 @@ test('wheel roll: Robinhood month-first dates, years from fill date, fees split'
   assert.strictEqual(t.length, 2);
   assert.deepStrictEqual(t.map(x => [x.action, x.strike, x.expiry, x.entered, x.contracts, x.premium, x.fees]),
     [['BTC', 19.5, '2026-04-24', '2026-04-21', 4, 0.5, 2.16], ['STOC', 21, '2026-05-01', '2026-04-21', 4, 0.62, 2.16]]);
-  assert.strictEqual(t[0].rollId, t[1].rollId);
+  assert.strictEqual(t[0].rollId, null);
+  assert.strictEqual(t[1].rollId, null);
 });
 test('fill date in a later month than today goes to last year; expiry follows it', () => {
   const t = S.parseRollTrades(SOFI.replace(/Apr 21/g, 'Dec 29').replace('Apr 24', 'Jan 2').replace('May 1', 'Jan 9'), T);

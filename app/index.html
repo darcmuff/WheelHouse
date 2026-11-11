@@ -22,6 +22,7 @@
 <link rel="manifest" href="manifest.json">
 <script src="demo.js"></script>
 <script src="brand.js"></script>
+<script src="popular.js"></script>
 <script src="analytics.js" defer></script>
 <meta name="theme-color" content="#f6f5f1">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
@@ -276,6 +277,32 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
   min-width:0;
 }
 .trow-focus{background:rgba(20,184,166,.16)!important;box-shadow:inset 0.1875rem 0 0 var(--teal,var(--orange2));}
+.trow{position:relative}
+.sel-mark{display:none}
+body.sel-mode .trow{user-select:none;-webkit-user-select:none}
+body.sel-mode .trow.sel{background:var(--orangeL);box-shadow:inset 0.2rem 0 0 var(--orange)}
+body.sel-mode .trow.sel .sel-mark{display:flex;position:absolute;left:0.2rem;top:0.28rem;width:0.8rem;height:0.8rem;border-radius:0.2rem;background:var(--orange);color:#fff;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;pointer-events:none}
+body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
+#sel-panel{position:fixed;z-index:70;top:7.25rem;right:1.25rem;width:22rem;max-height:calc(100vh - 8.5rem);overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:1.25rem;box-shadow:0 12px 40px rgba(20,24,20,.18);padding:1rem 1.125rem}
+#sel-panel[hidden]{display:none !important}
+.sel-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem}
+.sel-h .sel-kind{font-size:0.8125rem;font-weight:700}
+.sel-x{border:0;background:transparent;color:var(--text3);cursor:pointer;font-size:1.25rem;line-height:1;padding:0}
+.sel-x:hover{color:var(--text)}
+#sel-net{font-size:1.75rem;font-weight:700;letter-spacing:-0.02em;line-height:1.1}
+#sel-sub{font-size:0.75rem;color:var(--text3);margin-top:0.2rem}
+.sel-bits{margin-top:0.75rem;font-size:0.75rem;color:var(--text2);line-height:1.45}
+.sel-list{margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.4rem}
+.sel-row{display:grid;grid-template-columns:4.2rem 1fr auto;gap:0.4rem;align-items:baseline;font-size:0.75rem;padding:0.28rem 0;color:var(--text)}
+.sel-row span:first-child{color:var(--text3)}
+.sel-tip{display:none}
+@media(min-width:701px){
+  .sel-tip{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;margin:0 0 0.625rem;padding:0.4rem 0.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;font-size:0.75rem;color:var(--text2)}
+  .sel-tip-x{border:0;background:transparent;color:var(--text3);cursor:pointer;font-size:0.875rem;line-height:1}
+}
+.roll-opt{display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text2);margin:0.25rem 0 0.5rem}
+.roll-opt input{accent-color:var(--orange)}
+#tf-roll-box[hidden],#pm-roll-box[hidden],#pcc-roll-box[hidden],#paste-roll-box[hidden]{display:none !important}
 .trow{
   display:grid;
   grid-template-columns:minmax(0,52fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,48fr) minmax(0,78fr) minmax(0,46fr) minmax(0,78fr) minmax(0,52fr) minmax(0,36fr);
@@ -325,12 +352,16 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 }
 .btn:hover{opacity:.85}.btn:active{transform:scale(.97)}
 .btn-primary{background:var(--orange);color:#fff}
-.nw{position:relative}
-.nw-box{position:relative}
-#new-rot-ticker-top{width:11rem;box-sizing:border-box;background:#fff;color:#111;border:1px solid var(--border);border-radius:0.375rem;padding:0.3125rem 0.625rem;font-size:0.6875rem;font-weight:600;outline:none}
-#new-rot-ticker-top::placeholder{color:#8a908b;opacity:1}
+.nw{position:relative;display:inline-grid;vertical-align:middle;width:6.75rem;height:1.75rem;flex:0 0 auto}
+.nw-pill,.nw-box{grid-area:1/1}
+.nw-pill{box-sizing:border-box;width:6.75rem;height:1.75rem;margin:0;border-radius:0.375rem;padding:0 0.625rem;font-size:0.6875rem;font-weight:600;line-height:1.75rem}
+#new-wheel-btn{justify-content:center;border:1px solid transparent}
+#new-wheel-btn[hidden],#new-wheel-box[hidden]{display:none !important}
+.nw-box{position:relative;display:block;height:1.75rem}
+#new-rot-ticker-top{display:block;background:#fff;color:#111;border:1px solid var(--border);outline:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#new-rot-ticker-top::placeholder{color:#8a908b;opacity:1;font-weight:500}
 #new-rot-ticker-top:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,90,54,.35)}
-.nw-list{position:absolute;z-index:40;top:calc(100% + 0.25rem);left:0;min-width:16rem;max-height:14rem;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;box-shadow:var(--shadow)}
+.nw-list{position:absolute;z-index:40;top:calc(100% + 0.25rem);left:0;width:16rem;max-height:14rem;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;box-shadow:var(--shadow)}
 .nw-item,.nw-note{display:flex;gap:0.5rem;align-items:baseline;width:100%;text-align:left;background:none;border:0;padding:0.4rem 0.55rem;font-size:0.6875rem;color:var(--text);cursor:pointer}
 .nw-item.on,.nw-item:hover{background:var(--bg3)}
 .nw-sym{font-weight:700;min-width:3.2rem}
@@ -607,7 +638,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 /* ── Top navigation (desktop) + bottom tab bar (phone) ── */
 #content{margin-left:0!important;padding:1.25rem 1.5rem 3rem!important;max-width:72rem;margin:0 auto!important}
 #topnav{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:1.5rem;padding:0.625rem 1.5rem;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
-.tn-brand{display:flex;align-items:center;gap:0.625rem;font-weight:600;font-size:1.5rem;letter-spacing:-0.03em;color:var(--text);flex-shrink:0;white-space:nowrap;line-height:1}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:900;font-display:swap;src:url('nunito-900.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+.wm{font-family:Nunito,sans-serif;font-weight:900;font-style:normal;letter-spacing:normal;line-height:1;display:inline-block;transform:skewX(-9deg);transform-origin:center bottom}
+.tn-brand{display:flex;align-items:center;gap:0.625rem;font-size:1.5rem;color:var(--text);flex-shrink:0;white-space:nowrap;line-height:1}
 .tn-mark{width:2.125rem;height:2.125rem;display:block}
 .tn-word{display:flex;flex-direction:column;align-items:flex-end}
 .tn-pro{margin-top:0.2rem;font-size:0.5625rem;font-weight:700;letter-spacing:0.06em;line-height:1;color:var(--orange)}
@@ -647,7 +680,14 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .hb-v{font-size:0.575rem;color:var(--text2)}.hb-m{font-size:0.575rem;color:var(--text3)}.hb-m.now{color:var(--text);font-weight:600}
 .hb-leg{display:flex;gap:1rem;font-size:0.6rem;color:var(--text2);margin-top:0.625rem}.hb-leg i{display:inline-block;width:0.5rem;height:0.5rem;border-radius:0.125rem;margin-right:0.3rem}
 .ny-row{display:flex;align-items:center;gap:0.5rem;font-size:0.6875rem;padding:0.4375rem 0;border-top:1px solid var(--bg3)}.ny-row:first-of-type{border-top:0}.ny-row a{margin-left:auto;color:var(--orange);cursor:pointer;font-size:0.625rem}
-.ny-dot{width:0.4375rem;height:0.4375rem;border-radius:50%;flex-shrink:0}.ny-dot.r{background:var(--red)}.ny-dot.a{background:var(--yellow)}.ny-dot.g{background:var(--green)}
+.ny-dot{width:0.4375rem;height:0.4375rem;border-radius:50%;flex-shrink:0;margin-top:0.3rem}.ny-dot.r{background:var(--red)}.ny-dot.a{background:var(--yellow)}.ny-dot.g{background:var(--text3)}
+.hy{border-top:1px solid var(--bg3)}.hy-sum{display:flex;align-items:flex-start;gap:0.5rem;width:100%;background:none;border:0;padding:0.45rem 0;cursor:pointer;text-align:left;color:inherit;font:inherit}
+.hy-what{flex:1;font-size:0.75rem;line-height:1.4;color:var(--text)}
+.hy-more{display:none;padding:0 0 0.55rem 1rem;font-size:0.6875rem;color:var(--text2);line-height:1.45}
+.hy.open .hy-more{display:block}.hy-more div+div{margin-top:0.15rem}
+.hy-acts{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem}
+.lc-quiet{font-size:0.6875rem;color:var(--text3);padding:0.15rem 1rem 0.35rem;display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap}
+.lc-quiet .btn{padding:0.15rem 0.45rem;font-size:0.625rem}
 .ny-none{color:var(--text3);font-size:0.6875rem;padding:0.25rem 0 0.5rem}
 .hc-links{display:flex;flex-direction:column;gap:0.375rem;margin-top:0.875rem;padding-top:0.625rem;border-top:1px solid var(--bg3)}.hc-links a{color:var(--orange);font-size:0.65rem;cursor:pointer}
 .ms-head{display:flex;align-items:baseline;gap:1rem;margin:0.25rem 0 0.5rem 1rem}.ms-head a{color:var(--orange);cursor:pointer;font-size:0.65rem}.ms-head h1{font-size:1.25rem;font-weight:600}
@@ -686,6 +726,15 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .leap-card .pmcc-open .trow-empty{border-top:0}
 .pmcc-open .thead-row.has-to-strike,.pmcc-open .trow.has-to-strike{
   grid-template-columns:minmax(0,52fr) minmax(0,70fr) minmax(0,70fr) minmax(0,52fr) minmax(0,92fr) minmax(0,52fr) minmax(0,44fr) minmax(0,72fr) minmax(0,42fr) minmax(0,72fr) minmax(0,48fr) minmax(0,36fr);
+}
+.cap-at{color:var(--text3);font-weight:400;font-size:0.6rem}
+@media(min-width:701px){
+  .pmcc-open .tgrid{display:grid;grid-template-columns:repeat(11,minmax(max-content,1fr)) max-content;column-gap:0.75rem;align-items:center;width:100%}
+  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.75rem}
+  .pmcc-open .tgrid>.chain-row,.pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
+  .pmcc-open .tgrid>.trow.has-to-strike{min-height:3.15rem}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(3),.pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(2){white-space:nowrap}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:last-child{justify-self:end}
 }
 .pmcc-open .to-strike{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:0.65rem}
 .pmcc-open .to-strike.m{color:var(--text3)}
@@ -775,7 +824,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <!-- Logo -->
     <div style="text-align:center;margin-bottom:2rem;">
       <img src="logo-mark.svg" alt="" width="56" height="56" style="margin-bottom:0.75rem">
-      <div data-brand="name" style="color:#f3f4f6;font-size:1.375rem;font-weight:600;letter-spacing:-0.02em;">OpTrack</div>
+      <div class="wm" data-brand="name" style="color:#f3f4f6;font-size:1.375rem;">OpTrack</div>
       <div data-brand="tagline" style="color:var(--text3);font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
     </div>
 
@@ -914,7 +963,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
   <!-- SIDEBAR -->
   <header id="topnav">
-    <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg" alt=""><span class="tn-word"><span data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span></div>
+    <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg" alt=""><span class="tn-word"><span class="wm" data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span></div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
     <div class="tn-right">
       <button class="btn btn-primary tn-paste" onclick="pasteFill()" title="Add a trade — SmartScan or Manual Entry">+ Add trade</button>
@@ -928,6 +977,13 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 </div>
 
+<div id="sel-panel" hidden>
+  <div class="sel-h"><span id="sel-kind" class="sel-kind"></span><button type="button" class="sel-x" onclick="selDone()" aria-label="Close">✕</button></div>
+  <div id="sel-net">$0.00</div>
+  <div id="sel-sub">0 trades</div>
+  <div class="sel-bits" id="sel-bits"></div>
+  <div class="sel-list" id="sel-list"></div>
+</div>
 
 <!-- MODAL: Rotation -->
 <div class="mb" id="mWheel">
@@ -951,7 +1007,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mTradeTitle">Add Trade</span><span class="mx" onclick="closeModal('mTrade')">✕</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
       <div class="fld"><label>Ticker</label><input id="tf-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase" oninput="onTickerInput()"></div>
-      <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="tf-wheel"></select></div>
+      <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="tf-wheel" onchange="fillRollSelect('tf-roll-from',this.value,document.getElementById('tf-id').value)"></select></div>
       <div class="fld"><label>Action</label>
         <select id="tf-action" onchange="onActionChange()">
           <option value="CSP">CSP — Cash Secured Put</option>
@@ -974,6 +1030,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>DTE <small style="color:#555">auto</small></label><input id="tf-days" type="number" step="1" oninput="autoCalcPPD()"></div>
       <div class="fld"><label>PPD ($) <small style="color:#555">auto</small></label><input id="tf-ppd" type="number" step="0.01" readonly></div>
       <div class="fld" style="grid-column:span 3"><label>Comment</label><textarea id="tf-comment" rows="1"></textarea></div>
+      <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="tf-roll" onchange="document.getElementById('tf-roll-box').hidden=!this.checked"> Mark as roll</label><div id="tf-roll-box" hidden class="fld"><label>Rolls from</label><select id="tf-roll-from"><option value="">Choose a trade</option></select></div></div>
       <div class="fld" style="grid-column:span 3;display:none" id="tg-created-at"><label>Date Added <small style="color:#555">auto</small></label><input id="tf-created-at" type="text" readonly style="color:var(--text3);background:var(--bg3);cursor:default"></div>
     </div>
     <input type="hidden" id="tf-id">
@@ -1019,7 +1076,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div id="paste-panel-manual" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5625rem;margin-bottom:0.5625rem">
           <div class="fld"><label>Ticker</label><input id="pm-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase" oninput="onPMTickerInput()"></div>
-          <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="pm-wheel"></select></div>
+          <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="pm-wheel" onchange="fillRollSelect('pm-roll-from',this.value)"></select></div>
           <div class="fld"><label>Action</label>
             <select id="pm-action" onchange="onPMActionChange()">
               <option value="CSP">CSP — Cash Secured Put</option>
@@ -1040,6 +1097,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
           <div class="fld"><label>Fees ($)</label><input id="pm-fees" type="number" step="0.01" value="0" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="pm-total" type="number" step="0.01" readonly></div>
           <div class="fld"><label>Comment</label><input id="pm-comment" type="text"></div>
+          <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="pm-roll" onchange="document.getElementById('pm-roll-box').hidden=!this.checked"> Mark as roll</label><div id="pm-roll-box" hidden class="fld"><label>Rolls from</label><select id="pm-roll-from"><option value="">Choose a trade</option></select></div></div>
         </div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="savePMTrade()">Save Trade</button></div>
       </div>
@@ -1049,15 +1107,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div id="paste-preview"></div>
       <div class="mfoot"><button class="btn btn-ghost" onclick="showPasteStep1()">← Back</button><button class="btn btn-primary" onclick="confirmParsed()">✓ Save Trade</button></div>
     </div>
-  </div>
-</div>
-
-<!-- MODAL: Roll Confirm -->
-<div class="mb" id="mRoll">
-  <div class="mbox sm">
-    <div class="mtitle"><span>↻ Link as Roll?</span><span class="mx" onclick="closeModal('mRoll')">✕</span></div>
-    <p id="mRoll-msg" style="font-size:0.8125rem;color:var(--text2);margin-bottom:1.125rem;line-height:1.5"></p>
-    <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mRoll')">Skip</button><button class="btn btn-primary" onclick="confirmRoll()">↻ Link</button></div>
   </div>
 </div>
 
@@ -1159,6 +1208,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label id="pcc-date-lbl">Date sold</label><input id="pcc-date" type="date"></div>
       <div class="fld"><label>Fees total ($)</label><input id="pcc-fees" type="number" step="0.01" value="0"></div>
       <div class="fld" style="grid-column:span 2"><label>Notes</label><input id="pcc-notes" type="text"></div>
+      <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="pcc-roll" onchange="document.getElementById('pcc-roll-box').hidden=!this.checked"> Mark as roll</label><div id="pcc-roll-box" hidden class="fld"><label>Rolls from</label><select id="pcc-roll-from"><option value="">Choose a trade</option></select></div></div>
     </div>
     <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="savePmcc()">Save</button></div>
     </div>
@@ -1435,11 +1485,11 @@ function _saveTrade(trade){
     .catch(e=>console.error('Trade save failed:',e));
 }
 let _optsLoadError='';
-// Live prices (optchain/Cboe/Finnhub marks + greeks) live in memory only — never written to Firestore.
-// Only a mark the user typed (markSrc==='manual') is persisted.
+// A quote we actually received is saved with its date, same as a price you type.
+// Display-only notes (why the number moved) are not stored.
 function _persistableLeg(leg){
-  if(!leg||leg.markSrc==='manual')return leg;
-  const o={...leg};o.mark=null;o.markSrc=null;o.markAt=null;o.delta=null;o.theta=null;o.iv=null;delete o.markWhy;delete o.markNote;return o;
+  if(!leg)return leg;
+  const o={...leg};delete o.markWhy;delete o.markNote;return o;
 }
 function _saveOpt(leg){
   if(APP_DEMO){OT_DEMO.save(db);return;}
@@ -1481,6 +1531,21 @@ const CREDITS=new Set(['CSP','STOC','STO','STC','OUT','DIV']); // STC receives c
 const OPTIONS=new Set(['CSP','BTC','STOC','STC']);
 const STOCKS=new Set(['IN','OUT']);
 function isCredit(a){return CREDITS.has(a);}
+function selCash(action,total){const n=+total||0;if(n<0)return Math.round(n*100)/100;return Math.round((isCredit(action)?n:-n)*100)/100;}
+function selCt(action,shares){if(action!=='CSP'&&action!=='BTC'&&action!=='STOC'&&action!=='STC'&&action!=='STO')return 0;const sh=+shares||0;return sh>0?Math.round(sh)/100:0;}
+function selSummary(items){
+  let net=0,min='',max='',fees=0,credits=0,debits=0,optCash=0,contracts=0;const by={};
+  (items||[]).forEach(x=>{
+    const c=+x.cash||0;net+=c;if(c>0)credits+=c;else if(c<0)debits+=-c;fees+=+x.fee||0;
+    const d=x.date||'';if(d){if(!min||d<min)min=d;if(!max||d>max)max=d;}
+    const tk=x.tk||'';if(tk)by[tk]=(by[tk]||0)+c;
+    const q=+x.ct||0;if(q>0){contracts+=q;optCash+=c;}
+  });
+  const r=n=>Math.round(n*100)/100;
+  const names=Object.keys(by);
+  return{net:r(net),n:(items||[]).length,min,max,credits:r(credits),debits:r(debits),fees:r(fees),contracts:r(contracts),per:contracts?r(optCash/contracts):null,tickers:names.length>1?names.sort().map(t=>({tk:t,cash:r(by[t])})):[]};
+}
+let _selOn=false,_selSkip=false,_selPop=false;const _sel=new Map();
 function computeTotal(action,premium,shares,fees){
   fees=fees||0;premium=premium||0;shares=shares||0;
   const gross=premium*shares;
@@ -1627,7 +1692,7 @@ function optionsLib(){
       if(l.parentLeapId&&!legs.some(x=>x.id===l.parentLeapId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} was sold against a LEAP that no longer exists — shown under Other options`});
       if(l.wheelId&&!wheels.some(w=>w.id===l.wheelId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is attached to a rotation that no longer exists`});
       if(l.wheelId){const w=wheels.find(w=>w.id===l.wheelId);if(w&&w.ticker&&w.ticker!==l.underlying)out.push({sev:'grey',legId:l.id,text:`${nm(l)} is attached to the ${w.ticker} rotation — different underlying`});}
-      if(l.status==='open'&&l.markAt&&(Date.parse(today)-Date.parse(l.markAt.slice(0,10)))/DAY>5)out.push({sev:'grey',legId:l.id,text:`${nm(l)} mark is stale (${l.markAt.slice(0,10)})`});
+      // A missing quote is shown on the LEAP card, not as a Home nag. The saved date moves when a quote arrives.
       const fp=`${l.underlying}|${l.type}|${l.strike}|${l.expiry}|${l.side}|${l.entryDate}|${l.qty}|${l.entryPrice}`;(seen[fp]=seen[fp]||[]).push(l);
     });
     Object.values(seen).forEach(a=>{if(a.length>1)out.push({sev:'grey',legId:a[0].id,text:`${nm(a[0])} appears ${a.length}× with identical details — duplicates?`});});
@@ -2229,6 +2294,7 @@ async function fetchAllQuotes(){
     }
     await fetchExtQuotes(allSyms);
     _applyWheelMarks();
+    await fetchOptionMarks(false);
     await logosDone;
     const nOk=Object.keys(quotes).length;
     if(nOk>0){
@@ -2269,6 +2335,7 @@ function buildSpark(prices,isUp,w=52,h=20){
 // VIEW STATE
 // ════════════════════════════════════════════════════════
 let view='positions'; // every app open/reload lands on the Wheel tab (saved tab ignored at startup)
+let _nyOpen=false;
 let expanded=new Set(JSON.parse(localStorage.getItem('wh-expanded')||'[]'));
 let collapsedWheels=new Set(JSON.parse(localStorage.getItem('wh-collapsedWheels')||'[]')); // wheel cards default to expanded, like LEAP cards
 let collapsedLeaps=new Set(JSON.parse(localStorage.getItem('wh-collapsedLeaps')||'[]')); // LEAP cards default to expanded; only an explicit ▾ tap collapses
@@ -2342,6 +2409,7 @@ function render(){
   if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
   if(view==='options'){c.innerHTML=renderOptions();fetchOptionMarks(false);}
+  if(typeof selPaint==='function')selPaint();
 }
 
 // ════════════════════════════════════════════════════════
@@ -2427,8 +2495,8 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
       <td>${thOk?money(th)+'<small style="color:var(--text3)">/d</small>':'—'}</td>
       <td style="white-space:nowrap">${acts}<button class="btn btn-ghost btn-icon" onclick="openOptEdit('${g.id}')">•••</button></td>
     </tr>`;}).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:2.5rem">${legs.length?'No positions match these filters':'No option positions yet — add one, or import a broker file with buy-to-open fills.'}</td></tr>`;
-  const issues=OPTS.health(legs,db.wheels,today,db.trades);
-  const healthH=issues.length?`<div style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.625rem 0.75rem"><div style="font-size:0.75rem;color:var(--text3);margin-bottom:0.375rem">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(i=>`<div style="font-size:0.75rem;padding:2px 0;color:${i.sev==='red'?'var(--red)':i.sev==='amber'?'var(--yellow)':'var(--text3)'}">● ${esc(i.text)}</div>`).join('')}</div>`:'';
+  const issues=shownHealth(OPTS.health(legs,db.wheels,today,db.trades));
+  const healthH=issues.length?`<div class="hy-box" style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.25rem 0.75rem 0.5rem"><div style="font-size:0.75rem;color:var(--text3);margin:0.375rem 0">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(healthItemHtml).join('')}</div>`:'';
   // linked-to-rotation summary (display only; wheel P&L untouched)
   const byW={};legs.filter(l=>l.wheelId).forEach(l=>{const p=OPTS.legPnL(l);const o=byW[l.wheelId]=byW[l.wheelId]||{r:0,u:0};o.r+=p.realized;if(p.unrealized!=null)o.u+=p.unrealized;});
   const linkH=Object.keys(byW).length?`<div style="margin-top:0.875rem;font-size:0.75rem;color:var(--text3)">Attached to rotations (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
@@ -2632,14 +2700,14 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       ts=toStrike(spot,+c.strike).text;
       const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=ppdCellHtml(t.total/t.days,t.days);
       const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
-      if(mark!=null&&sold>0){const cc=capturedCellHtml(Math.round((sold-mark)/sold*100),pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),true);cap=`<span title="${esc(c.markNote||('Buy-back price $'+(+mark).toFixed(2)))}">${cc.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;capColor=cc.color;}
+      if(mark!=null&&sold>0){const pct=Math.round((sold-mark)/sold*100),dl=pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),cc=capturedCellHtml(pct,dl,true);cap=`<div style="white-space:nowrap" title="${esc(c.markNote||('Buy-back price $'+(+mark).toFixed(2)))}">${pct}% <span class="cap-at">· at $${(+mark).toFixed(2)}</span></div><div style="white-space:nowrap">${cc.html.replace(/^-?\d+% /,'')}</div>`;capColor=cc.color;}
       else if(c.markWhy==='none')cap=`<span title="${esc(c.markNote||'No reliable quote for this contract')}">no quote</span>`;
     }else{
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
       if(d&&net!=null)ppd=ppdCellHtml(net/d,d);
       const closeP=c.status==='closed'?(+c.closePrice||0):0;
-      if(sold>0){const cc=capturedCellHtml(Math.round((sold-closeP)/sold*100),net,false);cap=cc.html;capColor=cc.color;}
+      if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);cap=net!=null?`<div style="white-space:nowrap">${pct}%</div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html;capColor=cc.color;}
       else if(net!=null)cap=capturedCellHtml(0,net,false).html.replace(/^0% /,'');
     }
   }
@@ -2654,7 +2722,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
   }
   if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
   const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
-  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}" data-pmid="${esc(e.id)}">
+  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}" data-act="${esc(e.action||'')}" data-strike="${e.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
     <span class="action-cell"><span class="roll-slot">${rolled?'<span class="roll-badge">↻</span>':''}</span><span class="ab ab-${e.action}">${e.action}</span></span>
     <span>${fmtDateFull(e.entered)}</span>
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
@@ -2689,9 +2757,9 @@ function renderPmcc(leap,today,spot,add){
   const keep=listCut(ev.length,ev.map(e=>cmap[e.legId]!=null?'c'+cmap[e.legId]:'l'+e.legId),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
   const chainOut={},rowHtml=evS.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
   const rows=hoistChainLines(evS.map(e=>cmap[e.legId]),rowHtml,chainOut)+listMoreBtn(leap.id,ev.length,keep.length);
-  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button></div>`:''}${tradeTableHead({lastCol:'Captured',toStrike:true})}
-    ${rows||'<div class="trow trow-empty"><span style="grid-column:1/-1;color:var(--text3)">No short calls yet.</span></div>'}
-  </div>`;
+  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+    ${rows||'<div class="trow trow-empty"><span style="color:var(--text3)">No short calls yet.</span></div>'}
+  </div></div>`;
 }
 // Per-row Edit: one short call leg. Pure helpers never write; UI wrappers save/delete exactly that leg id.
 function pmccDeleteLegFrom(legs,id){return(legs||[]).filter(x=>x.id!==id);}
@@ -2777,7 +2845,8 @@ function renderLeapCard(l,spot,today){
     const leapExp=!collapsedLeaps.has(l.id);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
   <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
-  ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
+  ${l.markWhy==='none'?`<div class="lc-quiet" onclick="event.stopPropagation()">No fresh quote${l.mark!=null&&l.markAt?` · last price $${Number(l.mark).toFixed(2)} on ${_fdShort(String(l.markAt).slice(0,10))}`:''}. <button type="button" class="btn btn-ghost btn-sm" onclick="refreshLegMark('${esc(l.id)}')">Refresh price</button><button type="button" class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Enter mark manually</button></div>`:''}
+    ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
@@ -2848,8 +2917,8 @@ function renderOptions(){
   // non-long-call legs never vanish silently
   const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
   const otherH=og.length?`<details class="leap-other"><summary>Other options (${og.length}) — spreads, puts and short legs, kept as recorded</summary>${og.map(g=>`<div style="display:flex;gap:0.625rem;align-items:center;border-top:1px solid var(--border);padding:0.375rem 0;margin-top:0.375rem"><div style="flex:1;min-width:0;overflow-x:auto"><div style="font-size:0.6875rem;color:var(--text3)">${esc(g.strategy)} · ${esc(g.status)}</div>${g.legs.map(_legLine).join('')}</div><button class="btn btn-ghost btn-icon" onclick="openOptEdit('${esc(g.id)}')">•••</button></div>`).join('')}</details>`:'';
-  const issues=OPTS.health(legs,db.wheels,today,db.trades);
-  const healthH=issues.length?`<div style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.625rem 0.75rem"><div style="font-size:0.75rem;color:var(--text3);margin-bottom:0.375rem">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(i=>`<div style="font-size:0.75rem;padding:2px 0;color:${i.sev==='red'?'var(--red)':i.sev==='amber'?'var(--yellow)':'var(--text3)'}">● ${esc(i.text)}</div>`).join('')}</div>`:'';
+  const issues=shownHealth(OPTS.health(legs,db.wheels,today,db.trades));
+  const healthH=issues.length?`<div class="hy-box" style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.25rem 0.75rem 0.5rem"><div style="font-size:0.75rem;color:var(--text3);margin:0.375rem 0">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(healthItemHtml).join('')}</div>`:'';
   const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
   const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample LEAPs shown <b>instead of</b> your real ones. Nothing here is saved. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
   return`${err}${demoH}
@@ -2860,6 +2929,7 @@ function renderOptions(){
     <span class="leap-seg"><button class="${leapStatus==='open'?'on':''}" onclick="setLeapStatus('open')">Open</button><button class="${leapStatus!=='open'?'on':''}" onclick="setLeapStatus('closed')">Closed</button></span>
     <button class="btn btn-primary" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="openLeapAdd()">+ LEAP</button>
   </div>
+  ${selTipHtml()}
   ${sumH}<div class="leap-grid">${cards}</div>${otherH}${healthH}
   <div style="margin-top:0.875rem;font-size:0.6875rem;color:var(--text3);display:flex;gap:0.875rem"><a href="#" style="color:var(--text3)" onclick="setOptDemo(${!optDemo});return false">${optDemo?'Hide demo positions':'Show demo positions'}</a><a href="#" style="color:var(--text3)" onclick="exportOptsCSV();return false">Export options CSV</a></div>`;
 }
@@ -2971,6 +3041,7 @@ function openPmccSell(leapId){
   document.getElementById('mPmccTitle').textContent=`Add trade · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
   document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
   ['pcc-scan-msg','pcc-filled','pcc-err'].forEach(k=>document.getElementById(k).style.display='none');pmccSide('sto');document.getElementById('pcc-pick').innerHTML='';
+  const pr=document.getElementById('pcc-roll');if(pr){pr.checked=false;document.getElementById('pcc-roll-box').hidden=true;fillLeapRollSelect(L);}
   ['pcc-price','pcc-date','pcc-qty','pcc-fees','pcc-expiry'].forEach(k=>document.getElementById(k).style.borderColor='');
   _pmccMode='trade';document.getElementById('pcc-scan-btn').style.display='';
   pmccTab('smartscan');initPmccDrop();openModal('mPmcc');
@@ -3045,13 +3116,13 @@ function pmccRollScan(text,today){
   return{error:`This roll has ${t.map(x=>x.action).join(' + ')} — a LEAP roll needs a buy back plus a new sell, or a sale of the LEAP plus a new buy.`};
 }
 // Apply a scanned roll to this LEAP → {save:[legs]} or {err}. Never touches wheel data.
-function pmccRollApply(r,leap,legs,newId){
+function pmccRollApply(r,leap,legs,newId,link){
   if(!leap)return{err:'LEAP not found'};
   if(r.close.ticker&&r.close.ticker!==leap.underlying)return{err:`The paste is for ${r.close.ticker}, but this LEAP is ${leap.underlying}.`};
   if(r.kind==='short'){
     const b=pmccBuyBack(r.close,leap,legs);if(b.err)return{err:b.err};
     const n=pmccFormLeg({...r.open,newId},leap);if(n.err)return{err:n.err};
-    n.leg.rolledFrom=b.leg.id;const now=new Date().toISOString();b.leg.closeTs=now;n.leg.ts=now;
+    if(link!==false)n.leg.rolledFrom=b.leg.id;const now=new Date().toISOString();b.leg.closeTs=now;n.leg.ts=now;
     return{save:[b.leg,n.leg]};
   }
   if(leap.status!=='open')return{err:'This LEAP is already closed.'};
@@ -3070,11 +3141,13 @@ function pmccRollPreview(r){
   const cash=x=>(x.price||0)*(x.qty||0)*100,net=(cash(r.kind==='short'?r.open:r.close)-cash(r.kind==='short'?r.close:r.open))-(r.close.fees||0)-(r.open.fees||0);
   return`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem"><span style="border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem">↻ ROLL</span><span style="margin-left:auto;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit +':'Net debit -'}$${Math.abs(net).toFixed(2)}</span></div>
   <div style="display:flex;gap:0.5rem;align-items:stretch">${card(r.close,nm[0])}<div style="align-self:center;color:var(--orange)">→</div>${card(r.open,nm[1])}</div>
-  <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save roll</button>`;
+  <label class="roll-opt"><input type="checkbox" id="pcc-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>
+  <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save</button>`;
 }
 function pmccSaveRoll(){
   const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
-  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid());
+  const pair=document.getElementById('pcc-roll-pair');
+  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),pair&&pair.checked?true:false);
   if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
   db.opts=db.opts||[];
   a.save.forEach(l=>{const i=db.opts.findIndex(x=>x.id===l.id);if(i>=0)db.opts[i]=l;else db.opts.push(l);_saveOpt(l);});
@@ -3131,6 +3204,7 @@ function savePmcc(){
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
   const d=pmccDupOf(r.leg,db.opts);
   if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
+  if(document.getElementById('pcc-roll').checked&&document.getElementById('pcc-roll-from').value)r.leg.rolledFrom=document.getElementById('pcc-roll-from').value;
   r.leg.ts=new Date().toISOString();db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
 }
 function pmccClose(id,mode){
@@ -3539,13 +3613,18 @@ async function fetchWheelMarks(force){
 }
 // ── Live marks: CBOE delayed chain via Netlify proxy; graceful fallback to manual marks + local BS greeks ──
 let _optMarksAt=0;
-async function fetchOptionMarks(force){
-  const open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
-  if(!open.length){_optMarkStatus='';return;}
-  if(!force&&_optMarksAt&&!canUse('live-refresh'))return; // free plan: marks once per visit, no auto refresh
-  if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
+function _markStamp(l){return String(l.markAt||'').slice(0,10)+'|'+(l.mark==null?'':l.mark)+'|'+(l.markSrc||'');}
+async function fetchOptionMarks(force, onlyId){
+  let open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
+  if(onlyId)open=open.filter(l=>l.id===onlyId);
+  if(!open.length){if(!onlyId)_optMarkStatus='';return;}
+  if(!onlyId){
+    if(!force&&_optMarksAt&&!canUse('live-refresh'))return; // free plan: marks once per visit, no auto refresh
+    if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
+  }
   const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
-  let ok=0,miss=0,failU=[];
+  let ok=0,miss=0,failU=[],changed=false;
+  const noteFail=l=>{if(l.markWhy!=='none'){l.markWhy='none';l.markNote='No reliable quote for this contract';changed=true;}};
   for(const[u,ls]of Object.entries(byU)){
     try{
       const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${ls.map(OPTS.occ).join(',')}`,{signal:AbortSignal.timeout(15000)});
@@ -3555,27 +3634,31 @@ async function fetchOptionMarks(force){
       ls.forEach(l=>{
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
-        if(l.markSrc==='manual'&&!force)return; // a manual mark wins until the user refreshes explicitly
+        // a price typed in the last 5 days stays until Refresh. An older typed price does not block the quote.
+        if(!force&&l.markSrc==='manual'&&l.markAt&&(Date.now()-Date.parse(l.markAt))/864e5<5)return;
         const c=j.contracts&&j.contracts[OPTS.occ(l)];
         const live=quotes[u]&&quotes[u].state!=='DELAYED'?quotes[u].price:null;
         const prevM=l.mark!=null&&l.mark!==''?+l.mark:null;
         const sm=c?steadyMark(c,j.spot,live,prevM,{strike:+l.strike,type:l.type,regular:isRegularSession()}):null;
-        if(!sm){l.mark=null;l.markSrc=null;l.markWhy='none';l.markNote='No reliable quote for this contract';miss++;return;}
+        if(!sm){noteFail(l);miss++;return;} // keep the last price; the card says there is no fresh quote
+        const before=_markStamp(l);
         l.markWhy=sm.why;l.markNote=markNote(sm.mark,sm.why,u,live,c);
         Object.assign(l,{mark:sm.mark,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),prevClose:c.prevClose>0?+c.prevClose:null,dayOpen:typeof leapDayOpen==='function'?leapDayOpen(OPTS.occ(l),sm.mark):null,iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
-        ok++; // in memory only — live marks are never saved
+        if(_markStamp(l)!==before){_saveOpt(l);changed=true;}
+        ok++;
       });
-    }catch(e){failU.push(u);console.warn('Option marks:',u,e.message);}
+    }catch(e){failU.push(u);ls.forEach(l=>{const cur=(db.opts||[]).find(x=>x.id===l.id);if(cur)noteFail(cur);});console.warn('Option marks:',u,e.message);}
   }
-  _optMarkStatus=failU.length&&!ok?'Live marks unavailable — using manual marks':`Marks: ${ok} updated (delayed)${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
-  if(view==='options')render();
+  _optMarkStatus=failU.length&&!ok?'Live marks unavailable — using the last saved price':`Marks: ${ok} updated (delayed)${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
+  if(changed||view==='options')render();
 }
+async function refreshLegMark(id){await fetchOptionMarks(true,id);}
 
 function renderSidebar(){
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
   // Health badge on the Dashboard nav item — visible from any view
   document.querySelectorAll('.nav-health-badge').forEach(_hb=>{
-    const _hi=allDataHealth();
+    const _hi=openHealth();
     if(_hi.length){
       const worst=_hi.some(i=>i.sev==='red')?'var(--red)':_hi.some(i=>i.sev==='amber')?'var(--yellow)':'var(--text3)';
       _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:0.625rem;font-weight:600;border-radius:0.5625rem;padding:1px 0.4375rem;line-height:1.4">${_hi.length}</span>`;
@@ -3620,11 +3703,11 @@ function renderPositions(){
       <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
     </div>
     <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg></button>
-    <div class="nw" id="new-wheel"><button type="button" class="btn btn-primary btn-sm" id="new-wheel-btn" onclick="openNewWheel()">New wheel</button><div class="nw-box" id="new-wheel-box" hidden><input id="new-rot-ticker-top" type="text" placeholder="Ticker or company" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="new-wheel-list" oninput="nwInput()" onkeydown="nwKey(event)" onblur="nwBlur()"><div class="nw-list" id="new-wheel-list" hidden></div></div></div>
+    <div class="nw" id="new-wheel"><button type="button" class="btn btn-primary btn-sm nw-pill" id="new-wheel-btn" onclick="openNewWheel()">New wheel</button><div class="nw-box" id="new-wheel-box" hidden><input class="nw-pill" id="new-rot-ticker-top" type="text" placeholder="Ticker or company" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="new-wheel-list" oninput="nwInput()" onkeydown="nwKey(event)" onblur="nwBlur()"><div class="nw-list" id="new-wheel-list" hidden></div></div></div>
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
-  </div>`;
+  </div>${selTipHtml()}`;
 
   // Render each rotation
   const cards=visibleWheels.map(w=>{
@@ -3856,10 +3939,7 @@ function openOptionLegs(wheelTrades){
 // original fresh entry. Chains can MERGE — one 8-lot closer consuming two 4-lot legs —
 // so ancestry is a tree walked with a seen-set, not a simple linked list.
 // Returns {trades, rolls, net, live, breakeven} or null if the leg isn't part of a chain.
-// ── Roll inference (read-time only, never writes) ──
-// Marc's rule: buyback(s) and a sell-to-open on the SAME day, same put/call side, at the
-// same strike or the next one, whose shares add up exactly, are one roll — even when it
-// takes two buybacks to make the shares (a merge roll). Stored rollIds are kept and topped up.
+// Stored rollIds only. A buy-to-close and a later sell are not a roll unless the user said Yes.
 function strikeStep(k){k=Math.abs(+k)||0;return k<25?1:k<200?5:10;}
 function nearStrike(a,b){a=+a;b=+b;if(!(a>0&&b>0))return a===b;return Math.abs(a-b)<=Math.max(strikeStep(a),strikeStep(b))+1e-9;}
 // Smallest subset of items whose sizes add to exactly target (first 12 candidates), else null.
@@ -3873,29 +3953,8 @@ const _effRollCache=new WeakMap();
 // Returns copies of wheelTrades carrying their effective rollId (stored or inferred); ._rid maps id → rollId.
 function withInferredRolls(wheelTrades){
   if(_effRollCache.has(wheelTrades))return _effRollCache.get(wheelTrades);
-  const{pairs}=walkLegPairs(wheelTrades);
-  const byId={};wheelTrades.forEach(t=>{byId[t.id]=t;});
-  const isCl=t=>t.action==='BTC'||t.action==='STC';
-  const side=t=>{
-    if(t.action==='CSP')return'P';if(t.action==='STOC')return'C';
-    const a=(pairs[t.id]||[]).map(p=>byId[p.legId]&&byId[p.legId].action);
-    if(a.length&&a.every(x=>x==='CSP'))return'P';if(a.length&&a.every(x=>x==='STOC'))return'C';return null;
-  };
   const rid={};wheelTrades.forEach(t=>{if(t.rollId)rid[t.id]=t.rollId;});
-  const used=new Set();
-  wheelTrades.filter(t=>t.action==='CSP'||t.action==='STOC')
-    .sort((a,b)=>(a.entered||'').localeCompare(b.entered||'')).forEach(o=>{
-    const have=o.rollId?wheelTrades.filter(t=>isCl(t)&&t.rollId===o.rollId).reduce((x,t)=>x+(+t.shares||0),0):0;
-    const need=(+o.shares||0)-have;
-    if(need<=0)return;
-    const k=side(o);
-    const cands=wheelTrades.filter(t=>isCl(t)&&!t.rollId&&!used.has(t.id)&&t.entered&&t.entered===o.entered&&side(t)===k&&nearStrike(t.strike,o.strike));
-    const pick=exactSubset(cands,t=>+t.shares||0,need);
-    if(!pick)return;
-    const key=o.rollId||('inf_'+o.id);
-    rid[o.id]=key;pick.forEach(t=>{rid[t.id]=key;used.add(t.id);});
-  });
-  const out=wheelTrades.map(t=>(rid[t.id]||null)!==(t.rollId||null)?{...t,rollId:rid[t.id]}:t);
+  const out=wheelTrades.map(t=>t);
   out._rid=rid;
   _effRollCache.set(wheelTrades,out);
   return out;
@@ -4344,13 +4403,13 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
-      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
-      ${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
+      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}
+      <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
     const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
     {const cm=wheelChainMap(m.trades),chainOut={};const keep=listCut(_ord.length,_ord.map(t=>cm[t.id]),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);const rh=_S.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_S.map(t=>cm[t.id]),rh,chainOut)+listMoreBtn(wheel.id,_ord.length,keep.length);}
-    expandedHtml+=`</div>`;
+    expandedHtml+=`</div></div>`;
   }
 
   return`
@@ -4393,7 +4452,7 @@ function capturedCellHtml(pct,dollars,open){
   let html=pct+'%';if(dollars!=null)html+=` <span class="${dollars>=0?'g':'r'}">${dollars>=0?'+':'-'}${fmtMoney(Math.abs(dollars))}</span>`;
   return{html,color};
 }
-function ppdCellHtml(v,d){return v!=null&&d>0?`$${fmt2(v)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`:'—';}
+function ppdCellHtml(v,d){return v!=null&&d>0?`${fmtMoney(v)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`:'—';}
 // Pure (READ-ONLY): closed wheel sells (CSP/STOC) → {kept %, realised net $, end date}. Open or part-closed sells are absent.
 // Bought back: net = sell total − buy-back total; expired / assigned / called away: whole premium kept.
 function wheelSellOutcomes(trades){
@@ -4436,12 +4495,14 @@ function wheelListCells(t,L){
     if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:(+t.shares||0)/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
-      const c=capturedCellHtml(Math.round((prem-mark)/prem*100),pf,true);r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(wheelLegOcc(L.ticker,t)):'')}">${c.html}</span><div style="color:var(--text3);font-size:0.625rem;font-weight:400">at $${(+mark).toFixed(2)}</div>`;r.capColor=c.color;}
+      const pct=Math.round((prem-mark)/prem*100),c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap" title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'')}">${pct}% <span class="cap-at">· at $${(+mark).toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;}
     return r;
   }
   const o=L.outcomes[t.id];if(!o)return r;
   const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
-  const c=capturedCellHtml(o.kept,o.net,false);r.cap=c.html;r.capColor=c.color;
+  const c=capturedCellHtml(o.kept,o.net,false);
+  r.cap=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
+  r.capColor=c.color;
   return r;
 }
 function renderTradeRow(t,wheelTrades,opts){
@@ -4462,7 +4523,8 @@ function renderTradeRow(t,wheelTrades,opts){
           ?`<span class="chain-be">breakeven buyback ≤ $${fmtPrem(c.breakeven)} — close cheaper and the whole chain is green</span>`
           :`<span class="chain-be">chain is underwater — no green buyback exists at any price</span>`)
         :`<span class="chain-be">chain complete</span>`;
-      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span><span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
+      const move=rollMoveText(c.trades,t);
+      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span>${move?`<span>${move}</span>`:''}<span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
     }
   }
   if(opts.list){const lc=wheelListCells(t,opts.list);opts={...opts,rocHtml:lc.cap,rocColor:lc.capColor,ppdHtml:lc.ppd,extraAfterStrike:`<span class="to-strike m">${esc(lc.ts)}</span>`,editBtn:true};}
@@ -4480,7 +4542,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
   if(opts.chainOut&&chainHtml&&cIdx!=null){opts.chainOut[cIdx]=chainHtml;chainHtml='';}
-  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}" data-tid="${t.id}">
+  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}" data-act="${esc(t.action||'')}" data-strike="${t.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
     <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
@@ -4588,12 +4650,80 @@ function renderLog(){
 // One lifecycle walk per rotation: tracks open option legs + a running share ledger.
 // wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
 function allDataHealth(){
-  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+esc(i.text)}));}
+  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+i.text}));}
   catch(e){console.warn('options health',e);o=[{sev:'amber',text:'Options · LEAP/options checks could not run — those positions were not checked. Reload to retry.'}];}
   // never report "all clear" when the options legs never loaded — say they weren't checked
   if(_optsLoadError)o.unshift({sev:'amber',text:`Options · Your LEAP/options positions couldn't load (${esc(_optsLoadError)}), so they weren't checked. Reload to retry.`});
   const order={red:0,amber:1,grey:2};
   return runDataHealth().concat(o).sort((a,b)=>order[a.sev]-order[b.sev]);
+}
+// One sentence each: what is already i.text, then why it happened, then how to fix it.
+function explainHealth(text){
+  const t=String(text||'').replace(/^Options( \(DEMO\))? · /,'');
+  const row=(why,how,act)=>({why,how,act});
+  if(/couldn't load|could not run|weren't checked/.test(t))return row('The options list did not load, so those checks were skipped.','Reload the page. If it keeps happening, the connection needs a look.','reload');
+  if(/has no underlying/.test(t))return row('This was saved without a ticker.','Edit the position and enter the ticker.','edit-leg');
+  if(/has no strike/.test(t))return row('The strike was blank when this was saved or imported.','Edit it and enter the strike. Collateral and profit need it.','edit');
+  if(/has no share count/.test(t))return row('The share count was blank, so collateral and profit cannot be worked out.','Edit the trade and enter how many shares.','edit-trade');
+  if(/has no expiry/.test(t))return row('No expiry was recorded, so a close or assignment cannot be matched to it.','Edit it and set the expiry date.','edit');
+  if(/has no contract quantity/.test(t))return row('The number of contracts was blank.','Edit the position and enter the contracts.','edit-leg');
+  if(/neither call nor put/.test(t))return row('It was not saved as a call or a put.','Edit the position and choose call or put.','edit-leg');
+  if(/no long\/short side/.test(t))return row('It is not marked long or short, so profit is calculated the wrong way.','Edit the position and set long or short.','edit-leg');
+  if(/no entry premium/.test(t))return row('The price paid or received was not recorded.','Edit the position and enter the premium.','edit-leg');
+  if(/LEAP expired — close it/.test(t))return row('The expiry date has passed and the LEAP is still open.','Close it, or mark it expired, so it leaves your open positions.','close-leap');
+  if(/still open/.test(t))return row('The expiry has passed but nothing recorded the outcome.','Close it, mark it expired, or record the assignment.','edit-leg');
+  if(/no close price/.test(t))return row('It is marked closed but the close price or date is missing.','Edit it and fill in the close.','edit-leg');
+  if(/closed before it was opened/.test(t))return row('The close date is earlier than the open date.','Edit the dates so the close is on or after the open.','edit-leg');
+  if(/opened after its expiry/.test(t))return row('The open date is after the expiry, which cannot happen.','Edit the dates.','edit-leg');
+  if(/no longer exists/.test(t)&&/LEAP/.test(t))return row('This call was sold against a LEAP that has been deleted.','Edit the call and attach it to a LEAP, or close it.','edit-leg');
+  if(/rotation that no longer exists/.test(t))return row('It points at a wheel that was deleted.','Edit it and clear or change the wheel.','edit-leg');
+  if(/different underlying/.test(t))return row('The option ticker and the wheel ticker are not the same.','Edit the link so both use the same ticker.','edit-leg');
+  if(/identical details/.test(t))return row('The same details were saved more than once, often by importing twice.','Delete the extra copy, or leave it if they are real partial fills.','edit');
+  if(/same fill recorded twice/.test(t))return row('A wheel trade and an option leg share the ticker, strike, expiry and day.','Check both and delete the one you did not mean to keep. Nothing is removed for you.','edit');
+  if(/closes nothing|orphan/.test(t))return row('This close has no matching open option.','Edit the strike, expiry or date so it matches the open trade, or delete it if it was a bad import.','edit-trade');
+  if(/can't be both/.test(t))return row('It is flagged expired-worthless and also closed or assigned. Only one of those is true.','Edit the trade and clear the flag that is wrong.','edit-trade');
+  if(/shares appeared from nowhere|no open CSP/.test(t))return row('Shares were added without a put that was assigned.','Edit the assignment so it matches the put, or add the missing put.','edit-trade');
+  if(/only \d+ held/.test(t))return row('More shares were sold than this wheel held on that date.','Edit the share count, or add the missing buy.','edit-trade');
+  if(/never closed, assigned, or marked expired/.test(t))return row('The expiry passed and nothing recorded what happened to the option.','Open the trade and mark it expired, closed, or assigned.','edit-trade');
+  return row('Something in this record does not add up.','Open it and correct the field that is wrong.','edit');
+}
+function healthKey(i){
+  const t=String(i.text||'').replace(/<[^>]+>/g,'').replace(/\d+d ago/g,'Nd ago').replace(/^Options( \(DEMO\))? · /,'');
+  return (i.tradeId||i.legId||'')+'|'+t;
+}
+function shownHealth(list){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  const d=new Set(raw);
+  return (list||[]).filter(i=>!d.has(healthKey(i)));
+}
+function openHealth(){return shownHealth(allDataHealth());}
+function dismissHealth(key){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  const s=new Set(raw);s.add(key);
+  localStorage.setItem('wh-health-dismiss',JSON.stringify([...s].slice(-200)));
+  _nyOpen=true;render();
+}
+function healthAction(i){
+  const e=explainHealth(i.text);
+  const q=s=>String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  if(e.act==='reload')return {label:'Reload',fn:'location.reload()'};
+  if(e.act==='edit-trade'&&i.tradeId)return {label:'Edit trade',fn:`openEditTrade('${q(i.tradeId)}')`};
+  if(i.legId){
+    const l=(db.opts||[]).find(x=>x.id===i.legId);
+    if(l&&e.act==='close-leap')return {label:'Close it',fn:`openOptClose('${q(l.groupId||l.id)}','close')`};
+    if(l&&l.side==='long'&&l.type==='C'&&!l.parentLeapId)return {label:'Edit LEAP',fn:`openLeapEdit('${q(l.id)}')`};
+    if(l)return {label:'Edit position',fn:`openOptEdit('${q(l.groupId||l.id)}')`};
+    return {label:'Edit position',fn:`goToOpt('${q(i.legId)}')`};
+  }
+  if(i.tradeId)return {label:'Edit trade',fn:`openEditTrade('${q(i.tradeId)}')`};
+  return null;
+}
+function healthItemHtml(i){
+  const e=explainHealth(i.text);
+  const act=healthAction(i);
+  const key=healthKey(i).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const dot=i.sev==='red'?'r':i.sev==='amber'?'a':'g';
+  return `<div class="hy"><button type="button" class="hy-sum" onclick="this.parentElement.classList.toggle('open')"><span class="ny-dot ${dot}"></span><span class="hy-what">${esc(i.text)}</span></button><div class="hy-more"><div>${esc(e.why)}</div><div>${esc(e.how)}</div><div class="hy-acts">${act?`<button type="button" class="btn btn-primary btn-sm" onclick="${act.fn}">${esc(act.label)}</button>`:''}<button type="button" class="btn btn-ghost btn-sm" onclick="dismissHealth('${key}')">Dismiss</button></div></div></div>`;
 }
 function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
 function runDataHealth(){
@@ -4816,22 +4946,16 @@ function renderStatsOverview(){
   const recentTrades=[...db.trades].sort((a,b)=>b.entered.localeCompare(a.entered)).slice(0,8);
 
   // ── Data Health panel ──
-  const health=allDataHealth();
+  const health=openHealth();
   const hRed=health.filter(i=>i.sev==='red').length;
   const hAmber=health.filter(i=>i.sev==='amber').length;
   const hGrey=health.filter(i=>i.sev==='grey').length;
-  const sevDot={red:'var(--red)',amber:'var(--yellow)',grey:'var(--text3)'};
   const healthBadge=[hRed?`<span style="color:var(--red);font-size:0.6875rem;font-weight:600">${hRed} critical</span>`:'',
       hAmber?`<span style="color:var(--yellow);font-size:0.6875rem;font-weight:600">${hAmber} warning${hAmber>1?'s':''}</span>`:'',
       hGrey?`<span style="color:var(--text3);font-size:0.6875rem;font-weight:600">${hGrey} note${hGrey>1?'s':''}</span>`:''].filter(Boolean).join('');
   const healthRows=health.map(i=>{
     const t=db.trades.find(x=>x.id===i.tradeId);
-    return`<div style="border-top:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:0.625rem;padding:0.5625rem 1rem 0">
-        <span class="d-alert-dot" style="background:${sevDot[i.sev]};flex-shrink:0"></span>
-        <span style="font-size:0.75rem;color:var(--text2);line-height:1.5;flex:1">${i.text}</span>
-        ${i.tradeId?`<button class="btn btn-ghost" style="font-size:0.625rem;padding:0.1875rem 0.625rem;flex-shrink:0" onclick="goToTrade('${i.wheelId}','${i.tradeId}')">Go to</button>`:i.legId?`<button class="btn btn-ghost" style="font-size:0.625rem;padding:0.1875rem 0.625rem;flex-shrink:0" onclick="goToOpt('${i.legId}')">Go to</button>`:''}
-      </div>
+    return`<div style="padding:0 1rem;border-top:1px solid var(--border)">${healthItemHtml(i)}
       ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
     </div>`;
   }).join('');
@@ -5002,7 +5126,7 @@ function renderHome(){
   const un=calcAllUnrealised(db.wheels,db.trades,_priceOf,legs);
   const wheelLegs=db.wheels.filter(w=>w.status==='open').flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).map(l=>({...l,ticker:l.ticker||w.ticker,wheelId:w.id})));
   const nx=nextExpiry(wheelLegs,legs,today);
-  const health=allDataHealth();
+  const health=openHealth();
   const mName=new Date().toLocaleDateString('en-GB',{month:'long'});
   const wl=calcWinLoss();
   const caw=currentCapitalAtWork();
@@ -5023,11 +5147,11 @@ function renderHome(){
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="hk-grid hk-row2">
-    <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p)p.hidden=!p.hidden"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':''):'nothing to do'}</div></div>
+    <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p){p.hidden=!p.hidden;_nyOpen=!p.hidden}"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':''):'nothing to do'}</div></div>
     <div class="hk"><div class="hk-l">Return this month ${ii(`This month's realised profit from sold options, as a % of ${rs.base==='account'?'the account size you set':'money at work (LEAP cost + shares/put collateral)'}.${rs.target?` Target ${rs.target}%.`:''} Change this in Settings.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':'neg'):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'at work'}${rs.target?` · target ${rs.target}%`:''}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
-  <div class="hcard ny-panel" id="ny-panel" hidden><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(i=>`<div class="ny-row"><span class="ny-dot ${i.sev==='red'?'r':i.sev==='amber'?'a':'g'}"></span><span>${i.text}</span><a onclick="goToHealth()">Open</a></div>`).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
+  <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}</div>
   <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
   ${renderMonthlyRealised()}
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
@@ -5236,22 +5360,23 @@ function nwTicker(s){const t=String(s||'').toUpperCase().trim();return /^[A-Z][A
 function openNewWheel(){_nwOpen=true;_nwHits=[];_nwHi=-1;_nwState='';showNewWheel();const inp=document.getElementById('new-rot-ticker-top');if(inp){inp.value='';inp.focus();}}
 function showNewWheel(){const b=document.getElementById('new-wheel-btn'),box=document.getElementById('new-wheel-box');if(b)b.hidden=true;if(box)box.hidden=false;}
 function closeNewWheel(){_nwOpen=false;clearTimeout(_nwTimer);_nwSeq++;_nwHits=[];_nwHi=-1;const b=document.getElementById('new-wheel-btn'),box=document.getElementById('new-wheel-box'),list=document.getElementById('new-wheel-list');if(b)b.hidden=false;if(box)box.hidden=true;if(list)list.hidden=true;}
+function nwRank(q,remote){if(window.POPULAR&&POPULAR.rank)return POPULAR.rank(q,remote);const seen=new Set();return (remote||[]).filter(h=>{const s=String(h.symbol||'').toUpperCase();if(!/^[A-Z][A-Z0-9]{0,9}$/.test(s)||seen.has(s))return false;seen.add(s);return true;}).slice(0,8);}
 function renderNwList(){const list=document.getElementById('new-wheel-list');if(!list)return;
   if(!_nwOpen){list.hidden=true;return;}
   const inp=document.getElementById('new-rot-ticker-top');const q=inp?inp.value.trim():'';
   if(!q){list.hidden=true;list.innerHTML='';return;}
   list.hidden=false;
-  if(_nwState==='err'){list.innerHTML=`<div class="nw-note">${nwTicker(q)?"Couldn't look up names. Press Enter to use the ticker.":"Couldn't look up names."}</div>`;return;}
-  if(_nwState!=='ok'){list.hidden=true;list.innerHTML='';return;}
-  if(!_nwHits.length){list.innerHTML=`<div class="nw-note">No matches${nwTicker(q)?' — press Enter to use '+esc(nwTicker(q)):''}</div>`;return;}
+  if(_nwState==='err'&&!_nwHits.length){list.innerHTML=`<div class="nw-note">${nwTicker(q)?"Couldn't look up names. Press Enter to use the ticker.":"Couldn't look up names."}</div>`;return;}
+  if(!_nwHits.length){if(_nwState!=='ok'){list.hidden=true;return;}list.innerHTML=`<div class="nw-note">No matches${nwTicker(q)?' — press Enter to use '+esc(nwTicker(q)):''}</div>`;return;}
   list.innerHTML=_nwHits.map((h,i)=>`<button type="button" class="nw-item${i===_nwHi?' on':''}" onmousedown="event.preventDefault()" onclick="commitNewWheel('${esc(h.symbol)}')"><span class="nw-sym">${esc(h.symbol)}</span><span class="nw-name">${esc(h.name||'')}</span></button>`).join('');
 }
-function nwInput(){const inp=document.getElementById('new-rot-ticker-top');const q=inp?inp.value.trim():'';clearTimeout(_nwTimer);const seq=++_nwSeq;_nwHits=[];_nwHi=-1;_nwState='';
-  if(q.length<1){renderNwList();return;}
+function nwInput(){const inp=document.getElementById('new-rot-ticker-top');const q=inp?inp.value.trim():'';clearTimeout(_nwTimer);const seq=++_nwSeq;
+  const local=q?nwRank(q,[]):[];_nwHits=local;_nwHi=local.length?0:-1;_nwState=local.length?'ok':'';
   renderNwList();
+  if(q.length<1)return;
   _nwTimer=setTimeout(()=>nwSearch(q,seq),300);
 }
-async function nwSearch(q,seq){try{const r=await fetch('/.netlify/functions/symbol?q='+encodeURIComponent(q),{signal:AbortSignal.timeout(8000)});if(seq!==_nwSeq)return;if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(seq!==_nwSeq)return;if(j.error)throw new Error('lookup');_nwHits=Array.isArray(j.results)?j.results.slice(0,8):[];_nwHi=_nwHits.length?0:-1;_nwState='ok';}catch(e){if(seq!==_nwSeq)return;_nwHits=[];_nwHi=-1;_nwState='err';}renderNwList();}
+async function nwSearch(q,seq){try{const r=await fetch('/.netlify/functions/symbol?q='+encodeURIComponent(q),{signal:AbortSignal.timeout(8000)});if(seq!==_nwSeq)return;if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(seq!==_nwSeq)return;if(j.error)throw new Error('lookup');_nwHits=nwRank(q,Array.isArray(j.results)?j.results:[]);_nwHi=_nwHits.length?0:-1;_nwState='ok';}catch(e){if(seq!==_nwSeq)return;if(!_nwHits.length){_nwHi=-1;_nwState='err';}}renderNwList();}
 function nwKey(e){if(e.key==='Escape'){e.preventDefault();closeNewWheel();return;}
   if(e.key==='ArrowDown'||e.key==='ArrowUp'){if(!_nwHits.length)return;e.preventDefault();_nwHi=e.key==='ArrowDown'?Math.min(_nwHits.length-1,_nwHi+1):Math.max(0,_nwHi-1);renderNwList();return;}
   if(e.key==='Enter'){e.preventDefault();commitNewWheel();}}
@@ -5384,6 +5509,7 @@ function populateWheelSelect(selectedId,ticker){
   });
   if(selectedId)sel.value=selectedId;
   else if(ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
+  fillRollSelect('tf-roll-from',sel.value,document.getElementById('tf-id').value);
 }
 function openAddTrade(wheelId){
   document.getElementById('tf-id').value='';
@@ -5391,6 +5517,7 @@ function openAddTrade(wheelId){
   document.getElementById('tf-entered').value=new Date().toISOString().slice(0,10);
   ['tf-expiry','tf-strike','tf-delta','tf-premium','tf-shares','tf-total','tf-days','tf-ppd','tf-comment'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('tf-fees').value='0';
+  const tr=document.getElementById('tf-roll');if(tr){tr.checked=false;document.getElementById('tf-roll-box').hidden=true;}
   document.getElementById('tf-delete-btn').style.display='none';
   document.getElementById('tf-expired-btn').style.display='none';
   document.getElementById('tg-created-at').style.display='none';
@@ -5413,6 +5540,7 @@ function openEditTrade(id){
   document.getElementById('tf-fees').value=t.fees||0;document.getElementById('tf-total').value=t.total||'';
   document.getElementById('tf-days').value=t.days||'';document.getElementById('tf-ppd').value=t.ppd||'';
   document.getElementById('tf-comment').value=t.comment||'';
+  const tr=document.getElementById('tf-roll');if(tr){tr.checked=false;document.getElementById('tf-roll-box').hidden=true;}
   document.getElementById('tf-delete-btn').style.display='inline-flex';
   document.getElementById('mTradeTitle').textContent='Edit Trade';
   const _expBtn=document.getElementById('tf-expired-btn');
@@ -5492,18 +5620,19 @@ function saveTrade(){
     if(idx>=0){
       const old=db.trades[idx];
       const updated={id,...data,createdAt:old.createdAt||new Date().toISOString()};
-      if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
+      if(document.getElementById('tf-roll').checked&&document.getElementById('tf-roll-from').value)linkWheelRoll(updated,document.getElementById('tf-roll-from').value);
+      else if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
       if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
       updated.verified=old.verified||false;                    // preserve verification status
       db.trades[idx]=updated;
     }
   }
   else{
-    db.trades.push({id:uid(),createdAt:new Date().toISOString(),...data});
+    const newTrade={id:uid(),createdAt:new Date().toISOString(),...data};
+    if(document.getElementById('tf-roll').checked)linkWheelRoll(newTrade,document.getElementById('tf-roll-from').value);
+    db.trades.push(newTrade);
     expanded.add(wheelId);
-    const newTrade=db.trades[db.trades.length-1];
     _saveTrade(newTrade);closeModal('mTrade');render();
-    checkRollCandidate(newTrade,wheelId,entered,action);
     return;
   }
   const updatedTrade=db.trades.find(t=>t.id===id);
@@ -6637,6 +6766,7 @@ function switchPasteTab(tab){
     document.getElementById('pm-action').value='CSP';
     ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('pm-fees').value='0';
+    const pr=document.getElementById('pm-roll');if(pr){pr.checked=false;document.getElementById('pm-roll-box').hidden=true;}
     populatePMWheelSelect(wheelId,ticker);
     onPMActionChange();
   }
@@ -6648,6 +6778,7 @@ function populatePMWheelSelect(wheelId,ticker){
     sel.innerHTML+=`<option value="${w.id}" ${w.id===wheelId?'selected':''}>${esc(w.label||w.ticker)} ${w.status==='open'?'(Open)':'(Closed)'}</option>`;
   });
   if(!wheelId&&ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
+  fillRollSelect('pm-roll-from',sel.value,'');
 }
 function onPMTickerInput(){const tk=document.getElementById('pm-ticker').value.toUpperCase().trim();populatePMWheelSelect(null,tk);}
 function onPMActionChange(){
@@ -6688,8 +6819,8 @@ function savePMTrade(){
     delta:isNaN(deltaRaw)?null:deltaRaw,
     premium,fees,shares,total,days,ppd:days>0?total/days:0,
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
+  if(document.getElementById('pm-roll').checked)linkWheelRoll(newTrade,document.getElementById('pm-roll-from').value);
   db.trades.push(newTrade);expanded.add(wheelId);
-  checkRollCandidate(newTrade,wheelId,entered,action);
   _saveTrade(newTrade);closeModal('mPaste');render();
 }
 function openPasteTrade(wheelId){
@@ -6707,28 +6838,31 @@ function showPasteStep1(){
   document.getElementById('paste-step2').style.display='none';
 }
 
-// ── Roll detection ──
-let pendingRollData=null;
-function checkRollCandidate(newTrade,wheelId,entered,action){
-  if(action!=='CSP'&&action!=='STOC')return;
-  const twoAgo=new Date(entered);twoAgo.setDate(twoAgo.getDate()-2);
-  const twoAgoStr=twoAgo.toISOString().slice(0,10);
-  const prevClose=db.trades.find(t=>t.wheelId===wheelId&&(t.action==='BTC'||t.action==='STC')&&t.entered>=twoAgoStr&&t.entered<=entered&&t.id!==newTrade.id&&!t.rollId);
-  if(prevClose){
-    pendingRollData={rid:'roll_'+uid(),newId:newTrade.id,prevId:prevClose.id};
-    document.getElementById('mRoll-msg').textContent=`Link this ${action} to the ${prevClose.action} on ${fmtDateFull(prevClose.entered)} as a roll? Linked trades will be highlighted together in the trade log.`;
-    setTimeout(()=>openModal('mRoll'),200);
-  }
+// A ticked "Mark as roll" shares one rollId with the trade the user picked. Nothing is chosen for them.
+function fillRollSelect(selId,wheelId,excludeId){
+  const sel=document.getElementById(selId);if(!sel)return;
+  const rows=(db.trades||[]).filter(t=>t&&t.wheelId===wheelId&&t.id!==excludeId).sort((a,b)=>String(b.entered||'').localeCompare(String(a.entered||'')));
+  sel.innerHTML='<option value="">Choose a trade</option>'+rows.map(t=>{const k=t.strike?` $${fmt2(t.strike).replace(/\.00$/,'')}`:'';const when=t.entered?` · ${fmtDateShort(t.entered)}`:'';return `<option value="${esc(t.id)}">${esc((t.action||'')+k+when)}</option>`;}).join('');
 }
-function confirmRoll(){
-  if(!pendingRollData)return;
-  const{rid,newId,prevId}=pendingRollData;
-  const nt=db.trades.find(t=>t.id===newId);
-  const pt=db.trades.find(t=>t.id===prevId);
-  if(nt){nt.rollId=rid;_saveTrade(nt);}if(pt){pt.rollId=rid;_saveTrade(pt);}
-  render();closeModal('mRoll');pendingRollData=null;
+function linkWheelRoll(trade,fromId){
+  const from=(db.trades||[]).find(t=>t.id===fromId);if(!from||from.id===trade.id)return;
+  const rid=from.rollId||('roll_'+uid());
+  trade.rollId=rid;
+  if(from.rollId!==rid){from.rollId=rid;_saveTrade(from);}
 }
-
+function fillLeapRollSelect(leap){
+  const sel=document.getElementById('pcc-roll-from');if(!sel||!leap)return;
+  const rows=pmccShortsFor(leap,db.opts||[]).slice().sort((a,b)=>String(b.entryDate||b.closeDate||'').localeCompare(String(a.entryDate||a.closeDate||'')));
+  sel.innerHTML='<option value="">Choose a trade</option>'+rows.map(l=>`<option value="${esc(l.id)}">${esc((l.status==='open'?'Open':'Closed')+' $'+fmt2(l.strike).replace(/\.00$/,'')+' · '+_fdShort(l.entryDate||l.closeDate||''))}</option>`).join('');
+}
+// Stored roll links only. Nothing here guesses that a close and a later open belong together.
+function rollMoveText(trades,tip){
+  if(!tip||!tip.rollId)return '';
+  const btc=(trades||[]).find(t=>(t.action==='BTC'||t.action==='STC')&&t.rollId===tip.rollId);
+  if(!btc)return '';
+  const bit=t=>`$${fmt2(t.strike).replace(/\.00$/,'')}${t.expiry?' '+fmtDateShort(t.expiry):''}`;
+  return `${bit(btc)} → ${bit(tip)}`;
+}
 // ── SmartScan — broker-agnostic pattern hunter ──
 // Handles: Robinhood, Tastytrade, IBKR, Schwab, TD Ameritrade, E*Trade,
 //          Fidelity, Webull, eToro, Trading 212, and anything else
@@ -6958,7 +7092,6 @@ function parseRollTrades(raw,todayISO){
   const feeRx=/(?:est\.?\s*regulatory\s+fees?|contract\s+fee|commission)[:\s]*\n?\s*\$?([\d.]+)/gi;
   let totalFees=0;let fm;while((fm=feeRx.exec(raw))!==null)totalFees+=parseFloat(fm[1]);
   const feePerLeg=Math.round((totalFees/2)*100)/100;
-  const rid='roll_'+uid();
   const trades=[];
   for(let i=0;i<2;i++){
     const match=legMatches[i];
@@ -6996,7 +7129,7 @@ function parseRollTrades(raw,todayISO){
     }else{action=direction==='buy'?'IN':'OUT';}
     const total=premium&&shares?computeTotal(action,premium,shares,feePerLeg):0;
     const days=expiry&&entered?Math.max(0,Math.round((new Date(expiry)-new Date(entered))/86400000)):0;
-    trades.push({ticker,action,entered,expiry,strike,premium,shares,contracts,optType,effect:posEffect,fees:feePerLeg,total,days,ppd:days>0?total/days:0,rollId:rid});
+    trades.push({ticker,action,entered,expiry,strike,premium,shares,contracts,optType,effect:posEffect,fees:feePerLeg,total,days,ppd:days>0?total/days:0,rollId:null});
   }
   return trades.length===2?trades:null;
 }
@@ -7028,8 +7161,8 @@ function showRollPreview(trades){
   const net=trades.reduce((s,t)=>s+(isCredit(t.action)?t.total:-t.total),0);
   document.getElementById('paste-preview').innerHTML=`
     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6875rem">
-      <span style="background:rgba(255,90,54,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">↻ ROLL DETECTED</span>
-      <span style="font-size:0.6875rem;color:var(--text3)">Both trades linked automatically</span>
+      <span style="background:rgba(255,90,54,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">TWO TRADES</span>
+      <span style="font-size:0.6875rem;color:var(--text3)">Saved as a close and an open. Link them yourself if you want.</span>
       <span style="margin-left:auto;font-size:0.875rem;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit: +':'Net debit: -'}$${Math.abs(net).toFixed(2)}</span>
     </div>
     <div style="display:flex;gap:0.5rem;align-items:stretch;margin-bottom:0.75rem">
@@ -7037,7 +7170,8 @@ function showRollPreview(trades){
       <div style="display:flex;align-items:center;color:var(--orange);font-size:1.25rem;font-weight:600;flex-shrink:0">→</div>
       ${tradeCard(trades[1])}
     </div>
-    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>`;
+    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>
+    <label class="roll-opt"><input type="checkbox" id="paste-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>`;
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
 }
@@ -7089,7 +7223,9 @@ function showPastePreview(p){
         <div><div class="mini-lbl">Fees</div><div class="fs-sm">$${(p.fees||0).toFixed(2)}</div></div>
       </div>
     </div>
-    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>`;
+    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel" onchange="fillRollSelect('paste-roll-from',this.value)">${opts}</select></div>
+    <label class="roll-opt"><input type="checkbox" id="paste-roll-on" onchange="document.getElementById('paste-roll-box').hidden=!this.checked"> Mark as roll</label><div id="paste-roll-box" hidden class="fld"><label>Rolls from</label><select id="paste-roll-from"><option value="">Choose a trade</option></select></div>`;
+  fillRollSelect('paste-roll-from',document.getElementById('paste-wheel-sel').value);
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
 }
@@ -7105,12 +7241,14 @@ function confirmParsed(){
       if(ex){wheelId=ex.id;}
       else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
+    const pair=document.getElementById('paste-roll-pair');
+    const rid=pair&&pair.checked?'roll_'+uid():null;
     trades.forEach(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-        rollId:p.rollId,verified:false,comment:'via SmartScan (roll)'};
-      db.trades.push(nt);_saveTrade(nt); // save only what was touched
+        rollId:rid,verified:false,comment:'via SmartScan'};
+      db.trades.push(nt);_saveTrade(nt);
     });
     expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
     try{render();}catch(e){console.error('SmartScan roll render error:',e);}
@@ -7128,6 +7266,8 @@ function confirmParsed(){
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
     verified:false,comment:'via SmartScan'};
+  const on=document.getElementById('paste-roll-on');
+  if(on&&on.checked)linkWheelRoll(nt,document.getElementById('paste-roll-from').value);
   db.trades.push(nt);_saveTrade(nt); // save only what was touched
   expanded.add(wheelId);
   closeModal('mPaste');parsedTradeData=null;
@@ -7419,7 +7559,7 @@ function demoBoot(){
   document.getElementById('auth-overlay').style.display='none';
   document.documentElement.classList.add('ot-demo');
   const bar=document.createElement('div');bar.id='demo-banner';
-  bar.innerHTML='<span><b>Demo</b> with made-up trades. Nothing is saved to an account.</span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/start" class="db-go">Start free</a></span>';
+  bar.innerHTML='<span><b>Demo</b> with made-up trades. Nothing is saved to an account. Long press or right-click any trades to see the real net.</span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/start" class="db-go">Start free</a></span>';
   document.body.prepend(bar);
   ['settings-export','settings-signout','settings-delete','settings-user'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   const sx=document.getElementById('settings-legal');if(sx){const r=document.createElement('button');r.className='btn btn-ghost btn-full';r.style.cssText='text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem';r.textContent='↺ Reset demo';r.onclick=()=>OT_DEMO.reset();sx.after(r);}
@@ -7536,6 +7676,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
     // Start polling — clear any existing handle first so re-logins never stack intervals
     clearInterval(_pollHandle);
     _pollHandle = setInterval(fetchAllQuotes, 60000);
+    fetchOptionMarks(false);
   } else {
     _confirmedUid = null;_ent=null;_entErr=false;syncProBadge();
     clearInterval(_pollHandle);
@@ -7588,7 +7729,7 @@ window.saveOpt = saveOpt;
 window.deleteOptGroup = deleteOptGroup;
 window.openOptClose = openOptClose;
 window.saveOptClose = saveOptClose;
-window.fetchOptionMarks = fetchOptionMarks;
+window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth; window.dismissSelTip = dismissSelTip; window.selStart = selStart; window.selDone = selDone;
 
 window.openNewPos = openNewPos;
 window.quickAddRotation = quickAddRotation;
@@ -7605,7 +7746,22 @@ window.parsePaste = parsePaste;
 window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;
 window.confirmParsed = confirmParsed;
-window.confirmRoll = confirmRoll;
+function selTipHtml(){try{if(localStorage.getItem('wh-sel-tip')==='1')return '';}catch(e){}return `<div class="sel-tip"><span>Tip: long press or right-click trades to see their net</span><button type="button" class="sel-tip-x" onclick="dismissSelTip(event)" aria-label="Dismiss">✕</button></div>`;}
+function dismissSelTip(e){if(e){e.preventDefault();e.stopPropagation();}try{localStorage.setItem('wh-sel-tip','1');}catch(err){}document.querySelectorAll('.sel-tip').forEach(n=>n.remove());}
+function selStart(){if(!_selOn)selEnter();}
+function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');dismissSelTip();try{history.pushState({whSel:1},'');}catch(e){}selPaint();}
+function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const panel=document.getElementById('sel-panel');if(panel)panel.hidden=true;}
+function selDone(){if(_selOn&&history.state&&history.state.whSel){_selPop=true;history.back();return;}selExit();}
+function selRead(row){return{cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||'',tk:row.getAttribute('data-tk')||'',fee:+row.getAttribute('data-fee')||0,ct:+row.getAttribute('data-ct')||0,act:row.getAttribute('data-act')||'',strike:row.getAttribute('data-strike')||''};}
+function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_sel.has(k))_sel.delete(k);else _sel.set(k,selRead(row));row.classList.toggle('sel',_sel.has(k));if(!_sel.size){selDone();return;}selBar();}
+function selPaint(){document.querySelectorAll('.trow[data-sel]').forEach(el=>el.classList.toggle('sel',_sel.has(el.getAttribute('data-sel'))));selBar();}
+function selBar(){const panel=document.getElementById('sel-panel');if(!panel)return;if(!_selOn||!_sel.size){panel.hidden=true;return;}panel.hidden=false;const items=[..._sel.values()];const s=selSummary(items);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),kind=document.getElementById('sel-kind'),bits=document.getElementById('sel-bits'),list=document.getElementById('sel-list');const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));if(net){net.textContent=money(s.net);net.className=s.net<0?'r':'g';}if(kind){kind.textContent=s.net<0?'Net debit':s.net>0?'Net credit':'Even';kind.className='sel-kind '+(s.net<0?'r':'g');}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(bits){const lines=[`Collected ${fmtMoney(s.credits)}` ,`Paid ${fmtMoney(s.debits)}`,`Fees ${fmtMoney(s.fees)}`];if(s.tickers.length>1)lines.push(s.tickers.map(t=>`${esc(t.tk)} ${money(t.cash)}`).join(' · '));if(s.contracts>0)lines.push(`${s.contracts} contract${s.contracts===1?'':'s'} · ${money(s.per)} each`);bits.innerHTML=lines.map(l=>`<div>${l}</div>`).join('');}if(list){list.innerHTML=items.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>{const k=t.strike?` $${fmt2(+t.strike).replace(/\.00$/,'')}`:'';return `<div class="sel-row"><span>${t.date?fmtDateShort(t.date):''}</span><span>${esc((t.act||'')+k)}</span><span class="${t.cash<0?'r':'g'}">${money(t.cash)}</span></div>`;}).join('');}}
+document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();_selSkip=true;if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;const x=e.clientX,y=e.clientY;let held=false;try{row.setPointerCapture(e.pointerId);}catch(err){}const timer=setTimeout(()=>{held=true;_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}},500);const cancel=ev=>{clearTimeout(timer);if(ev&&ev.type==='pointerup'&&held)_selSkip=true;row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel(ev);};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
+document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
+document.addEventListener('click',e=>{if(!_selOn)return;const t=e.target;if(t.closest&&(t.closest('.trow[data-sel]')||t.closest('#sel-panel')))return;selDone();});
+document.addEventListener('contextmenu',e=>{const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;e.preventDefault();if(_selSkip)return;if(!_selOn)selEnter();selToggle(row);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_selOn){e.preventDefault();selDone();}});
+window.addEventListener('popstate',()=>{if(_selPop){_selPop=false;selExit();return;}if(_selOn)selExit();});
 window.doImport = doImport;
 window.openPasteTrade = openPasteTrade;
 window.openEditWheel = openEditWheel;

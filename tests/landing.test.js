@@ -7,8 +7,8 @@ test('installed app and returning users skip the landing page',()=>{assert.ok(L.
 test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');});
 test('landing leads with the USPs, top three first, then the rest, plans, not financial advice, CTAs, no hype',()=>{
   const i=id=>L.indexOf('id="'+id+'"');assert.ok(i('usp-broker')>0&&i('usp-broker')<i('usp-honest')&&i('usp-honest')<i('usp-smartscan')&&i('usp-smartscan')<i('plans'),'USP order');
-  ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Roll chains','PMCC','every minute','after-hours','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','href="/start"','id="plans"'].forEach(s=>assert.ok(L.includes(s),s));
-  ['img/shot-rollchain.webp'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
+  ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Pick any trades. See the real net.','PMCC','every minute','after-hours','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','href="/start"','id="plans"'].forEach(s=>assert.ok(L.includes(s),s));
+  ['img/select-net.png'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
   assert.ok(L.includes('Demo data')&&L.includes('made-up numbers'),'screens and examples labelled');
   assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));});
 test('landing is light: no external CSS/fonts, images small',()=>{assert.ok(!/<link[^>]+stylesheet/.test(L));fs.readdirSync(path.join(A,'img')).forEach(f=>assert.ok(fs.statSync(path.join(A,'img',f)).size<60000,f));});

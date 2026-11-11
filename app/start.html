@@ -12,7 +12,9 @@
 :root{--bg:#FAF9F6;--card:#FFFFFF;--text:#111111;--text2:#3d3d40;--text3:#6b6b70;--line:#E4E1DA;--accent:#FF5A36;--profit:#1A9E5A;--loss:#D93A3A}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 a{color:var(--accent)}.wrap{max-width:68rem;margin:0 auto;padding:0 1.25rem}
-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}header img{height:2.5rem;width:auto;display:block}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:900;font-display:swap;src:url('nunito-900.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+.wm{font-family:Nunito,sans-serif;font-weight:900;font-size:1.75rem;letter-spacing:normal;line-height:1;display:inline-block;color:var(--text);transform:skewX(-9deg);transform-origin:center bottom}
+header{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}header img{height:2.5rem;width:auto;display:block}.logo{display:flex;align-items:center;gap:.5rem;text-decoration:none}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .btn{display:block;text-align:center;padding:.9rem 1.25rem;border-radius:.625rem;text-decoration:none;font-weight:700;font-size:1rem}.btn.p{background:var(--accent);color:#FFFFFF}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
 .btn.sm{display:inline-block;padding:.5rem .9rem;font-size:.9rem;font-weight:600}
@@ -38,7 +40,7 @@ footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap
 </head>
 <body>
 <div class="wrap">
-  <header><a href="/"><img src="logo-horizontal-dark.svg" alt="OpTrack" width="128" height="40"></a><a class="btn g sm" href="/app/">Sign in</a></header>
+  <header><a class="logo" href="/"><img src="logo-mark.svg" alt="" width="40" height="40"><span class="wm" data-brand="name">OpTrack</span></a><a class="btn g sm" href="/app/">Sign in</a></header>
 
   <div class="hero"><div>
   <h1><span data-brand="name">OpTrack</span></h1>

@@ -6,7 +6,7 @@ function pick(raw) {
   for (const r of (raw && raw.result) || []) {
     const symbol = String(r.displaySymbol || r.symbol || '').toUpperCase().trim();
     const name = String(r.description || '').replace(/\s+/g, ' ').trim();
-    if (!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(symbol) || seen.has(symbol)) continue;
+    if (!/^[A-Z][A-Z0-9]{0,9}$/.test(symbol) || seen.has(symbol)) continue; // US listing only — drop .V .L .MI .NE and other exchange suffixes
     if (r.type && !OK.test(String(r.type))) continue;
     seen.add(symbol);
     out.push({ symbol, name });
