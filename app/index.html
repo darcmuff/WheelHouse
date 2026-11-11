@@ -2723,6 +2723,14 @@ function pmccChainMap(ev){
 }
 // LEAP card trade list: short calls only (the LEAP itself lives in the header), newest first, one row per trade, Edit on every row.
 function pmccShortEvents(leap,legs){return pmccTradeEvents(leap,legs).filter(e=>e.kind==='short');}
+// Realised Captured for a short call. Display only; the leg's P&L is unchanged.
+function pmccClosedCaptured(c){
+  if(!c)return null;
+  const sold=+c.entryPrice||0,net=OPTS.legPnL(c).realized,closeP=c.status==='closed'?(+c.closePrice||0):0;
+  if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);return {html:net!=null?`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${(+closeP).toFixed(2)}</span></div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html,color:cc.color};}
+  if(net!=null){const cc=capturedCellHtml(0,net,false);return {html:cc.html.replace(/^0% /,''),color:cc.color};}
+  return null;
+}
 function renderPmccListRow(e,spot,today,cmap,chainOut){
   const c=e.leg,par=cmap&&cmap._parents?cmap._parents:{};
   const cIdx=cmap?cmap[e.legId]:undefined,cCls=cIdx!=null?' chain-tint':'';
@@ -2741,10 +2749,10 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
       if(d&&net!=null)ppd=ppdCellHtml(net/d,d);
-      const closeP=c.status==='closed'?(+c.closePrice||0):0;
-      if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);cap=net!=null?`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${(+closeP).toFixed(2)}</span></div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html;capColor=cc.color;}
-      else if(net!=null)cap=capturedCellHtml(0,net,false).html.replace(/^0% /,'');
+      if(c.status!=='closed'){const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}}
     }
+  }else if(e.action==='BTC'&&c&&c.status==='closed'){
+    const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}
   }
   let chainHtml='';
   const isTip=rolled&&!Object.values(par).some(ps=>ps.includes(e.legId));
@@ -4517,9 +4525,40 @@ function wheelListCmp(a,b,pairs,idx){
   if(cl(a)!==cl(b))return cl(b)-cl(a);
   return (idx(b))-(idx(a));
 }
+// Closed Captured markup. Same words and colours wherever it is drawn.
+function closedCapturedHtml(o){
+  const c=capturedCellHtml(o.kept,o.net,false);
+  const at=o.px!=null?` <span class="cap-at">· at $${(+o.px).toFixed(2)}</span>`:'';
+  const html=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%${at}</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
+  return{html,color:c.color};
+}
+// Which openers have a matched buy-to-close row. Display only: the outcome numbers stay on the sell.
+// Expiries and assignments have no BTC row, so they are not moved.
+function wheelCapturedOnClose(trades){
+  const{pairs}=walkLegPairs(trades||[]);const byId={};(trades||[]).forEach(t=>{byId[t.id]=t;});
+  const hide=new Set(),best={};
+  for(const[cid,ps]of Object.entries(pairs)){
+    const c=byId[cid];if(!c||c.action!=='BTC')continue;
+    ps.forEach(p=>{
+      const s=byId[p.legId];if(!s||s.expiredWorthless||(s.action!=='CSP'&&s.action!=='STOC'))return;
+      hide.add(s.id);
+      const cur=best[s.id];
+      if(!cur||String(c.entered||'')>=String(cur.entered||''))best[s.id]={id:c.id,entered:c.entered||''};
+    });
+  }
+  const onClose={};
+  Object.entries(best).forEach(([leg,b])=>{(onClose[b.id]=onClose[b.id]||[]).push(leg);});
+  return{hide,onClose};
+}
 // Wheel trade-list cells (To strike, PPD, Captured) — same meaning as the LEAP card's short-call list.
 function wheelListCells(t,L){
   const r={ts:'—',ppd:'—',cap:'—',capColor:'var(--text3)'};
+  if(t.action==='BTC'){
+    const place=wheelCapturedOnClose(L.trades||[]),ids=(place.onClose[t.id]||[]);
+    const cells=ids.map(id=>L.outcomes&&L.outcomes[id]).filter(Boolean).map(closedCapturedHtml);
+    if(cells.length){r.cap=cells.map(c=>c.html).join('');r.capColor=cells[cells.length-1].color;}
+    return r;
+  }
   if(t.action!=='CSP'&&t.action!=='STOC')return r;
   const prem=+t.premium||0,dd=(a,b)=>{if(!a||!b)return null;const d=Math.round((Date.parse(a)-Date.parse(b))/864e5);return isNaN(d)?null:Math.max(1,d);};
   if(L.openIds.has(t.id)){
@@ -4535,10 +4574,8 @@ function wheelListCells(t,L){
   }
   const o=L.outcomes[t.id];if(!o)return r;
   const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
-  const c=capturedCellHtml(o.kept,o.net,false);
-  const at=o.px!=null?` <span class="cap-at">· at $${(+o.px).toFixed(2)}</span>`:'';
-  r.cap=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%${at}</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
-  r.capColor=c.color;
+  if(wheelCapturedOnClose(L.trades||[]).hide.has(t.id))return r;
+  const cell=closedCapturedHtml(o);r.cap=cell.html;r.capColor=cell.color;
   return r;
 }
 function renderTradeRow(t,wheelTrades,opts){
