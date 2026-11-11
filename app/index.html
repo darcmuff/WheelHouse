@@ -729,8 +729,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 }
 .cap-at{color:var(--text);font-weight:inherit;font-size:inherit}
 @media(min-width:701px){
-  .pmcc-open .tgrid{display:grid;grid-template-columns:max-content max-content max-content max-content minmax(max-content,1.8fr) minmax(max-content,.7fr) minmax(max-content,.5fr) minmax(max-content,1.1fr) minmax(max-content,.55fr) minmax(max-content,1.6fr) minmax(max-content,1.8fr) max-content;column-gap:0.75rem;align-items:center;width:100%}
-  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.75rem}
+  .pmcc-open .tgrid{display:grid;grid-template-columns:max-content max-content max-content max-content max-content repeat(6,minmax(max-content,1fr)) max-content;column-gap:0.45rem;align-items:center;width:100%}
+  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.45rem;padding-left:0.65rem;padding-right:0.65rem}
   .pmcc-open .tgrid>.chain-row,.pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
   .pmcc-open .tgrid>.trow.has-to-strike{min-height:3.15rem}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(3),.pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(2){white-space:nowrap}
