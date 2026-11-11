@@ -13,7 +13,7 @@ const stubs = [
   "const fmtDateFull=d=>d||'-';",
   "const esc=s=>String(s==null?'':s);",
   "function colorN(n){return n==null?'m':(n>=0?'g':'r');}",
-  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let collapsedLeaps=new Set();let _focusTid=null;",
+  "let db={wheels:[{id:'w1',ticker:'SPCX'}],trades:[{id:'t1',ticker:'SPCX'}],opts:[]};let writes=[];const _saveOpt=l=>writes.push(l);let collapsedLeaps=new Set();let _focusTid=null;const _sel=new Map();function selCash(){return 0;}function selCt(){return 0;}",
   "function openEditTrade(){}",
   "function openOptEdit(){}",
   "function pmccClose(){}",
@@ -24,7 +24,7 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','listCut','listMoreBtn','pmccShortEvents','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','listCut','listMoreBtn','pmccShortEvents','pmccClosedCaptured','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
   `\nconst listShowAll=new Set();const B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
@@ -76,6 +76,16 @@ check('form validation: strike required', /strike/.test(S.pmccFormLeg({ strike: 
 S.setOpts(legs);
 const h = S.renderPmcc(leap, today);
 check('trade list: short calls only (STO/BTC/EXP, no LEAP BTO), Edit on every row', /pmcc-trades/.test(h) && !/ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && (h.match(/class="trow /g)||[]).length===(h.match(/openPmccLegEdit\(/g)||[]).length && /To strike/.test(h) && /Captured/.test(h));
+check('bought-back Captured sits on the BTC row; the STO row is a dash; expiry stays on the STO', (()=>{
+  const rows=h.split('class="trow').slice(1);
+  const text=s=>s.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  const btc=rows.find(r=>/ab-BTC/.test(r)), stoClosed=rows.find(r=>/ab-STO/.test(r)&&/08\/12\/26|2026-08-12|12\/08/.test(r)&&!/ab-BTC/.test(r));
+  const sto=rows.filter(r=>/ab-STO/.test(r));
+  const closedSto=sto.find(r=>/at \$1\.15/.test(r));
+  const expSto=sto.find(r=>/at \$0\.00/.test(r));
+  const openSto=sto.find(r=>/at \$3\.05/.test(r));
+  return /ab-BTC/.test(btc)&&/77%/.test(text(btc))&&/at \$1\.15/.test(btc)&&/\+\$787\.40/.test(text(btc)) && !closedSto && expSto && openSto;
+})(), h.replace(/<[^>]+>/g,' ').slice(0,500));
 check('LEAP with no short calls shows "No short calls yet." row', (()=>{const h=S.renderPmcc({ ...leap, id: 'none' }, today);return /pmcc-trades/.test(h)&&/No short calls yet\./.test(h)&&!/BTO/.test(h);})());
 check('roll chain tip shows chain row', /chain-row/.test(h) && /Chain/.test(h));
 check('events newest-first with BTO present', (()=>{const ev=S.pmccTradeEvents(leap,legs);return ev[0].entered>=ev[ev.length-1].entered && ev.some(e=>e.action==='BTO') && ev.filter(e=>e.action==='STO').length===3;})());

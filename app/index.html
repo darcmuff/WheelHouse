@@ -2723,6 +2723,14 @@ function pmccChainMap(ev){
 }
 // LEAP card trade list: short calls only (the LEAP itself lives in the header), newest first, one row per trade, Edit on every row.
 function pmccShortEvents(leap,legs){return pmccTradeEvents(leap,legs).filter(e=>e.kind==='short');}
+// Realised Captured for a short call. Display only; the leg's P&L is unchanged.
+function pmccClosedCaptured(c){
+  if(!c)return null;
+  const sold=+c.entryPrice||0,net=OPTS.legPnL(c).realized,closeP=c.status==='closed'?(+c.closePrice||0):0;
+  if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);return {html:net!=null?`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${(+closeP).toFixed(2)}</span></div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html,color:cc.color};}
+  if(net!=null){const cc=capturedCellHtml(0,net,false);return {html:cc.html.replace(/^0% /,''),color:cc.color};}
+  return null;
+}
 function renderPmccListRow(e,spot,today,cmap,chainOut){
   const c=e.leg,par=cmap&&cmap._parents?cmap._parents:{};
   const cIdx=cmap?cmap[e.legId]:undefined,cCls=cIdx!=null?' chain-tint':'';
@@ -2741,10 +2749,10 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
       if(d&&net!=null)ppd=ppdCellHtml(net/d,d);
-      const closeP=c.status==='closed'?(+c.closePrice||0):0;
-      if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);cap=net!=null?`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${(+closeP).toFixed(2)}</span></div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html;capColor=cc.color;}
-      else if(net!=null)cap=capturedCellHtml(0,net,false).html.replace(/^0% /,'');
+      if(c.status!=='closed'){const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}}
     }
+  }else if(e.action==='BTC'&&c&&c.status==='closed'){
+    const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}
   }
   let chainHtml='';
   const isTip=rolled&&!Object.values(par).some(ps=>ps.includes(e.legId));
