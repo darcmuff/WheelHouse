@@ -727,17 +727,45 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .pmcc-open .thead-row.has-to-strike,.pmcc-open .trow.has-to-strike{
   grid-template-columns:minmax(0,52fr) minmax(0,70fr) minmax(0,70fr) minmax(0,52fr) minmax(0,92fr) minmax(0,52fr) minmax(0,44fr) minmax(0,72fr) minmax(0,42fr) minmax(0,72fr) minmax(0,48fr) minmax(0,36fr);
 }
-.cap-at{color:var(--text3);font-weight:400;font-size:0.6rem}
+.cap-at{color:var(--text);font-weight:inherit;font-size:inherit}
 @media(min-width:701px){
-  .pmcc-open .tgrid{display:grid;grid-template-columns:repeat(11,minmax(max-content,1fr)) max-content;column-gap:0.75rem;align-items:center;width:100%}
-  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.75rem}
+  /* Content columns stay as wide as their text. Equal flexible tracks between them share whatever width is left, so the gap after every column is the same and Edit ends flush right. */
+  .pmcc-open .tgrid{display:grid;grid-template-columns:max-content repeat(11,minmax(0.85rem,1fr) max-content);column-gap:0;align-items:center;justify-items:start;width:100%;padding-left:0.75rem;padding-right:0.75rem;box-sizing:border-box}
+  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0;padding-left:0;padding-right:0;justify-content:start}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(1){grid-column:1}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(2){grid-column:3}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(3){grid-column:5}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(4){grid-column:7}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(5){grid-column:9}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(6){grid-column:11}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(7){grid-column:13}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(8){grid-column:15}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(9){grid-column:17}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(10){grid-column:19}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(11){grid-column:21}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(12){grid-column:23}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(2){grid-column:1}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(3){grid-column:3}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(4){grid-column:5}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(5){grid-column:7}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(6){grid-column:9}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(7){grid-column:11}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(8){grid-column:13}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(9){grid-column:15}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(10){grid-column:17}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(11){grid-column:19}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(12){grid-column:21}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(13){grid-column:23}
   .pmcc-open .tgrid>.chain-row,.pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
   .pmcc-open .tgrid>.trow.has-to-strike{min-height:3.15rem}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(3),.pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(2){white-space:nowrap}
   .pmcc-open .tgrid>.trow.has-to-strike>span:last-child{justify-self:end}
 }
-.pmcc-open .to-strike{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:0.65rem}
-.pmcc-open .to-strike.m{color:var(--text3)}
+.pmcc-open .to-strike{font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(min-width:701px){
+  .pmcc-open .to-strike{font-size:inherit;font-weight:inherit}
+  .pmcc-open .to-strike.m{color:var(--text)}
+}
 .pmcc-open .to-strike.a{color:var(--yellow)}
 .pmcc-open .to-strike.r{color:var(--red)}
 
@@ -747,6 +775,13 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 .act-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin:0.25rem 0 0.875rem}.act-head h1{font-size:1.375rem;font-weight:600}.act-head p{color:var(--text3);font-size:0.7rem}
 .act-btns{display:flex;flex-wrap:wrap;gap:0.375rem}
+.act-filter{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:0.75rem 1.25rem;margin:0 0 0.75rem}
+.act-pills{display:flex;flex-wrap:wrap;gap:0.375rem}
+.act-pill{border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:999px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer}
+.act-pill.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.act-pnl{text-align:right}
+.act-net{font-size:1.25rem;font-weight:700;line-height:1.1}
+.act-net-sub,.act-split{display:block;font-size:0.7rem;color:var(--text3)}
 
 /* ── Rotation detail (A) ── */
 .trade-body{border-top:1px solid var(--bg3);margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;overflow:hidden}
@@ -2707,7 +2742,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       const net=OPTS.legPnL(c).realized;
       if(d&&net!=null)ppd=ppdCellHtml(net/d,d);
       const closeP=c.status==='closed'?(+c.closePrice||0):0;
-      if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);cap=net!=null?`<div style="white-space:nowrap">${pct}%</div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html;capColor=cc.color;}
+      if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);cap=net!=null?`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${(+closeP).toFixed(2)}</span></div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html;capColor=cc.color;}
       else if(net!=null)cap=capturedCellHtml(0,net,false).html.replace(/^0% /,'');
     }
   }
@@ -2757,7 +2792,7 @@ function renderPmcc(leap,today,spot,add){
   const keep=listCut(ev.length,ev.map(e=>cmap[e.legId]!=null?'c'+cmap[e.legId]:'l'+e.legId),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
   const chainOut={},rowHtml=evS.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
   const rows=hoistChainLines(evS.map(e=>cmap[e.legId]),rowHtml,chainOut)+listMoreBtn(leap.id,ev.length,keep.length);
-  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
     ${rows||'<div class="trow trow-empty"><span style="color:var(--text3)">No short calls yet.</span></div>'}
   </div></div>`;
 }
@@ -4403,7 +4438,7 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
-      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}
+      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
       <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
@@ -4452,7 +4487,7 @@ function capturedCellHtml(pct,dollars,open){
   let html=pct+'%';if(dollars!=null)html+=` <span class="${dollars>=0?'g':'r'}">${dollars>=0?'+':'-'}${fmtMoney(Math.abs(dollars))}</span>`;
   return{html,color};
 }
-function ppdCellHtml(v,d){return v!=null&&d>0?`${fmtMoney(v)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`:'—';}
+function ppdCellHtml(v,d){return v!=null&&d>0?`${fmtMoney(v)}<span>/d (${d}d)</span>`:'—';}
 // Pure (READ-ONLY): closed wheel sells (CSP/STOC) → {kept %, realised net $, end date}. Open or part-closed sells are absent.
 // Bought back: net = sell total − buy-back total; expired / assigned / called away: whole premium kept.
 function wheelSellOutcomes(trades){
@@ -4460,14 +4495,14 @@ function wheelSellOutcomes(trades){
   for(const[cid,ps]of Object.entries(pairs)){const c=byId[cid];if(!c)continue;
     ps.forEach(p=>{const s=byId[p.legId];if(!s||s.expiredWorthless)return;const o=acc[s.id]||(acc[s.id]={cost:0,pxSh:0,sh:0,end:''});
       const frac=+c.shares>0?p.shares/(+c.shares):1;
-      if(c.action==='BTC'||c.action==='STC'){o.cost+=(+c.total||0)*frac;o.pxSh+=(+c.premium||0)*(p.shares||0);}
+      if(c.action==='BTC'||c.action==='STC'){o.cost+=(+c.total||0)*frac;o.pxSh+=(+c.premium||0)*(p.shares||0);o.saw=1;}
       o.sh+=p.shares||0;if((c.entered||'')>o.end)o.end=c.entered||'';});}
   trades.forEach(s=>{
     if(s.action!=='CSP'&&s.action!=='STOC')return;const prem=+s.premium||0;
-    if(s.expiredWorthless){out[s.id]={kept:prem>0?100:null,net:Math.round((+s.total||0)*100)/100,end:s.expiry||''};return;}
+    if(s.expiredWorthless){out[s.id]={kept:prem>0?100:null,net:Math.round((+s.total||0)*100)/100,end:s.expiry||'',px:0};return;}
     const o=acc[s.id];if(!o)return;if(+s.shares&&o.sh<+s.shares)return;
     const px=o.sh?o.pxSh/o.sh:0;
-    out[s.id]={kept:prem>0?Math.round((prem-px)/prem*100):null,net:Math.round(((+s.total||0)-o.cost)*100)/100,end:o.end};
+    out[s.id]={kept:prem>0?Math.round((prem-px)/prem*100):null,net:Math.round(((+s.total||0)-o.cost)*100)/100,end:o.end,px:o.saw?Math.round(px*100)/100:null};
   });
   return out;
 }
@@ -4501,7 +4536,8 @@ function wheelListCells(t,L){
   const o=L.outcomes[t.id];if(!o)return r;
   const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
   const c=capturedCellHtml(o.kept,o.net,false);
-  r.cap=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
+  const at=o.px!=null?` <span class="cap-at">· at $${(+o.px).toFixed(2)}</span>`:'';
+  r.cap=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%${at}</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
   r.capColor=c.color;
   return r;
 }
@@ -4535,7 +4571,7 @@ function renderTradeRow(t,wheelTrades,opts){
   // PPD — income velocity: net dollars per day. Credit opens (incl. PMCC STO).
   const isOpenLeg=t.action==='CSP'||t.action==='STOC'||t.action==='STO';
   const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
-  const ppdDisplay=opts.ppdHtml!=null?opts.ppdHtml:ppd!==null?`$${fmt2(ppd)}<span style="color:var(--text3);font-weight:normal">/d (${t.days}d)</span>`:'—';
+  const ppdDisplay=opts.ppdHtml!=null?opts.ppdHtml:ppd!==null?`${fmtMoney(ppd)}<span>/d (${t.days}d)</span>`:'—';
   const rowCls=[effRid?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
   const rollBadge=effRid?'<span class="roll-badge">↻</span>':'';
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
@@ -4566,8 +4602,7 @@ function renderActivityHead(){
     <div class="act-btns"><button class="btn btn-primary" onclick="openPasteTrade()">+ Add trade</button>
     <button class="btn btn-ghost" onclick="openImport()">Import CSV / PDF</button>
     <button class="btn btn-ghost" onclick="exportCSV()">Export trades CSV</button>
-    <button class="btn btn-ghost" onclick="exportOptsCSV()">Export LEAPs CSV</button>
-    <button class="btn btn-ghost" onclick="openNewPos()">New rotation</button></div></div>`;
+    <button class="btn btn-ghost" onclick="exportOptsCSV()">Export LEAPs CSV</button></div></div>`;
 }
 // Option legs (LEAPs, PMCC short calls, other long/short options) as Activity rows: one open row, plus one close row once closed/expired.
 function optLegLogRows(opts){
@@ -4575,7 +4610,7 @@ function optLegLogRows(opts){
   for(const l of opts||[]){
     if(!l||l.demo)continue;
     const short=l.side==='short',n=(+l.qty||0)*100,tk=String(l.underlying||'').toUpperCase(),ef=+l.fees||0;
-    const base={ticker:tk,expiry:l.expiry||null,strike:+l.strike||null,shares:n,legId:l.id,opt:true,wheelId:null};
+    const base={ticker:tk,expiry:l.expiry||null,strike:+l.strike||null,shares:n,legId:l.id,opt:true,wheelId:null,side:l.side||'',type:l.type||''};
     if(l.entryDate){const g=(+l.entryPrice||0)*n;out.push({...base,id:l.id+':o',action:short?'STO':'BTO',entered:l.entryDate,premium:+l.entryPrice||0,fees:ef,total:short?g-ef:g+ef,ts:l.ts||null});}
     if(l.status!=='open'&&l.closeDate){const cp=+l.closePrice||0,cf=+l.closeFees||0,g=cp*n;
       if(l.status==='expired'||cp===0)out.push({...base,id:l.id+':x',action:'EXP',entered:l.closeDate,premium:0,fees:0,total:0,ts:l.closeTs||null});
@@ -4588,9 +4623,48 @@ function logSameDayCmp(a,b){
   if(a.ts&&b.ts&&a.ts!==b.ts)return String(b.ts).localeCompare(String(a.ts));
   const r=x=>({EXP:0,BTC:1,STC:1}[x.action]??2);return r(b)-r(a);
 }
+const ACT_KINDS=[['csp','Cash-secured puts'],['cc','Covered calls'],['leap','LEAPs'],['other','Other']];
+let logKinds=new Set();
+function actKind(t,opener){
+  if(t.opt){
+    if(t.side==='long'&&t.type==='C')return 'leap';
+    if(t.side==='short'&&t.type==='C')return 'cc';
+    if(t.side==='short'&&t.type==='P')return 'csp';
+    return 'other';
+  }
+  if(t.action==='CSP')return 'csp';
+  if(t.action==='STOC')return 'cc';
+  if(t.action==='BTC'||t.action==='STC')return opener==='CSP'?'csp':opener==='STOC'?'cc':'other';
+  return 'other';
+}
+function actAnnotate(trades){
+  const wheel=(trades||[]).filter(t=>!t.opt);
+  let pairs={};try{pairs=(walkLegPairs(wheel).pairs)||{};}catch(e){}
+  const byId={};wheel.forEach(t=>{byId[t.id]=t;});
+  return (trades||[]).map(t=>{
+    let opener=null;
+    if(!t.opt&&(t.action==='BTC'||t.action==='STC')){const o=byId[((pairs[t.id]||[])[0]||{}).legId];opener=o&&o.action;}
+    return {...t,kind:actKind(t,opener)};
+  });
+}
+function actPnl(rows){
+  const by={csp:0,cc:0,leap:0,other:0},n={csp:0,cc:0,leap:0,other:0};let net=0,fees=0;
+  (rows||[]).forEach(t=>{const c=selCash(t.action,t.total);net+=c;fees+=+t.fees||0;const k=t.kind||'other';by[k]+=c;n[k]++;});
+  const r=x=>Math.round(x*100)/100;
+  ['csp','cc','leap','other'].forEach(k=>{by[k]=r(by[k]);});
+  return {net:r(net),fees:r(fees),by,n,count:(rows||[]).length};
+}
+function setLogKind(k){
+  if(k==='all')logKinds.clear();
+  else if(logKinds.has(k))logKinds.delete(k);else logKinds.add(k);
+  render();
+}
 function renderLog(){
   const q=logQ.toLowerCase();
-  let trades=[...db.trades,...optLegLogRows(db.opts)].filter(t=>{
+  const tagged=actAnnotate([...db.trades,...optLegLogRows(db.opts)]);
+  const haveOther=tagged.some(t=>t.kind==='other');
+  let trades=tagged.filter(t=>{
+    if(logKinds.size&&!logKinds.has(t.kind))return false;
     if(!q)return true;
     return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
   }).sort((a,b)=>{
@@ -4620,7 +4694,17 @@ function renderLog(){
       </td>
     </tr>`;
   }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:3.125rem">No trades</td></tr>';
+  const pnl=actPnl(trades);
+  const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));
+  const kindsShown=ACT_KINDS.filter(([k])=>haveOther||k!=='other');
+  const pills=[['all','All'],...kindsShown].map(([k,lbl])=>{
+    const on=k==='all'?!logKinds.size:logKinds.has(k);
+    return `<button type="button" class="act-pill${on?' on':''}" onclick="setLogKind('${k}')">${lbl}</button>`;
+  }).join('');
+  const split=ACT_KINDS.filter(([k])=>pnl.n[k]).map(([k,lbl])=>`${lbl} ${money(pnl.by[k])}`);
+  const pnlHtml=`<div class="act-pnl"><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}</div>`;
   return`
+  <div class="act-filter">${`<div class="act-pills">${pills}</div>`}${pnlHtml}</div>
   <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0">
     <span style="font-size:0.8125rem;font-weight:400;color:var(--silver)">Trade Log</span>
     <button class="rot-header-btn" onclick="switchView('positions')" title="Close" style="margin-left:0.25rem"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:1rem;height:1rem"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
@@ -7729,7 +7813,7 @@ window.saveOpt = saveOpt;
 window.deleteOptGroup = deleteOptGroup;
 window.openOptClose = openOptClose;
 window.saveOptClose = saveOptClose;
-window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth; window.dismissSelTip = dismissSelTip; window.selStart = selStart; window.selDone = selDone;
+window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth; window.dismissSelTip = dismissSelTip; window.selDone = selDone;
 
 window.openNewPos = openNewPos;
 window.quickAddRotation = quickAddRotation;
@@ -7746,9 +7830,8 @@ window.parsePaste = parsePaste;
 window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;
 window.confirmParsed = confirmParsed;
-function selTipHtml(){try{if(localStorage.getItem('wh-sel-tip')==='1')return '';}catch(e){}return `<div class="sel-tip"><span>Tip: long press or right-click trades to see their net</span><button type="button" class="sel-tip-x" onclick="dismissSelTip(event)" aria-label="Dismiss">✕</button></div>`;}
+function selTipHtml(){try{if(localStorage.getItem('wh-sel-tip')==='1')return '';}catch(e){}return `<div class="sel-tip"><span>Right-click to select trades</span><button type="button" class="sel-tip-x" onclick="dismissSelTip(event)" aria-label="Dismiss">✕</button></div>`;}
 function dismissSelTip(e){if(e){e.preventDefault();e.stopPropagation();}try{localStorage.setItem('wh-sel-tip','1');}catch(err){}document.querySelectorAll('.sel-tip').forEach(n=>n.remove());}
-function selStart(){if(!_selOn)selEnter();}
 function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');dismissSelTip();try{history.pushState({whSel:1},'');}catch(e){}selPaint();}
 function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const panel=document.getElementById('sel-panel');if(panel)panel.hidden=true;}
 function selDone(){if(_selOn&&history.state&&history.state.whSel){_selPop=true;history.back();return;}selExit();}
@@ -7759,7 +7842,7 @@ function selBar(){const panel=document.getElementById('sel-panel');if(!panel)ret
 document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();_selSkip=true;if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;const x=e.clientX,y=e.clientY;let held=false;try{row.setPointerCapture(e.pointerId);}catch(err){}const timer=setTimeout(()=>{held=true;_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}},500);const cancel=ev=>{clearTimeout(timer);if(ev&&ev.type==='pointerup'&&held)_selSkip=true;row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel(ev);};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
 document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
 document.addEventListener('click',e=>{if(!_selOn)return;const t=e.target;if(t.closest&&(t.closest('.trow[data-sel]')||t.closest('#sel-panel')))return;selDone();});
-document.addEventListener('contextmenu',e=>{const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;e.preventDefault();if(_selSkip)return;if(!_selOn)selEnter();selToggle(row);});
+document.addEventListener('contextmenu',e=>{const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;e.preventDefault();if(_selSkip)return;_selSkip=true;if(!_selOn)selEnter();selToggle(row);setTimeout(()=>{_selSkip=false;},400);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_selOn){e.preventDefault();selDone();}});
 window.addEventListener('popstate',()=>{if(_selPop){_selPop=false;selExit();return;}if(_selOn)selExit();});
 window.doImport = doImport;
@@ -7777,7 +7860,7 @@ window.toggleMinAll = toggleMinAll;
 window.toggleShowClosed = toggleShowClosed;
 window.toggleShowHidden = toggleShowHidden;
 window.setPosSort = setPosSort;
-window.setLogQ = setLogQ;
+window.setLogQ = setLogQ; window.setLogKind = setLogKind;
 window.cyclePosSort = cyclePosSort;
 window.toggleSortMenu = toggleSortMenu;
 window.closeSortMenu = closeSortMenu;

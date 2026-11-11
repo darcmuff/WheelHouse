@@ -10,7 +10,7 @@ const tr = (id, a, ent, exp, k, p, sh, tot, x) => ({ id, action: a, entered: ent
 test('bought-back CSP: kept % from buy-back price, net = sell total − buy-back total', () => {
   const T = [tr('a', 'CSP', '2026-01-02', '2026-02-20', 50, 1.20, 400, 478.92), tr('b', 'BTC', '2026-02-10', '2026-02-20', 50, 0.30, 400, 121.08)];
   const o = F.wheelSellOutcomes(T);
-  assert.strictEqual(o.a.kept, 75); assert.strictEqual(o.a.net, 357.84); assert.strictEqual(o.a.end, '2026-02-10');
+  assert.strictEqual(o.a.kept, 75); assert.strictEqual(o.a.net, 357.84); assert.strictEqual(o.a.end, '2026-02-10'); assert.strictEqual(o.a.px, 0.3);
   assert.strictEqual(o.b, undefined);
 });
 test('expired worthless and assigned sells keep the whole premium', () => {
