@@ -729,8 +729,33 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 }
 .cap-at{color:var(--text);font-weight:inherit;font-size:inherit}
 @media(min-width:701px){
-  .pmcc-open .tgrid{display:grid;grid-template-columns:minmax(max-content,.75fr) minmax(max-content,.85fr) minmax(max-content,.85fr) minmax(max-content,.56fr) max-content minmax(max-content,.66fr) minmax(max-content,.58fr) minmax(max-content,.93fr) minmax(max-content,.56fr) minmax(max-content,1.38fr) minmax(max-content,1.5fr) max-content;column-gap:0.7rem;align-items:center;width:100%}
-  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.7rem;padding-left:0.7rem;padding-right:0.7rem}
+  /* Content columns stay as wide as their text. Equal flexible tracks between them share whatever width is left, so the gap after every column is the same and Edit ends flush right. */
+  .pmcc-open .tgrid{display:grid;grid-template-columns:max-content repeat(11,minmax(0.85rem,1fr) max-content);column-gap:0;align-items:center;justify-items:start;width:100%;padding-left:0.75rem;padding-right:0.75rem;box-sizing:border-box}
+  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0;padding-left:0;padding-right:0;justify-content:start}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(1){grid-column:1}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(2){grid-column:3}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(3){grid-column:5}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(4){grid-column:7}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(5){grid-column:9}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(6){grid-column:11}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(7){grid-column:13}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(8){grid-column:15}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(9){grid-column:17}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(10){grid-column:19}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(11){grid-column:21}
+  .pmcc-open .tgrid>.thead-row.has-to-strike>span:nth-child(12){grid-column:23}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(2){grid-column:1}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(3){grid-column:3}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(4){grid-column:5}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(5){grid-column:7}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(6){grid-column:9}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(7){grid-column:11}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(8){grid-column:13}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(9){grid-column:15}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(10){grid-column:17}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(11){grid-column:19}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(12){grid-column:21}
+  .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(13){grid-column:23}
   .pmcc-open .tgrid>.chain-row,.pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
   .pmcc-open .tgrid>.trow.has-to-strike{min-height:3.15rem}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(3),.pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(2){white-space:nowrap}
