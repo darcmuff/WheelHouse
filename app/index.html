@@ -2767,7 +2767,7 @@ function renderPmcc(leap,today,spot,add){
   const keep=listCut(ev.length,ev.map(e=>cmap[e.legId]!=null?'c'+cmap[e.legId]:'l'+e.legId),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
   const chainOut={},rowHtml=evS.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
   const rows=hoistChainLines(evS.map(e=>cmap[e.legId]),rowHtml,chainOut)+listMoreBtn(leap.id,ev.length,keep.length);
-  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
     ${rows||'<div class="trow trow-empty"><span style="color:var(--text3)">No short calls yet.</span></div>'}
   </div></div>`;
 }
@@ -4413,7 +4413,7 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
-      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button><button type="button" class="btn btn-ghost btn-sm" onclick="selStart()">Select</button></div>`:''}
+      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
       <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
@@ -7787,7 +7787,7 @@ window.saveOpt = saveOpt;
 window.deleteOptGroup = deleteOptGroup;
 window.openOptClose = openOptClose;
 window.saveOptClose = saveOptClose;
-window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth; window.dismissSelTip = dismissSelTip; window.selStart = selStart; window.selDone = selDone;
+window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth; window.dismissSelTip = dismissSelTip; window.selDone = selDone;
 
 window.openNewPos = openNewPos;
 window.quickAddRotation = quickAddRotation;
@@ -7804,9 +7804,8 @@ window.parsePaste = parsePaste;
 window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;
 window.confirmParsed = confirmParsed;
-function selTipHtml(){try{if(localStorage.getItem('wh-sel-tip')==='1')return '';}catch(e){}return `<div class="sel-tip"><span>Tip: long press or right-click trades to see their net</span><button type="button" class="sel-tip-x" onclick="dismissSelTip(event)" aria-label="Dismiss">✕</button></div>`;}
+function selTipHtml(){try{if(localStorage.getItem('wh-sel-tip')==='1')return '';}catch(e){}return `<div class="sel-tip"><span>Right-click to select trades</span><button type="button" class="sel-tip-x" onclick="dismissSelTip(event)" aria-label="Dismiss">✕</button></div>`;}
 function dismissSelTip(e){if(e){e.preventDefault();e.stopPropagation();}try{localStorage.setItem('wh-sel-tip','1');}catch(err){}document.querySelectorAll('.sel-tip').forEach(n=>n.remove());}
-function selStart(){if(!_selOn)selEnter();}
 function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');dismissSelTip();try{history.pushState({whSel:1},'');}catch(e){}selPaint();}
 function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const panel=document.getElementById('sel-panel');if(panel)panel.hidden=true;}
 function selDone(){if(_selOn&&history.state&&history.state.whSel){_selPop=true;history.back();return;}selExit();}
@@ -7817,7 +7816,7 @@ function selBar(){const panel=document.getElementById('sel-panel');if(!panel)ret
 document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();_selSkip=true;if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;const x=e.clientX,y=e.clientY;let held=false;try{row.setPointerCapture(e.pointerId);}catch(err){}const timer=setTimeout(()=>{held=true;_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}},500);const cancel=ev=>{clearTimeout(timer);if(ev&&ev.type==='pointerup'&&held)_selSkip=true;row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel(ev);};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
 document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
 document.addEventListener('click',e=>{if(!_selOn)return;const t=e.target;if(t.closest&&(t.closest('.trow[data-sel]')||t.closest('#sel-panel')))return;selDone();});
-document.addEventListener('contextmenu',e=>{const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;e.preventDefault();if(_selSkip)return;if(!_selOn)selEnter();selToggle(row);});
+document.addEventListener('contextmenu',e=>{const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;e.preventDefault();if(_selSkip)return;_selSkip=true;if(!_selOn)selEnter();selToggle(row);setTimeout(()=>{_selSkip=false;},400);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_selOn){e.preventDefault();selDone();}});
 window.addEventListener('popstate',()=>{if(_selPop){_selPop=false;selExit();return;}if(_selOn)selExit();});
 window.doImport = doImport;
