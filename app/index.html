@@ -729,8 +729,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 }
 .cap-at{color:var(--text);font-weight:inherit;font-size:inherit}
 @media(min-width:701px){
-  .pmcc-open .tgrid{display:grid;grid-template-columns:max-content max-content max-content max-content max-content repeat(6,minmax(max-content,1fr)) max-content;column-gap:0.45rem;align-items:center;width:100%}
-  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.45rem;padding-left:0.65rem;padding-right:0.65rem}
+  .pmcc-open .tgrid{display:grid;grid-template-columns:minmax(max-content,.75fr) minmax(max-content,.85fr) minmax(max-content,.85fr) minmax(max-content,.56fr) max-content minmax(max-content,.66fr) minmax(max-content,.58fr) minmax(max-content,.93fr) minmax(max-content,.56fr) minmax(max-content,1.38fr) minmax(max-content,1.5fr) max-content;column-gap:0.7rem;align-items:center;width:100%}
+  .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.7rem;padding-left:0.7rem;padding-right:0.7rem}
   .pmcc-open .tgrid>.chain-row,.pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
   .pmcc-open .tgrid>.trow.has-to-strike{min-height:3.15rem}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(3),.pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(2){white-space:nowrap}
@@ -2717,7 +2717,7 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
       const net=OPTS.legPnL(c).realized;
       if(d&&net!=null)ppd=ppdCellHtml(net/d,d);
       const closeP=c.status==='closed'?(+c.closePrice||0):0;
-      if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);cap=net!=null?`<div style="white-space:nowrap">${pct}%</div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html;capColor=cc.color;}
+      if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);cap=net!=null?`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${(+closeP).toFixed(2)}</span></div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html;capColor=cc.color;}
       else if(net!=null)cap=capturedCellHtml(0,net,false).html.replace(/^0% /,'');
     }
   }
@@ -4470,14 +4470,14 @@ function wheelSellOutcomes(trades){
   for(const[cid,ps]of Object.entries(pairs)){const c=byId[cid];if(!c)continue;
     ps.forEach(p=>{const s=byId[p.legId];if(!s||s.expiredWorthless)return;const o=acc[s.id]||(acc[s.id]={cost:0,pxSh:0,sh:0,end:''});
       const frac=+c.shares>0?p.shares/(+c.shares):1;
-      if(c.action==='BTC'||c.action==='STC'){o.cost+=(+c.total||0)*frac;o.pxSh+=(+c.premium||0)*(p.shares||0);}
+      if(c.action==='BTC'||c.action==='STC'){o.cost+=(+c.total||0)*frac;o.pxSh+=(+c.premium||0)*(p.shares||0);o.saw=1;}
       o.sh+=p.shares||0;if((c.entered||'')>o.end)o.end=c.entered||'';});}
   trades.forEach(s=>{
     if(s.action!=='CSP'&&s.action!=='STOC')return;const prem=+s.premium||0;
-    if(s.expiredWorthless){out[s.id]={kept:prem>0?100:null,net:Math.round((+s.total||0)*100)/100,end:s.expiry||''};return;}
+    if(s.expiredWorthless){out[s.id]={kept:prem>0?100:null,net:Math.round((+s.total||0)*100)/100,end:s.expiry||'',px:0};return;}
     const o=acc[s.id];if(!o)return;if(+s.shares&&o.sh<+s.shares)return;
     const px=o.sh?o.pxSh/o.sh:0;
-    out[s.id]={kept:prem>0?Math.round((prem-px)/prem*100):null,net:Math.round(((+s.total||0)-o.cost)*100)/100,end:o.end};
+    out[s.id]={kept:prem>0?Math.round((prem-px)/prem*100):null,net:Math.round(((+s.total||0)-o.cost)*100)/100,end:o.end,px:o.saw?Math.round(px*100)/100:null};
   });
   return out;
 }
@@ -4511,7 +4511,8 @@ function wheelListCells(t,L){
   const o=L.outcomes[t.id];if(!o)return r;
   const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
   const c=capturedCellHtml(o.kept,o.net,false);
-  r.cap=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
+  const at=o.px!=null?` <span class="cap-at">· at $${(+o.px).toFixed(2)}</span>`:'';
+  r.cap=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%${at}</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
   r.capColor=c.color;
   return r;
 }
