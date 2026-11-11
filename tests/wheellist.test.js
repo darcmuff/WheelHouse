@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const { extractFn } = require('./extract');
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
-const names = ['walkLegPairs', 'wheelSellOutcomes', 'wheelListCmp', 'wheelLegOcc', 'capturedCellHtml', 'ppdCellHtml', 'toStrike'];
+const names = ['walkLegPairs', 'wheelSellOutcomes', 'wheelListCmp', 'wheelLegOcc', 'capturedCellHtml', 'ppdCellHtml', 'toStrike', 'closedCapturedHtml', 'wheelCapturedOnClose', 'wheelListCells'];
 const F = new Function('fmtMoney', 'fmt2', names.map(extractFn).join('\n') + `\nreturn {${names.join(',')}};`)(
   v => '$' + v.toFixed(2), v => v.toFixed(2));
 const tr = (id, a, ent, exp, k, p, sh, tot, x) => ({ id, action: a, entered: ent, expiry: exp, strike: k, premium: p, shares: sh, total: tot, ...(x || {}) });
@@ -38,6 +38,23 @@ test('OCC symbol and shared cells match LEAP formatting', () => {
   assert.strictEqual(F.capturedCellHtml(60, 123, true).html, '60% <span class="g">+$123.00</span>');
   assert.strictEqual(F.capturedCellHtml(null).html, '—');
   assert.ok(F.ppdCellHtml(10, 4).startsWith('$10.00'));
+});
+test('bought-back Captured is drawn on the BTC row; the CSP row keeps PPD and a dash', () => {
+  const T = [tr('c2', 'CSP', '2026-11-09', '2026-11-23', 130, 2.51, 400, 1001.84, { fees: 2.16 }), tr('b2', 'BTC', '2026-11-11', '2026-11-23', 130, 2.10, 400, 842.16, { fees: 2.16 })];
+  const L = { trades: T, outcomes: F.wheelSellOutcomes(T), openIds: new Set(), spot: 0, today: '2026-11-11', marks: {} };
+  const csp = F.wheelListCells(T[0], L), btc = F.wheelListCells(T[1], L);
+  assert.strictEqual(csp.cap, '—');
+  assert.ok(csp.ppd.includes('$79.84') && csp.ppd.includes('(2d)'), csp.ppd);
+  assert.ok(btc.cap.includes('16%') && btc.cap.includes('at $2.10') && btc.cap.includes('+$159.68'), btc.cap);
+  assert.strictEqual(btc.ppd, '—');
+});
+test('expiry and assignment keep Captured on the opener', () => {
+  const T = [tr('a', 'CSP', '2026-01-02', '2026-01-16', 52, 1, 400, 398.92, { expiredWorthless: true }),
+    tr('c', 'CSP', '2026-01-20', '2026-02-20', 46, 1, 400, 398.92), tr('d', 'IN', '2026-02-20', null, 46, 46, 400, 18400)];
+  const L = { trades: T, outcomes: F.wheelSellOutcomes(T), openIds: new Set(), spot: 0, today: '2026-02-20', marks: {} };
+  assert.ok(F.wheelListCells(T[0], L).cap.includes('100%'));
+  assert.ok(F.wheelListCells(T[1], L).cap.includes('100%'));
+  assert.strictEqual(F.wheelListCells(T[2], L).cap, '—');
 });
 test('wheel card table uses the LEAP list header, row Edit and list cells', () => {
   assert.match(SRC, /trade-body open pmcc-open wheel-list[\s\S]{0,80}tradeTableHead\(\{lastCol:'Captured',toStrike:true\}\)/);

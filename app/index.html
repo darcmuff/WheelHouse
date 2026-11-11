@@ -4517,9 +4517,40 @@ function wheelListCmp(a,b,pairs,idx){
   if(cl(a)!==cl(b))return cl(b)-cl(a);
   return (idx(b))-(idx(a));
 }
+// Closed Captured markup. Same words and colours wherever it is drawn.
+function closedCapturedHtml(o){
+  const c=capturedCellHtml(o.kept,o.net,false);
+  const at=o.px!=null?` <span class="cap-at">· at $${(+o.px).toFixed(2)}</span>`:'';
+  const html=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%${at}</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
+  return{html,color:c.color};
+}
+// Which openers have a matched buy-to-close row. Display only: the outcome numbers stay on the sell.
+// Expiries and assignments have no BTC row, so they are not moved.
+function wheelCapturedOnClose(trades){
+  const{pairs}=walkLegPairs(trades||[]);const byId={};(trades||[]).forEach(t=>{byId[t.id]=t;});
+  const hide=new Set(),best={};
+  for(const[cid,ps]of Object.entries(pairs)){
+    const c=byId[cid];if(!c||c.action!=='BTC')continue;
+    ps.forEach(p=>{
+      const s=byId[p.legId];if(!s||s.expiredWorthless||(s.action!=='CSP'&&s.action!=='STOC'))return;
+      hide.add(s.id);
+      const cur=best[s.id];
+      if(!cur||String(c.entered||'')>=String(cur.entered||''))best[s.id]={id:c.id,entered:c.entered||''};
+    });
+  }
+  const onClose={};
+  Object.entries(best).forEach(([leg,b])=>{(onClose[b.id]=onClose[b.id]||[]).push(leg);});
+  return{hide,onClose};
+}
 // Wheel trade-list cells (To strike, PPD, Captured) — same meaning as the LEAP card's short-call list.
 function wheelListCells(t,L){
   const r={ts:'—',ppd:'—',cap:'—',capColor:'var(--text3)'};
+  if(t.action==='BTC'){
+    const place=wheelCapturedOnClose(L.trades||[]),ids=(place.onClose[t.id]||[]);
+    const cells=ids.map(id=>L.outcomes&&L.outcomes[id]).filter(Boolean).map(closedCapturedHtml);
+    if(cells.length){r.cap=cells.map(c=>c.html).join('');r.capColor=cells[cells.length-1].color;}
+    return r;
+  }
   if(t.action!=='CSP'&&t.action!=='STOC')return r;
   const prem=+t.premium||0,dd=(a,b)=>{if(!a||!b)return null;const d=Math.round((Date.parse(a)-Date.parse(b))/864e5);return isNaN(d)?null:Math.max(1,d);};
   if(L.openIds.has(t.id)){
@@ -4535,10 +4566,8 @@ function wheelListCells(t,L){
   }
   const o=L.outcomes[t.id];if(!o)return r;
   const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
-  const c=capturedCellHtml(o.kept,o.net,false);
-  const at=o.px!=null?` <span class="cap-at">· at $${(+o.px).toFixed(2)}</span>`:'';
-  r.cap=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%${at}</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
-  r.capColor=c.color;
+  if(wheelCapturedOnClose(L.trades||[]).hide.has(t.id))return r;
+  const cell=closedCapturedHtml(o);r.cap=cell.html;r.capColor=cell.color;
   return r;
 }
 function renderTradeRow(t,wheelTrades,opts){
