@@ -727,17 +727,20 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .pmcc-open .thead-row.has-to-strike,.pmcc-open .trow.has-to-strike{
   grid-template-columns:minmax(0,52fr) minmax(0,70fr) minmax(0,70fr) minmax(0,52fr) minmax(0,92fr) minmax(0,52fr) minmax(0,44fr) minmax(0,72fr) minmax(0,42fr) minmax(0,72fr) minmax(0,48fr) minmax(0,36fr);
 }
-.cap-at{color:var(--text3);font-weight:400;font-size:0.6rem}
+.cap-at{color:var(--text);font-weight:inherit;font-size:inherit}
 @media(min-width:701px){
-  .pmcc-open .tgrid{display:grid;grid-template-columns:repeat(11,minmax(max-content,1fr)) max-content;column-gap:0.75rem;align-items:center;width:100%}
+  .pmcc-open .tgrid{display:grid;grid-template-columns:max-content max-content max-content max-content minmax(max-content,1.8fr) minmax(max-content,.7fr) minmax(max-content,.5fr) minmax(max-content,1.1fr) minmax(max-content,.55fr) minmax(max-content,1.6fr) minmax(max-content,1.8fr) max-content;column-gap:0.75rem;align-items:center;width:100%}
   .pmcc-open .tgrid>.thead-row.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;column-gap:0.75rem}
   .pmcc-open .tgrid>.chain-row,.pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
   .pmcc-open .tgrid>.trow.has-to-strike{min-height:3.15rem}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(3),.pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(2){white-space:nowrap}
   .pmcc-open .tgrid>.trow.has-to-strike>span:last-child{justify-self:end}
 }
-.pmcc-open .to-strike{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:0.65rem}
-.pmcc-open .to-strike.m{color:var(--text3)}
+.pmcc-open .to-strike{font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(min-width:701px){
+  .pmcc-open .to-strike{font-size:inherit;font-weight:inherit}
+  .pmcc-open .to-strike.m{color:var(--text)}
+}
 .pmcc-open .to-strike.a{color:var(--yellow)}
 .pmcc-open .to-strike.r{color:var(--red)}
 
@@ -4459,7 +4462,7 @@ function capturedCellHtml(pct,dollars,open){
   let html=pct+'%';if(dollars!=null)html+=` <span class="${dollars>=0?'g':'r'}">${dollars>=0?'+':'-'}${fmtMoney(Math.abs(dollars))}</span>`;
   return{html,color};
 }
-function ppdCellHtml(v,d){return v!=null&&d>0?`${fmtMoney(v)}<span style="color:var(--text3);font-weight:normal">/d (${d}d)</span>`:'—';}
+function ppdCellHtml(v,d){return v!=null&&d>0?`${fmtMoney(v)}<span>/d (${d}d)</span>`:'—';}
 // Pure (READ-ONLY): closed wheel sells (CSP/STOC) → {kept %, realised net $, end date}. Open or part-closed sells are absent.
 // Bought back: net = sell total − buy-back total; expired / assigned / called away: whole premium kept.
 function wheelSellOutcomes(trades){
@@ -4542,7 +4545,7 @@ function renderTradeRow(t,wheelTrades,opts){
   // PPD — income velocity: net dollars per day. Credit opens (incl. PMCC STO).
   const isOpenLeg=t.action==='CSP'||t.action==='STOC'||t.action==='STO';
   const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
-  const ppdDisplay=opts.ppdHtml!=null?opts.ppdHtml:ppd!==null?`$${fmt2(ppd)}<span style="color:var(--text3);font-weight:normal">/d (${t.days}d)</span>`:'—';
+  const ppdDisplay=opts.ppdHtml!=null?opts.ppdHtml:ppd!==null?`${fmtMoney(ppd)}<span>/d (${t.days}d)</span>`:'—';
   const rowCls=[effRid?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
   const rollBadge=effRid?'<span class="roll-badge">↻</span>':'';
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
