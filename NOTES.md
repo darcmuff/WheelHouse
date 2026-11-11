@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v181` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v182` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 
@@ -17,6 +17,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `dev` no longer suggests or auto-links rolls (sw v171). A close and an open stay separate. Saved `rollId` and `rolledFrom` values still show. The Wheel and LEAPs tabs have a one-time tip and a Select button so you can total any trades. The landing page leads with that.
 - `dev` keeps a manual Mark as roll checkbox, off by default, on Add trade, the paste form, and the SmartScan review (sw v172). Tick it to choose which trade on that wheel or LEAP it rolls from, or, for a two-leg confirmation, to link those two legs. Nothing is chosen for you.
 - `dev` sizes the trade table from the text in each column, so a large PPD such as $1,001.84/d cannot run into Captured, and the spare width is shared across the data columns. Edit stays only as wide as the button, at the right (sw v181).
+- `dev` drops the Activity toolbar New rotation button. The CSV buttons stay. New wheel on the Wheel tab is unchanged (sw v182).
 - `dev` lets you long-press a trade row on a phone or tablet, or right-click it, to select it (sw v176). A mouse hold does not select. Ctrl-click still works. The in-app tip says long press or right-click and hides for good once you select a trade or dismiss it.
 - `dev` shows a selected-trade summary in a floating card, not a bottom bar (sw v173). It lists the net, collected, paid, fees, a per-ticker split, contracts, and each selected trade. A click outside the rows and the card, Escape, or the close mark clears the selection. The card is fixed and does not narrow the page (sw v174).
 - `dev` refreshes open LEAP and option marks on login and on the same minute timer as wheel quotes, and saves the new price and date (sw v168). A quote that cannot be fetched stays off Home and shows on the LEAP card. Every Needs you / Data Health row explains what is wrong, why, and how to fix it, and can be dismissed until that issue changes.
