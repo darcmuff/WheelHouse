@@ -25,7 +25,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `app/legal.html` still shows the DRAFT banner (for Marc to read and approve; not lawyer-reviewed). The page says last updated 1 November 2026.
 - Stripe code refuses live secret keys unless `STRIPE_ALLOW_LIVE=1` (`netlify/lib/stripe.js`). A 2026-11-06 working note said Stripe was live then. The Stripe dashboard, webhook, and Netlify env are external; this file does not assert them.
 - Founder Pro (never downgraded) is a Firestore `entitlements/{uid}` write via `tools/grant-founder.js` (see SETUP.md). Not confirmed from git. Do not put UIDs or keys in this file.
-- In-repo cookie-free analytics stays off (`analytics.provider` is `''` in `app/brand.js`). A 2026-11-07 working note said app tracking and Netlify Analytics were disabled then. The Netlify toggle is not in git; do not assert it from the repo.
+- In-repo cookie-free analytics is on: `analytics.provider` is `goatcounter` and `analytics.goatcounter` is `https://optrack.goatcounter.com/count` in `app/brand.js` (Marc approved, 2026-11-11). A 2026-11-07 working note said app tracking and Netlify Analytics were disabled then. The Netlify toggle is not in git; do not assert it from the repo.
 - Other remote branches exist (`onboarding`, `overhaul`, `skunkworks`). This notes commit does not touch them.
 
 ## What's next

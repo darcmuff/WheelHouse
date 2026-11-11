@@ -12,9 +12,11 @@ test('landing leads with the USPs, top three first, then the rest, plans, not fi
   assert.ok(L.includes('Demo data')&&L.includes('made-up numbers'),'screens and examples labelled');
   assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));});
 test('landing is light: no external CSS/fonts, images small',()=>{assert.ok(!/<link[^>]+stylesheet/.test(L));fs.readdirSync(path.join(A,'img')).forEach(f=>assert.ok(fs.statSync(path.join(A,'img',f)).size<60000,f));});
-test('analytics: off by default, cookie-free providers only, never on localhost',()=>{const ctx={window:{}};require('vm').runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);
-  assert.strictEqual(analyticsTag(ctx.window.BRAND.analytics,'x.netlify.app'),null);
+test('analytics: goatcounter on the public site, cookie-free providers only, never on localhost',()=>{const ctx={window:{}};require('vm').runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);
+  const live=analyticsTag(ctx.window.BRAND.analytics,'optrack.app');
+  assert.strictEqual(live&&live.src,'https://gc.zgo.at/count.js');assert.strictEqual(live.attrs['data-goatcounter'],'https://optrack.goatcounter.com/count');
+  assert.strictEqual(analyticsTag(ctx.window.BRAND.analytics,'localhost'),null);assert.strictEqual(analyticsTag(ctx.window.BRAND.analytics,'127.0.0.1'),null);
   assert.strictEqual(analyticsTag({provider:'plausible',domain:'optrack.app'},'optrack.app').attrs['data-domain'],'optrack.app');assert.strictEqual(analyticsTag({provider:'plausible',domain:'optrack.app'},'localhost'),null);
   assert.ok(analyticsTag({provider:'goatcounter',goatcounter:'https://optrack.goatcounter.com/count'},'a').src.includes('gc.zgo.at'));assert.strictEqual(analyticsTag({provider:'goatcounter',goatcounter:'https://evil.com/x'},'a'),null);
-  ['index.html','landing.html','legal.html'].forEach(f=>assert.ok(fs.readFileSync(path.join(A,f),'utf8').includes('src="analytics.js"'),f));});
+  ['index.html','landing.html','start.html','legal.html'].forEach(f=>{const h=fs.readFileSync(path.join(A,f),'utf8');assert.ok(h.indexOf('src="brand.js"')>=0&&h.indexOf('src="brand.js"')<h.indexOf('src="analytics.js"'),f);});});
 test('service worker keeps the app, not the landing page, as the offline shell',()=>{const s=fs.readFileSync(path.join(A,'sw.js'),'utf8');assert.ok(s.includes("const SHELL = './index.html'")&&s.includes('x.put(SHELL, c)'));});
