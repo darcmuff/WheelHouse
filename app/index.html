@@ -747,6 +747,13 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 .act-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin:0.25rem 0 0.875rem}.act-head h1{font-size:1.375rem;font-weight:600}.act-head p{color:var(--text3);font-size:0.7rem}
 .act-btns{display:flex;flex-wrap:wrap;gap:0.375rem}
+.act-filter{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:0.75rem 1.25rem;margin:0 0 0.75rem}
+.act-pills{display:flex;flex-wrap:wrap;gap:0.375rem}
+.act-pill{border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:999px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer}
+.act-pill.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.act-pnl{text-align:right}
+.act-net{font-size:1.25rem;font-weight:700;line-height:1.1}
+.act-net-sub,.act-split{display:block;font-size:0.7rem;color:var(--text3)}
 
 /* ── Rotation detail (A) ── */
 .trade-body{border-top:1px solid var(--bg3);margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;overflow:hidden}
@@ -4574,7 +4581,7 @@ function optLegLogRows(opts){
   for(const l of opts||[]){
     if(!l||l.demo)continue;
     const short=l.side==='short',n=(+l.qty||0)*100,tk=String(l.underlying||'').toUpperCase(),ef=+l.fees||0;
-    const base={ticker:tk,expiry:l.expiry||null,strike:+l.strike||null,shares:n,legId:l.id,opt:true,wheelId:null};
+    const base={ticker:tk,expiry:l.expiry||null,strike:+l.strike||null,shares:n,legId:l.id,opt:true,wheelId:null,side:l.side||'',type:l.type||''};
     if(l.entryDate){const g=(+l.entryPrice||0)*n;out.push({...base,id:l.id+':o',action:short?'STO':'BTO',entered:l.entryDate,premium:+l.entryPrice||0,fees:ef,total:short?g-ef:g+ef,ts:l.ts||null});}
     if(l.status!=='open'&&l.closeDate){const cp=+l.closePrice||0,cf=+l.closeFees||0,g=cp*n;
       if(l.status==='expired'||cp===0)out.push({...base,id:l.id+':x',action:'EXP',entered:l.closeDate,premium:0,fees:0,total:0,ts:l.closeTs||null});
@@ -4587,9 +4594,48 @@ function logSameDayCmp(a,b){
   if(a.ts&&b.ts&&a.ts!==b.ts)return String(b.ts).localeCompare(String(a.ts));
   const r=x=>({EXP:0,BTC:1,STC:1}[x.action]??2);return r(b)-r(a);
 }
+const ACT_KINDS=[['csp','Cash-secured puts'],['cc','Covered calls'],['leap','LEAPs'],['other','Other']];
+let logKinds=new Set();
+function actKind(t,opener){
+  if(t.opt){
+    if(t.side==='long'&&t.type==='C')return 'leap';
+    if(t.side==='short'&&t.type==='C')return 'cc';
+    if(t.side==='short'&&t.type==='P')return 'csp';
+    return 'other';
+  }
+  if(t.action==='CSP')return 'csp';
+  if(t.action==='STOC')return 'cc';
+  if(t.action==='BTC'||t.action==='STC')return opener==='CSP'?'csp':opener==='STOC'?'cc':'other';
+  return 'other';
+}
+function actAnnotate(trades){
+  const wheel=(trades||[]).filter(t=>!t.opt);
+  let pairs={};try{pairs=(walkLegPairs(wheel).pairs)||{};}catch(e){}
+  const byId={};wheel.forEach(t=>{byId[t.id]=t;});
+  return (trades||[]).map(t=>{
+    let opener=null;
+    if(!t.opt&&(t.action==='BTC'||t.action==='STC')){const o=byId[((pairs[t.id]||[])[0]||{}).legId];opener=o&&o.action;}
+    return {...t,kind:actKind(t,opener)};
+  });
+}
+function actPnl(rows){
+  const by={csp:0,cc:0,leap:0,other:0},n={csp:0,cc:0,leap:0,other:0};let net=0,fees=0;
+  (rows||[]).forEach(t=>{const c=selCash(t.action,t.total);net+=c;fees+=+t.fees||0;const k=t.kind||'other';by[k]+=c;n[k]++;});
+  const r=x=>Math.round(x*100)/100;
+  ['csp','cc','leap','other'].forEach(k=>{by[k]=r(by[k]);});
+  return {net:r(net),fees:r(fees),by,n,count:(rows||[]).length};
+}
+function setLogKind(k){
+  if(k==='all')logKinds.clear();
+  else if(logKinds.has(k))logKinds.delete(k);else logKinds.add(k);
+  render();
+}
 function renderLog(){
   const q=logQ.toLowerCase();
-  let trades=[...db.trades,...optLegLogRows(db.opts)].filter(t=>{
+  const tagged=actAnnotate([...db.trades,...optLegLogRows(db.opts)]);
+  const haveOther=tagged.some(t=>t.kind==='other');
+  let trades=tagged.filter(t=>{
+    if(logKinds.size&&!logKinds.has(t.kind))return false;
     if(!q)return true;
     return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
   }).sort((a,b)=>{
@@ -4619,7 +4665,17 @@ function renderLog(){
       </td>
     </tr>`;
   }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:3.125rem">No trades</td></tr>';
+  const pnl=actPnl(trades);
+  const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));
+  const kindsShown=ACT_KINDS.filter(([k])=>haveOther||k!=='other');
+  const pills=[['all','All'],...kindsShown].map(([k,lbl])=>{
+    const on=k==='all'?!logKinds.size:logKinds.has(k);
+    return `<button type="button" class="act-pill${on?' on':''}" onclick="setLogKind('${k}')">${lbl}</button>`;
+  }).join('');
+  const split=ACT_KINDS.filter(([k])=>pnl.n[k]).map(([k,lbl])=>`${lbl} ${money(pnl.by[k])}`);
+  const pnlHtml=`<div class="act-pnl"><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}</div>`;
   return`
+  <div class="act-filter">${`<div class="act-pills">${pills}</div>`}${pnlHtml}</div>
   <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0">
     <span style="font-size:0.8125rem;font-weight:400;color:var(--silver)">Trade Log</span>
     <button class="rot-header-btn" onclick="switchView('positions')" title="Close" style="margin-left:0.25rem"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:1rem;height:1rem"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
@@ -7776,7 +7832,7 @@ window.toggleMinAll = toggleMinAll;
 window.toggleShowClosed = toggleShowClosed;
 window.toggleShowHidden = toggleShowHidden;
 window.setPosSort = setPosSort;
-window.setLogQ = setLogQ;
+window.setLogQ = setLogQ; window.setLogKind = setLogKind;
 window.cyclePosSort = cyclePosSort;
 window.toggleSortMenu = toggleSortMenu;
 window.closeSortMenu = closeSortMenu;
