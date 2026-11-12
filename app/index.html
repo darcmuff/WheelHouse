@@ -780,8 +780,11 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .act-pill{border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:999px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer}
 .act-pill.on{background:var(--orange);border-color:var(--orange);color:#fff}
 .act-pnl{text-align:right}
+.act-figs{display:flex;justify-content:flex-end;gap:1.75rem}
+.act-k{display:block;font-size:0.7rem;color:var(--text3);font-weight:400}
 .act-net{font-size:1.25rem;font-weight:700;line-height:1.1}
-.act-net-sub,.act-split{display:block;font-size:0.7rem;color:var(--text3)}
+.act-net-sub,.act-split,.act-note{display:block;font-size:0.7rem;color:var(--text3)}
+.act-note{margin-top:0.3rem}
 
 /* ── Rotation detail (A) ── */
 .trade-body{border-top:1px solid var(--bg3);margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;overflow:hidden}
@@ -4691,6 +4694,33 @@ function actPnl(rows){
   ['csp','cc','leap','other'].forEach(k=>{by[k]=r(by[k]);});
   return {net:r(net),fees:r(fees),by,n,count:(rows||[]).length};
 }
+// Market value to add to the cash total. Shares: FIFO lots still held, from the rows shown, priced with priceOf(ticker).
+// No price → value them at what was paid. Open long LEAP calls: today's mark × 100 × qty when the leg already has one.
+// Read-only. Premiums stay inside the cash total and are not added again.
+function actHeldValue(rows,priceOf,legs){
+  const sr=shareRealisations(rows||[]),tickerOf={};
+  (rows||[]).forEach(t=>{if(t.wheelId)tickerOf[t.wheelId]=t.ticker||'';});
+  let shares=0;const atCost=[];
+  Object.entries(sr.open).forEach(([k,o])=>{
+    if(!(o.shares>0))return;
+    const ticker=k.indexOf('tk:')===0?k.slice(3):(tickerOf[k]||'');
+    const px=priceOf?priceOf(ticker):null;
+    if(px>0)shares+=px*o.shares;
+    else{shares+=o.cost;if(ticker)atCost.push(ticker);}
+  });
+  let leaps=0,leapPlain=0;const seen=new Set();
+  (rows||[]).forEach(t=>{
+    if(!t.opt||t.side!=='long'||t.type!=='C'||!t.legId||seen.has(t.legId))return;
+    seen.add(t.legId);
+    const leg=(legs||[]).find(l=>l.id===t.legId);
+    if(!leg||leg.status!=='open'||leg.side!=='long'||leg.type!=='C')return;
+    const mark=leg.mark!=null&&leg.mark!==''?+leg.mark:null;
+    if(mark>0)leaps+=mark*100*(+leg.qty||0);
+    else leapPlain++;
+  });
+  const r=x=>Math.round(x*100)/100;
+  return {shares:r(shares),leaps:r(leaps),atCost,leapPlain};
+}
 function setLogKind(k){
   if(k==='all')logKinds.clear();
   else if(logKinds.has(k))logKinds.delete(k);else logKinds.add(k);
@@ -4732,6 +4762,9 @@ function renderLog(){
     </tr>`;
   }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:3.125rem">No trades</td></tr>';
   const pnl=actPnl(trades);
+  const priceOf=tk=>{const q=typeof quotes!=='undefined'&&quotes[tk];if(q&&q.price>0)return q.price;const w=(db.wheels||[]).find(x=>String(x.ticker||'').toUpperCase()===String(tk||'').toUpperCase()&&x.lastPrice!=null);return w?+w.lastPrice:null;};
+  const held=actHeldValue(trades,priceOf,db.opts||[]);
+  const totalRet=Math.round((pnl.net+held.shares+held.leaps)*100)/100;
   const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));
   const kindsShown=ACT_KINDS.filter(([k])=>haveOther||k!=='other');
   const pills=[['all','All'],...kindsShown].map(([k,lbl])=>{
@@ -4739,7 +4772,8 @@ function renderLog(){
     return `<button type="button" class="act-pill${on?' on':''}" onclick="setLogKind('${k}')">${lbl}</button>`;
   }).join('');
   const split=ACT_KINDS.filter(([k])=>pnl.n[k]).map(([k,lbl])=>`${lbl} ${money(pnl.by[k])}`);
-  const pnlHtml=`<div class="act-pnl"><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}</div>`;
+  const costNote=held.atCost.length?` ${held.atCost.join(', ')} priced at what you paid.`:'';
+  const pnlHtml=`<div class="act-pnl"><div class="act-figs"><div><span class="act-k">Net cash flow</span><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span></div><div><span class="act-k">Total return</span><span class="act-net ${totalRet<0?'r':'g'}">${money(totalRet)}</span></div></div><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}<span class="act-note">Net cash flow counts shares bought as cash out. Total return adds what those shares are worth today.${costNote}</span></div>`;
   return`
   <div class="act-filter">${`<div class="act-pills">${pills}</div>`}${pnlHtml}</div>
   <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0">
