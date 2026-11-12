@@ -1466,9 +1466,8 @@ function autoMarkExpiredTrades(){
         if(t.expiredWorthless&&t.expiry&&new Date(t.expiry)>=new Date(new Date().toISOString().slice(0,10))){t.expiredWorthless=false;changedIds.add(t.id);}
         openId=t.id;
       } else if(t.action==='BTC'||t.action==='STC'){
-        // Properly closed — ensure the open is NOT flagged as expired
-        if(openId){const prev=db.trades.find(x=>x.id===openId);if(prev&&prev.expiredWorthless){prev.expiredWorthless=false;changedIds.add(prev.id);}}
-        openId=null;
+        // A buy-back of every share closes the sale. A partial buy-back leaves the rest open, so it must not wipe an expiry.
+        if(openId){const prev=db.trades.find(x=>x.id===openId);const covers=!prev||!(+prev.shares)||(+t.shares||0)>=+prev.shares;if(covers){if(prev&&prev.expiredWorthless){prev.expiredWorthless=false;changedIds.add(prev.id);}openId=null;}}
       }
     });
     // Last open trade: only clear expired flag if expiry is still in the future (i.e. genuinely still active)
@@ -1860,7 +1859,7 @@ function realisedPremium(trades,today){
       if(f<=0)return;used[o.id]=(used[o.id]||0)+f;events.push({key:k,ticker:o.ticker||tkr,date:c.entered||'',amount:(o.total||0)*f});});});
     list.forEach(t=>{const v=t.total||0;
       if(t.action==='BTC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:-v});
-      else if(t.action==='STC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:v});
+      else if(t.action==='STC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:(pairs[t.id]&&pairs[t.id].length)?-v:v});
       else if(t.action==='DIV')return;});
     rest.forEach(o=>{const f=1-(used[o.id]||0);if(f<=1e-9)return;const amt=(o.total||0)*f;
       if(o.expiry&&(o.expiry<today||o.expiredWorthless&&o.expiry<=today))events.push({key:k,ticker:o.ticker||tkr,date:o.expiry,amount:amt});
@@ -3130,6 +3129,7 @@ function pmccSide(a){
   on('pcc-side-sto',a==='sto');on('pcc-side-btc',a==='btc');
   document.getElementById('pcc-price-lbl').textContent=a==='btc'?'Buyback price / share':'Premium / share';
   document.getElementById('pcc-date-lbl').textContent=a==='btc'?'Date bought':'Date sold';
+  if(a==='btc'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const open=L?pmccShortsFor(L,db.opts||[]).filter(s=>s.status==='open'):[];if(open.length===1)document.getElementById('pcc-qty').value=open[0].qty;}
   document.getElementById('pcc-err').style.display='none';
 }
 // Buy to close: find the open short call on this LEAP (strike + expiry; else the only open one when both are blank) and close it with the same OPTS.closeLeg the Close action uses.
@@ -3147,7 +3147,11 @@ function pmccBuyBack(f,leap,legs){
   const k=parseFloat(f.strike);let l=null;
   l=pmccBtcMatch(f,open);
   if(!l)return{err:`No open short call${k>0?' at $'+k:''}${f.expiry?' expiring '+f.expiry:''} on this LEAP to buy back.`};
-  return{leg:OPTS.closeLeg(l,price,f.date||new Date().toISOString().slice(0,10),f.fees)};
+  const want=parseInt(f.qty,10),qty=want>0?want:+l.qty;
+  if(qty>+l.qty)return{err:`Only ${l.qty} contract${l.qty===1?'':'s'} of this call are still open.`};
+  let rest=null,leg={...l};
+  if(qty<+l.qty){rest={...l,id:f.newId,qty:+l.qty-qty,fees:0,status:'open',closePrice:null,closeDate:null,closeFees:0,closeTs:null,mark:null,markAt:null,markSrc:null};leg={...leg,qty};}
+  return{leg:OPTS.closeLeg(leg,price,f.date||new Date().toISOString().slice(0,10),f.fees),rest};
 }
 // LEAP card roll: Robinhood two-leg roll paste → {kind:'short'|'long', close, open} or {error}. Reuses detectRollPaste/parseRollTrades.
 function pmccRollScan(text,today){
@@ -3169,7 +3173,7 @@ function pmccRollApply(r,leap,legs,newId,link){
     const b=pmccBuyBack(r.close,leap,legs);if(b.err)return{err:b.err};
     const n=pmccFormLeg({...r.open,newId},leap);if(n.err)return{err:n.err};
     if(link!==false)n.leg.rolledFrom=b.leg.id;const now=new Date().toISOString();b.leg.closeTs=now;n.leg.ts=now;
-    return{save:[b.leg,n.leg]};
+    return{save:[b.leg,n.leg].concat(b.rest?[b.rest]:[])};
   }
   if(leap.status!=='open')return{err:'This LEAP is already closed.'};
   if(+r.close.strike!==+leap.strike||(r.close.expiry&&r.close.expiry!==leap.expiry))return{err:`This roll sells a $${r.close.strike} call expiring ${r.close.expiry||'?'}, but this LEAP is $${leap.strike} expiring ${leap.expiry}.`};
@@ -3244,7 +3248,9 @@ function savePmcc(){
   if(g('pcc-side')==='btc'){
     const r=pmccBuyBack(f,L,db.opts||[]);
     if(r.err){e.textContent=r.err;e.style.display='block';return;}
-    r.leg.closeTs=new Date().toISOString();const i=db.opts.findIndex(x=>x.id===r.leg.id);db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmcc');render();return;
+    r.leg.closeTs=new Date().toISOString();const i=db.opts.findIndex(x=>x.id===r.leg.id);db.opts[i]=r.leg;_saveOpt(r.leg);
+    if(r.rest){db.opts.push(r.rest);_saveOpt(r.rest);}
+    closeModal('mPmcc');render();return;
   }
   const r=pmccFormLeg(f,L);
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
@@ -3551,6 +3557,7 @@ function openOptClose(gid,mode){
   document.getElementById('oc-legs').innerHTML=legs.map(l=>`<div class="oc-leg" data-id="${l.id}" style="border-top:1px solid var(--border);padding-top:0.375rem;margin-top:0.375rem">
     <div style="font-size:0.75rem;margin-bottom:0.25rem">${l.side==='long'?'Long':'Short'} ${l.qty}× ${esc(l.underlying)} ${fmt2(l.strike)}${l.type} ${esc(l.expiry)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.3125rem">
+      <div class="fld"><label>Contracts</label><input class="oc-qty" type="number" step="1" min="1" max="${l.qty}" value="${l.qty}"></div>
       <div class="fld"><label>Close price/sh</label><input class="oc-price" type="number" step="0.0001" value="${l.mark??''}"></div>
       <div class="fld"><label>Date</label><input class="oc-date" type="date" value="${today}"></div>
       <div class="fld"><label>Fees</label><input class="oc-fees" type="number" step="0.01" value="0"></div>
@@ -3570,11 +3577,15 @@ function saveOptClose(){
     const i=db.opts.findIndex(l=>l.id===r.dataset.id);if(i<0)continue;const l=db.opts[i];
     const how=r.querySelector('.oc-how').value,price=r.querySelector('.oc-price').value,date=r.querySelector('.oc-date').value,fees=r.querySelector('.oc-fees').value;
     if(how==='closed'&&price===''){alert('Enter a close price (or choose Expired)');return;}
-    let closed=how==='expired'?{...OPTS.expireLeg(l),closeDate:date||l.expiry}:OPTS.closeLeg(l,how==='assigned'?0:price,date,fees);
+    const want=parseInt(r.querySelector('.oc-qty')&&r.querySelector('.oc-qty').value,10)||+l.qty;
+    if(want<1||want>+l.qty){alert(`Enter between 1 and ${l.qty} contracts.`);return;}
+    let src=l;
+    if(want<+l.qty){const rest={...l,id:uid(),qty:+l.qty-want,fees:0,status:'open',closePrice:null,closeDate:null,closeFees:0,closeTs:null,mark:null,markAt:null,markSrc:null};db.opts.push(rest);_saveOpt(rest);src={...l,qty:want};}
+    let closed=how==='expired'?{...OPTS.expireLeg(src),closeDate:date||l.expiry}:OPTS.closeLeg(src,how==='assigned'?0:price,date,fees);
     if(how==='assigned'){closed.status='assigned';closed.closePrice=0;closed.notes=((l.notes?l.notes+' · ':'')+`Assigned/exercised ${date||l.expiry}`);} // recorded in Options only — no share trades
     if(mode==='roll'){
       const np=r.querySelector('.or-price').value;if(np===''){alert('Enter the new leg price');return;}
-      const[c,nl]=OPTS.rollLeg(l,{price:how==='closed'?price:0,date,fees},{strike:r.querySelector('.or-strike').value,expiry:r.querySelector('.or-expiry').value,price:np,fees:r.querySelector('.or-fees').value},uid());
+      const[c,nl]=OPTS.rollLeg(src,{price:how==='closed'?price:0,date,fees},{strike:r.querySelector('.or-strike').value,expiry:r.querySelector('.or-expiry').value,price:np,fees:r.querySelector('.or-fees').value},uid());
       closed={...c,status:closed.status};db.opts.push(nl);_saveOpt(nl);
     }
     db.opts[i]=closed;_saveOpt(closed);
@@ -4079,7 +4090,7 @@ function buildOpenPosition(trades){
   if(!legs.length)return null;
   // Header shows the nearest-expiry live leg
   const t=[...legs].sort((a,b)=>a.expiry.localeCompare(b.expiry))[0];
-  return{action:t.action,strike:t.strike,expiry:t.expiry,shares:t.shares,dte:dteDays(t.expiry)};
+  return{action:t.action,strike:t.strike,expiry:t.expiry,shares:t._rem>0?t._rem:t.shares,dte:dteDays(t.expiry)};
 }
 
 // Pure (READ-ONLY): the wheel's most recent OPEN short option (latest entered; ties → later in the list), with its OCC symbol.
@@ -4089,7 +4100,7 @@ function wheelCurrentOption(ticker,trades){
   const legs=openOptionLegs(trades).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry&&t.shares>0);
   if(!legs.length)return null;
   let t=legs[0];legs.forEach(x=>{if(String(x.entered||'')>=String(t.entered||''))t=x;});
-  const type=t.action==='CSP'?'P':'C',contracts=t.shares/100;
+  const type=t.action==='CSP'?'P':'C',contracts=(t._rem>0?t._rem:t.shares)/100;
   const occ=`${String(ticker||'').toUpperCase()}${String(t.expiry).replace(/-/g,'').slice(2)}${type}${String(Math.round((+t.strike)*1000)).padStart(8,'0')}`; // same as wheelLegOcc
   return{id:t.id,action:t.action,type,strike:t.strike,expiry:t.expiry,contracts,occ,premium:+t.premium||null};
 }
@@ -4535,6 +4546,44 @@ function closedCapturedHtml(o){
   const html=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%${at}</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
   return{html,color:c.color};
 }
+// One buy-back's share of a sale, plus an expiry of whatever is left. Display only.
+// A full buy-back of one sale is the whole premium against that buy-back. A partial buy-back
+// is only its own contracts; the rest stays open, or expires on its own for the remaining premium.
+function wheelCloseSlices(trades,today){
+  today=today||new Date().toISOString().slice(0,10);
+  const{open,pairs}=walkLegPairs(trades||[]);const byId={};(trades||[]).forEach(t=>{byId[t.id]=t;});
+  const rem={};open.forEach(o=>{rem[o.id]=o._rem;});
+  const byCloser={},consumed={};
+  for(const[cid,ps]of Object.entries(pairs)){
+    const c=byId[cid];if(!c||(c.action!=='BTC'&&c.action!=='STC'))continue;
+    ps.forEach(p=>{
+      const s=byId[p.legId];if(!s||(s.action!=='CSP'&&s.action!=='STOC'))return;
+      const sh=+p.shares||0,S=+s.shares||0;if(!(sh>0)||!(S>0))return;
+      const credit=(+s.total||0)*(sh/S),cost=(+c.total||0)*((+c.shares>0)?sh/(+c.shares):1);
+      const prem=+s.premium||0,px=+c.premium||0;
+      const slice={legId:s.id,kept:prem>0?Math.round((prem-px)/prem*100):null,net:Math.round((credit-cost)*100)/100,px,shares:sh};
+      (byCloser[c.id]=byCloser[c.id]||[]).push(slice);
+      consumed[s.id]=(consumed[s.id]||0)+sh;
+    });
+  }
+  const remainder={};
+  (trades||[]).forEach(s=>{
+    if(s.action!=='CSP'&&s.action!=='STOC')return;
+    const S=+s.shares||0,used=consumed[s.id]||0;if(!(S>0)||!(used>0)||used>=S-1e-6)return;
+    const left=S-used;
+    if(!((s.expiry&&s.expiry<today)||s.expiredWorthless))return;
+    remainder[s.id]={kept:(+s.premium>0)?100:null,net:Math.round((+s.total||0)*(left/S)*100)/100,px:0,shares:left};
+  });
+  return{byCloser,remainder,rem,consumed};
+}
+// Wording for a sale that still has contracts left after a buy-back: "3 open of 5", or "3 expired of 5".
+function wheelRemainLabel(t,trades,today){
+  if(!t||(t.action!=='CSP'&&t.action!=='STOC'))return'';
+  const{rem}=wheelCloseSlices(trades||[],today),S=+t.shares||0,left=rem[t.id];
+  if(!(S>0)||left==null||left>=S-1e-6)return'';
+  const n=v=>S%100===0&&left%100===0?v/100:v,word=(t.expiry&&t.expiry<today)||t.expiredWorthless?'expired':'open';
+  return`${n(left)} ${word} of ${n(S)}`;
+}
 // Which openers have a matched buy-to-close row. Display only: the outcome numbers stay on the sell.
 // Expiries and assignments have no BTC row, so they are not moved.
 function wheelCapturedOnClose(trades){
@@ -4556,28 +4605,31 @@ function wheelCapturedOnClose(trades){
 // Wheel trade-list cells (To strike, PPD, Captured) — same meaning as the LEAP card's short-call list.
 function wheelListCells(t,L){
   const r={ts:'—',ppd:'—',cap:'—',capColor:'var(--text3)'};
-  if(t.action==='BTC'){
-    const place=wheelCapturedOnClose(L.trades||[]),ids=(place.onClose[t.id]||[]);
-    const cells=ids.map(id=>L.outcomes&&L.outcomes[id]).filter(Boolean).map(closedCapturedHtml);
-    if(cells.length){r.cap=cells.map(c=>c.html).join('');r.capColor=cells[cells.length-1].color;}
+  const slices=wheelCloseSlices(L.trades||[],L.today);
+  if(t.action==='BTC'||t.action==='STC'){
+    const parts=slices.byCloser[t.id]||[];
+    if(parts.length){const cells=parts.map(closedCapturedHtml);r.cap=cells.map(c=>c.html).join('');r.capColor=cells[cells.length-1].color;}
     return r;
   }
   if(t.action!=='CSP'&&t.action!=='STOC')return r;
   const prem=+t.premium||0,dd=(a,b)=>{if(!a||!b)return null;const d=Math.round((Date.parse(a)-Date.parse(b))/864e5);return isNaN(d)?null:Math.max(1,d);};
+  const left=slices.rem[t.id],baseSh=+t.shares||0,openSh=left!=null?left:baseSh;
   if(L.openIds.has(t.id)){
     r.ts=toStrike(L.spot,+t.strike).text;
-    const d=dd(L.today,t.entered);if(d&&t.total)r.ppd=ppdCellHtml(t.total/d,d);
+    const d=dd(L.today,t.entered);if(d&&t.total)r.ppd=ppdCellHtml(t.total*(baseSh?openSh/baseSh:1)/d,d);
     const occ=wheelLegOcc(L.ticker,t),known=!!(L.marks&&Object.prototype.hasOwnProperty.call(L.marks,occ));
     const mark=L.marks?L.marks[occ]:null;
     if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
-    if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:(+t.shares||0)/100};const cv=wheelCurrentValue(opt,mark);
+    if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:openSh/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
       const pct=Math.round((prem-mark)/prem*100),c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap" title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'')}">${pct}% <span class="cap-at">· at $${(+mark).toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;}
     return r;
   }
+  const rest=slices.remainder[t.id];
+  if(rest){const d=dd(t.expiry||t.entered,t.entered);if(d&&rest.net!=null)r.ppd=ppdCellHtml(rest.net/d,d);const cell=closedCapturedHtml(rest);r.cap=cell.html;r.capColor=cell.color;return r;}
   const o=L.outcomes[t.id];if(!o)return r;
   const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
-  if(wheelCapturedOnClose(L.trades||[]).hide.has(t.id))return r;
+  if((slices.consumed[t.id]||0)>0)return r;
   const cell=closedCapturedHtml(o);r.cap=cell.html;r.capColor=cell.color;
   return r;
 }
@@ -4625,7 +4677,7 @@ function renderTradeRow(t,wheelTrades,opts){
     <span>${t.strike?fmtStrike(t.strike):'—'}</span>
     ${hasExtra?opts.extraAfterStrike:''}
     <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
-    <span>${t.shares||'—'}</span>
+    <span style="white-space:nowrap">${opts.list?(()=>{const lab=wheelRemainLabel(t,wheelTrades,opts.list.today);return lab?esc(lab):(t.shares||'—');})():(t.shares||'—')}</span>
     <span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>
     <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
     <span style="white-space:nowrap">${ppdDisplay}</span>
