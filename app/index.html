@@ -7698,7 +7698,7 @@ async function _billingCall(fn,payload){
   const r=await fetch('/.netlify/functions/'+fn,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify(payload||{})});
   const j=await r.json().catch(()=>({}));if(!r.ok||!j.url)throw new Error(j.error||'Something went wrong, please try again.');return j.url;
 }
-async function startCheckout(plan){const m=document.getElementById('upg-msg');m.textContent='Opening secure checkout…';try{location.href=await _billingCall('checkout',{plan});}catch(e){m.textContent=e.message;}}
+async function startCheckout(plan){const m=document.getElementById('upg-msg');if(m)m.textContent='Opening secure checkout…';try{const url=await _billingCall('checkout',{plan});if(url&&(plan==='monthly'||plan==='yearly')){try{if(typeof otTrack==='function')otTrack('/checkout-started/'+plan);}catch(e){}}if(url)location.href=url;}catch(e){if(m)m.textContent=e.message;}}
 async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
 
 // ── Your data: export and delete ─────────────────────────────
