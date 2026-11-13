@@ -7,11 +7,17 @@ test('installed app and returning users skip the landing page',()=>{assert.ok(L.
 test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');});
 test('landing leads with the USPs, top three first, then the rest, plans, not financial advice, CTAs, no hype',()=>{
   const i=id=>L.indexOf('id="'+id+'"');assert.ok(i('usp-broker')>0&&i('usp-broker')<i('usp-honest')&&i('usp-honest')<i('usp-smartscan')&&i('usp-smartscan')<i('plans'),'USP order');
-  ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Pick any trades. See the real net.','PMCC','every minute','after-hours','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','Try the demo','href="/start"','id="plans"','id="start-free"','id="try-demo"','id="signin-hero"','id="go-pro"','href="/app/?signup=1"','signup=1&checkout=monthly'].forEach(s=>assert.ok(L.includes(s),s));
+  ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Pick any trades. See the real net.','PMCC','every minute','after-hours','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','Try the demo','href="/start"','id="plans"','id="start-free"','id="try-demo"','id="signin-top"','id="go-pro"','href="/app/?signup=1"','signup=1&checkout=monthly'].forEach(s=>assert.ok(L.includes(s),s));
+  assert.ok(!L.includes('id="signin-hero"')&&!L.includes('I have an account'),'hero row has no Sign in button');
+  assert.ok(L.includes('id="ways-note">Start free creates an account. No card. The demo needs no sign-up. Nothing to download: it runs in your web browser.'));
+  assert.ok(L.includes('@media(min-width:1280px)')&&L.includes('#ways-in{flex-direction:column')&&/id="start-free"[\s\S]*id="try-demo"[\s\S]*id="go-pro"/.test(L)&&L.includes("otCount('/start-free')")&&L.includes("otCount('/demo')")&&L.includes("otCount('/go-pro')"));
   assert.ok(L.indexOf('id="ways-in"')<L.indexOf('id="usp-broker"'),'the ways in sit above the feature cards');
   ['img/select-net.png'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
   assert.ok(L.includes('Demo data')&&L.includes('made-up numbers'),'screens and examples labelled');
-  assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));});
+  assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));
+  assert.ok(i('grokbot')>i('usp-smartscan')&&i('grokbot')<i('plans'),'Grok Bot block sits with the features');
+  assert.ok(L.includes('id="grokbot"')&&L.includes('Automatic trade inputs with Grok Bot, no brokerage link needed.')&&L.includes('Plaid connection you linked yourself')&&L.includes('OpTrack never receives your broker credentials'));
+  assert.ok(!/no one sees your broker|partnership|xAI/i.test(L));});
 test('landing is light: no external CSS/fonts, images small',()=>{assert.ok(!/<link[^>]+stylesheet/.test(L));fs.readdirSync(path.join(A,'img')).forEach(f=>assert.ok(fs.statSync(path.join(A,'img',f)).size<60000,f));});
 test('analytics: goatcounter on the public site, cookie-free providers only, never on localhost or a simulator run',()=>{const ctx={window:{}};require('vm').runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);
   const live=analyticsTag(ctx.window.BRAND.analytics,'optrack.app');

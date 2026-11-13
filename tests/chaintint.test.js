@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { load } = require('./extract');
-const { wheelChainMap, pmccChainMap, hoistChainLines, buildRollChain, isChainTip, pmccRollParents } = load([
+const { wheelChainMap, pmccChainMap, buildRollChain, isChainTip, pmccRollParents } = load([
   { kind: 'const', name: 'CREDITS' },
   { kind: 'fn', name: 'isCredit' },
   { kind: 'fn', name: 'walkLegPairs' },
@@ -17,7 +17,6 @@ const { wheelChainMap, pmccChainMap, hoistChainLines, buildRollChain, isChainTip
   { kind: 'fn', name: 'wheelChainMap' },
   { kind: 'fn', name: 'pmccRollParents' },
   { kind: 'fn', name: 'pmccChainMap' },
-  { kind: 'fn', name: 'hoistChainLines' },
 ]);
 
 test('wheel: two chains get distinct indices, plain trades none', () => {
@@ -48,16 +47,9 @@ test('pmcc: rolledFrom chains indexed, lone short untinted', () => {
   assert.notEqual(m.s1, m.s3); assert.equal(m.s5, undefined);
 });
 
-test('render: one teal tint class, chain line sits above the tip row', () => {
+test('trade tables do not paint chain strips, roll icons or tint', () => {
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
-  assert.ok(!/chain-c\d/.test(src), 'no multi-colour palette classes');
-  assert.ok(/\.trow\.chain-tint,\.chain-row\.chain-tint\{background:rgba\(8,145,178/.test(src));
-  assert.ok(!/<\/div>\$\{chainHtml\}`/.test(src));
-});
-
-test('chain line hoists above the first displayed member, even when interleaved', () => {
-  const out = hoistChainLines([0, undefined, 0, 1, 1], ['A', 'x', 'B', 'C', 'D'], { 0: '[c0]', 1: '[c1]' });
-  assert.equal(out, '[c0]AxB[c1]CD');
+  assert.ok(!/chain-row|roll-badge|chain-tint|roll-trade|roll-slot|⛓ Chain|chain complete/.test(src));
 });
 
 // Marc's real SOFI-style example: two 400 CSPs → both bought back 01/04 and rolled into one

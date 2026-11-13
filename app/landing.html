@@ -13,7 +13,7 @@
 }catch(e){}})();
 </script>
 <title>OpTrack: Options Wheel Tracker</title>
-<meta name="description" content="An honest options tracker for the wheel and LEAPs. No broker link: type trades in, paste a confirmation or import a CSV. Realised P&amp;L only.">
+<meta name="description" content="An honest option wheel tracker for the wheel and LEAPs. No broker link: type trades in, paste a confirmation or import a CSV. Realised P&amp;L only.">
 <meta name="theme-color" content="#FAF9F6"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.json">
 <meta property="og:title" content="OpTrack: Options Wheel Tracker"><meta property="og:image" content="optrack-share.png">
 <script src="brand.js"></script>
@@ -27,8 +27,10 @@ a{color:var(--green)}.wrap{max-width:72rem;margin:0 auto;padding:0 2rem}
 .wm{font-family:Nunito,sans-serif;font-weight:900;font-size:1.75rem;letter-spacing:normal;line-height:1;display:inline-block;color:var(--text);transform:skewX(-9deg);transform-origin:center bottom}
 header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0}.logo{display:flex;align-items:center;gap:.5rem}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .btn{display:inline-block;padding:.8rem 1.4rem;border-radius:.5rem;text-decoration:none;font-weight:600;font-size:1rem}.btn.p{background:var(--green);color:#FFFFFF}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
-.hero{padding:1.75rem 0 1.5rem;max-width:52rem}.hero h1{font-size:2.75rem;line-height:1.1;margin:0 0 .5rem;letter-spacing:-.03em}.hero .tagline{margin:0 0 1rem;font-size:1.35rem;font-weight:700;font-style:italic;letter-spacing:-.02em;color:var(--text);line-height:1.3}.hero p{color:var(--text2);font-size:1.2rem;margin:0}
+.hero{padding:1.75rem 0 1.5rem}.hero-copy{max-width:46rem}.hero h1{font-size:2.75rem;line-height:1.1;margin:0 0 .5rem;letter-spacing:-.03em}.hero .tagline{margin:0 0 1rem;font-size:1.35rem;font-weight:700;font-style:italic;letter-spacing:-.02em;color:var(--text);line-height:1.3}.hero-copy p{color:var(--text2);font-size:1.2rem;margin:0}
 .cta{display:flex;gap:.75rem;flex-wrap:wrap;margin:1.25rem 0 .5rem}.small{font-size:.85rem;color:var(--text3)}
+#ways-in{flex-direction:column;align-items:stretch;margin:1.25rem 0 0;max-width:20rem}#ways-in .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;text-align:center;min-height:4.35rem;border:1px solid transparent}#ways-in .btn.g{border-color:var(--line)}#ways-note{margin:.7rem 0 0;max-width:20rem}
+@media(min-width:1280px){.hero{display:grid;grid-template-columns:minmax(0,1fr) 17.5rem;column-gap:3rem;align-items:center}#ways-in,#ways-note{max-width:none;margin:0}#ways-note{margin-top:.75rem}}
 .btn small{display:block;font-weight:500;font-size:.75rem;line-height:1.2;margin-top:.1rem}.btn.p small{color:#fff}.btn.g small{color:var(--text3)}
 h2{font-size:1.6rem;margin:4rem 0 1.25rem;letter-spacing:-.01em}
 .usp{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
@@ -49,6 +51,10 @@ h2{font-size:1.6rem;margin:4rem 0 1.25rem;letter-spacing:-.01em}
 .plans{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:.75rem;overflow:hidden;font-size:.925rem}th,td{padding:.625rem .75rem;border-bottom:1px solid var(--line);text-align:left}th:not(:first-child),td:not(:first-child){text-align:center;width:7rem}tr:last-child td{border-bottom:0}.y{color:var(--green);font-weight:700}.n{color:var(--text3)}
 .price{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1.5rem}.price .amt{font-size:2rem;font-weight:700}.price .amt span{font-size:1rem;color:var(--text3);font-weight:400}
+.bot{margin:3.5rem 0 0;background:var(--card);border:1px solid var(--line);border-radius:1rem;padding:1.35rem 1.5rem;scroll-margin-top:1.25rem}
+.bot .k{font-size:.75rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em}
+.bot h2{font-size:1.45rem;line-height:1.25;margin:.35rem 0 .5rem;letter-spacing:-.01em}
+.bot p{margin:0;color:var(--text2);max-width:46rem}
 .nfa{background:#FFF8E6;border:1px solid #F0D58A;border-radius:.75rem;padding:1rem 1.25rem;font-size:.95rem;color:#5c4a12;margin-top:4rem}
 footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}
 </style>
@@ -58,11 +64,15 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
   <header><div class="logo"><img src="logo-mark.svg" alt="" width="40" height="40"><span class="wm" data-brand="name">OpTrack</span></div><a class="btn g" href="/app/" id="signin-top">Sign in</a></header>
 
   <section class="hero">
-    <h1>An options tracker that tells you the truth.</h1>
-    <p class="tagline">There’s no such thing as a roll, grow up!</p>
-    <p>Track the wheel and LEAPs without linking your broker. <span data-brand="name">OpTrack</span> only counts money you've actually banked, so the numbers you see are the numbers you made.</p>
-    <div class="cta" id="ways-in"><a class="btn p" href="/app/?signup=1" id="start-free" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/demo" id="try-demo" onclick="otCount('/demo')">Try the demo<small>No sign-up</small></a><a class="btn g" href="/app/" id="signin-hero">Sign in<small>I have an account</small></a><a class="btn g" href="/app/?signup=1&checkout=monthly" id="go-pro" onclick="otCount('/go-pro')">Go Pro<small>Paid plan</small></a></div>
-    <div class="small" id="ways-note">Start free creates an account. No card. The demo needs no sign-up. Sign in is for an account you already have. Nothing to download: it runs in your web browser.</div>
+    <div class="hero-copy">
+      <h1>An option wheel tracker that tells you the truth.</h1>
+      <p class="tagline">There’s no such thing as a roll, grow up!</p>
+      <p>Track the wheel and LEAPs without linking your broker. <span data-brand="name">OpTrack</span> only counts money you've actually banked, so the numbers you see are the numbers you made.</p>
+    </div>
+    <div class="hero-actions">
+      <div class="cta" id="ways-in"><a class="btn p" href="/app/?signup=1" id="start-free" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/demo" id="try-demo" onclick="otCount('/demo')">Try the demo<small>No sign-up</small></a><a class="btn g" href="/app/?signup=1&checkout=monthly" id="go-pro" onclick="otCount('/go-pro')">Go Pro<small>Paid plan</small></a></div>
+      <div class="small" id="ways-note">Start free creates an account. No card. The demo needs no sign-up. Nothing to download: it runs in your web browser.</div>
+    </div>
   </section>
 
   <section class="usp">
@@ -84,6 +94,12 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
         <div class="paste">Sold to open 2 XYZ 11/21 $45 Put @ 1.10<br>Fees $0.06</div>
         <div class="arrow">↓</div>
         <div class="fields"><span><b>Type</b>Sell put</span><span><b>Strike</b>$45</span><span><b>Expiry</b>21 Nov</span><span><b>Qty</b>2</span><span><b>Price</b>$1.10</span><span><b>Fees</b>$0.06</span></div></div></div>
+  </section>
+
+  <section class="bot" id="grokbot">
+    <div class="k">Hands-free entry</div>
+    <h2>Automatic trade inputs with Grok Bot, no brokerage link needed.</h2>
+    <p>Set this up in your own Grok Bot. Once a week it reads your new broker trades, through the Plaid connection you linked yourself, and types them into OpTrack the same way you would. OpTrack never receives your broker credentials.</p>
   </section>
 
   <h2>And the rest</h2>
@@ -116,7 +132,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
 (function(){var B=window.BRAND;if(!B)return;
   document.querySelectorAll('[data-brand="name"]').forEach(function(e){e.textContent=B.name;});document.title=B.name+': '+B.tagline;
   document.getElementById('yr').textContent=new Date().getFullYear();
-  if(B.supportEmail){var s=document.getElementById('support');s.href='mailto:'+B.supportEmail;s.hidden=false;}
+  if(B.supportEmail){var s=document.getElementById('support');s.href='mailto:'+B.supportEmail+'?subject='+encodeURIComponent('OpTrack support');s.hidden=false;var addr=document.getElementById('support-addr');if(!addr){addr=document.createElement('span');addr.id='support-addr';s.after(addr);}addr.textContent=' '+B.supportEmail;}
   var P=B.plans,N=B.featureNames||{};if(!P)return;var paid=P.paidFeatures||[],c=P.currency||'£';
   var rows=[['Manual entry and SmartScan','✓','✓'],['Wheel tracking',paid.indexOf('unlimited')>=0?'Up to '+P.free.maxWheelTickers+' tickers':'Unlimited','Unlimited'],['LEAPs',paid.indexOf('unlimited')>=0||paid.indexOf('leaps-full')>=0?P.free.maxOpenLeaps+' open LEAP':'Unlimited','Unlimited'],['Realised P&L and Home','✓','✓'],['Export and delete your data','✓','✓']];
   Object.keys(N).forEach(function(k){if(k==='unlimited'||k==='leaps-full')return;rows.push([N[k],paid.indexOf(k)>=0?'–':'✓','✓']);});
@@ -124,5 +140,6 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
   var pa=document.getElementById('pro-amt');if(pa)pa.innerHTML=c+P.priceMonthly+' <span>/ month</span>';document.getElementById('price-line').textContent='Pro is '+c+P.priceMonthly+' a month or '+c+P.priceYearly+' a year. Cancel any time.'+(P.gating?'':' For now, everything is free while we finish setting up.');
 })();
 </script>
+<script src="sw-update.js"></script>
 </body>
 </html>

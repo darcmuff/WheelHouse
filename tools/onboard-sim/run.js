@@ -94,7 +94,19 @@ function watch(page) {
 
 async function fresh(browser, w, h) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, locale: 'en-GB' });
-  await ctx.addInitScript(() => { try { localStorage.setItem('ot-sim', '1'); } catch (e) {} });
+  await ctx.addInitScript(() => {
+    try { localStorage.setItem('ot-sim', '1'); } catch (e) {}
+    function arm(){
+      if (!document.documentElement || document.documentElement.__otBanner) return;
+      document.documentElement.__otBanner = 1;
+      new MutationObserver(function(){
+        var t = document.body ? document.body.innerText : '';
+        if (document.getElementById('sw-update') || /New version — Refresh/.test(t)) window.__otSawBanner = 1;
+      }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arm);
+    else arm();
+  });
   return ctx;
 }
 
@@ -116,6 +128,10 @@ async function step(bag, name, budget, fn) {
 
 function checkErrors(errors) {
   if (errors.length) throw new Error('console error: ' + errors.slice(0, 3).join(' | '));
+}
+async function noBanner(page) {
+  const saw = await page.evaluate(() => !!(window.__otSawBanner || document.getElementById('sw-update') || /New version — Refresh/.test(document.body ? document.body.innerText : '')));
+  if (saw) throw new Error('update banner appeared');
 }
 
 async function clickSel(page, selector) {
@@ -200,12 +216,12 @@ async function main() {
         rec.paths.goPro = await pathGoPro(browser, pass, origin, shot);
         if (opt.diagnose) {
           rec.paths.startFree = await pathEntryOnly(browser, pass, origin, '#start-free', 'signup', shot);
-          rec.paths.signIn = await pathEntryOnly(browser, pass, origin, '#signin-hero', 'signin', shot);
+          rec.paths.signIn = await pathEntryOnly(browser, pass, origin, '#signin-top', 'signin', shot);
         } else {
           const made = await pathStartFree(browser, pass, origin, shot);
           rec.paths.startFree = made.report;
-          if (made.account && made.report.ok) rec.paths.signIn = await pathSignIn(browser, pass, origin, made.account, shot);
-          else rec.paths.signIn = { ok: false, error: 'skipped: start-free did not leave an account', steps: [], clicksToSignup: null };
+          const left = made.account && made.report.ok ? made.account : null;
+          rec.paths.signIn = await pathSignIn(browser, pass, origin, left, shot);
         }
       } catch (e) {
         rec.ok = false;
@@ -242,7 +258,7 @@ async function pathLanding(browser, pass, origin, shot, shotFull) {
     await step(bag, 'ways in are above the fold', UI, async () => {
       const info = await page.evaluate(() => {
         const fold = window.innerHeight;
-        const ids = ['start-free', 'try-demo', 'signin-hero', 'go-pro'];
+        const ids = ['start-free', 'try-demo', 'signin-top', 'go-pro'];
         const out = {};
         ids.forEach((id) => {
           const el = document.getElementById(id);
@@ -258,6 +274,7 @@ async function pathLanding(browser, pass, origin, shot, shotFull) {
     });
     bag.shots.push(await shot(page, 'landing-' + pass.tag));
     bag.shots.push(await shotFull(page, 'landing-full-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -291,6 +308,7 @@ async function pathDemo(browser, pass, origin, shot) {
       bag.detail = state.text;
     });
     bag.shots.push(await shot(page, 'demo-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -326,6 +344,7 @@ async function pathGoPro(browser, pass, origin, shot) {
       if (checkout !== 'monthly') throw new Error('checkout was ' + checkout + ', expected monthly');
     });
     bag.shots.push(await shot(page, 'gopro-signup-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -361,6 +380,7 @@ async function pathEntryOnly(browser, pass, origin, sel, want, shot) {
       if (mode !== want) throw new Error(sel + ' opened "' + mode + '" at ' + page.url());
     });
     bag.shots.push(await shot(page, 'entry-' + sel.replace('#', '') + '-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -444,6 +464,16 @@ async function pathStartFree(browser, pass, origin, shot) {
       await page.waitForFunction(() => document.body.innerText.includes('$15') && document.body.innerText.includes('$14'), null, { timeout: NET });
     });
     bag.shots.push(await shot(page, 'smartscan-trade-' + pass.tag));
+    await step(bag, 'not stuck on Please wait', UI, async () => {
+      const state = await page.evaluate(() => {
+        const o = document.getElementById('auth-overlay');
+        const btn = document.getElementById('auth-submit-btn');
+        return { overlay: o ? getComputedStyle(o).display : 'missing', label: btn ? btn.textContent.replace(/\s+/g, ' ').trim() : '', disabled: !!(btn && btn.disabled) };
+      });
+      if (state.overlay !== 'none') throw new Error('auth overlay still up ' + JSON.stringify(state));
+      if (state.disabled || /please wait/i.test(state.label)) throw new Error('submit button left waiting ' + JSON.stringify(state));
+    });
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -461,17 +491,29 @@ async function pathStartFree(browser, pass, origin, shot) {
 }
 
 async function pathSignIn(browser, pass, origin, acc, shot) {
-  const bag = { ok: true, steps: [], clicks: 0, clicksToSignup: 'not a sign-up path', shots: [], email: acc.email, deleted: false };
+  const bag = { ok: true, steps: [], clicks: 0, clicksToSignup: 'not a sign-up path', shots: [], deleted: false };
+  if (!acc) {
+    bag.provisioned = true;
+    const made = await pathStartFree(browser, pass, origin, shot);
+    bag.shots.push.apply(bag.shots, made.report.shots || []);
+    if (!made.account || !made.report.ok) {
+      bag.ok = false;
+      bag.error = 'start-free left no account, and a fresh sign-in account could not be created' + (made.report.error ? ': ' + made.report.error : '');
+      return bag;
+    }
+    acc = made.account;
+  }
+  bag.email = acc.email;
   const ctx = await fresh(browser, pass.w, pass.h);
   const page = await ctx.newPage();
   const errors = watch(page);
   try {
     await step(bag, 'open landing in a fresh browser', UI, async () => {
       await page.goto(origin + '/', { waitUntil: 'domcontentloaded', timeout: UI });
-      await page.waitForSelector('#signin-hero', { timeout: UI });
+      await page.waitForSelector('#signin-top', { timeout: UI });
     });
     await step(bag, 'click Sign in', UI, async () => {
-      await clickSel(page, '#signin-hero');
+      await clickSel(page, '#signin-top');
       bag.clicks = 1;
       await page.waitForURL(/\/app\/?/, { timeout: UI });
     });
@@ -493,6 +535,7 @@ async function pathSignIn(browser, pass, origin, acc, shot) {
       }, null, { timeout: NET });
     });
     bag.shots.push(await shot(page, 'signed-in-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
     await step(bag, 'delete the account', NET, async () => { await deleteAccount(page, acc.password); });
     bag.deleted = true;
