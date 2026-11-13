@@ -527,11 +527,17 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .fld{display:flex;flex-direction:column;gap:0.1875rem}
 .fld.s2{grid-column:span 2}
 .fld label{font-size:0.625rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
-.fld input,.fld select,.fld textarea{
+.fld input,.fld select,.fld textarea,.wh-pick-btn{
   background:var(--bg);border:1px solid var(--border2);color:var(--text);
   padding:0.375rem 0.5625rem;border-radius:0.375rem;font-size:0.8125rem;width:100%;transition:border-color .15s;
 }
-.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--orange)}
+.fld input:focus,.fld select:focus,.fld textarea:focus,.wh-pick-btn:focus{outline:none;border-color:var(--orange)}
+.wh-pick{position:relative}.wh-pick-btn{display:flex;align-items:center;gap:0.4rem;text-align:left;cursor:pointer}
+.wh-pick-face{display:flex;align-items:center;gap:0.4rem;flex:1;min-width:0}.wh-caret{color:var(--text3);font-size:0.7rem}
+.wh-pick-face .rot-logo,.wh-opt .rot-logo{width:1.125rem;height:1.125rem}
+.wh-pick-list{position:absolute;z-index:30;left:0;right:0;top:calc(100% + 2px);background:var(--bg);border:1px solid var(--border2);border-radius:0.375rem;max-height:14rem;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.wh-opt{display:flex;align-items:center;gap:0.4rem;width:100%;background:none;border:0;color:var(--text);padding:0.4rem 0.5625rem;font-size:0.8125rem;cursor:pointer;text-align:left}
+.wh-opt:hover,.wh-opt.on{background:var(--bg3)}
 .fld input[readonly]{color:var(--text3)}
 .fld textarea{resize:vertical;min-height:2.25rem}
 .mfoot{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.625rem;padding-top:0.625rem;border-top:1px solid var(--border)}
@@ -800,7 +806,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .mbox{background:var(--bg2);border:1px solid var(--border);border-radius:1.25rem;box-shadow:0 12px 40px rgba(20,24,20,.18);padding:1.375rem 1.5rem}
 .mtitle{color:var(--text);font-size:0.95rem;font-weight:600}
 .fld label{text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2);font-size:0.625rem}
-.fld input,.fld select,.fld textarea,.mbox textarea,.mbox input[type=text]{background:var(--bg)!important;border:1px solid var(--border)!important;border-radius:0.625rem!important;color:var(--text)!important}
+.fld input,.fld select,.fld textarea,.wh-pick-btn,.mbox textarea,.mbox input[type=text]{background:var(--bg)!important;border:1px solid var(--border)!important;border-radius:0.625rem!important;color:var(--text)!important}
 .fld input:focus,.fld select:focus,.fld textarea:focus,.mbox textarea:focus{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeD)}
 .mfoot{border-top:1px solid var(--bg3)}
 .hint{color:var(--text3)}
@@ -1026,7 +1032,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mTradeTitle">Add Trade</span><span class="mx" onclick="closeModal('mTrade')">✕</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
       <div class="fld"><label>Ticker</label><input id="tf-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase" oninput="onTickerInput()"></div>
-      <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="tf-wheel" onchange="fillRollSelect('tf-roll-from',this.value,document.getElementById('tf-id').value)"></select></div>
+      <div class="fld" style="grid-column:span 2"><label for="tf-wheel-btn">Wheel</label><div class="wh-pick"><input type="hidden" id="tf-wheel"><button type="button" class="wh-pick-btn" id="tf-wheel-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div></div>
       <div class="fld"><label>Action</label>
         <select id="tf-action" onchange="onActionChange()">
           <option value="CSP">CSP — Cash Secured Put</option>
@@ -1096,7 +1102,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div id="paste-panel-manual" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5625rem;margin-bottom:0.5625rem">
           <div class="fld"><label>Ticker</label><input id="pm-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase" oninput="onPMTickerInput()"></div>
-          <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="pm-wheel" onchange="fillRollSelect('pm-roll-from',this.value)"></select></div>
+          <div class="fld" style="grid-column:span 2"><label>Wheel</label><div class="wh-pick"><input type="hidden" id="pm-wheel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div></div>
           <div class="fld"><label>Action</label>
             <select id="pm-action" onchange="onPMActionChange()">
               <option value="CSP">CSP — Cash Secured Put</option>
@@ -5713,16 +5719,78 @@ function deleteWheel(id){
   expanded.delete(id);render();
 }
 
-function populateWheelSelect(selectedId,ticker){
-  const sel=document.getElementById('tf-wheel');
-  sel.innerHTML='<option value="new">+ Create New Rotation</option>';
-  db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
-    const opt=document.createElement('option');
-    opt.value=w.id;opt.textContent=`${w.label||w.ticker} (${w.status})`;sel.appendChild(opt);
+function wheelFace(w,withDate){
+  const tk=String(w.ticker||'').toUpperCase();
+  let co=String(w.company||'').trim();
+  if(!co||/^rotation\b/i.test(co)){const row=(window.POPULAR&&POPULAR.rows||[]).find(r=>String(r[0]).toUpperCase()===tk);co=row&&row[1]?String(row[1]):'';}
+  const name=co&&co.toUpperCase()!==tk?co+' / '+tk:(tk||'Wheel');
+  if(!withDate)return name;
+  const d=String(w.createdAt||'').slice(0,10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d)?name+' · '+fmtMonYear(d):name;
+}
+function wheelLogoHtml(ticker){const u=logos[String(ticker||'').toUpperCase()];return u?`<img src="${esc(u)}" class="rot-logo" alt="" onerror="this.style.display='none'">`:'';}
+function wheelPickItems(wheels){
+  const counts={};(wheels||[]).forEach(w=>{const t=String(w.ticker||'').toUpperCase();counts[t]=(counts[t]||0)+1;});
+  return [{id:'new',ticker:'',text:'+ New wheel'}].concat((wheels||[]).map(w=>({id:w.id,ticker:w.ticker,text:wheelFace(w,counts[String(w.ticker||'').toUpperCase()]>1)})));
+}
+function pickWheelDefault(selectedId,ticker){
+  if(selectedId&&(selectedId==='new'||(db.wheels||[]).some(w=>w.id===selectedId)))return selectedId;
+  if(ticker){const op=(db.wheels||[]).find(w=>w.ticker===ticker&&w.status==='open');if(op)return op.id;}
+  return 'new';
+}
+function fillWheelPick(id,items,selectedId){
+  const hidden=document.getElementById(id);if(!hidden)return;
+  const root=hidden.closest('.wh-pick');if(!root)return;
+  const value=items.some(i=>i.id===selectedId)?selectedId:(items[0]?items[0].id:'new');
+  hidden.value=value;
+  root.querySelector('.wh-pick-list').innerHTML=items.map(i=>`<button type="button" class="wh-opt${i.id===value?' on':''}" data-id="${esc(i.id)}" onclick="chooseWheelPick('${esc(id)}','${esc(i.id)}')">${wheelLogoHtml(i.ticker)}<span>${esc(i.text)}</span></button>`).join('');
+  const cur=items.find(i=>i.id===value);
+  root.querySelector('.wh-pick-face').innerHTML=cur?wheelLogoHtml(cur.ticker)+`<span>${esc(cur.text)}</span>`:'';
+}
+function toggleWheelPick(btn){
+  const list=btn.parentElement.querySelector('.wh-pick-list');
+  const willOpen=list.hidden;
+  document.querySelectorAll('.wh-pick-list').forEach(l=>l.hidden=true);
+  document.querySelectorAll('.wh-pick-btn').forEach(b=>b.setAttribute('aria-expanded','false'));
+  if(!willOpen)return;
+  list.hidden=false;btn.setAttribute('aria-expanded','true');
+  const close=e=>{if(btn.parentElement.contains(e.target))return;list.hidden=true;btn.setAttribute('aria-expanded','false');document.removeEventListener('click',close,true);};
+  setTimeout(()=>document.addEventListener('click',close,true),0);
+}
+function chooseWheelPick(id,value){
+  const hidden=document.getElementById(id);if(!hidden)return;
+  const root=hidden.closest('.wh-pick');
+  hidden.value=value;
+  root.querySelectorAll('.wh-opt').forEach(b=>b.classList.toggle('on',b.dataset.id===value));
+  const on=root.querySelector('.wh-opt.on');
+  root.querySelector('.wh-pick-face').innerHTML=on?on.innerHTML:'';
+  root.querySelector('.wh-pick-list').hidden=true;
+  root.querySelector('.wh-pick-btn').setAttribute('aria-expanded','false');
+  if(id==='tf-wheel')fillRollSelect('tf-roll-from',value,document.getElementById('tf-id').value);
+  if(id==='pm-wheel')fillRollSelect('pm-roll-from',value);
+  if(id==='paste-wheel-sel')fillRollSelect('paste-roll-from',value);
+}
+function warmWheelLogos(){
+  const need=[...new Set((db.wheels||[]).map(w=>String(w.ticker||'').toUpperCase()).filter(t=>t&&logos[t]===undefined))];
+  if(!need.length)return;
+  Promise.all(need.map(fetchLogo)).then(()=>{
+    document.querySelectorAll('.wh-pick').forEach(root=>{
+      root.querySelectorAll('.wh-opt').forEach(b=>{
+        if(b.querySelector('img'))return;
+        const w=(db.wheels||[]).find(x=>x.id===b.dataset.id);
+        const logo=wheelLogoHtml(w&&w.ticker);
+        if(logo)b.insertAdjacentHTML('afterbegin',logo);
+      });
+      const on=root.querySelector('.wh-opt.on');
+      if(on)root.querySelector('.wh-pick-face').innerHTML=on.innerHTML;
+    });
   });
-  if(selectedId)sel.value=selectedId;
-  else if(ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
-  fillRollSelect('tf-roll-from',sel.value,document.getElementById('tf-id').value);
+}
+function populateWheelSelect(selectedId,ticker){
+  const wheels=[...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  fillWheelPick('tf-wheel',wheelPickItems(wheels),pickWheelDefault(selectedId,ticker));
+  fillRollSelect('tf-roll-from',document.getElementById('tf-wheel').value,document.getElementById('tf-id').value);
+  warmWheelLogos();
 }
 function openAddTrade(wheelId){
   document.getElementById('tf-id').value='';
@@ -6994,13 +7062,10 @@ function switchPasteTab(tab){
   }
 }
 function populatePMWheelSelect(wheelId,ticker){
-  const sel=document.getElementById('pm-wheel');
-  sel.innerHTML='<option value="new">+ New Rotation</option>';
-  db.wheels.filter(w=>!ticker||w.ticker===ticker).forEach(w=>{
-    sel.innerHTML+=`<option value="${w.id}" ${w.id===wheelId?'selected':''}>${esc(w.label||w.ticker)} ${w.status==='open'?'(Open)':'(Closed)'}</option>`;
-  });
-  if(!wheelId&&ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
-  fillRollSelect('pm-roll-from',sel.value,'');
+  const wheels=(db.wheels||[]).filter(w=>!ticker||w.ticker===ticker).sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  fillWheelPick('pm-wheel',wheelPickItems(wheels),pickWheelDefault(wheelId,ticker));
+  fillRollSelect('pm-roll-from',document.getElementById('pm-wheel').value,'');
+  warmWheelLogos();
 }
 function onPMTickerInput(){const tk=document.getElementById('pm-ticker').value.toUpperCase().trim();populatePMWheelSelect(null,tk);}
 function onPMActionChange(){
@@ -7354,11 +7419,7 @@ function parseRollTrades(raw,todayISO){
 function showRollPreview(trades){
   const wheelId=document.getElementById('paste-wheelId').value;
   const ticker=trades[0].ticker;
-  let opts='<option value="new">+ Create New Rotation</option>';
-  db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
-    const sel=(wheelId&&w.id===wheelId)||(!wheelId&&w.ticker===ticker&&w.status==='open');
-    opts+=`<option value="${w.id}"${sel?' selected':''}>${esc(w.label||w.ticker)} (${w.status})</option>`;
-  });
+  const wheelHtml=`<div class="wh-pick"><input type="hidden" id="paste-wheel-sel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div>`;
   function tradeCard(p){
     const cr=isCredit(p.action);const col=cr?'var(--green)':'var(--red)';const borderCol=cr?'var(--green)':'var(--red)';
     return`<div style="background:var(--bg3);border:1px solid var(--border);border-left:0.1875rem solid ${borderCol};border-radius:0.5rem;padding:0.75rem;flex:1;min-width:0">
@@ -7387,10 +7448,12 @@ function showRollPreview(trades){
       <div style="display:flex;align-items:center;color:var(--orange);font-size:1.25rem;font-weight:600;flex-shrink:0">→</div>
       ${tradeCard(trades[1])}
     </div>
-    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>
+    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>
     <label class="roll-opt"><input type="checkbox" id="paste-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>`;
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
+  fillWheelPick('paste-wheel-sel',wheelPickItems([...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99))),pickWheelDefault(wheelId,ticker));
+  warmWheelLogos();
 }
 
 function parsePaste(){
@@ -7416,11 +7479,7 @@ function parsePaste(){
 function showPastePreview(p){
   const wheelId=document.getElementById('paste-wheelId').value;
   // Build wheel select
-  let opts='<option value="new">+ Create New Rotation</option>';
-  db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
-    const sel=(wheelId&&w.id===wheelId)||(!wheelId&&w.ticker===p.ticker&&w.status==='open');
-    opts+=`<option value="${w.id}"${sel?' selected':''}>${esc(w.label||w.ticker)} (${w.status})</option>`;
-  });
+  const wheelHtml=`<div class="wh-pick"><input type="hidden" id="paste-wheel-sel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div>`;
   const totalCol=isCredit(p.action)?'var(--green)':'var(--red)';
   const totalSign=isCredit(p.action)?'+':'-';
   document.getElementById('paste-preview').innerHTML=`
@@ -7440,8 +7499,10 @@ function showPastePreview(p){
         <div><div class="mini-lbl">Fees</div><div class="fs-sm">$${(p.fees||0).toFixed(2)}</div></div>
       </div>
     </div>
-    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel" onchange="fillRollSelect('paste-roll-from',this.value)">${opts}</select></div>
+    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>
     <label class="roll-opt"><input type="checkbox" id="paste-roll-on" onchange="document.getElementById('paste-roll-box').hidden=!this.checked"> Mark as roll</label><div id="paste-roll-box" hidden class="fld"><label>Rolls from</label><select id="paste-roll-from"><option value="">Choose a trade</option></select></div>`;
+  fillWheelPick('paste-wheel-sel',wheelPickItems([...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99))),pickWheelDefault(wheelId,p.ticker));
+  warmWheelLogos();
   fillRollSelect('paste-roll-from',document.getElementById('paste-wheel-sel').value);
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
@@ -7982,6 +8043,7 @@ window.markExpiredFromModal = markExpiredFromModal;
 window.saveTrade = saveTrade;
 window.savePrice = savePrice;
 window.switchPasteTab = switchPasteTab;window.fillRollSelect = fillRollSelect;
+window.toggleWheelPick = toggleWheelPick;window.chooseWheelPick = chooseWheelPick;
 window.parsePaste = parsePaste;
 window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;
