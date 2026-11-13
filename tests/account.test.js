@@ -15,6 +15,7 @@ test('delete flow: confirm word, re-sign-in, data before login',()=>{const d=ext
   assert.ok(/id="delete-go"[^>]*disabled/.test(SRC));});
 test('settings and sign-up link to the legal page; export and delete in settings',()=>{
   assert.ok(/id="settings-export"[^>]*exportMyData\(\)/.test(SRC));assert.ok(/id="settings-delete"[^>]*openDeleteAccount\(\)/.test(SRC));assert.ok(/id="settings-legal" href="legal.html"/.test(SRC));
+  assert.ok(/id="settings-support"[^>]*href="mailto:support@optrack\.app\?subject=OpTrack%20support"/.test(SRC)&&SRC.includes('>support@optrack.app</span>'),'Settings contact mailto');
   assert.ok(/id="auth-legal"[\s\S]{0,400}legal.html#terms[\s\S]{0,200}legal.html#privacy[\s\S]{0,200}legal.html#advice/.test(SRC));
   ['exportMyData','openDeleteAccount','doDeleteAccount'].forEach(f=>assert.ok(SRC.includes(`window.${f} = ${f}`),f));});
 test('legal page: draft, three sections, brand-driven, delete instructions',()=>{const h=fs.readFileSync(path.join(__dirname,'..','app','legal.html'),'utf8');

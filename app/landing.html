@@ -126,7 +126,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
 (function(){var B=window.BRAND;if(!B)return;
   document.querySelectorAll('[data-brand="name"]').forEach(function(e){e.textContent=B.name;});document.title=B.name+': '+B.tagline;
   document.getElementById('yr').textContent=new Date().getFullYear();
-  if(B.supportEmail){var s=document.getElementById('support');s.href='mailto:'+B.supportEmail;s.hidden=false;}
+  if(B.supportEmail){var s=document.getElementById('support');s.href='mailto:'+B.supportEmail+'?subject='+encodeURIComponent('OpTrack support');s.hidden=false;var addr=document.getElementById('support-addr');if(!addr){addr=document.createElement('span');addr.id='support-addr';s.after(addr);}addr.textContent=' '+B.supportEmail;}
   var P=B.plans,N=B.featureNames||{};if(!P)return;var paid=P.paidFeatures||[],c=P.currency||'£';
   var rows=[['Manual entry and SmartScan','✓','✓'],['Wheel tracking',paid.indexOf('unlimited')>=0?'Up to '+P.free.maxWheelTickers+' tickers':'Unlimited','Unlimited'],['LEAPs',paid.indexOf('unlimited')>=0||paid.indexOf('leaps-full')>=0?P.free.maxOpenLeaps+' open LEAP':'Unlimited','Unlimited'],['Realised P&L and Home','✓','✓'],['Export and delete your data','✓','✓']];
   Object.keys(N).forEach(function(k){if(k==='unlimited'||k==='leaps-full')return;rows.push([N[k],paid.indexOf(k)>=0?'–':'✓','✓']);});

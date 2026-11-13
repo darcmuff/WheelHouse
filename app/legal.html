@@ -77,7 +77,7 @@
 </main>
 <script>
 (function(){var B=window.BRAND||{};if(B.name){document.querySelectorAll('[data-brand="name"]').forEach(function(e){e.textContent=B.name;});document.title=B.name+': privacy, terms and disclaimer';}
- if(B.supportEmail)document.querySelectorAll('.support-email').forEach(function(e){e.innerHTML='<a href="mailto:'+B.supportEmail+'">'+B.supportEmail+'</a>';});})();
+ if(B.supportEmail)document.querySelectorAll('.support-email').forEach(function(e){var a=B.supportEmail.replace(/&/g,'&amp;').replace(/</g,'&lt;');e.innerHTML='<a href="mailto:'+a+'?subject=OpTrack%20support">Contact support</a> '+a;});})();
 </script>
 </body>
 </html>
