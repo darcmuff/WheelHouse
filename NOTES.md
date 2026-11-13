@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v191` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-13. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v192` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 
@@ -30,6 +30,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - Stripe code refuses live secret keys unless `STRIPE_ALLOW_LIVE=1` (`netlify/lib/stripe.js`). A 2026-11-06 working note said Stripe was live then. The Stripe dashboard, webhook, and Netlify env are external; this file does not assert them.
 - Founder Pro (never downgraded) is a Firestore `entitlements/{uid}` write via `tools/grant-founder.js` (see SETUP.md). Not confirmed from git. Do not put UIDs or keys in this file.
 - In-repo cookie-free analytics is on: `analytics.provider` is `goatcounter` and `analytics.goatcounter` is `https://optrack.goatcounter.com/count` in `app/brand.js` (Marc approved, 2026-11-11). A 2026-11-07 working note said app tracking and Netlify Analytics were disabled then. The Netlify toggle is not in git; do not assert it from the repo.
+- 2026-11-13 (review branch, not merged): `/start` Start free and Go Pro open `/app/?signup=1` (checkout and `utm_*` kept). That URL shows Create Account; a direct `/app/` visit stays on Sign In. The auth screen no longer says "Free forever. No credit card required." GoatCounter events, names only, via `window.otTrack`: `account-created` (Firebase `getAdditionalUserInfo` `isNewUser`), `sign-in`, `checkout-started/monthly` or `yearly`. No-op when analytics is off, on localhost, or before `count.js` loads. Nothing personal is sent. Service worker `optrack-v192`.
 - Other remote branches exist (`onboarding`, `overhaul`, `skunkworks`). This notes commit does not touch them.
 
 ## What's next

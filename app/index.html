@@ -928,10 +928,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       Continue with Google
     </button>
 
-    <div style="text-align:center;margin-top:1.25rem;color:#4b5563;font-size:0.6875rem;">
-      Free forever. No credit card required.
-    </div>
-    <div id="auth-legal" style="text-align:center;margin-top:0.625rem;color:#6b7280;font-size:0.6875rem;line-height:1.5;">
+    <div id="auth-legal" style="text-align:center;margin-top:1.25rem;color:#6b7280;font-size:0.6875rem;line-height:1.5;">
       By continuing you agree to the <a href="legal.html#terms" target="_blank" rel="noopener" style="color:#5eead4">Terms</a> and <a href="legal.html#privacy" target="_blank" rel="noopener" style="color:#5eead4">Privacy policy</a>.<br>Not financial advice: <a href="legal.html#advice" target="_blank" rel="noopener" style="color:#5eead4">read why</a>.
     </div>
   </div>
@@ -1373,7 +1370,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 <script>
 // Theme: the stored value keeps its old meaning ('light' → light, 'dark' → dark); nothing stored → light.
-(function(){var m=/[?&]checkout=(monthly|yearly)/.exec(location.search);if(m){try{sessionStorage.setItem('ot-checkout',m[1]);}catch(e){}history.replaceState(null,'',location.pathname);}})();
+(function(){var m=/[?&]checkout=(monthly|yearly)/.exec(location.search);if(!m)return;try{sessionStorage.setItem('ot-checkout',m[1]);}catch(e){}var p=new URLSearchParams(location.search);p.delete('checkout');var rest=p.toString();history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+location.hash);})();
 function themeFromStored(v){return v==='dark'?'dark':'light';}
 // Legacy GitHub Pages deployment — redirect to the live app. Never fake a user.
 (function(){
@@ -1404,7 +1401,7 @@ function themeFromStored(v){return v==='dark'?'dark':'light';}
 // FIREBASE — single module context, no execution boundary
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, getAdditionalUserInfo, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
@@ -7409,7 +7406,9 @@ function authTab(tab){
   document.getElementById('auth-error').style.display='none';
   const fw=document.getElementById('auth-forgot-wrap');if(fw)fw.style.display=isSign?'block':'none';
 }
-authTab('signin');
+authTab(/[?&]signup=1(?:&|$)/.test(location.search)?'signup':'signin');
+function _track(name){try{if(typeof window.otTrack==='function')window.otTrack(name);}catch(e){}}
+function _trackAuth(cred){try{var info=cred&&getAdditionalUserInfo(cred);_track(info&&info.isNewUser?'account-created':'sign-in');}catch(e){}}
 
 function showAuthError(msg){
   const el=document.getElementById('auth-error');
@@ -7424,11 +7423,8 @@ async function authSubmit(){
   if(!email||!pass){showAuthError('Please enter your email and password.');return;}
   btn.textContent='Please wait…';btn.disabled=true;
   try{
-        if(mode==='signup'){
-      await createUserWithEmailAndPassword(_auth,email,pass);
-    } else {
-      await signInWithEmailAndPassword(_auth,email,pass);
-    }
+    var cred=mode==='signup'?await createUserWithEmailAndPassword(_auth,email,pass):await signInWithEmailAndPassword(_auth,email,pass);
+    _trackAuth(cred);
   } catch(e){
     btn.textContent=mode==='signup'?'Create Account':'Sign In';btn.disabled=false;
     const msgs={'auth/email-already-in-use':'An account with this email already exists.','auth/invalid-email':'Invalid email address.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-credential':'Incorrect email or password.'};
@@ -7453,7 +7449,7 @@ async function authForgot(e){
 
 async function authGoogle(){
   try{
-    await signInWithPopup(_auth,_googleProvider);
+    _trackAuth(await signInWithPopup(_auth,_googleProvider));
   }catch(e){
     if(e.code!=='auth/popup-closed-by-user')showAuthError(e.message);
   }
@@ -7565,7 +7561,7 @@ async function _billingCall(fn,payload){
   const r=await fetch('/.netlify/functions/'+fn,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify(payload||{})});
   const j=await r.json().catch(()=>({}));if(!r.ok||!j.url)throw new Error(j.error||'Something went wrong, please try again.');return j.url;
 }
-async function startCheckout(plan){const m=document.getElementById('upg-msg');m.textContent='Opening secure checkout…';try{location.href=await _billingCall('checkout',{plan});}catch(e){m.textContent=e.message;}}
+async function startCheckout(plan){const m=document.getElementById('upg-msg');m.textContent='Opening secure checkout…';try{const url=await _billingCall('checkout',{plan});if(plan==='monthly'||plan==='yearly')_track('checkout-started/'+plan);location.href=url;}catch(e){m.textContent=e.message;}}
 async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
 
 // ── Your data: export and delete ─────────────────────────────

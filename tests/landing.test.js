@@ -1,6 +1,6 @@
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
 const A=path.join(__dirname,'..','app');const L=fs.readFileSync(path.join(A,'landing.html'),'utf8');const R=fs.readFileSync(path.join(A,'_redirects'),'utf8');
-const{analyticsTag}=require('../app/analytics.js');
+const{analyticsTag,trackEvent,forwardUtm}=require('../app/analytics.js');
 test('root shows the landing page; /app/ and /index.html are the app',()=>{assert.ok(/^\/\s+\/landing\.html\s+200!$/m.test(R));assert.ok(/^\/app\s+\/index\.html\s+200$/m.test(R)&&/^\/app\/\*\s+\/index\.html\s+200$/m.test(R));assert.ok(!/301/.test(R.replace(/^#.*$/mg,'')),'no slash redirect loop');
   const h=fs.readFileSync(path.join(A,'index.html'),'utf8');assert.ok(h.includes('<base href="/">'));});
 test('installed app and returning users skip the landing page',()=>{assert.ok(L.includes("display-mode: standalone")&&L.includes("'wh-view'")&&L.includes("location.replace('/app/'"));assert.ok(L.indexOf('location.replace')<L.indexOf('<style>'),'redirect runs before anything renders');});
@@ -20,3 +20,46 @@ test('analytics: goatcounter on the public site, cookie-free providers only, nev
   assert.ok(analyticsTag({provider:'goatcounter',goatcounter:'https://optrack.goatcounter.com/count'},'a').src.includes('gc.zgo.at'));assert.strictEqual(analyticsTag({provider:'goatcounter',goatcounter:'https://evil.com/x'},'a'),null);
   ['index.html','landing.html','start.html','legal.html'].forEach(f=>{const h=fs.readFileSync(path.join(A,f),'utf8');assert.ok(h.indexOf('src="brand.js"')>=0&&h.indexOf('src="brand.js"')<h.indexOf('src="analytics.js"'),f);});});
 test('service worker keeps the app, not the landing page, as the offline shell',()=>{const s=fs.readFileSync(path.join(A,'sw.js'),'utf8');assert.ok(s.includes("const SHELL = './index.html'")&&s.includes('x.put(SHELL, c)'));});
+test('start-page signup links open Create Account and keep the plan',()=>{
+  const S=fs.readFileSync(path.join(A,'start.html'),'utf8');
+  assert.ok(S.includes('href="/app/?signup=1" id="go-free"'));
+  assert.ok(S.includes('href="/app/?checkout=monthly&signup=1" id="go-pro"'));
+  assert.ok(S.includes('href="/app/?checkout=yearly&signup=1" id="go-pro-year"'));
+  assert.ok(S.includes('href="/app/?signup=1" data-carry-utm>Start free</a>'));
+  assert.ok(S.includes('href="/app/?checkout=monthly&signup=1" data-carry-utm>Go Pro</a>'));
+  assert.ok(S.includes('href="/app/">Sign in</a>'));
+  assert.ok(!/href="\/app\/"[^>]*>Start free/.test(S));
+  assert.ok(S.includes('href="/demo"'));
+  assert.ok(!L.includes('signup=1'),'landing Start free still goes to /start, not straight into the app');
+  [...L.matchAll(/<a\b[^>]*href="\/start"[^>]*>/g)].forEach(m=>assert.ok(m[0].includes('data-carry-utm'),m[0]));
+  assert.ok(!/href="\/app\/"[^>]*data-carry-utm/.test(L));
+});
+test('utm params ride along on signup links; nothing else is copied',()=>{
+  function fake(hrefs){const nodes=hrefs.map(h=>({href:h,getAttribute(k){return k==='href'?this.href:'';},setAttribute(k,v){if(k==='href')this.href=v;}}));return{nodes,querySelectorAll(){return nodes;}};}
+  const d=fake(['/app/?signup=1','/app/?checkout=monthly&signup=1','/start']);
+  assert.strictEqual(forwardUtm(d,'?utm_source=x&utm_campaign=nov&email=a@b.c&signup=1'),3);
+  assert.strictEqual(d.nodes[0].href,'/app/?signup=1&utm_source=x&utm_campaign=nov');
+  assert.strictEqual(d.nodes[1].href,'/app/?checkout=monthly&signup=1&utm_source=x&utm_campaign=nov');
+  assert.strictEqual(d.nodes[2].href,'/start?utm_source=x&utm_campaign=nov');
+  assert.strictEqual(forwardUtm(d,'?utm_source=y'),0,'already has utm');
+  assert.ok(!d.nodes[0].href.includes('email'));
+  assert.strictEqual(forwardUtm(fake(['/app/?signup=1']),''),0);
+});
+test('goatcounter events are names only and no-ops when off, local, or not loaded',()=>{
+  const calls=[];
+  const win={BRAND:{analytics:{provider:'goatcounter',goatcounter:'https://optrack.goatcounter.com/count'}},goatcounter:{count:o=>calls.push(o)}};
+  trackEvent('account-created',{window:win,host:'optrack.app'});
+  assert.deepStrictEqual(calls,[{path:'account-created',title:'account-created',event:true}]);
+  calls.length=0;
+  trackEvent('checkout-started/yearly',{window:win,host:'optrack.app'});
+  assert.deepStrictEqual(calls[0],{path:'checkout-started/yearly',title:'checkout-started/yearly',event:true});
+  calls.length=0;
+  trackEvent('sign-in',{window:win,host:'localhost'});
+  trackEvent('sign-in',{window:{BRAND:{analytics:{provider:''}},goatcounter:win.goatcounter},host:'optrack.app'});
+  trackEvent('sign-in',{window:{BRAND:win.BRAND},host:'optrack.app'});
+  trackEvent('a@b.c',{window:win,host:'optrack.app'});
+  trackEvent('uid-AbC123',{window:win,host:'optrack.app'});
+  assert.strictEqual(calls.length,0);
+  const boom={BRAND:win.BRAND,goatcounter:{count(){throw new Error('nope');}}};
+  assert.doesNotThrow(()=>trackEvent('sign-in',{window:boom,host:'optrack.app'}));
+});
