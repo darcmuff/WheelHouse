@@ -1,7 +1,8 @@
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
 const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
-test('header Add trade is the only one, hidden on Home',()=>{const i=SRC.indexOf('function render(){');
-  assert.ok(SRC.slice(i,i+220).includes("b.style.display=view==='dash'?'none':''"));
+test('header Add trade only on Wheel and LEAPs, not Home, Activity or Settings',()=>{
+  assert.ok(SRC.includes("b.style.display=(view==='positions'||view==='options')&&!settingsOpen?'':'none'"));
+  assert.ok(SRC.includes("if(id==='mSettings')syncAddTrade()"));
   assert.ok(SRC.includes('class="btn btn-primary tn-paste"'));
   assert.ok(!SRC.includes(`openPasteTrade('\${wheel.id}')">Add trade`));
   assert.ok(!SRC.includes(`openPmccSell('\${esc(leap.id)}')">Add trade`));

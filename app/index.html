@@ -2454,7 +2454,7 @@ function _saveUIState(){
 }
 
 function render(){
-  {const b=document.querySelector('.tn-paste');if(b)b.style.display=view==='dash'?'none':'';} // Home has no Add trade. Every other tab uses the header button only.
+  syncAddTrade();
   const _nwKeep=view==='positions'&&_nwOpen, _nwWas=document.getElementById('new-rot-ticker-top'), _nwTyped=_nwWas?_nwWas.value:'', _nwFocus=document.activeElement===_nwWas;
   _saveUIState();
   renderSidebar();
@@ -5841,8 +5841,15 @@ function savePrice(){
   _saveWheel(w);closeModal('mPrice');render();
 }
 
-function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openModal(id){document.getElementById(id).classList.add('open');if(id==='mSettings')syncAddTrade();}
+function closeModal(id){document.getElementById(id).classList.remove('open');if(id==='mSettings')syncAddTrade();}
+// + Add trade only where a trade is added: Wheel, LEAPs, and an empty wheel. Not Home, Activity, stats, or Settings.
+function syncAddTrade(){
+  const b=document.querySelector('.tn-paste');if(!b)return;
+  const settings=document.getElementById('mSettings');
+  const settingsOpen=!!(settings&&settings.classList.contains('open'));
+  b.style.display=(view==='positions'||view==='options')&&!settingsOpen?'':'none';
+}
 document.querySelectorAll('.mb').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);});});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mb.open').forEach(el=>closeModal(el.id));});
 
