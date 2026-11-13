@@ -20,6 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://optrack.app/optrack-share.png">
 <link rel="manifest" href="manifest.json">
+<script src="onboarding.js"></script>
 <script src="demo.js"></script>
 <script src="brand.js"></script>
 <script src="popular.js"></script>
@@ -1414,6 +1415,8 @@ const _firebaseConfig = {
 };
 // Demo (/demo): Firebase is never initialised, so nothing can sign in, read or write a real account.
 const APP_DEMO = !!(window.OT_DEMO && window.OT_DEMO.active);
+// Onboarding test site: simulated sign-up, no Firebase, data stays in this browser (see onboarding.js).
+const APP_SIM = APP_DEMO && !!window.OT_DEMO.sim;
 const _app  = APP_DEMO ? null : initializeApp(_firebaseConfig);
 const _auth = APP_DEMO ? null : getAuth(_app);
 let _fsDb = APP_DEMO ? null : getFirestore(_app);
@@ -7574,6 +7577,7 @@ function showAuthError(msg){
 }
 
 async function authSubmit(){
+  if(APP_SIM){OT_DEMO.signIn();simEnter();return;}
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-password').value;
   const mode=document.getElementById('auth-submit-btn').dataset.mode||'signin';
@@ -7610,6 +7614,7 @@ async function authForgot(e){
 }
 
 async function authGoogle(){
+  if(APP_SIM){OT_DEMO.signIn();simEnter();return;}
   try{
     const cred=await signInWithPopup(_auth,_googleProvider);
     const info=getAdditionalUserInfo(cred);
@@ -7626,6 +7631,7 @@ function onboardSkip(){localStorage.setItem('wh-onboardSkipped','1');const ob=do
 async function onboardSubmit(){
   const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
   if(!ticker){document.getElementById('onboard-ticker').focus();return;}
+  if(APP_SIM){const wheelId='w_'+ticker.toLowerCase()+'_'+uid();const newWheel={id:wheelId,ticker:ticker,label:ticker+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()};db.wheels.push(newWheel);OT_DEMO.save(db);document.getElementById('onboard-overlay').style.display='none';render();return;}
   // UID is guaranteed here — onboarding only shows after onAuthStateChanged confirms a valid user
   const userId=_confirmedUid;
   if(!userId){console.error('Onboard: no confirmed UID — should not happen');return;}
@@ -7725,7 +7731,7 @@ async function _billingCall(fn,payload){
   const r=await fetch('/.netlify/functions/'+fn,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify(payload||{})});
   const j=await r.json().catch(()=>({}));if(!r.ok||!j.url)throw new Error(j.error||'Something went wrong, please try again.');return j.url;
 }
-async function startCheckout(plan){const m=document.getElementById('upg-msg');if(m)m.textContent='Opening secure checkout…';try{const url=await _billingCall('checkout',{plan});if(url&&(plan==='monthly'||plan==='yearly')){try{if(typeof otTrack==='function')otTrack('/checkout-started/'+plan);}catch(e){}}if(url)location.href=url;}catch(e){if(m)m.textContent=e.message;}}
+async function startCheckout(plan){const m=document.getElementById('upg-msg');if(typeof APP_SIM!=='undefined'&&APP_SIM){if(m)m.textContent='Test site: checkout is not charged here.';return;}if(m)m.textContent='Opening secure checkout…';try{const url=await _billingCall('checkout',{plan});if(url&&(plan==='monthly'||plan==='yearly')){try{if(typeof otTrack==='function')otTrack('/checkout-started/'+plan);}catch(e){}}if(url)location.href=url;}catch(e){if(m)m.textContent=e.message;}}
 async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
 
 // ── Your data: export and delete ─────────────────────────────
@@ -7802,6 +7808,7 @@ async function doDeleteAccount(){
 }
 
 async function doSignOut(){
+  if(APP_SIM){otRestartOnboarding();return;}
   try{await releaseFirestore();await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
 
@@ -7833,6 +7840,30 @@ async function migrateLocalStorage(userId) {
   }
 }
 
+// ── Onboarding test site: Create Account accepts anything, then the empty first-run app. No Firebase. ──
+function simBoot(){
+  window._authResolved=true;_confirmedUid=null;_ent={plan:'free'};_entErr=false;syncProBadge();
+  const l=document.getElementById('loading-overlay');if(l)l.style.display='none';
+  ['settings-export','settings-delete'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  if(OT_DEMO.signedIn()){simEnter();return;}
+  document.getElementById('auth-overlay').style.display='flex';
+  authTab('signup');
+  const n=document.createElement('div');n.id='sim-note';n.style.cssText='margin-top:0.75rem;font-size:0.75rem;color:#9ca3af;text-align:center';
+  n.textContent='Test site: any email and password work. No account is created.';
+  const btn=document.getElementById('auth-submit-btn');if(btn)btn.after(n);
+}
+function simEnter(){
+  const d=OT_DEMO.load();db.wheels=d.wheels;db.trades=d.trades;db.opts=d.opts;window._db=db;
+  document.getElementById('auth-overlay').style.display='none';
+  resetAuthButton();
+  const l=document.getElementById('loading-overlay');if(l)l.style.display='none';
+  showSignOutButton({email:'Test visitor'});
+  render();
+  const ob=document.getElementById('onboard-overlay');
+  if(ob)ob.style.display=needsOnboarding(db,localStorage.getItem('wh-onboardSkipped')==='1')?'flex':'none';
+  fetchAllQuotes().then(render).catch(()=>{});
+  clearInterval(_pollHandle);_pollHandle=setInterval(fetchAllQuotes,60000);
+}
 // ── Demo boot: made-up trades from demo.js, Pro features on, prices made up locally (no API calls). ──
 function demoBoot(){
   window._authResolved=true;_confirmedUid=null;
@@ -7873,7 +7904,7 @@ function showAuthOverlay() {
   render();
 }
 
-if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
+if (APP_SIM) simBoot(); else if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
   window._authResolved = true;
   if (user) {
     try{sessionStorage.removeItem('ot-signup');}catch(e){}

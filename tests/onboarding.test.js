@@ -1,0 +1,8 @@
+const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');const vm=require('vm');
+const SRC=fs.readFileSync(path.join(__dirname,'..','app','onboarding.js'),'utf8');
+function run(host,pathname,search=''){const store={a:'1'};const ctx={location:{hostname:host,pathname,search},window:{},localStorage:{_m:store,clear(){for(const k in store)delete store[k];},getItem(k){return store[k]??null;},setItem(k,v){store[k]=v;}},sessionStorage:{clear(){}},navigator:{},indexedDB:{deleteDatabase(){}},document:{addEventListener(){}},console};ctx.window=ctx;vm.runInNewContext(SRC,ctx);return {ctx,store};}
+test('inactive on dev and prod hosts',()=>{for(const h of ['dev--wheelhouse-tracker.netlify.app','optrack.app','wheelhouse-tracker.netlify.app']){const r=run(h,'/');assert.strictEqual(r.ctx.OT_ONBOARDING,false);assert.strictEqual(r.store.a,'1');assert.ok(!r.ctx.OT_DEMO);}});
+test('landing on the onboarding host wipes storage and does not count analytics',()=>{const r=run('onboarding--wheelhouse-tracker.netlify.app','/');assert.strictEqual(r.ctx.OT_ONBOARDING,true);assert.strictEqual(r.store.a,undefined);assert.strictEqual(r.store['ot-sim'],'1');assert.strictEqual(r.ctx.OT_DEMO.sim,true);});
+test('start and app keep state mid-flow; demo stays the real demo',()=>{for(const p of ['/start','/app/']){const r=run('onboarding--wheelhouse-tracker.netlify.app',p);assert.strictEqual(r.store.a,'1');assert.strictEqual(r.ctx.OT_DEMO.sim,true);}
+  const d=run('onboarding--wheelhouse-tracker.netlify.app','/demo');assert.ok(!d.ctx.OT_DEMO);});
+test('?obtest turns the layer on anywhere',()=>{const r=run('localhost','/', '?obtest=1');assert.strictEqual(r.ctx.OT_ONBOARDING,true);});
