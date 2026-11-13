@@ -2454,7 +2454,7 @@ function _saveUIState(){
 }
 
 function render(){
-  {const b=document.querySelector('.tn-paste');if(b)b.style.display=(view==='dash'||view==='positions'||view==='options')?'none':'';} // Home: no Add trade; Wheel tab: cards have their own Add trade; LEAPs tab: has + LEAP
+  {const b=document.querySelector('.tn-paste');if(b)b.style.display=view==='dash'?'none':'';} // Home has no Add trade. Every other tab uses the header button only.
   const _nwKeep=view==='positions'&&_nwOpen, _nwWas=document.getElementById('new-rot-ticker-top'), _nwTyped=_nwWas?_nwWas.value:'', _nwFocus=document.activeElement===_nwWas;
   _saveUIState();
   renderSidebar();
@@ -2802,11 +2802,11 @@ function listMoreBtn(id,n,shown){
   return`<div class="list-more" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" style="color:var(--text3)" onclick="toggleListAll('${esc(id)}')">${on?'Show less':`Show all (${n})`}</button></div>`;
 }
 function toggleListAll(id){listShowAll.has(id)?listShowAll.delete(id):listShowAll.add(id);render();}
-function renderPmcc(leap,today,spot,add){
+function renderPmcc(leap,today,spot){
   const ev=pmccShortEvents(leap,db.opts||[]);
   const keep=listCut(ev.length,ev.map(()=>undefined),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
   const rows=evS.map(e=>renderPmccListRow(e,spot,today)).join('')+listMoreBtn(leap.id,ev.length,keep.length);
-  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+  return`<div class="trade-body open pmcc-open pmcc-trades"><div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
     ${rows||'<div class="trow trow-empty"><span style="color:var(--text3)">No short calls yet.</span></div>'}
   </div></div>`;
 }
@@ -2872,7 +2872,7 @@ function renderLeapCard(l,spot,today){
   const note=rev?`◷ ${rev}`:'';
   const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:'';
   const gid=l.groupId||l.id;
-  const btns=`${open?`<button class="btn btn-ghost" onclick="openPmccSell('${esc(l.id)}')">Add trade</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
+  const btns=`${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
   let row;
   if(open){
     const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
@@ -2901,7 +2901,7 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
-  ${renderPmcc(l,today,spot,true)}
+  ${renderPmcc(l,today,spot)}
 `:''}</div>`;
   }
   return`<div class="leap-card ${!open?'cn':''}" data-leap="${esc(l.id)}">
@@ -3414,7 +3414,7 @@ function leapScan(text,B,today){
   const effOf0=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
   const verdict=c=>{
     if(c.type!=='C')return'This is a put, not a call — LEAPs here are bought calls only.';
-    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close or Roll at the top right of the LEAP card instead.':'This is a sold call (sell to open) — use Add trade on the LEAP card (or log it on the wheel), not + LEAP.';
+    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close or Roll at the top right of the LEAP card instead.':'This is a sold call (sell to open) — use + Add trade at the top (or log it on the wheel), not + LEAP.';
     if(c.effect==='close')return'This is a buy-to-close (closing a short call) — not a new LEAP.';
     if(!c.side)return'Couldn\'t tell whether this was bought or sold.';
     return'';};
@@ -4422,7 +4422,6 @@ function renderRotationWindow(wheel){
       <div class="rmb-lbl">Last Action</div>
       <div class="rmb-val" style="color:var(--orange2);font-size:0.6875rem;font-weight:600">${lastAct}</div>
       <div class="rmb-sub">${m.trades.length} trade${m.trades.length!==1?'s':''}</div>
-      <button class="btn btn-ghost btn-sm" style="margin-top:0.375rem;font-size:0.625rem;padding:0.1875rem 0.5rem;line-height:1;border-color:var(--orange);color:var(--orange)" onclick="openPasteTrade('${wheel.id}');event.stopPropagation()">✦ Add Trade</button>
     </div>
     <div class="rmb-col">
       <div class="rmb-lbl">Realised premium</div>
@@ -4458,8 +4457,7 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
-      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
-      ${m.trades.length?'':`<p style="margin:0.35rem 0.75rem 0.15rem;color:var(--text2);font-size:0.8125rem">No trades yet. Add your first one above — Manual Entry, or paste a confirmation into SmartScan. The free plan includes it.</p>`}
+      ${m.trades.length?'':`<p style="margin:0.35rem 0.75rem 0.15rem;color:var(--text2);font-size:0.8125rem">No trades yet. Add your first one with + Add trade at the top — Manual Entry, or paste a confirmation into SmartScan. The free plan includes it.</p>`}
       <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
@@ -4670,8 +4668,7 @@ function renderTradeRow(t,wheelTrades,opts){
 // ── LOG ──
 function renderActivityHead(){
   return`<div class="act-head"><div><h1>Activity</h1><p>Every trade, plus getting trades in and out.</p></div>
-    <div class="act-btns"><button class="btn btn-primary" onclick="openPasteTrade()">+ Add trade</button>
-    <button class="btn btn-ghost" onclick="openImport()">Import CSV / PDF</button>
+    <div class="act-btns"><button class="btn btn-ghost" onclick="openImport()">Import CSV / PDF</button>
     <button class="btn btn-ghost" onclick="exportCSV()">Export trades CSV</button>
     <button class="btn btn-ghost" onclick="exportOptsCSV()">Export LEAPs CSV</button></div></div>`;
 }
@@ -7598,8 +7595,21 @@ function toggleTheme(isLight){
   if(knob)knob.style.left=isLight?'18px':'2px';
 }
 function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls are harmless)
-// "+ Add trade": SmartScan for whatever you're looking at — LEAP/short-call fills on LEAPs, wheel fills everywhere else.
-function pasteFill(){ if(view==='options'&&typeof openLeapAdd==='function')openLeapAdd(); else openPasteTrade(); }
+// The one + Add trade. A single expanded card is the ticker; otherwise the form opens with no ticker chosen.
+function pasteFill(){
+  if(view==='options'){
+    const leaps=(db.opts||[]).filter(l=>l&&l.side==='long'&&l.type==='C'&&!l.parentLeapId&&!l.demo&&(leapStatus==='open'?l.status==='open':l.status!=='open')&&!collapsedLeaps.has(l.id));
+    if(leaps.length===1){openPmccSell(leaps[0].id);return;}
+  }
+  let wheelId='';
+  if(view==='positions'){
+    const visible=(db.wheels||[]).filter(w=>!(hidden.has(w.id)&&!showHidden)&&!(w.status!=='open'&&!showClosed));
+    const open=visible.filter(w=>!minimised.has(w.id)&&!collapsedWheels.has(w.id));
+    if(open.length===1)wheelId=open[0].id;
+    else if(_focusTid){const t=(db.trades||[]).find(x=>x.id===_focusTid);if(t&&visible.some(w=>w.id===t.wheelId))wheelId=t.wheelId;}
+  }
+  openPasteTrade(wheelId||undefined);
+}
 
 // ── Plans: Free / Pro. Everything is driven by window.BRAND.plans; gating is OFF unless plans.gating is true.
 // The entitlement lives at entitlements/{uid}: users can read it, only the server (Stripe webhook / founder tool) can write it.
