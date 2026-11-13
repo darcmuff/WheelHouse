@@ -49,6 +49,10 @@ h2{font-size:1.6rem;margin:4rem 0 1.25rem;letter-spacing:-.01em}
 .plans{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:.75rem;overflow:hidden;font-size:.925rem}th,td{padding:.625rem .75rem;border-bottom:1px solid var(--line);text-align:left}th:not(:first-child),td:not(:first-child){text-align:center;width:7rem}tr:last-child td{border-bottom:0}.y{color:var(--green);font-weight:700}.n{color:var(--text3)}
 .price{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1.5rem}.price .amt{font-size:2rem;font-weight:700}.price .amt span{font-size:1rem;color:var(--text3);font-weight:400}
+.bot{margin:3.5rem 0 0;background:var(--card);border:1px solid var(--line);border-radius:1rem;padding:1.35rem 1.5rem;scroll-margin-top:1.25rem}
+.bot .k{font-size:.75rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em}
+.bot h2{font-size:1.45rem;line-height:1.25;margin:.35rem 0 .5rem;letter-spacing:-.01em}
+.bot p{margin:0;color:var(--text2);max-width:46rem}
 .nfa{background:#FFF8E6;border:1px solid #F0D58A;border-radius:.75rem;padding:1rem 1.25rem;font-size:.95rem;color:#5c4a12;margin-top:4rem}
 footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}
 </style>
@@ -84,6 +88,12 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
         <div class="paste">Sold to open 2 XYZ 11/21 $45 Put @ 1.10<br>Fees $0.06</div>
         <div class="arrow">↓</div>
         <div class="fields"><span><b>Type</b>Sell put</span><span><b>Strike</b>$45</span><span><b>Expiry</b>21 Nov</span><span><b>Qty</b>2</span><span><b>Price</b>$1.10</span><span><b>Fees</b>$0.06</span></div></div></div>
+  </section>
+
+  <section class="bot" id="grokbot">
+    <div class="k">Hands-free entry</div>
+    <h2>Automatic trade inputs with Grok Bot, no brokerage link needed.</h2>
+    <p>Set this up in your own Grok Bot. Once a week it reads your new broker trades, through the Plaid connection you linked yourself, and types them into OpTrack the same way you would. OpTrack never receives your broker credentials.</p>
   </section>
 
   <h2>And the rest</h2>

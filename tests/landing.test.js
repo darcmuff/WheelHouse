@@ -11,7 +11,10 @@ test('landing leads with the USPs, top three first, then the rest, plans, not fi
   assert.ok(L.indexOf('id="ways-in"')<L.indexOf('id="usp-broker"'),'the ways in sit above the feature cards');
   ['img/select-net.png'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
   assert.ok(L.includes('Demo data')&&L.includes('made-up numbers'),'screens and examples labelled');
-  assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));});
+  assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));
+  assert.ok(i('grokbot')>i('usp-smartscan')&&i('grokbot')<i('plans'),'Grok Bot block sits with the features');
+  assert.ok(L.includes('id="grokbot"')&&L.includes('Automatic trade inputs with Grok Bot, no brokerage link needed.')&&L.includes('Plaid connection you linked yourself')&&L.includes('OpTrack never receives your broker credentials'));
+  assert.ok(!/no one sees your broker|partnership|xAI/i.test(L));});
 test('landing is light: no external CSS/fonts, images small',()=>{assert.ok(!/<link[^>]+stylesheet/.test(L));fs.readdirSync(path.join(A,'img')).forEach(f=>assert.ok(fs.statSync(path.join(A,'img',f)).size<60000,f));});
 test('analytics: goatcounter on the live site, never localhost, never a simulator run',()=>{const ctx={window:{}};require('vm').runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);
   const live=analyticsTag(ctx.window.BRAND.analytics,'optrack.app');
