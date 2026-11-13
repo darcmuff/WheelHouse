@@ -1,0 +1,40 @@
+name: New-visitor simulator
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Site to test. Leave empty to serve this commit. Use https://optrack.app for production.'
+        required: false
+        default: ''
+
+jobs:
+  sim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run simulator
+        run: |
+          if [ -n "$SIM_URL" ]; then
+            node tools/onboard-sim/run.js --url "$SIM_URL"
+          else
+            node tools/onboard-sim/run.js
+          fi
+        env:
+          SIM_URL: ${{ inputs.url }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: onboard-sim
+          path: tools/onboard-sim/out
+          if-no-files-found: warn

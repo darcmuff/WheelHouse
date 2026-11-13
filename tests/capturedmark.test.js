@@ -2,7 +2,7 @@
 // The mark must be this contract brought forward to the live stock, and Captured / Profit use that same mark.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
 const{extractFn,extractConst}=require('./extract');
-const code=[extractConst('CREDITS')].concat(['isCredit','computeTotal','wheelListCells','capturedCellHtml','ppdCellHtml','wheelCurrentValue','wheelCurrentProfit','toStrike','wheelLegOcc'].map(extractFn)).join('\n');
+const code=[extractConst('CREDITS')].concat(['isCredit','computeTotal','walkLegPairs','wheelCloseSlices','closedCapturedHtml','wheelListCells','capturedCellHtml','ppdCellHtml','wheelCurrentValue','wheelCurrentProfit','toStrike','wheelLegOcc'].map(extractFn)).join('\n');
 const L=new Function('wheelChainProfit','fmt2','fmtMoney','esc',code+'\nreturn{wheelListCells,wheelCurrentProfit,wheelCurrentValue,wheelLegOcc};')(()=>null,n=>(+n).toFixed(2),n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2),s=>String(s));
 const S=new Function(['adjMark','steadyMark'].map(extractFn).join('\n')+'\nreturn{steadyMark};')();
 const t={id:'p',ticker:'SPCX',action:'CSP',entered:'2026-10-26',expiry:'2026-11-13',strike:130,premium:1.74,shares:400,fees:2.16};

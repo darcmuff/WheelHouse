@@ -7,7 +7,9 @@ const F=load([
   {kind:'fn',name:'walkLegPairs'},
   {kind:'fn',name:'actKind'},
   {kind:'fn',name:'actAnnotate'},
-  {kind:'fn',name:'actPnl'}
+  {kind:'fn',name:'actPnl'},
+  {kind:'fn',name:'shareRealisations'},
+  {kind:'fn',name:'actHeldValue'}
 ]);
 const put={id:'p',action:'CSP',strike:15,expiry:'2026-11-20',entered:'2026-10-01',shares:100,total:100,fees:1};
 const buy={id:'b',action:'BTC',strike:15,expiry:'2026-11-20',entered:'2026-10-20',shares:100,total:40,fees:1};
@@ -33,4 +35,21 @@ test('P&L is the select-card cash sum, fees already inside each total',()=>{
   assert.strictEqual(pnl.fees, 1+1+1);
   assert.strictEqual(pnl.by.csp, 60);
   assert.strictEqual(pnl.n.leap, 1);
+});
+test('total return adds share value once and a priced open LEAP, and does not recount premium',()=>{
+  const rows=F.actAnnotate([
+    put,
+    {id:'in',wheelId:'w',ticker:'GX',action:'IN',entered:'2026-10-20',shares:100,total:5000,fees:0},
+    {id:'L:o',opt:true,legId:'L',side:'long',type:'C',action:'BTO',total:2001,fees:1}
+  ]);
+  const cash=F.actPnl(rows).net;
+  assert.strictEqual(cash, 100-5000-2001);
+  const held=F.actHeldValue(rows, tk=>tk==='GX'?80:null, [{id:'L',status:'open',side:'long',type:'C',qty:1,mark:26}]);
+  assert.strictEqual(held.shares, 8000);
+  assert.strictEqual(held.leaps, 2600);
+  assert.strictEqual(Math.round((cash+held.shares+held.leaps)*100)/100, 3699);
+  const cspOnly=rows.filter(t=>t.kind==='csp');
+  const only=F.actHeldValue(cspOnly, ()=>80, []);
+  assert.strictEqual(only.shares, 0);
+  assert.strictEqual(F.actPnl(cspOnly).net+only.shares, 100);
 });

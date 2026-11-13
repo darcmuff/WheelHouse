@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v191` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v195` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 
@@ -19,7 +19,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `dev` sizes the trade table from the text in each column, so a large PPD such as $1,001.84/d cannot run into Captured, and the spare width is shared across the data columns. Edit stays only as wide as the button, at the right (sw v181).
 - `dev` drops the Activity toolbar New rotation button. The CSV buttons stay. New wheel on the Wheel tab is unchanged (sw v182).
 - `dev` puts Marc’s line under the landing hero headline: “There’s no such thing as a roll, grow up!” The calmer headline stays above it (sw v183).
-- `dev` lets Activity filter by cash-secured puts, covered calls, and LEAPs (and Other, when a trade is none of those). The total is the same cash-in minus cash-out sum as the select card, fees already inside each trade total (sw v184).
+- `dev` lets Activity filter by cash-secured puts, covered calls, and LEAPs (and Other, when a trade is none of those). The total is the same cash-in minus cash-out sum as the select card, fees already inside each trade total, labelled Net cash flow (sw v184, label sw v192). Beside it, Total return adds the market value of shares still held in the rows shown (today's quote, else the wheel's last price, else what was paid) and the mark of an open long LEAP when that leg already has one. Premiums are not added twice.
+- `dev` keeps a partial buy-back open for the contracts still out. The sale row says how many are left (`3 open of 5`, or `3 expired of 5` after expiry). Each buy-back shows Captured for its own contracts. The leftover premium expires on the sale, and the buy-back is kept. The same split applies when assigning the remainder. A sell-to-close that actually closes a short call is a cost, not extra income. On a LEAP, Buy to close and the Close dialog take a contract count and leave the rest open, the same split a broker import already made (sw v193).
 - `dev` draws To strike, the Captured buy-back price, and the PPD day count in the same size and dark colour as the other trade-table figures (sw v185). On a desktop each trade-table column is only as wide as its text, and the spare width is split into equal gaps, so the space after Fees matches the space after Action. Edit sits at the end of that same gap (sw v189). Once a cash-secured put or covered call is bought back, Captured (`16% · at $2.10` and the dollar result) is drawn on the buy-to-close row and the opening row shows a dash. An expiry or an assignment with no buy-to-close row still shows Captured on the opener. PPD stays on the opener. The amounts are unchanged (sw v190). The same placement applies to short calls on a LEAP card: a buy-to-close shows Captured, the sell row shows a dash, and an open, expired, or assigned call keeps Captured on the sell (sw v191).
 - `dev` lets you long-press a trade row on a phone or tablet, or right-click it, to select it (sw v186). A mouse hold does not select. A trackpad two-finger click is a right-click and selects. Ctrl-click still works. The desktop tip says “Right-click to select trades” and hides for good once you select a trade or dismiss it. The Select button next to Add trade is gone.
 - `dev` shows a selected-trade summary in a floating card, not a bottom bar (sw v173). It lists the net, collected, paid, fees, a per-ticker split, contracts, and each selected trade. A click outside the rows and the card, Escape, or the close mark clears the selection. The card is fixed and does not narrow the page (sw v174).
@@ -29,7 +30,22 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `app/legal.html` still shows the DRAFT banner (for Marc to read and approve; not lawyer-reviewed). The page says last updated 1 November 2026.
 - Stripe code refuses live secret keys unless `STRIPE_ALLOW_LIVE=1` (`netlify/lib/stripe.js`). A 2026-11-06 working note said Stripe was live then. The Stripe dashboard, webhook, and Netlify env are external; this file does not assert them.
 - Founder Pro (never downgraded) is a Firestore `entitlements/{uid}` write via `tools/grant-founder.js` (see SETUP.md). Not confirmed from git. Do not put UIDs or keys in this file.
-- In-repo cookie-free analytics is on: `analytics.provider` is `goatcounter` and `analytics.goatcounter` is `https://optrack.goatcounter.com/count` in `app/brand.js` (Marc approved, 2026-11-11). A 2026-11-07 working note said app tracking and Netlify Analytics were disabled then. The Netlify toggle is not in git; do not assert it from the repo.
+- In-repo cookie-free analytics is on: `analytics.provider` is `goatcounter` and `analytics.goatcounter` is `https://optrack.goatcounter.com/count` in `app/brand.js` (Marc approved, 2026-11-11). Page views come from the GoatCounter script. Clicks and new-account events go through `window.otTrack`, which calls `goatcounter.count({path, event:true})`. It does not run on localhost, and it does not run when `localStorage['ot-sim']` is `1` (the onboarding simulator sets that). Events: `/start-free`, `/go-pro`, `/demo`, `/signup-complete` (new email or Google accounts only), `/first-trade-saved`. A 2026-11-07 working note said app tracking and Netlify Analytics were disabled then. The Netlify toggle is not in git; do not assert it from the repo.
+- New visitors: Start free, Try the demo, Sign in and Go Pro are on the landing page above the fold. Start free and Go Pro open Create Account (`/app/?signup=1`, Go Pro also keeps `checkout=monthly|yearly`). Sign in opens the Sign In tab. A person who is already signed in is unchanged.
+
+## New-visitor simulator
+
+There is no separate dev deploy URL in this repo. `npm run sim` serves `app/` on a local port (the same paths as the live site: `/`, `/start`, `/demo`, `/app/`) and walks a brand-new browser. `npm run sim -- --url https://optrack.app` points it at production.
+
+```
+npm install
+npm run sim
+npm run sim -- --url https://optrack.app
+```
+
+Screenshots and `report.md` land in `tools/onboard-sim/out/<timestamp>/`. A step over 5 seconds fails (sign-up, sign-in and delete are allowed 12 seconds, because they wait on Firebase). The simulator sets `localStorage['ot-sim']=1` before any page script, so it does not count in GoatCounter.
+
+GitHub Actions: `.github/workflows/onboard-sim.yml` (workflow_dispatch, optional URL input, artifact upload). The Run workflow button is https://github.com/darcmuff/WheelHouse/actions/workflows/onboard-sim.yml
 - Other remote branches exist (`onboarding`, `overhaul`, `skunkworks`). This notes commit does not touch them.
 
 ## What's next

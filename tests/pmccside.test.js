@@ -57,6 +57,8 @@ check('already closed call is not matched', !r3.leg && r3.err, r3);
 const r4 = S.pmccBuyBack({ strike: '', expiry: '', price: '0.50', date: '2026-10-19' }, leap, [leap, c]);
 check('blank strike/expiry with one open call → closes it', r4.leg && r4.leg.id === 'c', r4);
 check('buy back writes nothing itself', S.writes.length === 0);
+const part = S.pmccBuyBack({ strike: '245', expiry: '2026-11-20', price: '1.10', date: '2026-10-19', fees: '1.30', qty: '1', newId: 'rest1' }, leap, [leap, { ...c, qty: 3 }]);
+check('partial buy back splits like an import: 1 closed, 2 left open', part.leg && part.leg.qty === 1 && part.leg.status === 'closed' && part.rest && part.rest.qty === 2 && part.rest.status === 'open' && part.rest.id === 'rest1', part);
 
 // Buy backs: no expiry doubt — expiry comes from the open call it closes.
 const rbY = S.scanAt('Buy SPCX $245 Call Nov 20\nPosition effect\nClose\nFilled Oct 19, 10:31 AM\n2 contracts at $1.10', '2026-10-23').calls[0] || {};
