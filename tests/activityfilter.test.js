@@ -9,6 +9,7 @@ const F=load([
   {kind:'fn',name:'actAnnotate'},
   {kind:'fn',name:'actPnl'},
   {kind:'fn',name:'shareRealisations'},
+  {kind:'fn',name:'wheelCloseSlices'},
   {kind:'fn',name:'actHeldValue'}
 ]);
 const put={id:'p',action:'CSP',strike:15,expiry:'2026-11-20',entered:'2026-10-01',shares:100,total:100,fees:1};

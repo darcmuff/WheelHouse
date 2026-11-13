@@ -316,6 +316,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .trow.expired-trade{border-left:0.1875rem solid var(--green);padding-left:0.8125rem;background:rgba(34,197,94,0.04)}
 .exp-badge{font-size:0.625rem;font-weight:600;color:var(--green);letter-spacing:.5px;vertical-align:middle}
 .ab{padding:0.1875rem 0.5rem;border-radius:0.25rem;font-size:0.6875rem;font-weight:600;white-space:nowrap;display:inline-block;letter-spacing:.3px}
+.cp-edit{display:flex;flex-direction:column;gap:0.1rem;margin-top:0.2rem;font-size:0.6rem;font-weight:400;color:var(--text3);line-height:1.2}.cp-edit span{display:inline-flex;align-items:center;gap:0.15rem;color:var(--text2)}.cp-edit input{width:4.5rem;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:0.25rem;padding:0 0.2rem}
 .ab-CSP{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.28)}
 .ab-BTC{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.28)}
 .ab-STOC{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.28)}
@@ -1042,6 +1043,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld" id="tg-strike"><label>Strike ($)</label><input id="tf-strike" type="number" step="0.01"></div>
       <div class="fld" id="tg-delta"><label>Delta <small style="color:#555">optional</small></label><input id="tf-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30"></div>
       <div class="fld"><label id="tf-prem-lbl">Premium per Share</label><input id="tf-premium" type="number" step="0.0001" placeholder="0.0000" oninput="autoCalcTotal()"></div>
+      <div class="fld" id="tg-current-price" style="display:none"><label for="current-price">Current price</label><input id="current-price" name="current-price" aria-label="Current price" type="number" step="0.0001" placeholder="0.0000"></div>
       <div class="fld"><label>Shares</label><input id="tf-shares" type="number" step="1" placeholder="100" oninput="autoCalcTotal()"></div>
       <div class="fld"><label>Fees ($)</label><input id="tf-fees" type="number" step="0.01" value="0" oninput="autoCalcTotal()"></div>
       <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="tf-total" type="number" step="0.01" readonly></div>
@@ -1156,7 +1158,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>Date bought</label><input id="lf-date" type="date"></div>
       <div class="fld"><label>Fees total ($)</label><input id="lf-fees" type="number" step="0.01" value="0"></div>
       <div class="fld"><label>Review date <small style="color:#555">optional</small></label><input id="lf-review" type="date"></div>
-      <div class="fld" id="lf-mark-wrap"><label>Manual mark / share</label><input id="lf-mark" type="number" step="0.01"></div>
+      <div class="fld" id="lf-mark-wrap"><label for="lf-mark">Current price</label><input id="lf-mark" name="current-price" aria-label="Current price" type="number" step="0.01"></div>
     </div>
     <div class="fld"><label>Notes / thesis</label><input id="lf-notes" type="text"></div>
     <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem">
@@ -1177,6 +1179,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>Expiry</label><input id="pe-expiry" type="date"></div>
       <div class="fld"><label>Contracts</label><input id="pe-qty" type="number" step="1"></div>
       <div class="fld"><label>Sell price / sh</label><input id="pe-price" type="number" step="0.01"></div>
+      <div class="fld" id="pe-cp-wrap"><label for="pe-current-price">Current price</label><input id="pe-current-price" name="current-price" aria-label="Current price" type="number" step="0.01"></div>
       <div class="fld"><label>Sold on</label><input id="pe-date" type="date"></div>
       <div class="fld"><label>Fees</label><input id="pe-fees" type="number" step="0.01"></div>
     </div>
@@ -2756,6 +2759,10 @@ function pmccClosedCaptured(c){
   if(net!=null){const cc=capturedCellHtml(0,net,false);return {html:cc.html.replace(/^0% /,''),color:cc.color};}
   return null;
 }
+function cpDate(iso){if(!iso)return'';const d=new Date(iso);return isNaN(+d)?'':d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+function cpEditor(id,value,when,saveFn){const v=value!=null&&value!==''?String(value):'';const whenTxt=v!==''?cpDate(when):'';return `<label class="cp-edit" onclick="event.stopPropagation()">Current price<span>Now $<input id="current-price-${esc(id)}" name="current-price" aria-label="Current price" type="number" step="0.0001" value="${esc(v)}" onchange="${saveFn}('${id}',this.value)">${whenTxt?` · ${esc(whenTxt)}`:''}</span></label>`;}
+function saveWheelCurrentPrice(id,raw){const t=(db.trades||[]).find(x=>x.id===id);if(!t)return;const v=String(raw==null?'':raw).trim();if(v===''){if(t.currentPrice==null)return;delete t.currentPrice;delete t.currentPriceAt;}else{const n=+v;if(!(n>=0))return;if(t.currentPrice!=null&&+t.currentPrice===n)return;t.currentPrice=n;t.currentPriceAt=new Date().toISOString();}_saveTrade(t);render();}
+function saveOptCurrentPrice(id,raw){const i=(db.opts||[]).findIndex(x=>x.id===id);if(i<0)return;const l=db.opts[i];const v=String(raw==null?'':raw).trim();if(v===''){if(l.mark==null||l.mark==='')return;l.mark=null;l.markAt=null;l.markSrc=null;}else{const n=+v;if(!(n>=0))return;if(l.markSrc==='manual'&&l.mark!=null&&+l.mark===n)return;l.mark=n;l.markSrc='manual';l.markAt=new Date().toISOString();l.delta=null;l.theta=null;l.iv=null;}_saveOpt(l);render();}
 function renderPmccListRow(e,spot,today){
   const c=e.leg;
   const isSto=e.action==='STO';
@@ -2784,7 +2791,7 @@ function renderPmccListRow(e,spot,today){
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
     <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
     <span class="to-strike m">${esc(ts)}</span>
-    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}</span>
+    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}${e.open&&isSto&&c?cpEditor(c.id,c.mark,c.markAt,'saveOptCurrentPrice'):''}</span>
     <span>${e.qty?e.qty*100:'—'}</span>
     <span class="${e.total>=0?'g':'r'}">${fmtMoney(e.total)}</span>
     <span>${e.fees?'$'+fmt2(e.fees):'—'}</span>
@@ -2822,13 +2829,15 @@ function pmccEditLeg(l,f){
   if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};if(!(qty>0))return{err:'Enter the contracts'};if(!(price>=0))return{err:'Enter the sell price'};
   const n={...l,strike,expiry:f.expiry,qty,entryPrice:price,entryDate:f.date||l.entryDate||null,fees:+f.fees||0};
   if(l.status==='closed'){const cp=parseFloat(f.cprice);if(!(cp>=0))return{err:'Enter the buyback price'};n.closePrice=cp;n.closeDate=f.cdate||l.closeDate;n.closeFees=+f.cfees||0;}
+  if(l.status==='open'&&f.mark!=null){const raw=String(f.mark).trim();if(raw===''){n.mark=null;n.markAt=null;n.markSrc=null;}else if(!(l.mark!=null&&l.mark!==''&&+raw===+l.mark)){n.mark=+raw;n.markSrc='manual';n.markAt=new Date().toISOString();n.delta=null;n.theta=null;n.iv=null;}}
   return{leg:n};
 }
 function openPmccLegEdit(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
   const v=(k,x)=>document.getElementById(k).value=x??'';
   v('pe-id',l.id);v('pe-strike',l.strike);v('pe-expiry',l.expiry);v('pe-qty',l.qty);v('pe-price',l.entryPrice);v('pe-date',l.entryDate);v('pe-fees',l.fees??0);
-  v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);
+  v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);v('pe-current-price',l.mark);
+  document.getElementById('pe-cp-wrap').style.display=l.status==='open'?'':'none';
   document.getElementById('pe-close').style.display=l.status==='closed'?'grid':'none';
   document.getElementById('pe-exp').style.display=l.status==='open'?'':'none';
   document.getElementById('pe-err').style.display='none';
@@ -2837,7 +2846,7 @@ function openPmccLegEdit(id){
 }
 function savePmccLeg(){
   const g=k=>document.getElementById(k).value,i=(db.opts||[]).findIndex(x=>x.id===g('pe-id'));if(i<0)return;
-  const r=pmccEditLeg(db.opts[i],{strike:g('pe-strike'),expiry:g('pe-expiry'),qty:g('pe-qty'),price:g('pe-price'),date:g('pe-date'),fees:g('pe-fees'),cprice:g('pe-cprice'),cdate:g('pe-cdate'),cfees:g('pe-cfees')});
+  const r=pmccEditLeg(db.opts[i],{strike:g('pe-strike'),expiry:g('pe-expiry'),qty:g('pe-qty'),price:g('pe-price'),date:g('pe-date'),fees:g('pe-fees'),cprice:g('pe-cprice'),cdate:g('pe-cdate'),cfees:g('pe-cfees'),mark:g('pe-current-price')});
   const e=document.getElementById('pe-err');if(r.err){e.textContent=r.err;e.style.display='block';return;}
   db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmccLeg');render();
 }
@@ -2906,6 +2915,7 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
+  <div style="margin:0.5rem 0.875rem 0">${cpEditor(l.id,l.mark,l.markAt,'saveOptCurrentPrice')}</div>
   ${renderPmcc(l,today,spot,true)}
 `:''}</div>`;
   }
@@ -4622,6 +4632,7 @@ function wheelListCells(t,L){
     const d=dd(L.today,t.entered);if(d&&t.total)r.ppd=ppdCellHtml(t.total*(baseSh?openSh/baseSh:1)/d,d);
     const occ=wheelLegOcc(L.ticker,t),known=!!(L.marks&&Object.prototype.hasOwnProperty.call(L.marks,occ));
     const mark=L.marks?L.marks[occ]:null;
+    if(t.currentPrice!=null&&t.currentPrice!==''&&prem>0){const px=+t.currentPrice;const cv=Math.round(px*openSh*100)/100;const pf=Math.round((prem-px)*openSh*100)/100;const pct=Math.round((prem-px)/prem*100);const c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${px.toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;return r;}
     if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:openSh/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
@@ -4659,7 +4670,7 @@ function renderTradeRow(t,wheelTrades,opts){
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?fmtStrike(t.strike):'—'}</span>
     ${hasExtra?opts.extraAfterStrike:''}
-    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
+    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}${opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?cpEditor(t.id,t.currentPrice,t.currentPriceAt,'saveWheelCurrentPrice'):''}</span>
     <span style="white-space:nowrap">${opts.list?(()=>{const lab=wheelRemainLabel(t,wheelTrades,opts.list.today);return lab?esc(lab):(t.shares||'—');})():(t.shares||'—')}</span>
     <span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>
     <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
@@ -4752,8 +4763,21 @@ function actHeldValue(rows,priceOf,legs){
     if(mark>0)leaps+=mark*100*(+leg.qty||0);
     else leapPlain++;
   });
+  let closeCost=0;
+  const wheelRows=(rows||[]).filter(t=>!t.opt);
+  const slices=wheelCloseSlices(wheelRows);
+  wheelRows.forEach(t=>{
+    if((t.action!=='CSP'&&t.action!=='STOC')||t.currentPrice==null||t.currentPrice==='')return;
+    const left=slices.rem[t.id];
+    if(!(left>0))return;
+    closeCost+=(+t.currentPrice)*left;
+  });
+  (legs||[]).forEach(l=>{
+    if(!l||l.status!=='open'||l.side!=='short'||l.markSrc!=='manual'||l.mark==null||l.mark==='')return;
+    closeCost+=(+l.mark)*100*(+l.qty||0);
+  });
   const r=x=>Math.round(x*100)/100;
-  return {shares:r(shares),leaps:r(leaps),atCost,leapPlain};
+  return {shares:r(shares),leaps:r(leaps),closeCost:r(closeCost),atCost,leapPlain};
 }
 function setLogKind(k){
   if(k==='all')logKinds.clear();
@@ -4798,7 +4822,7 @@ function renderLog(){
   const pnl=actPnl(trades);
   const priceOf=tk=>{const q=typeof quotes!=='undefined'&&quotes[tk];if(q&&q.price>0)return q.price;const w=(db.wheels||[]).find(x=>String(x.ticker||'').toUpperCase()===String(tk||'').toUpperCase()&&x.lastPrice!=null);return w?+w.lastPrice:null;};
   const held=actHeldValue(trades,priceOf,db.opts||[]);
-  const totalRet=Math.round((pnl.net+held.shares+held.leaps)*100)/100;
+  const totalRet=Math.round((pnl.net+held.shares+held.leaps-(held.closeCost||0))*100)/100;
   const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));
   const kindsShown=ACT_KINDS.filter(([k])=>haveOther||k!=='other');
   const pills=[['all','All'],...kindsShown].map(([k,lbl])=>{
@@ -5710,6 +5734,8 @@ function openAddTrade(wheelId){
   document.getElementById('tf-delete-btn').style.display='none';
   document.getElementById('tf-expired-btn').style.display='none';
   document.getElementById('tg-created-at').style.display='none';
+  document.getElementById('tg-current-price').style.display='none';
+  document.getElementById('current-price').value='';
   document.getElementById('mTradeTitle').textContent='Add Trade';
   const w=wheelId?db.wheels.find(x=>x.id===wheelId):null;
   document.getElementById('tf-ticker').value=w?.ticker||'SOFI';
@@ -5749,6 +5775,9 @@ function openEditTrade(id){
   }else{
     _expBtn.style.display='none';
   }
+  const cpOpen=(t.action==='CSP'||t.action==='STOC')&&!t.expiredWorthless&&walkLegPairs((db.trades||[]).filter(x=>x.wheelId===t.wheelId)).open.some(o=>o.id===t.id&&o._rem>0);
+  const cpBox=document.getElementById('tg-current-price');cpBox.style.display=cpOpen?'':'none';
+  document.getElementById('current-price').value=t.currentPrice!=null&&t.currentPrice!==''?t.currentPrice:'';
   const caDiv=document.getElementById('tg-created-at');
   if(t.createdAt){const caDate=t.createdAt.slice(0,10);document.getElementById('tf-created-at').value=fmtDateFull(caDate)+' ('+new Date(t.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+')';caDiv.style.display='';}
   else{caDiv.style.display='none';}
@@ -5813,6 +5842,8 @@ function saveTrade(){
       else if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
       if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
       updated.verified=old.verified||false;                    // preserve verification status
+      if(old.currentPrice!=null&&old.currentPrice!==''){updated.currentPrice=old.currentPrice;updated.currentPriceAt=old.currentPriceAt||null;}
+      if(action==='CSP'||action==='STOC'){const raw=document.getElementById('current-price').value.trim();if(raw===''){delete updated.currentPrice;delete updated.currentPriceAt;}else if(!(old.currentPrice!=null&&+old.currentPrice===+raw)){updated.currentPrice=+raw;updated.currentPriceAt=new Date().toISOString();}}
       db.trades[idx]=updated;
     }
   }
@@ -7990,6 +8021,8 @@ window.cyclePosSort = cyclePosSort;
 window.toggleSortMenu = toggleSortMenu;
 window.closeSortMenu = closeSortMenu;
 window.openEditTrade = openEditTrade;
+window.saveWheelCurrentPrice = saveWheelCurrentPrice;
+window.saveOptCurrentPrice = saveOptCurrentPrice;
 window.goToTrade = goToTrade;
 window.goToWheel = goToWheel; // module-scope rule: inline handlers need window exposure
 window.sortLog = sortLog;
