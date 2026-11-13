@@ -879,6 +879,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
         background:transparent;color:var(--text3);
       ">Create Account</button>
     </div>
+    <p id="auth-lead" style="display:none;color:#9ca3af;font-size:0.8125rem;line-height:1.5;margin:-0.75rem 0 1rem;">Create a free account. No card. You can sign in from this same screen later.</p>
 
     <!-- Error message -->
     <div id="auth-error" style="
@@ -949,7 +950,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   <div style="width:100%;max-width:27.5rem;padding:2rem 1.5rem;text-align:center;">
     <div style="color:var(--orange);font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;" data-brand="welcome">Welcome to OpTrack</div>
     <h2 style="color:#f3f4f6;font-size:1.5rem;font-weight:600;margin-bottom:0.5rem;letter-spacing:-0.02em;">What's your first ticker?</h2>
-    <p style="color:#9ca3af;font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. You can add more tickers anytime.</p>
+    <p style="color:#9ca3af;font-size:0.875rem;margin-bottom:1.75rem;line-height:1.6;">Enter the stock you're running the wheel on. Next you'll add a trade, or paste a confirmation. You can add more tickers anytime. The free plan includes this.</p>
     <input id="onboard-ticker" type="text" placeholder="e.g. SOFI" maxlength="8" style="
       width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;
       padding:0.875rem;color:var(--text);font-size:1.25rem;font-weight:600;text-align:center;
@@ -1376,7 +1377,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 <script>
 // Theme: the stored value keeps its old meaning ('light' → light, 'dark' → dark); nothing stored → light.
-(function(){var m=/[?&]checkout=(monthly|yearly)/.exec(location.search);if(m){try{sessionStorage.setItem('ot-checkout',m[1]);}catch(e){}history.replaceState(null,'',location.pathname);}})();
+(function(){var q=location.search;var c=/[?&]checkout=(monthly|yearly)/.exec(q);var s=/(?:^|[?&])signup=1(?:&|$)/.test(q);if(c){try{sessionStorage.setItem('ot-checkout',c[1]);}catch(e){}}if(s){try{sessionStorage.setItem('ot-signup','1');}catch(e){}}if(c||s)history.replaceState(null,'',location.pathname);})();
 function themeFromStored(v){return v==='dark'?'dark':'light';}
 // Legacy GitHub Pages deployment — redirect to the live app. Never fake a user.
 (function(){
@@ -1407,7 +1408,7 @@ function themeFromStored(v){return v==='dark'?'dark':'light';}
 // FIREBASE — single module context, no execution boundary
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, getAdditionalUserInfo } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
@@ -3725,7 +3726,7 @@ function renderSidebar(){
 
 function renderPositions(){
   let wheels=[...db.wheels];
-  if(!wheels.length)return`<div class="empty" id="wheel-empty"><h3>No wheels yet</h3><p>Start one by adding your first put, or bring your history in from your broker.</p><div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem"><button class="btn btn-primary" onclick="openNewPos()">+ Start a wheel</button><button class="btn btn-ghost" onclick="openImport()">Import broker file</button></div></div>`;
+  if(!wheels.length)return`<div class="empty" id="wheel-empty"><h3>No wheels yet</h3><p>Add your first trade, or paste a confirmation. The free plan includes your first wheel.</p><div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem"><button class="btn btn-primary" onclick="openNewPos()">+ Start a wheel</button><button class="btn btn-ghost" onclick="openImport()">Import broker file</button></div></div>`;
 
   // Sort
   if(posSortBy==='ticker') wheels.sort((a,b)=>(a.ticker||'').localeCompare(b.ticker||''));
@@ -4461,6 +4462,7 @@ function renderRotationWindow(wheel){
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
       ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
+      ${m.trades.length?'':`<p style="margin:0.35rem 0.75rem 0.15rem;color:var(--text2);font-size:0.8125rem">No trades yet. Add your first one above — Manual Entry, or paste a confirmation into SmartScan. The free plan includes it.</p>`}
       <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
@@ -5837,9 +5839,11 @@ function saveTrade(){
   else{
     const newTrade={id:uid(),createdAt:new Date().toISOString(),...data};
     if(document.getElementById('tf-roll').checked)linkWheelRoll(newTrade,document.getElementById('tf-roll-from').value);
+    const _firstTrade=!db.trades.length;
     db.trades.push(newTrade);
     expanded.add(wheelId);
     _saveTrade(newTrade);closeModal('mTrade');render();
+    if(_firstTrade)noteFirstTrade();
     return;
   }
   const updatedTrade=db.trades.find(t=>t.id===id);
@@ -7004,6 +7008,7 @@ function autoCalcPMTotal(){
   document.getElementById('pm-total').value=computeTotal(a,p,s,f).toFixed(2);
 }
 function autoCalcPMDTE(){autoCalcPMTotal();} // days computed at save time; just keep total fresh
+function noteFirstTrade(){if(typeof otTrack==='function')otTrack('/first-trade-saved');}
 function savePMTrade(){
   const ticker=document.getElementById('pm-ticker').value.toUpperCase().trim();
   const entered=document.getElementById('pm-entered').value;
@@ -7027,8 +7032,10 @@ function savePMTrade(){
     premium,fees,shares,total,days,ppd:days>0?total/days:0,
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
   if(document.getElementById('pm-roll').checked)linkWheelRoll(newTrade,document.getElementById('pm-roll-from').value);
+  const _firstTrade=!db.trades.length;
   db.trades.push(newTrade);expanded.add(wheelId);
   _saveTrade(newTrade);closeModal('mPaste');render();
+  if(_firstTrade)noteFirstTrade();
 }
 function openPasteTrade(wheelId){
   document.getElementById('paste-raw').value='';
@@ -7450,6 +7457,7 @@ function confirmParsed(){
     }
     const pair=document.getElementById('paste-roll-pair');
     const rid=pair&&pair.checked?'roll_'+uid():null;
+    const _firstTrade=!db.trades.length;
     trades.forEach(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
@@ -7459,10 +7467,12 @@ function confirmParsed(){
     });
     expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
     try{render();}catch(e){console.error('SmartScan roll render error:',e);}
+    if(_firstTrade)noteFirstTrade();
     return;
   }
   // ── Single trade ──
   const p=parsedTradeData;
+  const _firstTrade=!db.trades.length;
   let wheelId=document.getElementById('paste-wheel-sel').value;
   if(wheelId==='new'||!wheelId){
     const ex=db.wheels.find(w=>w.ticker===p.ticker&&w.status==='open');
@@ -7479,6 +7489,7 @@ function confirmParsed(){
   expanded.add(wheelId);
   closeModal('mPaste');parsedTradeData=null;
   try{render();}catch(e){console.error('SmartScan render error:',e);alert('Trade saved but display error: '+e.message+'\n\nRefresh the page to see your trade.');}
+  if(_firstTrade)noteFirstTrade();
 }
 
 // ════════════════════════════════════════════════════════
@@ -7494,6 +7505,8 @@ function authTab(tab){
   document.getElementById('auth-submit-btn').dataset.mode = tab;
   document.getElementById('auth-error').style.display='none';
   const fw=document.getElementById('auth-forgot-wrap');if(fw)fw.style.display=isSign?'block':'none';
+  const lead=document.getElementById('auth-lead');if(lead)lead.style.display=isSign?'none':'block';
+  const pw=document.getElementById('auth-password');if(pw&&document.activeElement!==pw)pw.placeholder=isSign?'Password':'Password (6 or more characters)';
 }
 authTab('signin');
 
@@ -7512,12 +7525,13 @@ async function authSubmit(){
   try{
         if(mode==='signup'){
       await createUserWithEmailAndPassword(_auth,email,pass);
+      if(typeof otTrack==='function')otTrack('/signup-complete');
     } else {
       await signInWithEmailAndPassword(_auth,email,pass);
     }
   } catch(e){
     btn.textContent=mode==='signup'?'Create Account':'Sign In';btn.disabled=false;
-    const msgs={'auth/email-already-in-use':'An account with this email already exists.','auth/invalid-email':'Invalid email address.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-credential':'Incorrect email or password.'};
+    const msgs={'auth/email-already-in-use':'An account with this email already exists. Try Sign In.','auth/invalid-email':'That email address does not look right.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-credential':'Incorrect email or password.','auth/network-request-failed':'Could not reach the sign-in service. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Please try again later.'};
     showAuthError(msgs[e.code]||e.message);
   }
 }
@@ -7539,9 +7553,13 @@ async function authForgot(e){
 
 async function authGoogle(){
   try{
-    await signInWithPopup(_auth,_googleProvider);
+    const cred=await signInWithPopup(_auth,_googleProvider);
+    const info=getAdditionalUserInfo(cred);
+    if(info&&info.isNewUser&&typeof otTrack==='function')otTrack('/signup-complete');
   }catch(e){
-    if(e.code!=='auth/popup-closed-by-user')showAuthError(e.message);
+    if(e.code==='auth/popup-closed-by-user')return;
+    const msgs={'auth/popup-blocked':'Your browser blocked the Google window. Allow pop-ups for this site and try again.','auth/unauthorized-domain':'Google sign-in is not available from this address.','auth/network-request-failed':'Could not reach the sign-in service. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Please try again later.'};
+    showAuthError(msgs[e.code]||e.message);
   }
 }
 
@@ -7766,7 +7784,7 @@ function demoBoot(){
   document.getElementById('auth-overlay').style.display='none';
   document.documentElement.classList.add('ot-demo');
   const bar=document.createElement('div');bar.id='demo-banner';
-  bar.innerHTML='<span><b>Demo</b> with made-up trades. Nothing is saved to an account. Long press or right-click any trades to see the real net.</span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/start" class="db-go">Start free</a></span>';
+  bar.innerHTML='<span><b>Demo</b> with made-up trades. Nothing is saved to an account. Long press or right-click any trades to see the real net.</span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/app/?signup=1" class="db-go" onclick="window.otTrack&&window.otTrack(\'/start-free\')">Start free</a></span>';
   document.body.prepend(bar);
   ['settings-export','settings-signout','settings-delete','settings-user'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   const sx=document.getElementById('settings-legal');if(sx){const r=document.createElement('button');r.className='btn btn-ghost btn-full';r.style.cssText='text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem';r.textContent='↺ Reset demo';r.onclick=()=>OT_DEMO.reset();sx.after(r);}
@@ -7779,6 +7797,8 @@ function demoBoot(){
 }
 function showAuthOverlay() {
   document.getElementById('auth-overlay').style.display = 'flex';
+  var signup=false;try{signup=sessionStorage.getItem('ot-signup')==='1';sessionStorage.removeItem('ot-signup');}catch(e){}
+  if(typeof authTab==='function')authTab(signup?'signup':'signin');
   const ob = document.getElementById('onboard-overlay');
   if (ob) ob.style.display = 'none';
   const btn = document.getElementById('auth-signout-btn');
@@ -7791,6 +7811,7 @@ function showAuthOverlay() {
 if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
   window._authResolved = true;
   if (user) {
+    try{sessionStorage.removeItem('ot-signup');}catch(e){}
     _confirmedUid = user.uid;
 
     // Swap auth overlay for loading overlay
@@ -7948,7 +7969,7 @@ window.deleteTradeFromModal = deleteTradeFromModal;
 window.markExpiredFromModal = markExpiredFromModal;
 window.saveTrade = saveTrade;
 window.savePrice = savePrice;
-window.switchPasteTab = switchPasteTab;
+window.switchPasteTab = switchPasteTab;window.fillRollSelect = fillRollSelect;
 window.parsePaste = parsePaste;
 window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;

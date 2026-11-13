@@ -47,7 +47,7 @@ test('demo never initialises Firebase, auth or Firestore writes',()=>{
   assert.ok(H.includes('if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth'));
   assert.ok(/async function _billingCall\(fn,payload\)\{\n\s*if\(APP_DEMO\)/.test(H));
   const i=H.indexOf('<script src="demo.js"></script>');assert.ok(i>0&&i<H.indexOf('localStorage'),'demo.js runs before anything reads storage');
-  assert.ok(H.includes('Demo</b> with made-up trades. Nothing is saved to an account.')&&H.includes('href="/start"'));});
+  assert.ok(H.includes('Demo</b> with made-up trades. Nothing is saved to an account.')&&H.includes('href="/app/?signup=1"'));});
 test('demo is linked, routed, and never the installed app',()=>{
   const L=fs.readFileSync(path.join(A,'landing.html'),'utf8'),S=fs.readFileSync(path.join(A,'start.html'),'utf8'),R=fs.readFileSync(path.join(A,'_redirects'),'utf8');
   assert.ok(L.includes('href="/demo"')&&L.includes('Try the demo'));assert.ok(S.includes('href="/demo"'));

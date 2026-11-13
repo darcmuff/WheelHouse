@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v193` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v194` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 
@@ -30,7 +30,22 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 - `app/legal.html` still shows the DRAFT banner (for Marc to read and approve; not lawyer-reviewed). The page says last updated 1 November 2026.
 - Stripe code refuses live secret keys unless `STRIPE_ALLOW_LIVE=1` (`netlify/lib/stripe.js`). A 2026-11-06 working note said Stripe was live then. The Stripe dashboard, webhook, and Netlify env are external; this file does not assert them.
 - Founder Pro (never downgraded) is a Firestore `entitlements/{uid}` write via `tools/grant-founder.js` (see SETUP.md). Not confirmed from git. Do not put UIDs or keys in this file.
-- In-repo cookie-free analytics stays off (`analytics.provider` is `''` in `app/brand.js`). A 2026-11-07 working note said app tracking and Netlify Analytics were disabled then. The Netlify toggle is not in git; do not assert it from the repo.
+- In-repo cookie-free analytics is GoatCounter (`analytics.provider` is `goatcounter`, `analytics.goatcounter` is `https://optrack.goatcounter.com/count`). Page views come from the GoatCounter script. Clicks and new-account events go through `window.otTrack`, which calls `goatcounter.count({path, event:true})`. It does not run on localhost, and it does not run when `localStorage['ot-sim']` is `1` (the onboarding simulator sets that). Events: `/start-free`, `/go-pro`, `/demo`, `/signup-complete` (new email or Google accounts only), `/first-trade-saved`.
+- New visitors: Start free, Try the demo, Sign in and Go Pro are on the landing page above the fold. Start free and Go Pro open Create Account (`/app/?signup=1`, Go Pro also keeps `checkout=monthly|yearly`). Sign in opens the Sign In tab. A person who is already signed in is unchanged.
+
+## New-visitor simulator
+
+There is no separate dev deploy URL in this repo. `npm run sim` serves `app/` on a local port (the same paths as the live site: `/`, `/start`, `/demo`, `/app/`) and walks a brand-new browser. `npm run sim -- --url https://optrack.app` points it at production.
+
+```
+npm install
+npm run sim
+npm run sim -- --url https://optrack.app
+```
+
+Screenshots and `report.md` land in `tools/onboard-sim/out/<timestamp>/`. A step over 5 seconds fails (sign-up, sign-in and delete are allowed 12 seconds, because they wait on Firebase). The simulator sets `localStorage['ot-sim']=1` before any page script, so it does not count in GoatCounter.
+
+GitHub Actions: `.github/workflows/onboard-sim.yml` (workflow_dispatch, optional URL input, artifact upload). GitHub only shows the Run workflow button once this file is on the default branch `main`. Until then the button is not on main. The workflow file lives on `dev`. The link, after it is on main, is https://github.com/darcmuff/WheelHouse/actions/workflows/onboard-sim.yml
 - Other remote branches exist (`onboarding`, `overhaul`, `skunkworks`). This notes commit does not touch them.
 
 ## What's next
