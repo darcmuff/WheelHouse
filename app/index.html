@@ -5430,7 +5430,7 @@ function renderMonthlyRealised(){
   const tr=(label,cls,cells)=>`<tr class="${cls||''}"><td>${label}</td>${cells}</tr>`;
   const opt=all.filter(r=>r.collected||r.loss);
   let html=opt.length?panel('Monthly P&amp;L',`Options only, realised: booked in the month an option closed, expired or was assigned/called away; open options are excluded. Premium collected = credits of wheel puts and calls that ended that month, sell-to-close credits and credits of PMCC short calls. Loss = buyback costs on wheel options and PMCC calls. Profit = Premium collected minus Loss. Share sales and closed LEAPs are in Shares & LEAPs P&L below.`,
-    ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'')+cell(r.loss?-r.loss:0,'r')+pcell(r.profit))):'';
+    ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'g')+cell(r.loss?-r.loss:0,'r')+pcell(r.profit))):'';
   // Positions: FIFO share sales + closed long LEAPs (+ dividends), one table
   const sh=all.filter(r=>r.shareSales||r.divs||r.leapGain||r.leapLoss);
   const showDiv=sh.some(r=>r.divs);
