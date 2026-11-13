@@ -216,7 +216,7 @@ async function main() {
         rec.paths.goPro = await pathGoPro(browser, pass, origin, shot);
         if (opt.diagnose) {
           rec.paths.startFree = await pathEntryOnly(browser, pass, origin, '#start-free', 'signup', shot);
-          rec.paths.signIn = await pathEntryOnly(browser, pass, origin, '#signin-hero', 'signin', shot);
+          rec.paths.signIn = await pathEntryOnly(browser, pass, origin, '#signin-top', 'signin', shot);
         } else {
           const made = await pathStartFree(browser, pass, origin, shot);
           rec.paths.startFree = made.report;
@@ -258,7 +258,7 @@ async function pathLanding(browser, pass, origin, shot, shotFull) {
     await step(bag, 'ways in are above the fold', UI, async () => {
       const info = await page.evaluate(() => {
         const fold = window.innerHeight;
-        const ids = ['start-free', 'try-demo', 'signin-hero', 'go-pro'];
+        const ids = ['start-free', 'try-demo', 'signin-top', 'go-pro'];
         const out = {};
         ids.forEach((id) => {
           const el = document.getElementById(id);
@@ -510,10 +510,10 @@ async function pathSignIn(browser, pass, origin, acc, shot) {
   try {
     await step(bag, 'open landing in a fresh browser', UI, async () => {
       await page.goto(origin + '/', { waitUntil: 'domcontentloaded', timeout: UI });
-      await page.waitForSelector('#signin-hero', { timeout: UI });
+      await page.waitForSelector('#signin-top', { timeout: UI });
     });
     await step(bag, 'click Sign in', UI, async () => {
-      await clickSel(page, '#signin-hero');
+      await clickSel(page, '#signin-top');
       bag.clicks = 1;
       await page.waitForURL(/\/app\/?/, { timeout: UI });
     });
