@@ -43,7 +43,7 @@
       if(fn==='optchain')return J(chain(sym,(u.searchParams.get('contracts')||'').split(',').filter(Boolean)));
       if(fn==='candles')return J(candles(sym,u.searchParams.get('from')));
       if(fn==='extquote')return J({});
-      if(fn==='profile')return J({logo:null});
+      if(fn==='profile'){var svg='<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="#1f2937"/><text x="32" y="42" text-anchor="middle" font-size="28" font-family="sans-serif" fill="#fff">'+(sym.charAt(0)||'?')+'</text></svg>';return J({logo:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)});}
       if(fn==='earnings')return J({});
       if(fn==='symbol'){var q=(u.searchParams.get('q')||'').toLowerCase();var all=[{symbol:'KO',name:'Coca-Cola'},{symbol:'AMD',name:'Advanced Micro Devices'},{symbol:'SOFI',name:'SoFi'},{symbol:'AAPL',name:'Apple'},{symbol:'MSFT',name:'Microsoft'},{symbol:'TSLA',name:'Tesla'},{symbol:'SPCX',name:'Space Exploration Technologies'}];return J({results:all.filter(function(x){return x.symbol.toLowerCase().indexOf(q)>=0||x.name.toLowerCase().indexOf(q)>=0;}).slice(0,8)});}
       return J({error:'Not available in the demo.'},503);

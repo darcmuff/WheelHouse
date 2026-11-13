@@ -1119,6 +1119,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
           <div class="fld" id="pmg-strike"><label>Strike ($)</label><input id="pm-strike" type="number" step="0.01"></div>
           <div class="fld" id="pmg-delta"><label>Delta <small style="color:#555">optional</small></label><input id="pm-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30"></div>
           <div class="fld"><label id="pm-prem-lbl">Premium per Share</label><input id="pm-premium" type="number" step="0.0001" placeholder="0.0000" oninput="autoCalcPMTotal()"></div>
+          <div class="fld" id="pm-cp-wrap"><label for="pm-current-price">Current price</label><input id="pm-current-price" name="current-price" aria-label="Current price" type="number" step="0.0001" placeholder="0.0000"></div>
           <div class="fld"><label>Shares</label><input id="pm-shares" type="number" step="1" placeholder="100" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Fees ($)</label><input id="pm-fees" type="number" step="0.01" value="0" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="pm-total" type="number" step="0.01" readonly></div>
@@ -1232,6 +1233,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>Expiry</label><input id="pcc-expiry" type="date"></div>
       <div class="fld"><label>Contracts</label><input id="pcc-qty" type="number" step="1" min="1" value="1"></div>
       <div class="fld"><label id="pcc-price-lbl">Premium / share</label><input id="pcc-price" type="number" step="0.01"></div>
+      <div class="fld" id="pcc-cp-wrap"><label for="pcc-current-price">Current price</label><input id="pcc-current-price" name="current-price" aria-label="Current price" type="number" step="0.01" placeholder="0.00"></div>
       <div class="fld"><label id="pcc-date-lbl">Date sold</label><input id="pcc-date" type="date"></div>
       <div class="fld"><label>Fees total ($)</label><input id="pcc-fees" type="number" step="0.01" value="0"></div>
       <div class="fld" style="grid-column:span 2"><label>Notes</label><input id="pcc-notes" type="text"></div>
@@ -3106,7 +3108,7 @@ function openPmccSell(leapId){
   const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
   const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
   const v=(k,x)=>document.getElementById(k).value=x??'';
-  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste'].forEach(k=>v(k,''));
+  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste','pcc-current-price'].forEach(k=>v(k,''));
   v('pcc-qty',Math.max(1,(+L.qty||1)-P.open.reduce((a,l)=>a+(+l.qty||0),0)));v('pcc-fees','0');v('pcc-date',new Date().toISOString().slice(0,10));
   document.getElementById('mPmccTitle').textContent=`Add trade · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
   document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
@@ -3154,6 +3156,7 @@ function pmccSide(a){
   on('pcc-side-sto',a==='sto');on('pcc-side-btc',a==='btc');
   document.getElementById('pcc-price-lbl').textContent=a==='btc'?'Buyback price / share':'Premium / share';
   document.getElementById('pcc-date-lbl').textContent=a==='btc'?'Date bought':'Date sold';
+  const cp=document.getElementById('pcc-cp-wrap');if(cp)cp.style.display=a==='sto'?'':'none';
   if(a==='btc'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const open=L?pmccShortsFor(L,db.opts||[]).filter(s=>s.status==='open'):[];if(open.length===1)document.getElementById('pcc-qty').value=open[0].qty;}
   document.getElementById('pcc-err').style.display='none';
 }
@@ -3282,6 +3285,8 @@ function savePmcc(){
   const d=pmccDupOf(r.leg,db.opts);
   if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
   if(document.getElementById('pcc-roll').checked&&document.getElementById('pcc-roll-from').value)r.leg.rolledFrom=document.getElementById('pcc-roll-from').value;
+  const cpRaw=g('pcc-current-price').trim();
+  if(cpRaw!==''&&+cpRaw>=0){r.leg.mark=+cpRaw;r.leg.markSrc='manual';r.leg.markAt=new Date().toISOString();}
   r.leg.ts=new Date().toISOString();db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
 }
 function pmccClose(id,mode){
@@ -5719,19 +5724,25 @@ function deleteWheel(id){
   expanded.delete(id);render();
 }
 
-function wheelFace(w,withDate){
+function wheelRunSpan(w){
+  const dates=(db.trades||[]).filter(t=>t&&t.wheelId===w.id&&!t.expiredWorthless&&t.entered).map(t=>String(t.entered).slice(0,10)).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  const start=dates[0]||String(w.createdAt||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(start))return '';
+  if(w.status!=='closed')return fmtMonYear(start)+' – ongoing';
+  const end=dates.length?dates[dates.length-1]:start;
+  return fmtMonYear(start)+' – '+fmtMonYear(end);
+}
+function wheelFace(w){
   const tk=String(w.ticker||'').toUpperCase();
   let co=String(w.company||'').trim();
   if(!co||/^rotation\b/i.test(co)){const row=(window.POPULAR&&POPULAR.rows||[]).find(r=>String(r[0]).toUpperCase()===tk);co=row&&row[1]?String(row[1]):'';}
-  const name=co&&co.toUpperCase()!==tk?co+' / '+tk:(tk||'Wheel');
-  if(!withDate)return name;
-  const d=String(w.createdAt||'').slice(0,10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(d)?name+' · '+fmtMonYear(d):name;
+  const name=co&&co!==tk?co+' / '+tk:(tk||'Wheel');
+  const span=wheelRunSpan(w);
+  return span?name+' · '+span:name;
 }
 function wheelLogoHtml(ticker){const u=logos[String(ticker||'').toUpperCase()];return u?`<img src="${esc(u)}" class="rot-logo" alt="" onerror="this.style.display='none'">`:'';}
 function wheelPickItems(wheels){
-  const counts={};(wheels||[]).forEach(w=>{const t=String(w.ticker||'').toUpperCase();counts[t]=(counts[t]||0)+1;});
-  return [{id:'new',ticker:'',text:'+ New wheel'}].concat((wheels||[]).map(w=>({id:w.id,ticker:w.ticker,text:wheelFace(w,counts[String(w.ticker||'').toUpperCase()]>1)})));
+  return [{id:'new',ticker:'',text:'+ New wheel'}].concat((wheels||[]).map(w=>({id:w.id,ticker:w.ticker,text:wheelFace(w)})));
 }
 function pickWheelDefault(selectedId,ticker){
   if(selectedId&&(selectedId==='new'||(db.wheels||[]).some(w=>w.id===selectedId)))return selectedId;
@@ -7054,7 +7065,7 @@ function switchPasteTab(tab){
     document.getElementById('pm-ticker').value=ticker;
     document.getElementById('pm-entered').value=new Date().toISOString().slice(0,10);
     document.getElementById('pm-action').value='CSP';
-    ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment'].forEach(id=>document.getElementById(id).value='');
+    ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment','pm-current-price'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('pm-fees').value='0';
     const pr=document.getElementById('pm-roll');if(pr){pr.checked=false;document.getElementById('pm-roll-box').hidden=true;}
     populatePMWheelSelect(wheelId,ticker);
@@ -7074,6 +7085,7 @@ function onPMActionChange(){
   document.getElementById('pmg-strike').style.opacity=isOpt?'1':'0.4';
   document.getElementById('pmg-delta').style.opacity=isSell?'1':'0.4';
   document.getElementById('pm-prem-lbl').textContent=STOCKS.has(a)?'Price per Share':'Premium per Share';
+  const cp=document.getElementById('pm-cp-wrap');if(cp)cp.style.display=isSell?'':'none';
   autoCalcPMTotal();
 }
 function autoCalcPMTotal(){
@@ -7107,6 +7119,7 @@ function savePMTrade(){
     delta:isNaN(deltaRaw)?null:deltaRaw,
     premium,fees,shares,total,days,ppd:days>0?total/days:0,
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
+  if(action==='CSP'||action==='STOC'){const raw=document.getElementById('pm-current-price').value.trim();if(raw!==''&&+raw>=0){newTrade.currentPrice=+raw;newTrade.currentPriceAt=new Date().toISOString();}}
   if(document.getElementById('pm-roll').checked)linkWheelRoll(newTrade,document.getElementById('pm-roll-from').value);
   const _firstTrade=!db.trades.length;
   db.trades.push(newTrade);expanded.add(wheelId);
