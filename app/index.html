@@ -300,9 +300,6 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
   .sel-tip{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;margin:0 0 0.625rem;padding:0.4rem 0.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;font-size:0.75rem;color:var(--text2)}
   .sel-tip-x{border:0;background:transparent;color:var(--text3);cursor:pointer;font-size:0.875rem;line-height:1}
 }
-.roll-opt{display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text2);margin:0.25rem 0 0.5rem}
-.roll-opt input{accent-color:var(--orange)}
-#tf-roll-box[hidden],#pm-roll-box[hidden],#pcc-roll-box[hidden],#paste-roll-box[hidden]{display:none !important}
 .trow{
   display:grid;
   grid-template-columns:minmax(0,52fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,48fr) minmax(0,78fr) minmax(0,46fr) minmax(0,78fr) minmax(0,52fr) minmax(0,36fr);
@@ -1056,7 +1053,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>DTE <small style="color:#555">auto</small></label><input id="tf-days" type="number" step="1" oninput="autoCalcPPD()"></div>
       <div class="fld"><label>PPD ($) <small style="color:#555">auto</small></label><input id="tf-ppd" type="number" step="0.01" readonly></div>
       <div class="fld" style="grid-column:span 3"><label>Comment</label><textarea id="tf-comment" rows="1"></textarea></div>
-      <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="tf-roll" onchange="document.getElementById('tf-roll-box').hidden=!this.checked"> Mark as roll</label><div id="tf-roll-box" hidden class="fld"><label>Rolls from</label><select id="tf-roll-from"><option value="">Choose a trade</option></select></div></div>
       <div class="fld" style="grid-column:span 3;display:none" id="tg-created-at"><label>Date Added <small style="color:#555">auto</small></label><input id="tf-created-at" type="text" readonly style="color:var(--text3);background:var(--bg3);cursor:default"></div>
     </div>
     <input type="hidden" id="tf-id">
@@ -1124,7 +1120,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
           <div class="fld"><label>Fees ($)</label><input id="pm-fees" type="number" step="0.01" value="0" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="pm-total" type="number" step="0.01" readonly></div>
           <div class="fld"><label>Comment</label><input id="pm-comment" type="text"></div>
-          <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="pm-roll" onchange="document.getElementById('pm-roll-box').hidden=!this.checked"> Mark as roll</label><div id="pm-roll-box" hidden class="fld"><label>Rolls from</label><select id="pm-roll-from"><option value="">Choose a trade</option></select></div></div>
         </div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="savePMTrade()">Save Trade</button></div>
       </div>
@@ -1237,7 +1232,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label id="pcc-date-lbl">Date sold</label><input id="pcc-date" type="date"></div>
       <div class="fld"><label>Fees total ($)</label><input id="pcc-fees" type="number" step="0.01" value="0"></div>
       <div class="fld" style="grid-column:span 2"><label>Notes</label><input id="pcc-notes" type="text"></div>
-      <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="pcc-roll" onchange="document.getElementById('pcc-roll-box').hidden=!this.checked"> Mark as roll</label><div id="pcc-roll-box" hidden class="fld"><label>Rolls from</label><select id="pcc-roll-from"><option value="">Choose a trade</option></select></div></div>
     </div>
     <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="savePmcc()">Save</button></div>
     </div>
@@ -2557,7 +2551,7 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
     const open=g.legs.filter(l=>l.status==='open');
     let th=0,thOk=false;open.forEach(l=>{const gk=OPTS.legGreeks(l,spots[l.underlying],today);if(gk){th+=gk.theta;thOk=true;}});
     const linked=g.legs.find(l=>l.wheelId);
-    const acts=g.status==='open'?`<button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.6875rem" onclick="openOptClose('${g.id}','close')">Close</button><button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.6875rem" onclick="openOptClose('${g.id}','roll')">Roll</button>`:'';
+    const acts=g.status==='open'?`<button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.6875rem" onclick="openOptClose('${g.id}','close')">Close</button>`:'';
     return`<tr>
       <td><b>${esc(g.legs[0].underlying)}</b><div style="font-size:0.6875rem;color:var(--text3)">${esc(g.strategy)}${linked?` · ↳ ${wname(linked.wheelId)}`:''}</div></td>
       <td>${g.legs.map(_legLine).join('')}</td>
@@ -2894,7 +2888,7 @@ function renderLeapCard(l,spot,today){
   const note=rev?`◷ ${rev}`:'';
   const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:'';
   const gid=l.groupId||l.id;
-  const btns=`${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
+  const btns=`${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
   let row;
   if(open){
     const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
@@ -2915,7 +2909,7 @@ function renderLeapCard(l,spot,today){
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${l.markWhy==='none'?`<div class="lc-quiet" onclick="event.stopPropagation()">No fresh quote${l.mark!=null&&l.markAt?` · last price $${Number(l.mark).toFixed(2)} on ${_fdShort(String(l.markAt).slice(0,10))}`:''}. <button type="button" class="btn btn-ghost btn-sm" onclick="refreshLegMark('${esc(l.id)}')">Refresh price</button><button type="button" class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Enter mark manually</button></div>`:''}
     ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
@@ -3219,13 +3213,11 @@ function pmccRollPreview(r){
   const cash=x=>(x.price||0)*(x.qty||0)*100,net=(cash(r.kind==='short'?r.open:r.close)-cash(r.kind==='short'?r.close:r.open))-(r.close.fees||0)-(r.open.fees||0);
   return`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem"><span style="border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem">↻ ROLL</span><span style="margin-left:auto;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit +':'Net debit -'}$${Math.abs(net).toFixed(2)}</span></div>
   <div style="display:flex;gap:0.5rem;align-items:stretch">${card(r.close,nm[0])}<div style="align-self:center;color:var(--orange)">→</div>${card(r.open,nm[1])}</div>
-  <label class="roll-opt"><input type="checkbox" id="pcc-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>
   <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save</button>`;
 }
 function pmccSaveRoll(){
   const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
-  const pair=document.getElementById('pcc-roll-pair');
-  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),pair&&pair.checked?true:false);
+  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),false);
   if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
   db.opts=db.opts||[];
   a.save.forEach(l=>{const i=db.opts.findIndex(x=>x.id===l.id);if(i>=0)db.opts[i]=l;else db.opts.push(l);_saveOpt(l);});
@@ -3284,7 +3276,6 @@ function savePmcc(){
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
   const d=pmccDupOf(r.leg,db.opts);
   if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
-  if(document.getElementById('pcc-roll').checked&&document.getElementById('pcc-roll-from').value)r.leg.rolledFrom=document.getElementById('pcc-roll-from').value;
   const cpRaw=g('pcc-current-price').trim();
   if(cpRaw!==''&&+cpRaw>=0){r.leg.mark=+cpRaw;r.leg.markSrc='manual';r.leg.markAt=new Date().toISOString();}
   r.leg.ts=new Date().toISOString();db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
@@ -5917,8 +5908,7 @@ function saveTrade(){
     if(idx>=0){
       const old=db.trades[idx];
       const updated={id,...data,createdAt:old.createdAt||new Date().toISOString()};
-      if(document.getElementById('tf-roll').checked&&document.getElementById('tf-roll-from').value)linkWheelRoll(updated,document.getElementById('tf-roll-from').value);
-      else if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
+      if(old.rollId)updated.rollId=old.rollId;                 // keep a stored link; the form no longer edits it
       if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
       updated.verified=old.verified||false;                    // preserve verification status
       if(old.currentPrice!=null&&old.currentPrice!==''){updated.currentPrice=old.currentPrice;updated.currentPriceAt=old.currentPriceAt||null;}
@@ -5928,7 +5918,6 @@ function saveTrade(){
   }
   else{
     const newTrade={id:uid(),createdAt:new Date().toISOString(),...data};
-    if(document.getElementById('tf-roll').checked)linkWheelRoll(newTrade,document.getElementById('tf-roll-from').value);
     const _firstTrade=!db.trades.length;
     db.trades.push(newTrade);
     expanded.add(wheelId);
@@ -7120,7 +7109,6 @@ function savePMTrade(){
     premium,fees,shares,total,days,ppd:days>0?total/days:0,
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
   if(action==='CSP'||action==='STOC'){const raw=document.getElementById('pm-current-price').value.trim();if(raw!==''&&+raw>=0){newTrade.currentPrice=+raw;newTrade.currentPriceAt=new Date().toISOString();}}
-  if(document.getElementById('pm-roll').checked)linkWheelRoll(newTrade,document.getElementById('pm-roll-from').value);
   const _firstTrade=!db.trades.length;
   db.trades.push(newTrade);expanded.add(wheelId);
   _saveTrade(newTrade);closeModal('mPaste');render();
@@ -7141,7 +7129,7 @@ function showPasteStep1(){
   document.getElementById('paste-step2').style.display='none';
 }
 
-// A ticked "Mark as roll" shares one rollId with the trade the user picked. Nothing is chosen for them.
+// Fills a "rolls from" list when that control is on the page. Nothing is chosen for the user.
 function fillRollSelect(selId,wheelId,excludeId){
   const sel=document.getElementById(selId);if(!sel)return;
   const rows=(db.trades||[]).filter(t=>t&&t.wheelId===wheelId&&t.id!==excludeId).sort((a,b)=>String(b.entered||'').localeCompare(String(a.entered||'')));
@@ -7461,8 +7449,7 @@ function showRollPreview(trades){
       <div style="display:flex;align-items:center;color:var(--orange);font-size:1.25rem;font-weight:600;flex-shrink:0">→</div>
       ${tradeCard(trades[1])}
     </div>
-    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>
-    <label class="roll-opt"><input type="checkbox" id="paste-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>`;
+    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>`;
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
   fillWheelPick('paste-wheel-sel',wheelPickItems([...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99))),pickWheelDefault(wheelId,ticker));
@@ -7512,11 +7499,9 @@ function showPastePreview(p){
         <div><div class="mini-lbl">Fees</div><div class="fs-sm">$${(p.fees||0).toFixed(2)}</div></div>
       </div>
     </div>
-    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>
-    <label class="roll-opt"><input type="checkbox" id="paste-roll-on" onchange="document.getElementById('paste-roll-box').hidden=!this.checked"> Mark as roll</label><div id="paste-roll-box" hidden class="fld"><label>Rolls from</label><select id="paste-roll-from"><option value="">Choose a trade</option></select></div>`;
+    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>`;
   fillWheelPick('paste-wheel-sel',wheelPickItems([...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99))),pickWheelDefault(wheelId,p.ticker));
   warmWheelLogos();
-  fillRollSelect('paste-roll-from',document.getElementById('paste-wheel-sel').value);
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
 }
@@ -7532,14 +7517,12 @@ function confirmParsed(){
       if(ex){wheelId=ex.id;}
       else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
-    const pair=document.getElementById('paste-roll-pair');
-    const rid=pair&&pair.checked?'roll_'+uid():null;
     const _firstTrade=!db.trades.length;
     trades.forEach(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-        rollId:rid,verified:false,comment:'via SmartScan'};
+        verified:false,comment:'via SmartScan'};
       db.trades.push(nt);_saveTrade(nt);
     });
     expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
@@ -7560,8 +7543,6 @@ function confirmParsed(){
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
     verified:false,comment:'via SmartScan'};
-  const on=document.getElementById('paste-roll-on');
-  if(on&&on.checked)linkWheelRoll(nt,document.getElementById('paste-roll-from').value);
   db.trades.push(nt);_saveTrade(nt); // save only what was touched
   expanded.add(wheelId);
   closeModal('mPaste');parsedTradeData=null;

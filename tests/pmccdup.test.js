@@ -29,7 +29,7 @@ const cur = S.pmccStats(leap, marc, '2026-10-29').cur;
 check('Edit → Delete short call targets the stray open copy', cur && cur.id === 's2', cur && cur.id);
 // v93 LEAP card: Close/Roll top right, always-visible trades, collapse key, roll-mode modal
 {const SRC=require('fs').readFileSync(require('path').join(__dirname,'..','app','index.html'),'utf8');
-check('v93: Close + Roll in LEAP header', /class="lc-lacts"[^\n]*openOptClose\('\$\{esc\(gid\)\}','close'\)">Close<[^\n]*openLeapRoll\(/.test(SRC));
+check('v93: Close in LEAP header, no Roll button', /class="lc-lacts"[^\n]*openOptClose\('\$\{esc\(gid\)\}','close'\)">Close</.test(SRC)&&!/openLeapRoll\(/.test(SRC.match(/class="lc-lacts"[\s\S]{0,400}/)[0]));
 check('v93: new collapse key, default expanded', SRC.includes("localStorage.getItem('wh-collapsedLeaps')")&&!SRC.includes('expandedLeaps'));
 check('v93: no stale Edit → Close LEAP pointers', !/Edit → Close LEAP/.test(SRC));
 check('v93: hint', SRC.includes('Paste any trade or roll confirmation — any broker, any layout. Nothing is saved until you check the details and press Save.'));

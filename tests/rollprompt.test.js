@@ -10,19 +10,18 @@ test('the mark-as-roll prompt and its matchers are gone',()=>{
   assert.ok(!SRC.includes('function openRollPrompt'));
   assert.ok(!/checkRollCandidate\(/.test(SRC));
 });
-test('a two-leg paste stays unlinked unless Mark as roll is ticked',()=>{
+test('a two-leg paste is saved without a roll link',()=>{
   const save=extractFn('confirmParsed');
-  assert.match(save,/pair&&pair\.checked\?'roll_'\+uid\(\):null/);
-  assert.ok(!/openRollPrompt|checkRollCandidate/.test(save));
+  assert.ok(!/rollId/.test(save));
+  assert.ok(!/paste-roll-pair/.test(save));
 });
-test('an explicit Save roll still stores the link only when Mark as roll is ticked',()=>{
-  assert.match(extractFn('pmccRollApply'),/rolledFrom/);
+test('saving a scanned pair does not write a new roll link',()=>{
   const save=extractFn('pmccSaveRoll');
-  assert.match(save,/pcc-roll-pair/);
-  assert.match(save,/pair&&pair\.checked\?true:false/);
+  assert.match(save,/uid\(\),false\)/);
+  assert.ok(!/pcc-roll-pair/.test(save));
 });
-test('Mark as roll is an unticked choice on the trade forms',()=>{
-  assert.ok(SRC.includes('id="tf-roll"')&&SRC.includes('id="pm-roll"')&&SRC.includes('id="paste-roll-on"')&&SRC.includes('id="paste-roll-pair"'));
-  assert.match(extractFn('confirmParsed'),/paste-roll-pair/);
-  assert.match(extractFn('linkWheelRoll'),/roll_/);
+test('the trade forms have no Mark as roll control',()=>{
+  assert.ok(!SRC.includes('Mark as roll'));
+  assert.ok(!SRC.includes('id="tf-roll"')&&!SRC.includes('id="pm-roll"')&&!SRC.includes('id="paste-roll-on"')&&!SRC.includes('id="paste-roll-pair"'));
+  assert.match(extractFn('saveTrade'),/if\(old\.rollId\)updated\.rollId=old\.rollId/);
 });
