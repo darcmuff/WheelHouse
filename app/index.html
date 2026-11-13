@@ -642,7 +642,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 #topnav .nav-item,#tabbar .nav-item{border:0;padding:0.4375rem 0.875rem;border-radius:0.625rem;color:var(--text2);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:0.375rem;background:none}
 #topnav .nav-item.active{background:var(--bg2);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
 .tn-right{margin-left:auto;display:flex;align-items:center;gap:0.5rem}
-.tn-paste{padding:0.4375rem 0.875rem;font-size:0.6875rem}
 .tn-gear{background:none;border:0;color:var(--text2);cursor:pointer;padding:0.375rem;border-radius:0.5rem;display:flex}.tn-gear:hover{background:var(--bg3)}
 #tabbar{display:none}
 @media(max-width:700px){
@@ -986,7 +985,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg" alt=""><span class="tn-word"><span class="wm" data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span></div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheel</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
     <div class="tn-right">
-      <button class="btn btn-primary tn-paste" onclick="pasteFill()" title="Add a trade — SmartScan or Manual Entry">+ Add trade</button>
       <button class="tn-gear" onclick="openSettings()" title="Settings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button>
     </div>
   </header>
@@ -2454,7 +2452,6 @@ function _saveUIState(){
 }
 
 function render(){
-  syncAddTrade();
   const _nwKeep=view==='positions'&&_nwOpen, _nwWas=document.getElementById('new-rot-ticker-top'), _nwTyped=_nwWas?_nwWas.value:'', _nwFocus=document.activeElement===_nwWas;
   _saveUIState();
   renderSidebar();
@@ -2802,11 +2799,11 @@ function listMoreBtn(id,n,shown){
   return`<div class="list-more" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" style="color:var(--text3)" onclick="toggleListAll('${esc(id)}')">${on?'Show less':`Show all (${n})`}</button></div>`;
 }
 function toggleListAll(id){listShowAll.has(id)?listShowAll.delete(id):listShowAll.add(id);render();}
-function renderPmcc(leap,today,spot){
+function renderPmcc(leap,today,spot,add){
   const ev=pmccShortEvents(leap,db.opts||[]);
   const keep=listCut(ev.length,ev.map(()=>undefined),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
   const rows=evS.map(e=>renderPmccListRow(e,spot,today)).join('')+listMoreBtn(leap.id,ev.length,keep.length);
-  return`<div class="trade-body open pmcc-open pmcc-trades"><div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
     ${rows||'<div class="trow trow-empty"><span style="color:var(--text3)">No short calls yet.</span></div>'}
   </div></div>`;
 }
@@ -2901,7 +2898,7 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
-  ${renderPmcc(l,today,spot)}
+  ${renderPmcc(l,today,spot,true)}
 `:''}</div>`;
   }
   return`<div class="leap-card ${!open?'cn':''}" data-leap="${esc(l.id)}">
@@ -3414,7 +3411,7 @@ function leapScan(text,B,today){
   const effOf0=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
   const verdict=c=>{
     if(c.type!=='C')return'This is a put, not a call — LEAPs here are bought calls only.';
-    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close or Roll at the top right of the LEAP card instead.':'This is a sold call (sell to open) — use + Add trade at the top (or log it on the wheel), not + LEAP.';
+    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close or Roll at the top right of the LEAP card instead.':'This is a sold call (sell to open) — use Add trade at the top of that LEAP\'s trade table, not + LEAP.';
     if(c.effect==='close')return'This is a buy-to-close (closing a short call) — not a new LEAP.';
     if(!c.side)return'Couldn\'t tell whether this was bought or sold.';
     return'';};
@@ -4457,7 +4454,8 @@ function renderRotationWindow(wheel){
   let expandedHtml='';
   if(exp){
     expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
-      ${m.trades.length?'':`<p style="margin:0.35rem 0.75rem 0.15rem;color:var(--text2);font-size:0.8125rem">No trades yet. Add your first one with + Add trade at the top — Manual Entry, or paste a confirmation into SmartScan. The free plan includes it.</p>`}
+      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
+      ${m.trades.length?'':`<p style="margin:0.35rem 0.75rem 0.15rem;color:var(--text2);font-size:0.8125rem">No trades yet. Add your first one above — Manual Entry, or paste a confirmation into SmartScan. The free plan includes it.</p>`}
       <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
@@ -5841,15 +5839,8 @@ function savePrice(){
   _saveWheel(w);closeModal('mPrice');render();
 }
 
-function openModal(id){document.getElementById(id).classList.add('open');if(id==='mSettings')syncAddTrade();}
-function closeModal(id){document.getElementById(id).classList.remove('open');if(id==='mSettings')syncAddTrade();}
-// + Add trade only where a trade is added: Wheel, LEAPs, and an empty wheel. Not Home, Activity, stats, or Settings.
-function syncAddTrade(){
-  const b=document.querySelector('.tn-paste');if(!b)return;
-  const settings=document.getElementById('mSettings');
-  const settingsOpen=!!(settings&&settings.classList.contains('open'));
-  b.style.display=(view==='positions'||view==='options')&&!settingsOpen?'':'none';
-}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.mb').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);});});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mb.open').forEach(el=>closeModal(el.id));});
 
@@ -7602,21 +7593,6 @@ function toggleTheme(isLight){
   if(knob)knob.style.left=isLight?'18px':'2px';
 }
 function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls are harmless)
-// The one + Add trade. A single expanded card is the ticker; otherwise the form opens with no ticker chosen.
-function pasteFill(){
-  if(view==='options'){
-    const leaps=(db.opts||[]).filter(l=>l&&l.side==='long'&&l.type==='C'&&!l.parentLeapId&&!l.demo&&(leapStatus==='open'?l.status==='open':l.status!=='open')&&!collapsedLeaps.has(l.id));
-    if(leaps.length===1){openPmccSell(leaps[0].id);return;}
-  }
-  let wheelId='';
-  if(view==='positions'){
-    const visible=(db.wheels||[]).filter(w=>!(hidden.has(w.id)&&!showHidden)&&!(w.status!=='open'&&!showClosed));
-    const open=visible.filter(w=>!minimised.has(w.id)&&!collapsedWheels.has(w.id));
-    if(open.length===1)wheelId=open[0].id;
-    else if(_focusTid){const t=(db.trades||[]).find(x=>x.id===_focusTid);if(t&&visible.some(w=>w.id===t.wheelId))wheelId=t.wheelId;}
-  }
-  openPasteTrade(wheelId||undefined);
-}
 
 // ── Plans: Free / Pro. Everything is driven by window.BRAND.plans; gating is OFF unless plans.gating is true.
 // The entitlement lives at entitlements/{uid}: users can read it, only the server (Stripe webhook / founder tool) can write it.
@@ -8013,7 +7989,6 @@ window.openAddTrade = openAddTrade;
 window.openImport = openImport;
 window.openSettings = openSettings;
 window.toggleTheme = toggleTheme;
-window.pasteFill = pasteFill;
 window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
