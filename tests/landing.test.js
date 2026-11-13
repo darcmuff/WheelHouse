@@ -10,6 +10,7 @@ test('landing leads with the USPs, top three first, then the rest, plans, not fi
   ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Pick any trades. See the real net.','PMCC','every minute','after-hours','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','Try the demo','href="/start"','id="plans"','id="start-free"','id="try-demo"','id="signin-top"','id="go-pro"','href="/app/?signup=1"','signup=1&checkout=monthly'].forEach(s=>assert.ok(L.includes(s),s));
   assert.ok(!L.includes('id="signin-hero"')&&!L.includes('I have an account'),'hero row has no Sign in button');
   assert.ok(L.includes('id="ways-note">Start free creates an account. No card. The demo needs no sign-up. Nothing to download: it runs in your web browser.'));
+  assert.ok(L.includes('@media(min-width:1280px)')&&L.includes('#ways-in{flex-direction:column')&&/id="start-free"[\s\S]*id="try-demo"[\s\S]*id="go-pro"/.test(L)&&L.includes("otCount('/start-free')")&&L.includes("otCount('/demo')")&&L.includes("otCount('/go-pro')"));
   assert.ok(L.indexOf('id="ways-in"')<L.indexOf('id="usp-broker"'),'the ways in sit above the feature cards');
   ['img/select-net.png'].forEach(s=>{assert.ok(L.includes(s));assert.ok(fs.existsSync(path.join(A,s)),s);});
   assert.ok(L.includes('Demo data')&&L.includes('made-up numbers'),'screens and examples labelled');
