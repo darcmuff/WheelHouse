@@ -24,7 +24,7 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','hoistChainLines','renderPmcc','listCut','listMoreBtn','pmccShortEvents','pmccClosedCaptured','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','renderPmcc','listCut','listMoreBtn','pmccShortEvents','pmccClosedCaptured','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
   `\nconst listShowAll=new Set();const B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';
@@ -87,7 +87,7 @@ check('bought-back Captured sits on the BTC row; the STO row is a dash; expiry s
   return /ab-BTC/.test(btc)&&/77%/.test(text(btc))&&/at \$1\.15/.test(btc)&&/\+\$787\.40/.test(text(btc)) && !closedSto && expSto && openSto;
 })(), h.replace(/<[^>]+>/g,' ').slice(0,500));
 check('LEAP with no short calls shows "No short calls yet." row', (()=>{const h=S.renderPmcc({ ...leap, id: 'none' }, today);return /pmcc-trades/.test(h)&&/No short calls yet\./.test(h)&&!/BTO/.test(h);})());
-check('roll chain tip shows chain row', /chain-row/.test(h) && /Chain/.test(h));
+check('legacy roll fields render as plain rows', !/chain-row|roll-badge|chain-tint|roll-trade|roll-slot/.test(h));
 check('events newest-first with BTO present', (()=>{const ev=S.pmccTradeEvents(leap,legs);return ev[0].entered>=ev[ev.length-1].entered && ev.some(e=>e.action==='BTO') && ev.filter(e=>e.action==='STO').length===3;})());
 check('no wheel data touched by rendering', S.db.wheels.length === 1 && S.db.trades.length === 1 && S.writes.length === 0);
 check('pmccLegToTrade maps to STO with shares×100', (()=>{const tr=S.pmccLegToTrade(c, today);return tr.action==='STO'&&tr.shares===200&&tr.premium===6.4;})());

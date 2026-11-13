@@ -64,19 +64,19 @@
       var credit=action==='CSP'||action==='STOC'||action==='OUT'||action==='STC';
       var t={id:'dt'+(++n),wheelId:w,ticker:tk,action:action,entered:entered,expiry:o.expiry||null,strike:o.strike||null,delta:null,premium:prem,fees:fees,shares:sh,
         total:Math.round((credit?prem*sh-fees:prem*sh+fees)*100)/100,days:o.expiry?days(entered,o.expiry):0,ppd:0,verified:true,comment:'',createdAt:entered+'T15:00:00.000Z'};
-      if(o.rollId)t.rollId=o.rollId;if(o.exp)t.expiredWorthless=true;trades.push(t);return t;};
+      if(o.exp)t.expiredWorthless=true;trades.push(t);return t;};
     var wheels=[
       {id:'dw-ko',ticker:'KO',label:'',company:'Coca-Cola',status:'open',lastPrice:null,notes:'',createdAt:add(-120),sortOrder:1},
       {id:'dw-amd',ticker:'AMD',label:'',company:'AMD',status:'open',lastPrice:null,notes:'',createdAt:add(-70),sortOrder:2},
       {id:'dw-sofi2',ticker:'SOFI',label:'',company:'SoFi',status:'open',lastPrice:null,notes:'',createdAt:add(-5),sortOrder:3},
       {id:'dw-sofi1',ticker:'SOFI',label:'',company:'SoFi',status:'closed',lastPrice:null,notes:'',createdAt:add(-150),sortOrder:4}];
-    // KO: puts that expired, then a roll (buy back + sell a new put), then an open put.
+    // KO: puts that expired, then a buy back and a new put, then an open put.
     var e1=fri(-96),e2=fri(-68),e3=fri(-40),e4=fri(-12);
     tr('dw-ko','KO','CSP',add(-120),{strike:67.5,expiry:e1,premium:0.62,exp:true});
     tr('dw-ko','KO','CSP',add(days(iso(T),e1)+3),{strike:67.5,expiry:e2,premium:0.70,exp:true});
     tr('dw-ko','KO','CSP',add(days(iso(T),e2)+3),{strike:68,expiry:e3,premium:0.75});
-    tr('dw-ko','KO','BTC',add(days(iso(T),e3)-3),{strike:68,expiry:e3,premium:1.40,rollId:'droll1'});
-    tr('dw-ko','KO','CSP',add(days(iso(T),e3)-3),{strike:67,expiry:e4,premium:1.85,rollId:'droll1',exp:true});
+    tr('dw-ko','KO','BTC',add(days(iso(T),e3)-3),{strike:68,expiry:e3,premium:1.40});
+    tr('dw-ko','KO','CSP',add(days(iso(T),e3)-3),{strike:67,expiry:e4,premium:1.85,exp:true});
     tr('dw-ko','KO','CSP',add(-6),{strike:68,expiry:fri(12),premium:0.80});
     // AMD: a put expired, the next was assigned, then covered calls.
     var a1=fri(-52),a2=fri(-31),a3=fri(-14);
@@ -99,7 +99,7 @@
     var msft=L({g:2,underlying:'MSFT',strike:400,expiry:third(20),entryPrice:92.00,entryDate:add(-130)});
     var c1=L({g:3,underlying:'AAPL',side:'short',parentLeapId:aapl.id,strike:250,expiry:fri(-79),entryPrice:2.10,entryDate:add(-100),status:'expired',closePrice:0,closeDate:fri(-79)});
     var c2=L({g:4,underlying:'AAPL',side:'short',parentLeapId:aapl.id,strike:255,expiry:fri(-56),entryPrice:2.40,entryDate:add(-77),status:'closed',closePrice:3.90,closeDate:add(-60),closeFees:0.65});
-    var c3=L({g:4,underlying:'AAPL',side:'short',parentLeapId:aapl.id,strike:260,expiry:fri(-35),entryPrice:3.20,entryDate:add(-60),status:'expired',closePrice:0,closeDate:fri(-35),rolledFrom:c2.id});
+    var c3=L({g:9,underlying:'AAPL',side:'short',parentLeapId:aapl.id,strike:260,expiry:fri(-35),entryPrice:3.20,entryDate:add(-60),status:'expired',closePrice:0,closeDate:fri(-35)});
     var c4=L({g:5,underlying:'AAPL',side:'short',parentLeapId:aapl.id,strike:255,expiry:fri(12),entryPrice:2.30,entryDate:add(-9)});
     var c5=L({g:6,underlying:'MSFT',side:'short',parentLeapId:msft.id,strike:480,expiry:fri(-62),entryPrice:3.80,entryDate:add(-90),status:'closed',closePrice:1.10,closeDate:add(-70),closeFees:0.65});
     var c6=L({g:7,underlying:'MSFT',side:'short',parentLeapId:msft.id,strike:485,expiry:fri(-28),entryPrice:4.10,entryDate:add(-50),status:'expired',closePrice:0,closeDate:fri(-28)});

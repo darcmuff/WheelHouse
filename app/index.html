@@ -312,15 +312,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 }
 .trow:hover{background:var(--bg3)}
 .trow-health{border-top:none}
-.trow.roll-trade{border-left:0.1875rem solid #0891b2;padding-left:0.8125rem;background:rgba(8,145,178,0.07)}
-.chain-row{display:flex;gap:0.875rem;align-items:baseline;padding:0.375rem 1rem 0.5rem 0.8125rem;border-left:0.1875rem solid #0891b2;background:rgba(8,145,178,0.12);font-size:0.7188rem;border-top:1px dashed rgba(8,145,178,0.35)}
-.chain-row .chain-tag{color:#22d3ee;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-size:0.625rem}
-.chain-row .chain-net{font-weight:600;font-variant-numeric:tabular-nums}
-.chain-row .chain-be{color:var(--text2)}
-.roll-badge{font-size:0.9375rem;color:#0891b2;font-weight:normal;line-height:1}
 .action-cell{display:flex;align-items:center;gap:0.25rem;flex-wrap:wrap;min-width:0;line-height:1.2}
-.roll-slot:empty{display:none}
-.roll-slot{flex:0 0 1rem;display:flex;align-items:center;justify-content:center}
 .trow.expired-trade{border-left:0.1875rem solid var(--green);padding-left:0.8125rem;background:rgba(34,197,94,0.04)}
 .exp-badge{font-size:0.625rem;font-weight:600;color:var(--green);letter-spacing:.5px;vertical-align:middle}
 .ab{padding:0.1875rem 0.5rem;border-radius:0.25rem;font-size:0.6875rem;font-weight:600;white-space:nowrap;display:inline-block;letter-spacing:.3px}
@@ -756,7 +748,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(11){grid-column:19}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(12){grid-column:21}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-child(13){grid-column:23}
-  .pmcc-open .tgrid>.chain-row,.pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
+  .pmcc-open .tgrid>.list-more,.pmcc-open .tgrid>.trow-empty{grid-column:1 / -1}
   .pmcc-open .tgrid>.trow.has-to-strike{min-height:3.15rem}
   .pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(3),.pmcc-open .tgrid>.trow.has-to-strike>span:nth-last-child(2){white-space:nowrap}
   .pmcc-open .tgrid>.trow.has-to-strike>span:last-child{justify-self:end}
@@ -790,12 +782,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .trade-body{border-top:1px solid var(--bg3);margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;overflow:hidden}
 .thead-row{background:transparent;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.6rem;color:var(--text3);border-bottom:1px solid var(--border);padding:0.5rem 0.875rem}
 .trow{border-top:1px solid var(--bg3);padding:0.5rem 0.875rem;font-size:0.7rem}.trow:hover{background:var(--bg)}
-.trow.roll-trade,.trow.expired-trade{border-left:0;padding-left:0.875rem;background:transparent}
-.chain-row{border-left:0;background:var(--bg);color:var(--text2);padding:0.4rem 0.875rem;font-size:0.65rem}
-.chain-row .chain-tag{color:var(--orange);text-transform:none;letter-spacing:0;font-size:0.6rem}
-/* Roll chains: every row in a chain (and its ⛓ Chain line) gets a permanent teal tint */
-.trow.chain-tint,.chain-row.chain-tint{background:rgba(8,145,178,0.09)}
-.roll-badge{color:var(--orange)}
+.trow.expired-trade{border-left:0;padding-left:0.875rem;background:transparent}
 .ab{border:0!important;border-radius:1rem;padding:0.15rem 0.55rem;font-size:0.6rem;letter-spacing:0;font-weight:600}
 .ab-CSP,.ab-OUT,.ab-DIV{background:color-mix(in srgb,var(--green) 12%,transparent);color:var(--green)}
 .ab-BTC{background:color-mix(in srgb,var(--red) 11%,transparent);color:var(--red)}
@@ -2505,7 +2492,7 @@ function optDemoLegs(todayISO,wheels){
   ];
   const S=(o)=>L(o.g,{underlying:'SPCX',side:'short',parentLeapId:'demo-5',fees:1.30,qty:2,...o});
   const s1=S({g:6,strike:240,expiry:past(64),entryPrice:5.10,entryDate:past(100),status:'closed',closePrice:1.15,closeDate:past(70),closeFees:1.30,mark:null});
-  const s2=S({g:6,strike:250,expiry:past(29),entryPrice:4.60,entryDate:past(70),status:'expired',closePrice:0,closeDate:past(29),mark:null,rolledFrom:s1.id});
+  const s2=S({g:12,strike:250,expiry:past(29),entryPrice:4.60,entryDate:past(70),status:'expired',closePrice:0,closeDate:past(29),mark:null});
   const s3=S({g:7,strike:245,expiry:mo,entryPrice:6.40,entryDate:past(12),mark:3.05,iv:0.66});
   // a short weekly call on the TSLA 300 LEAP
   const s4=L(8,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:390,expiry:wk,entryPrice:4.20,entryDate:past(4),mark:6.80,iv:0.6});
@@ -2764,11 +2751,9 @@ function pmccClosedCaptured(c){
   if(net!=null){const cc=capturedCellHtml(0,net,false);return {html:cc.html.replace(/^0% /,''),color:cc.color};}
   return null;
 }
-function renderPmccListRow(e,spot,today,cmap,chainOut){
-  const c=e.leg,par=cmap&&cmap._parents?cmap._parents:{};
-  const cIdx=cmap?cmap[e.legId]:undefined,cCls=cIdx!=null?' chain-tint':'';
+function renderPmccListRow(e,spot,today){
+  const c=e.leg;
   const isSto=e.action==='STO';
-  const rolled=isSto&&!!(par[e.legId]&&par[e.legId].length);
   let ts='—',ppd='—',cap='—',capColor='var(--text3)';
   if(isSto&&c){
     const sold=+c.entryPrice||0;
@@ -2787,19 +2772,9 @@ function renderPmccListRow(e,spot,today,cmap,chainOut){
   }else if(e.action==='BTC'&&c&&c.status==='closed'){
     const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}
   }
-  let chainHtml='';
-  const isTip=rolled&&!Object.values(par).some(ps=>ps.includes(e.legId));
-  if(rolled&&isTip&&c){
-    const legs=db.opts||[];const chain=[],seen=new Set();let rolls=0;
-    const visit=l=>{if(!l||seen.has(l.id))return;seen.add(l.id);chain.push(l);const ps=par[l.id]||[];if(ps.length)rolls++;ps.forEach(id=>visit(legs.find(x=>x.id===id)));};
-    visit(c);
-    if(chain.length>1){let net=0;chain.forEach(l=>{const p=OPTS.legPnL(l);net+=l.status==='open'?(p.unrealized!=null?p.unrealized:p.openCash):p.realized;});net=Math.round(net*100)/100;
-      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${rolls} roll${rolls>1?'s':''} · ${chain.length} legs</span><span class="chain-net ${colorN(net)}">net ${fmtMoney(net)}</span><span class="chain-be">${e.open?'live short':'chain complete'}</span></div>`;}
-  }
-  if(chainOut&&chainHtml&&cIdx!=null){chainOut[cIdx]=chainHtml;chainHtml='';}
   const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
-  return`${chainHtml}<div class="trow has-to-strike${rolled?' roll-trade':''}${e.action==='EXP'?' expired-trade':''}${cCls}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}" data-act="${esc(e.action||'')}" data-strike="${e.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
-    <span class="action-cell"><span class="roll-slot">${rolled?'<span class="roll-badge">↻</span>':''}</span><span class="ab ab-${e.action}">${e.action}</span></span>
+  return`<div class="trow has-to-strike${e.action==='EXP'?' expired-trade':''}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}" data-act="${esc(e.action||'')}" data-strike="${e.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
+    <span class="action-cell"><span class="ab ab-${e.action}">${e.action}</span></span>
     <span>${fmtDateFull(e.entered)}</span>
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
     <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
@@ -2829,10 +2804,8 @@ function listMoreBtn(id,n,shown){
 function toggleListAll(id){listShowAll.has(id)?listShowAll.delete(id):listShowAll.add(id);render();}
 function renderPmcc(leap,today,spot,add){
   const ev=pmccShortEvents(leap,db.opts||[]);
-  const cmap=pmccChainMap(ev);
-  const keep=listCut(ev.length,ev.map(e=>cmap[e.legId]!=null?'c'+cmap[e.legId]:'l'+e.legId),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
-  const chainOut={},rowHtml=evS.map(e=>renderPmccListRow(e,spot,today,cmap,chainOut));
-  const rows=hoistChainLines(evS.map(e=>cmap[e.legId]),rowHtml,chainOut)+listMoreBtn(leap.id,ev.length,keep.length);
+  const keep=listCut(ev.length,ev.map(()=>undefined),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
+  const rows=evS.map(e=>renderPmccListRow(e,spot,today)).join('')+listMoreBtn(leap.id,ev.length,keep.length);
   return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
     ${rows||'<div class="trow trow-empty"><span style="color:var(--text3)">No short calls yet.</span></div>'}
   </div></div>`;
@@ -4098,12 +4071,6 @@ function wheelChainMap(wheelTrades){
   _chainMapCache.set(wheelTrades,map);
   return map;
 }
-// Join rendered rows, putting each chain's summary line above that chain's first displayed row.
-function hoistChainLines(idxs,rowHtml,chainOut){
-  const done=new Set();let out='';
-  rowHtml.forEach((h,i)=>{const k=idxs[i];if(k!=null&&!done.has(k)){done.add(k);out+=chainOut[k]||'';}out+=h;});
-  return out;
-}
 function isChainTip(wheelTrades,leg){
   wheelTrades=withInferredRolls(wheelTrades);
   leg=wheelTrades.find(x=>x.id===leg.id)||leg;
@@ -4140,7 +4107,7 @@ function wheelCurrentValue(opt,mid){return opt&&mid!=null&&mid>=0?Math.round(mid
 // Pure: % of the sold premium still kept = (premium received − current value) ÷ premium received × 100. + = cheaper to buy back.
 // Pure: open-option profit now = premium received − live buy-back cost; null without premium or quote.
 function wheelCurrentProfit(opt,curVal){if(!opt||!(opt.premium>0)||curVal==null)return null;return Math.round((opt.premium*100*opt.contracts-curVal)*100)/100;}
-// Pure: chain-aware Profit. When the open leg tips a roll chain: chain net (same basis as the ⛓ heading) − live buy-back;
+// Pure: chain-aware Profit. When the open leg tips a roll chain: chain net − live buy-back;
 // % = that ÷ every sell-to-open premium received across the chain. Null when the leg is not in a chain.
 function wheelChainProfit(trades,opt,curVal){
   if(!opt||curVal==null)return null;
@@ -4497,7 +4464,7 @@ function renderRotationWindow(wheel){
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
     const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
-    {const cm=wheelChainMap(m.trades),chainOut={};const keep=listCut(_ord.length,_ord.map(t=>cm[t.id]),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);const rh=_S.map(t=>renderTradeRow(t,m.trades,{chainOut,list:_L}));expandedHtml+=hoistChainLines(_S.map(t=>cm[t.id]),rh,chainOut)+listMoreBtn(wheel.id,_ord.length,keep.length);}
+    {const keep=listCut(_ord.length,_ord.map(()=>undefined),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);expandedHtml+=_S.map(t=>renderTradeRow(t,m.trades,{list:_L})).join('')+listMoreBtn(wheel.id,_ord.length,keep.length);}
     expandedHtml+=`</div></div>`;
   }
 
@@ -4669,24 +4636,6 @@ function renderTradeRow(t,wheelTrades,opts){
   // opts (optional): {rocHtml, rocColor, editOnclick, noEdit, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
   opts=opts||{};
   const fmtStrike=k=>'$'+fmt2(k).replace(/\.00$/,''),fmtRowTotal=t=>{const v=+t.total||0;return isCredit(t.action)?fmtMoney(v):fmtMoney(-Math.abs(v));};
-  // Chain summary — shown under the TIP of a roll chain: the campaign truth Robinhood hides
-  let chainHtml='';
-  const cIdx=wheelTrades?wheelChainMap(wheelTrades)[t.id]:undefined;
-  const cCls=cIdx!=null?' chain-tint':'';
-  const effRid=wheelTrades?withInferredRolls(wheelTrades)._rid[t.id]:t.rollId;
-  if(wheelTrades&&effRid&&isChainTip(wheelTrades,t)){
-    const c=buildRollChain(wheelTrades,t.id);
-    if(c){
-      const netCls=c.net>=0?'g':'r';
-      const beHtml=c.live
-        ?(c.breakeven!=null&&c.breakeven>0
-          ?`<span class="chain-be">breakeven buyback ≤ $${fmtPrem(c.breakeven)} — close cheaper and the whole chain is green</span>`
-          :`<span class="chain-be">chain is underwater — no green buyback exists at any price</span>`)
-        :`<span class="chain-be">chain complete</span>`;
-      const move=rollMoveText(c.trades,t);
-      chainHtml=`<div class="chain-row${cCls}"><span class="chain-tag">⛓ Chain</span><span>${c.rolls} roll${c.rolls>1?'s':''} · ${c.trades.length} legs</span>${move?`<span>${move}</span>`:''}<span class="chain-net ${netCls}">net ${fmtMoney(c.net)}</span>${beHtml}</div>`;
-    }
-  }
   if(opts.list){const lc=wheelListCells(t,opts.list);opts={...opts,rocHtml:lc.cap,rocColor:lc.capColor,ppdHtml:lc.ppd,extraAfterStrike:`<span class="to-strike m">${esc(lc.ts)}</span>`,editBtn:true};}
   const _o=wheelTrades?wheelSellOutcomes(wheelTrades)[t.id]:null;
   const roc=calcTradeROC(t,_o?_o.net:null);
@@ -4696,14 +4645,12 @@ function renderTradeRow(t,wheelTrades,opts){
   const isOpenLeg=t.action==='CSP'||t.action==='STOC'||t.action==='STO';
   const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
   const ppdDisplay=opts.ppdHtml!=null?opts.ppdHtml:ppd!==null?`${fmtMoney(ppd)}<span>/d (${t.days}d)</span>`:'—';
-  const rowCls=[effRid?'roll-trade':'',t.expiredWorthless?'expired-trade':''].filter(Boolean).join(' ');
-  const rollBadge=effRid?'<span class="roll-badge">↻</span>':'';
+  const rowCls=t.expiredWorthless?'expired-trade':'';
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
-  if(opts.chainOut&&chainHtml&&cIdx!=null){opts.chainOut[cIdx]=chainHtml;chainHtml='';}
-  return`${chainHtml}<div class="trow ${rowCls}${cCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}" data-act="${esc(t.action||'')}" data-strike="${t.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
-    <span class="action-cell"><span class="roll-slot">${rollBadge}</span><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
+  return`<div class="trow ${rowCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}" data-act="${esc(t.action||'')}" data-strike="${t.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
+    <span class="action-cell"><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?fmtStrike(t.strike):'—'}</span>
@@ -7098,14 +7045,6 @@ function fillLeapRollSelect(leap){
   const sel=document.getElementById('pcc-roll-from');if(!sel||!leap)return;
   const rows=pmccShortsFor(leap,db.opts||[]).slice().sort((a,b)=>String(b.entryDate||b.closeDate||'').localeCompare(String(a.entryDate||a.closeDate||'')));
   sel.innerHTML='<option value="">Choose a trade</option>'+rows.map(l=>`<option value="${esc(l.id)}">${esc((l.status==='open'?'Open':'Closed')+' $'+fmt2(l.strike).replace(/\.00$/,'')+' · '+_fdShort(l.entryDate||l.closeDate||''))}</option>`).join('');
-}
-// Stored roll links only. Nothing here guesses that a close and a later open belong together.
-function rollMoveText(trades,tip){
-  if(!tip||!tip.rollId)return '';
-  const btc=(trades||[]).find(t=>(t.action==='BTC'||t.action==='STC')&&t.rollId===tip.rollId);
-  if(!btc)return '';
-  const bit=t=>`$${fmt2(t.strike).replace(/\.00$/,'')}${t.expiry?' '+fmtDateShort(t.expiry):''}`;
-  return `${bit(btc)} → ${bit(tip)}`;
 }
 // ── SmartScan — broker-agnostic pattern hunter ──
 // Handles: Robinhood, Tastytrade, IBKR, Schwab, TD Ameritrade, E*Trade,

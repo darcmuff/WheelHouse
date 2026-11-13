@@ -18,7 +18,8 @@ test('demo keeps its own storage: every key gets the demo prefix',()=>{const e=e
 test('seed data loads: wheels, roll chain, assignment, called away, LEAPs with one open short call, modest sizes',()=>{
   const e=env('/demo'),d=e.win.OT_DEMO.load();
   assert.ok(d.wheels.filter(w=>w.status==='open').length>=3);
-  const r=d.trades.filter(t=>t.rollId);assert.ok(r.some(t=>t.action==='BTC')&&r.some(t=>t.action==='CSP'));
+  assert.ok(d.trades.some(t=>t.action==='BTC')&&d.trades.some(t=>t.action==='CSP'));
+  assert.ok(d.trades.every(t=>!t.rollId)&&d.opts.every(l=>!l.rolledFrom),'seed trades are plain rows');
   assert.ok(d.trades.some(t=>t.action==='IN')&&d.trades.some(t=>t.action==='OUT'));
   assert.strictEqual(d.opts.filter(l=>l.side==='long'&&l.status==='open').length,2);
   assert.strictEqual(d.opts.filter(l=>l.side==='short'&&l.status==='open').length,1);

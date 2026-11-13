@@ -30,7 +30,7 @@ const closedL = longs.filter(l => l.status !== 'open'); longs.splice(0, longs.le
 check('five open demo LEAPs (+1 closed for history), all long calls', longs.length === 5 && closedL.length === 1 && longs.every(l => l.type === 'C'));
 check('demo PMCC short calls: all calls, each linked to a demo LEAP', shorts.length === 6 && shorts.every(l => l.type === 'C' && longs.some(x => x.id === l.parentLeapId && x.underlying === l.underlying)));
 check('demo legs raise no red data-health issues', !S.OPTS.health(legs, [], today, []).some(i => i.sev === 'red'), S.OPTS.health(legs, [], today, []).filter(i => i.sev === 'red'));
-check('SPCX LEAP has open + past (rolled, expired) short calls', shorts.filter(l => l.parentLeapId === 'demo-5' && l.status === 'open').length === 1 && shorts.some(l => l.status === 'expired' && l.rolledFrom));
+check('SPCX LEAP has open + past expired short calls, with no roll link', shorts.filter(l => l.parentLeapId === 'demo-5' && l.status === 'open').length === 1 && shorts.some(l => l.status === 'expired' && !l.rolledFrom));
 check('TSLA ×2, NVDA, AAPL, SPCX', longs.filter(l => l.underlying === 'TSLA').length === 2 && legs.some(l => l.underlying === 'NVDA') && legs.some(l => l.underlying === 'AAPL'));
 const dtes = longs.map(l => S.OPTS.dte(l.expiry, today));
 check('three ≥ 270 DTE LEAPs, AAPL inside the 270-day review window', longs.filter((l, i) => dtes[i] >= 270).length === 4 && S.OPTS.dte(legs.find(l => l.underlying === 'AAPL').expiry, today) < 270, dtes);

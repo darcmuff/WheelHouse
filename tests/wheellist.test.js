@@ -76,6 +76,6 @@ test('expiry and assignment keep Captured on the opener', () => {
 });
 test('wheel card table uses the LEAP list header, row Edit and list cells', () => {
   assert.match(SRC, /trade-body open pmcc-open wheel-list[\s\S]{0,700}tradeTableHead\(\{lastCol:'Captured',toStrike:true\}\)/);
-  assert.match(SRC, /renderTradeRow\(t,m\.trades,\{chainOut,list:_L\}\)/);
+  assert.match(SRC, /renderTradeRow\(t,m\.trades,\{list:_L\}\)/);
   assert.match(SRC, /opts\.editBtn\?`<button class="btn btn-ghost btn-sm" onclick="\$\{editOn\};event\.stopPropagation\(\)">Edit<\/button>`/);
 });
