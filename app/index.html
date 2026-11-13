@@ -1406,7 +1406,7 @@ function themeFromStored(v){return v==='dark'?'dark':'light';}
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, getAdditionalUserInfo } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocsFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer, onSnapshot, disableNetwork, terminate } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
   apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
@@ -1420,7 +1420,9 @@ const _firebaseConfig = {
 const APP_DEMO = !!(window.OT_DEMO && window.OT_DEMO.active);
 const _app  = APP_DEMO ? null : initializeApp(_firebaseConfig);
 const _auth = APP_DEMO ? null : getAuth(_app);
-const _fsDb = APP_DEMO ? null : getFirestore(_app);
+let _fsDb = APP_DEMO ? null : getFirestore(_app);
+let _fsUnsubs=[];
+let _fsStopped=false;
 const _googleProvider = APP_DEMO ? null : new GoogleAuthProvider();
 
 // Scoped UID — only set after onAuthStateChanged confirms a valid user
@@ -1479,18 +1481,51 @@ function loadDB(){
   window._db = db;
 }
 
+// One server snapshot, then the listener stays open. getDocsFromServer is itself a
+// listen that is cancelled as soon as the rows arrive, and that cancel is what makes
+// the browser log Listen/channel 404 and 400. Held until releaseFirestore().
+function listenServer(q){
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    const unsub=onSnapshot(q,{includeMetadataChanges:true},snap=>{
+      if(snap.metadata.fromCache)return;
+      if(settled)return;
+      settled=true;
+      resolve(snap);
+    },err=>{
+      if(settled)return;
+      settled=true;
+      try{unsub();}catch(e){}
+      reject(err);
+    });
+    _fsUnsubs.push(unsub);
+  });
+}
+function fsUnsubAll(){
+  const xs=_fsUnsubs.splice(0);
+  xs.forEach(u=>{try{u();}catch(e){}});
+}
+async function releaseFirestore(){
+  if(APP_DEMO||!_fsDb||_fsStopped)return;
+  fsUnsubAll();
+  try{await disableNetwork(_fsDb);}catch(e){}
+  try{await terminate(_fsDb);}catch(e){}
+  _fsStopped=true;
+}
+function ensureFirestore(){
+  if(_fsStopped){_fsDb=getFirestore(_app);_fsStopped=false;_fsUnsubs=[];}
+  return _fsDb;
+}
 async function loadDBFromFirestore(userId){
   // No try/catch here — a failed load must throw so the caller can halt boot.
   // Swallowing it made a network blip look like an empty account (onboarding shown).
-  // getDocsFromServer, not getDocs: plain getDocs silently falls back to the (empty)
-  // local cache when the network is down and reports success — which made a dead
-  // connection look like a brand-new account. Server read or bust.
-  const wheelsSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'wheels'));
-  const tradesSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'trades'));
+  // A cache-only snapshot is ignored: a dead connection must not look like a new account.
+  const wheelsSnap=await listenServer(collection(_fsDb,'users',userId,'wheels'));
+  const tradesSnap=await listenServer(collection(_fsDb,'users',userId,'trades'));
   db.wheels=wheelsSnap.docs.map(d=>d.data());
   db.trades=tradesSnap.docs.map(d=>d.data());
   // Options legs live in their own collection; a failure here (e.g. rules not yet updated) must not block the wheel app
-  try{const oSnap=await getDocsFromServer(collection(_fsDb,'users',userId,'optlegs'));const real=oSnap.docs.map(d=>d.data());if(optDemo){_realOpts=real;db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}else db.opts=real;}
+  try{const oSnap=await listenServer(collection(_fsDb,'users',userId,'optlegs'));const real=oSnap.docs.map(d=>d.data());if(optDemo){_realOpts=real;db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}else db.opts=real;}
   catch(e){console.warn('Options legs load failed (check Firestore rules for optlegs):',e.message);db.opts=[];_optsLoadError=e.message;if(optDemo){_realOpts=[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}}
   render();
   // Show onboarding only after a confirmed-successful load with genuinely no rotations
@@ -7649,7 +7684,7 @@ function capNewLeaps(existing,newLegs,cfg,ent,err){const drop=new Set();let n=(e
   (newLegs||[]).forEach(l=>{if(l.side==='long'&&l.status==='open'){if(leapCapOk(1,Array(n).fill({status:'open',side:'long'}),cfg,ent,err))n++;else drop.add(l.id);}});
   const keep=(newLegs||[]).filter(l=>!drop.has(l.id)&&!(l.parentLeapId&&drop.has(l.parentLeapId)));return{keep,dropped:(newLegs||[]).length-keep.length,droppedLeaps:drop.size};}
 function capMsg(kind){const f=planCfg().free||{};return kind==='wheel'?`Free plan: up to ${f.maxWheelTickers} open tickers. Your existing ones are kept — upgrade to add more.`:`Free plan: up to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. Your existing ones are kept — upgrade to add more.`;}
-async function loadEntitlement(uid){try{const sn=await getDoc(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}syncProBadge();}
+async function loadEntitlement(uid){try{const sn=await listenServer(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}syncProBadge();}
 async function _pollUpgrade(uid){for(let i=0;i<6&&!isPro(_ent,false);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPro(_ent,false)){alert('Thanks! Pro is now on for your account.');render();}}
 function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';if(isPro(_ent,false))return 'Pro';return 'Free';}
 function openUpgrade(feature,msg){
@@ -7731,6 +7766,7 @@ async function doDeleteAccount(){
     else await reauthenticateWithPopup(u,_googleProvider);
     // 2. Delete every document, then 3. the login itself.
     await deleteAllUserData(uid,{list:async c=>(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.id),del:(c,id)=>deleteDoc(doc(_fsDb,'users',uid,c,id))});
+    await releaseFirestore();
     await deleteUser(u);
     Object.keys(localStorage).filter(k=>k.startsWith('wh-')||k==='wheel_tracker_v7').forEach(k=>localStorage.removeItem(k));
     closeModal('mDelete');alert('Your account and all its data have been deleted.');location.reload();
@@ -7742,7 +7778,7 @@ async function doDeleteAccount(){
 }
 
 async function doSignOut(){
-  try{await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
+  try{await releaseFirestore();await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
 }
 
 // ════════════════════════════════════════════════════════
@@ -7792,10 +7828,18 @@ function demoBoot(){
     const l=document.getElementById('loading-overlay');if(l)l.style.display='none';}).catch(()=>{const l=document.getElementById('loading-overlay');if(l)l.style.display='none';});
   clearInterval(_pollHandle);_pollHandle=setInterval(fetchAllQuotes,60000);
 }
+function resetAuthButton(){
+  const btn=document.getElementById('auth-submit-btn');
+  if(!btn)return;
+  btn.disabled=false;
+  const mode=btn.dataset.mode||'signin';
+  btn.textContent=mode==='signup'?'Create Account':'Sign In';
+}
 function showAuthOverlay() {
   document.getElementById('auth-overlay').style.display = 'flex';
   var signup=false;try{signup=sessionStorage.getItem('ot-signup')==='1';sessionStorage.removeItem('ot-signup');}catch(e){}
   if(typeof authTab==='function')authTab(signup?'signup':'signin');
+  resetAuthButton();
   const ob = document.getElementById('onboard-overlay');
   if (ob) ob.style.display = 'none';
   const btn = document.getElementById('auth-signout-btn');
@@ -7810,9 +7854,11 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
   if (user) {
     try{sessionStorage.removeItem('ot-signup');}catch(e){}
     _confirmedUid = user.uid;
+    ensureFirestore();
 
-    // Swap auth overlay for loading overlay
+    // Swap auth overlay for loading overlay. The submit button must not stay on "Please wait…".
     document.getElementById('auth-overlay').style.display = 'none';
+    resetAuthButton();
     const loadingEl = document.getElementById('loading-overlay');
     const loadingBar = document.getElementById('loading-bar');
     const loadingText = document.getElementById('loading-text');

@@ -13,4 +13,4 @@ test('if the entitlement cannot be read, nobody is locked out',()=>{assert.ok(G.
 test('the gates are wired in',()=>{assert.ok(/fetchExtQuotes\(syms\)\{\n  if\(!syms\.length\|\|!canUse\('extended-hours'\)\)/.test(SRC));assert.ok(SRC.includes("!canUse('live-refresh'))return"));
   assert.ok(SRC.includes("p.rh&&!canUse('robinhood-import')"));assert.ok(/function openNewPos\(\)\{\n  if\(!wheelCapOk\(/.test(SRC));assert.ok(/function openLeapAdd\(\)\{\n  if\(!leapCapOk\(/.test(SRC));
   assert.ok(/id="mUpgrade"/.test(SRC)&&SRC.includes("_billingCall('checkout'")&&SRC.includes('loadEntitlement(user.uid)'));
-  assert.ok(/getDoc\(doc\(_fsDb,'entitlements',uid\)\)/.test(SRC),'reads top-level entitlements only');assert.ok(!/setDoc\(doc\(_fsDb,'entitlements'/.test(SRC),'app never writes entitlements');});
+  assert.ok(/listenServer\(doc\(_fsDb,'entitlements',uid\)\)/.test(SRC),'reads top-level entitlements only');assert.ok(!/setDoc\(doc\(_fsDb,'entitlements'/.test(SRC),'app never writes entitlements');});

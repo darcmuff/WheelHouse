@@ -2,7 +2,7 @@
 
 Read NOTES.md first at start of future jobs; keep current; dev only until Marc explicitly approves main.
 
-Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v195` (`app/sw.js`).
+Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the product source for OpTrack (formerly WheelHouse), the options-wheel tracker (wheels, LEAPs/PMCC, P&L). Live site: https://optrack.app. App shell is `app/`. Go-live checklist is SETUP.md. Payments live in `netlify/functions/` (`checkout.js`, `stripe-webhook.js`). Tests are plain Node under `tests/` (they extract functions from `app/index.html`). Service-worker cache on this branch is `optrack-v196` (`app/sw.js`).
 
 ## Current state (checked in git on 2026-11-09)
 

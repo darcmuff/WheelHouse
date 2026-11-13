@@ -11,7 +11,7 @@ function fake(){const store={wheels:['w1','w2'],trades:['t1'],optlegs:['o1']};re
 test('delete removes every document in every collection',async()=>{const f=fake();assert.strictEqual(await L.deleteAllUserData('u1',f),4);assert.deepStrictEqual(f.store,{wheels:[],trades:[],optlegs:[]});});
 test('delete refuses without a user and reports leftovers',async()=>{await assert.rejects(L.deleteAllUserData('',fake()));const f=fake();f.del=async()=>{};await assert.rejects(L.deleteAllUserData('u1',f),/could not be deleted/);});
 test('delete flow: confirm word, re-sign-in, data before login',()=>{const d=extractFn('doDeleteAccount');
-  assert.ok(d.includes("!=='DELETE'"));const re=d.indexOf('reauthenticate'),da=d.indexOf('deleteAllUserData('),du=d.indexOf('deleteUser(u)');assert.ok(re>0&&re<da&&da<du,'order');
+  assert.ok(d.includes("!=='DELETE'"));const re=d.indexOf('reauthenticate'),da=d.indexOf('deleteAllUserData('),rel=d.indexOf('releaseFirestore('),du=d.indexOf('deleteUser(u)');assert.ok(re>0&&re<da&&da<rel&&rel<du,'listeners stop after the data is gone and before the login is deleted');
   assert.ok(/id="delete-go"[^>]*disabled/.test(SRC));});
 test('settings and sign-up link to the legal page; export and delete in settings',()=>{
   assert.ok(/id="settings-export"[^>]*exportMyData\(\)/.test(SRC));assert.ok(/id="settings-delete"[^>]*openDeleteAccount\(\)/.test(SRC));assert.ok(/id="settings-legal" href="legal.html"/.test(SRC));

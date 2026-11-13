@@ -204,8 +204,8 @@ async function main() {
         } else {
           const made = await pathStartFree(browser, pass, origin, shot);
           rec.paths.startFree = made.report;
-          if (made.account && made.report.ok) rec.paths.signIn = await pathSignIn(browser, pass, origin, made.account, shot);
-          else rec.paths.signIn = { ok: false, error: 'skipped: start-free did not leave an account', steps: [], clicksToSignup: null };
+          const left = made.account && made.report.ok ? made.account : null;
+          rec.paths.signIn = await pathSignIn(browser, pass, origin, left, shot);
         }
       } catch (e) {
         rec.ok = false;
@@ -444,6 +444,15 @@ async function pathStartFree(browser, pass, origin, shot) {
       await page.waitForFunction(() => document.body.innerText.includes('$15') && document.body.innerText.includes('$14'), null, { timeout: NET });
     });
     bag.shots.push(await shot(page, 'smartscan-trade-' + pass.tag));
+    await step(bag, 'not stuck on Please wait', UI, async () => {
+      const state = await page.evaluate(() => {
+        const o = document.getElementById('auth-overlay');
+        const btn = document.getElementById('auth-submit-btn');
+        return { overlay: o ? getComputedStyle(o).display : 'missing', label: btn ? btn.textContent.replace(/\s+/g, ' ').trim() : '', disabled: !!(btn && btn.disabled) };
+      });
+      if (state.overlay !== 'none') throw new Error('auth overlay still up ' + JSON.stringify(state));
+      if (state.disabled || /please wait/i.test(state.label)) throw new Error('submit button left waiting ' + JSON.stringify(state));
+    });
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -461,7 +470,19 @@ async function pathStartFree(browser, pass, origin, shot) {
 }
 
 async function pathSignIn(browser, pass, origin, acc, shot) {
-  const bag = { ok: true, steps: [], clicks: 0, clicksToSignup: 'not a sign-up path', shots: [], email: acc.email, deleted: false };
+  const bag = { ok: true, steps: [], clicks: 0, clicksToSignup: 'not a sign-up path', shots: [], deleted: false };
+  if (!acc) {
+    bag.provisioned = true;
+    const made = await pathStartFree(browser, pass, origin, shot);
+    bag.shots.push.apply(bag.shots, made.report.shots || []);
+    if (!made.account || !made.report.ok) {
+      bag.ok = false;
+      bag.error = 'start-free left no account, and a fresh sign-in account could not be created' + (made.report.error ? ': ' + made.report.error : '');
+      return bag;
+    }
+    acc = made.account;
+  }
+  bag.email = acc.email;
   const ctx = await fresh(browser, pass.w, pass.h);
   const page = await ctx.newPage();
   const errors = watch(page);
