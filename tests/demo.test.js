@@ -41,7 +41,7 @@ test('demo prices are made up locally: no quote API calls',async()=>{
   assert.ok(/Sell to Open/.test(e.win.OT_DEMO.sample()));});
 test('demo never initialises Firebase, auth or Firestore writes',()=>{
   assert.ok(H.includes("const APP_DEMO = !!(window.OT_DEMO && window.OT_DEMO.active);"));
-  ['const _app  = APP_DEMO ? null : initializeApp(','const _auth = APP_DEMO ? null : getAuth(','const _fsDb = APP_DEMO ? null : getFirestore('].forEach(s=>assert.ok(H.includes(s),s));
+  ['const _app  = APP_DEMO ? null : initializeApp(','const _auth = APP_DEMO ? null : getAuth(','let _fsDb = APP_DEMO ? null : getFirestore('].forEach(s=>assert.ok(H.includes(s),s));
   assert.strictEqual((H.match(/initializeApp\(/g)||[]).length,1);
   ['_saveWheel','_saveTrade','_saveOpt','_deleteOptDoc','_deleteWheelDoc','_deleteTradeDoc'].forEach(f=>{const i=H.indexOf('function '+f+'(');assert.ok(/^\s*if\(APP_DEMO\)\{[^}]*return;\}/.test(H.slice(H.indexOf('\n',i)+1,H.indexOf('\n',i)+120)),f);});
   assert.ok(H.includes('if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth'));

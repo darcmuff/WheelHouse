@@ -94,7 +94,19 @@ function watch(page) {
 
 async function fresh(browser, w, h) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, locale: 'en-GB' });
-  await ctx.addInitScript(() => { try { localStorage.setItem('ot-sim', '1'); } catch (e) {} });
+  await ctx.addInitScript(() => {
+    try { localStorage.setItem('ot-sim', '1'); } catch (e) {}
+    function arm(){
+      if (!document.documentElement || document.documentElement.__otBanner) return;
+      document.documentElement.__otBanner = 1;
+      new MutationObserver(function(){
+        var t = document.body ? document.body.innerText : '';
+        if (document.getElementById('sw-update') || /New version — Refresh/.test(t)) window.__otSawBanner = 1;
+      }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arm);
+    else arm();
+  });
   return ctx;
 }
 
@@ -116,6 +128,10 @@ async function step(bag, name, budget, fn) {
 
 function checkErrors(errors) {
   if (errors.length) throw new Error('console error: ' + errors.slice(0, 3).join(' | '));
+}
+async function noBanner(page) {
+  const saw = await page.evaluate(() => !!(window.__otSawBanner || document.getElementById('sw-update') || /New version — Refresh/.test(document.body ? document.body.innerText : '')));
+  if (saw) throw new Error('update banner appeared');
 }
 
 async function clickSel(page, selector) {
@@ -258,6 +274,7 @@ async function pathLanding(browser, pass, origin, shot, shotFull) {
     });
     bag.shots.push(await shot(page, 'landing-' + pass.tag));
     bag.shots.push(await shotFull(page, 'landing-full-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -291,6 +308,7 @@ async function pathDemo(browser, pass, origin, shot) {
       bag.detail = state.text;
     });
     bag.shots.push(await shot(page, 'demo-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -326,6 +344,7 @@ async function pathGoPro(browser, pass, origin, shot) {
       if (checkout !== 'monthly') throw new Error('checkout was ' + checkout + ', expected monthly');
     });
     bag.shots.push(await shot(page, 'gopro-signup-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -361,6 +380,7 @@ async function pathEntryOnly(browser, pass, origin, sel, want, shot) {
       if (mode !== want) throw new Error(sel + ' opened "' + mode + '" at ' + page.url());
     });
     bag.shots.push(await shot(page, 'entry-' + sel.replace('#', '') + '-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -453,6 +473,7 @@ async function pathStartFree(browser, pass, origin, shot) {
       if (state.overlay !== 'none') throw new Error('auth overlay still up ' + JSON.stringify(state));
       if (state.disabled || /please wait/i.test(state.label)) throw new Error('submit button left waiting ' + JSON.stringify(state));
     });
+    await noBanner(page);
     checkErrors(errors);
   } catch (e) {
     bag.ok = false;
@@ -514,6 +535,7 @@ async function pathSignIn(browser, pass, origin, acc, shot) {
       }, null, { timeout: NET });
     });
     bag.shots.push(await shot(page, 'signed-in-' + pass.tag));
+    await noBanner(page);
     checkErrors(errors);
     await step(bag, 'delete the account', NET, async () => { await deleteAccount(page, acc.password); });
     bag.deleted = true;

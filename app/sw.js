@@ -1,9 +1,15 @@
 // WheelHouse service worker. Bump CACHE on every release.
-const CACHE='optrack-v196';
+const CACHE='optrack-v197';
 // Caches from earlier app names, deleted on update. Only the service-worker cache: your data and settings are untouched.
 const LEGACY = ['wheelhouse-'];
 const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
-const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './demo.js', './popular.js', './analytics.js', './legal.html', './nunito-900.woff2', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg', './logo-horizontal.svg'];
+const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './demo.js', './popular.js', './analytics.js', './sw-update.js', './legal.html', './nunito-900.woff2', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg', './logo-horizontal.svg'];
+
+self.addEventListener('message', e => {
+  var d = e.data || {};
+  if (d.type === 'SKIP_WAITING') self.skipWaiting();
+  if (d.type === 'VERSION' && e.ports && e.ports[0]) e.ports[0].postMessage({ cache: CACHE });
+});
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting()));

@@ -836,9 +836,6 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 #demo-banner .db-go{background:#FF5A36;color:#fff;text-decoration:none;border-radius:0.375rem;padding:0.25rem 0.75rem;font-weight:600;font-size:0.75rem}
 .ot-demo #topnav{top:2.1rem}
 /* Soft SW update prompt — no auto-reload on deploy */
-#sw-update{position:fixed;left:0;right:0;bottom:0;z-index:80;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.5rem 1.5rem;background:var(--bg2);color:var(--text);border-top:1px solid var(--border);font-size:0.8125rem}
-#sw-update button{background:var(--orange);color:#fff;border:none;border-radius:0.375rem;padding:0.3rem 0.85rem;font-weight:600;font-size:0.75rem;cursor:pointer}
-#sw-update button:hover{background:var(--orange2)}
 /* Show/hide on password fields. Sits inside the right edge; colour follows the theme. */
 .pw-wrap{position:relative;width:100%}
 .pw-wrap input{width:100%;box-sizing:border-box}
@@ -8087,32 +8084,8 @@ window.hideXpop = hideXpop;
 // (offline / CDN blocked), show a plain message with Retry instead of a misleading sign-in form.
 setTimeout(function(){if(window._authResolved)return;var t=document.getElementById('loading-text');if(t)t.innerHTML='Still connecting… check your connection. <a href="#" onclick="location.reload();return false" style="color:inherit;text-decoration:underline">Retry</a>';},15000);
 </script>
-<script>
-// Register the offline service worker. When a new version takes over, show a Refresh prompt (no auto-reload).
-if('serviceWorker' in navigator && location.protocol==='https:'){
-  window.addEventListener('load',()=>{
-    const hadCtrl=!!navigator.serviceWorker.controller;
-    function showSwUpdate(){
-      if(document.getElementById('sw-update'))return;
-      const bar=document.createElement('div');
-      bar.id='sw-update';bar.setAttribute('role','status');
-      bar.innerHTML='<span>New version — Refresh when you\'re ready.</span><button type="button" id="sw-update-btn">Refresh</button>';
-      document.body.appendChild(bar);
-      document.getElementById('sw-update-btn').onclick=()=>location.reload();
-    }
-    // skipWaiting + clients.claim already ran in sw.js, so the new worker is ready; we just wait for the user.
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtrl)showSwUpdate();});
-    navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(r=>{
-      r.update();
-      if(r.waiting && hadCtrl)showSwUpdate();
-      r.addEventListener('updatefound',()=>{
-        const w=r.installing;if(!w)return;
-        w.addEventListener('statechange',()=>{if(w.state==='installed' && navigator.serviceWorker.controller)showSwUpdate();});
-      });
-    }).catch(e=>console.warn('SW register failed',e));
-  });
-}
-</script>
+<!-- Register the offline service worker. sw-update.js reloads a fresh open onto the new version and never shows a banner. -->
+<script src="sw-update.js"></script>
 </body>
 </html>
 
