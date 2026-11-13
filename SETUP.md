@@ -25,7 +25,7 @@ After changing env vars, redeploy: **Deploys → Trigger deploy → Deploy site*
 2. Netlify env: name `FIREBASE_SERVICE_ACCOUNT`, value = the whole contents of that file (paste it all). Mark it **secret**.
 3. Delete the downloaded file from your computer afterwards. Never email it or put it in GitHub.
 
-## 5. Make you and your brother founders (free Pro for life). Do this BEFORE step 9
+## 5. Make you and your brother founders (Pro, not billed). Do this BEFORE step 9
 1. Firebase console → **Authentication → Users**. Copy the **User UID** for your account and your brother's.
 2. Send both UIDs to Grok Bot. It runs `node tools/grant-founder.js <uid> <uid>` with the key from step 4,
    or you can run it yourself with: `FIREBASE_SERVICE_ACCOUNT="$(cat key.json)" node tools/grant-founder.js UID1 UID2`

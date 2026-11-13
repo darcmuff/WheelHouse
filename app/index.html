@@ -932,10 +932,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       Continue with Google
     </button>
 
-    <div style="text-align:center;margin-top:1.25rem;color:#4b5563;font-size:0.6875rem;">
-      Free forever. No credit card required.
-    </div>
-    <div id="auth-legal" style="text-align:center;margin-top:0.625rem;color:#6b7280;font-size:0.6875rem;line-height:1.5;">
+    <div id="auth-legal" style="text-align:center;margin-top:1.25rem;color:#6b7280;font-size:0.6875rem;line-height:1.5;">
       By continuing you agree to the <a href="legal.html#terms" target="_blank" rel="noopener" style="color:#5eead4">Terms</a> and <a href="legal.html#privacy" target="_blank" rel="noopener" style="color:#5eead4">Privacy policy</a>.<br>Not financial advice: <a href="legal.html#advice" target="_blank" rel="noopener" style="color:#5eead4">read why</a>.
     </div>
   </div>
@@ -7604,7 +7601,7 @@ function openSettings(){
   if(dateSel)dateSel.value=dateFmt;
   fillReturnSettings();
   const pl=document.getElementById('settings-plan'),lab=planLabel();
-  if(pl){pl.style.display=lab?'block':'none';pl.innerHTML=!lab?'':`Plan: <b>${lab}</b> · `+(_ent&&_ent.founder?'free for life':_ent&&_ent.stripeCustomerId?'<a href="#" onclick="openBillingPortal();return false" style="color:var(--orange)">Manage billing</a>':'<a href="#" onclick="closeModal(\'mSettings\');openUpgrade(\'unlimited\');return false" style="color:var(--orange)">Upgrade</a>');}
+  if(pl){const extra=_ent&&_ent.founder?'':_ent&&_ent.stripeCustomerId?'<a href="#" onclick="openBillingPortal();return false" style="color:var(--orange)">Manage billing</a>':'<a href="#" onclick="closeModal(\'mSettings\');openUpgrade(\'unlimited\');return false" style="color:var(--orange)">Upgrade</a>';pl.style.display=lab?'block':'none';pl.innerHTML=!lab?'':`Plan: <b>${lab}</b>`+(extra?' · '+extra:'');}
 }
 function fillReturnSettings(){
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]),b=document.getElementById('ret-base');if(!b)return;

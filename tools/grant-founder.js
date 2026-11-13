@@ -1,4 +1,4 @@
-// Make accounts founders: Pro forever, free, never downgraded by billing.
+// Make accounts founders: Pro, not billed, never downgraded by billing.
 // Usage (on your own computer, with the service-account JSON):
 //   FIREBASE_SERVICE_ACCOUNT="$(cat service-account.json)" node tools/grant-founder.js <uid> [<uid> ...]
 // Find a uid in Firebase console → Authentication → Users (the "User UID" column).
