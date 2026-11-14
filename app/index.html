@@ -7754,6 +7754,7 @@ function openSettings(){
 }
 function fillReturnSettings(){}
 // Return settings live in a small panel opened from the cog on the Home Capital at work / Account size tile.
+function retFmtAcct(el){const v=el.value,pos=el.selectionStart||0;const before=v.slice(0,pos).replace(/[^0-9]/g,'').length;const d=v.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');const f=d?Number(d).toLocaleString('en-US'):'';el.value=f;let i=0,c=0;while(i<f.length&&c<before){if(/\d/.test(f[i]))c++;i++;}try{el.setSelectionRange(i,i);}catch(e){}}
 function openRetCfg(btn){
   closeRetCfg();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]);
@@ -7766,14 +7767,14 @@ function openRetCfg(btn){
     <label>Measure return against<select id="ret-base" onchange="document.getElementById('ret-acct-row').style.display=this.value==='account'?'block':'none'"><option value="caw">Capital at work</option><option value="account">Account size</option></select></label>
   </div>
   <div class="wl-wi-in">
-    <label id="ret-acct-row">Account size<span class="ret-dol"><input id="ret-account" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 50000" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>
+    <label id="ret-acct-row">Account size<span class="ret-dol"><input id="ret-account" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 50,000" oninput="retFmtAcct(this)" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>
     <label>Monthly target %<input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></label>
   </div>
   <div style="font-size:0.6rem;color:var(--text3);font-weight:400">Banked profit only. Leave the target empty to switch it off.</div>
   <div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="saveReturnSettings(true)">Save</button></div>`;
   document.body.appendChild(p);
   p.querySelector('#ret-base').value=base;
-  p.querySelector('#ret-account').value=rs.account||'';
+  p.querySelector('#ret-account').value=rs.account?Number(rs.account).toLocaleString('en-US'):'';
   p.querySelector('#ret-target').value=rs.target||'';
   p.querySelector('#ret-acct-row').style.display=base==='account'?'block':'none';
   const r=btn.getBoundingClientRect(),w=Math.min(300,window.innerWidth-16);
@@ -7786,7 +7787,7 @@ function closeRetCfg(){const p=document.getElementById('ret-pop');if(p)p.remove(
 document.addEventListener('click',e=>{if(e.target.closest&&(e.target.closest('#ret-pop')||e.target.closest('.hk-cog')))return;closeRetCfg();});
 function saveReturnSettings(){
   const bEl=document.getElementById('ret-base');if(!bEl)return;
-  const b=bEl.value,a=+document.getElementById('ret-account').value||0,t=+document.getElementById('ret-target').value||0;
+  const b=bEl.value,a=+String(document.getElementById('ret-account').value).replace(/[^0-9.]/g,'')||0,t=+document.getElementById('ret-target').value||0;
   localStorage.setItem('wh-returnSet',JSON.stringify({base:b,account:a>0?a:0,target:t>0?t:null}));
   persistReturnSettings();
   closeRetCfg();
@@ -8225,7 +8226,7 @@ window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
 window.onboardSkip = onboardSkip;
-window.saveReturnSettings = saveReturnSettings; window.openRetCfg = openRetCfg; window.closeRetCfg = closeRetCfg; window.openUpgrade = openUpgrade; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
+window.saveReturnSettings = saveReturnSettings; window.retFmtAcct = retFmtAcct; window.openRetCfg = openRetCfg; window.closeRetCfg = closeRetCfg; window.openUpgrade = openUpgrade; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
 window.exportMyData = exportMyData; window.openDeleteAccount = openDeleteAccount; window.doDeleteAccount = doDeleteAccount;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;
