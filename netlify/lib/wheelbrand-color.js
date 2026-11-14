@@ -88,6 +88,23 @@ function hexc(rgb) {
   return `#${rgb.map((x) => x.toString(16).padStart(2, '0')).join('')}`;
 }
 
+/** G1: mean OKLCH L lift on the 0% gradient stop (AMD +0.0511, KO +0.0675 vs Direction A). */
+const G1_DARK_LIFT = 0.05925;
+const MIN_TEXT_CONTRAST = 4.5;
+
+function liftOklchL(L, C, h, dL = G1_DARK_LIFT) {
+  return fromOklch(L + dL, C, h);
+}
+
+function liftHex(hex, dL = G1_DARK_LIFT) {
+  const [L, C, h] = oklch(unhex(hex));
+  return hexc(liftOklchL(L, C, h, dL));
+}
+
+function liftGradientHexes(css) {
+  return css.replace(/#([0-9a-fA-F]{6})\b/g, (m) => liftHex(m));
+}
+
 function unhex(h) {
   const s = String(h || '').replace('#', '');
   return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)];
@@ -97,17 +114,17 @@ function gradientFromBrand(brandRgb, neutral = false) {
   const [L, C, h] = oklch(brandRgb);
   if (neutral) {
     return {
-      frm: hexc(fromOklch(0.17, 0.005, h)),
+      frm: hexc(liftOklchL(0.17, 0.005, h)),
       to: hexc(fromOklch(0.36, 0.012, h)),
       glow: 'rgba(255,255,255,.16)',
       kind: 'graphite',
     };
   }
-  const frm = fromOklch(0.19, Math.min(C, 0.07), h);
+  const frm = liftOklchL(0.19, Math.min(C, 0.07), h);
   let Lt = Math.min(Math.max(L, 0.42), 0.62);
   Lt = Math.min(Lt, 0.5);
   let to = fromOklch(Lt, Math.min(C, 0.2), h);
-  while (contrast([255, 255, 255], to) < 5.6 && Lt > 0.2) {
+  while (contrast([255, 255, 255], to) < MIN_TEXT_CONTRAST && Lt > 0.2) {
     Lt -= 0.01;
     to = fromOklch(Lt, Math.min(C, 0.2), h);
   }
@@ -135,15 +152,21 @@ function bgCssFromGradient(g, glowRgb) {
   return `radial-gradient(55% 120% at 94% 18%,rgba(${gr},.42) 0%,rgba(${gr},0) 70%),linear-gradient(104deg,${g.frm} 0%,${g.to} 100%)`;
 }
 
-/** Legacy multi-stop gradients (v243 hand-tuned). Keys: frm,to,glow as above. */
-const LEGACY_BG = {
-  AMD: 'radial-gradient(60% 120% at 92% 18%,rgba(237,28,36,.55) 0%,rgba(237,28,36,0) 70%),linear-gradient(104deg,#060607 0%,#121012 34%,#3a0a0e 58%,#86101a 82%,#b3121c 100%)',
-  KO: 'radial-gradient(55% 110% at 94% 20%,rgba(255,40,40,.45) 0%,rgba(255,40,40,0) 70%),linear-gradient(104deg,#3d0003 0%,#64000a 36%,#98000b 66%,#c4000a 100%)',
+/** Legacy multi-stop gradients — G1 (Direction A, step G1). AMD/KO match mockup; others lifted by G1_DARK_LIFT. */
+const LEGACY_BG_RAW = {
+  AMD: 'radial-gradient(60% 120% at 92% 18%,rgba(237,28,36,.55) 0%,rgba(237,28,36,0) 70%),linear-gradient(104deg,#1c0a0c 0%,#2e0c10 30%,#5c0d14 56%,#9e1018 80%,#c3131b 100%)',
+  KO: 'radial-gradient(55% 110% at 94% 20%,rgba(255,40,40,.45) 0%,rgba(255,40,40,0) 70%),linear-gradient(104deg,#5a0005 0%,#84000a 36%,#b0000b 66%,#d0000a 100%)',
   NVDA: 'radial-gradient(55% 120% at 94% 16%,rgba(118,185,0,.42) 0%,rgba(118,185,0,0) 70%),linear-gradient(104deg,#030403 0%,#0a0f06 36%,#1b2c08 62%,#335207 86%,#3f6606 100%)',
   SOFI: 'radial-gradient(60% 120% at 96% 90%,rgba(0,169,206,.48) 0%,rgba(0,169,206,0) 68%),linear-gradient(104deg,#041327 0%,#08234a 36%,#0a3a6a 64%,#0a5280 88%,#0a5a88 100%)',
 };
+const LEGACY_BG = {
+  AMD: LEGACY_BG_RAW.AMD,
+  KO: LEGACY_BG_RAW.KO,
+  NVDA: liftGradientHexes(LEGACY_BG_RAW.NVDA),
+  SOFI: liftGradientHexes(LEGACY_BG_RAW.SOFI),
+};
 
-const ETF_ISSUER = {
+const ETF_ISSUER_RAW = {
   SPY: { stops: ['#041513', '#0a2d29', '#0f4a43', '#156b60'], glow: '50,200,170' },
   QQQ: { stops: ['#060d22', '#101f4f', '#1e3584', '#3550b8'], glow: '120,140,255' },
   IWM: { stops: ['#0a0f1c', '#152038', '#243560', '#3a5090'], glow: '100,130,200' },
@@ -154,6 +177,9 @@ const ETF_ISSUER = {
   ARKK: { stops: ['#050a18', '#0c1a38', '#16306a', '#2448a0'], glow: '80,140,255' },
   XLK: { stops: ['#060d22', '#101f4f', '#1e3584', '#3550b8'], glow: '120,140,255' },
 };
+const ETF_ISSUER = Object.fromEntries(
+  Object.entries(ETF_ISSUER_RAW).map(([k, v]) => [k, { stops: v.stops.map((s) => liftHex(s)), glow: v.glow }])
+);
 
 function etfBg(ticker) {
   const k = String(ticker || '').toUpperCase();
@@ -176,4 +202,8 @@ module.exports = {
   hexc,
   oklch,
   contrast,
+  G1_DARK_LIFT,
+  liftHex,
+  liftGradientHexes,
+  MIN_TEXT_CONTRAST,
 };

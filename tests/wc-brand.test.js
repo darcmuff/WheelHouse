@@ -33,9 +33,9 @@ test('index.html includes Logo.dev credit and wc-brand script', () => {
   assert.match(src, /Not affiliated with or endorsed by/);
 });
 
-test('sw v245 precaches wc-brand but not brand PNG glob', () => {
+test('sw v246 precaches wc-brand but not brand PNG glob', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'app', 'sw.js'), 'utf8');
-  assert.match(sw, /optrack-v245/);
+  assert.match(sw, /optrack-v246/);
   assert.match(sw, /wc-brand\.js/);
   assert.match(sw, /brand\/index\.json/);
   assert.doesNotMatch(sw, /brand\/.*\.png/);
