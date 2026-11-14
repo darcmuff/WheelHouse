@@ -1,20 +1,39 @@
 // On-demand brand assets for tickers not in committed shards.
 const fs = require('fs');
 const path = require('path');
-const { fetchLogoPng } = require('../../scripts/brand/logo-fetch');
+const { fetchLogoPng } = require('../lib/logo-dev');
 const { analyseLogoPng, applyBrandOverride } = require('../lib/wheelbrand-image');
 const { fallbackHueTicker, etfBg } = require('../lib/wheelbrand-color');
 
-const OVERRIDES_PATH = path.join(__dirname, '../../app/brand/overrides.json');
+const OVERRIDES_PATHS = [
+  path.join(__dirname, '../../app/brand/overrides.json'),
+  path.join(process.cwd(), 'app/brand/overrides.json'),
+];
+
+const HEADERS_HIT = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'public, max-age=86400',
+  'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=604800, stale-while-revalidate=86400',
+};
+
+const HEADERS_MISS = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
+  'Netlify-CDN-Cache-Control': 'no-store',
+  Pragma: 'no-cache',
+};
 
 function readOverrides() {
-  try {
-    const j = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
-    delete j._doc;
-    return j;
-  } catch {
-    return {};
+  for (const p of OVERRIDES_PATHS) {
+    try {
+      const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+      delete j._doc;
+      return j;
+    } catch {
+      /* try next */
+    }
   }
+  return {};
 }
 
 function leanJson(sym, data) {
@@ -31,47 +50,58 @@ function leanJson(sym, data) {
   };
 }
 
+function safeWhy(msg) {
+  return String(msg || 'error')
+    .slice(0, 120)
+    .replace(/sk_[a-zA-Z0-9]+/gi, 'sk_…')
+    .replace(/Bearer\s+\S+/gi, 'Bearer …');
+}
+
+function fallbackResponse(sym, why, extra, headers = HEADERS_MISS) {
+  const { gradient } = fallbackHueTicker(sym);
+  return {
+    statusCode: 200,
+    headers,
+    body: JSON.stringify({ ...leanJson(sym, { fallback: true, gradient, watermarkOpacity: 0.13, ...extra }), why }),
+  };
+}
+
 const _handler = async (event) => {
   const ticker = String((event.queryStringParameters || {}).ticker || (event.queryStringParameters || {}).t || '')
     .trim()
     .toUpperCase()
     .slice(0, 12);
-  const headers = {
-    'Content-Type': 'application/json',
-    'Cache-Control': 'public, max-age=86400',
-    'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=604800, stale-while-revalidate=86400',
-  };
   if (!ticker || !/^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) {
-    return { statusCode: 400, headers: { ...headers, 'Cache-Control': 'no-store' }, body: JSON.stringify({ error: 'Bad ticker' }) };
+    return {
+      statusCode: 400,
+      headers: HEADERS_MISS,
+      body: JSON.stringify({ error: 'Bad ticker', why: 'bad_ticker' }),
+    };
   }
 
   const overrides = readOverrides();
   const ov = overrides[ticker] || {};
 
   if (ov.disable_logo || ov.force_fallback) {
-    const { gradient } = fallbackHueTicker(ticker);
-    return { statusCode: 200, headers, body: JSON.stringify(leanJson(ticker, { fallback: true, gradient, watermarkOpacity: 0.13 })) };
+    return fallbackResponse(ticker, 'disabled');
   }
 
-  const etf = etfBg(ticker);
-  if (etf) {
+  if (etfBg(ticker)) {
     const { gradient } = fallbackHueTicker(ticker);
-    return { statusCode: 200, headers, body: JSON.stringify(leanJson(ticker, { fallback: true, etf: true, gradient, legacyBg: etf, watermarkOpacity: 0.13 })) };
+    return fallbackResponse(ticker, 'etf', { etf: true, legacyBg: etfBg(ticker), gradient });
   }
 
   const secret = process.env.LOGO_DEV_SECRET_KEY;
   if (!secret) {
-    const { gradient } = fallbackHueTicker(ticker);
-    return { statusCode: 200, headers, body: JSON.stringify(leanJson(ticker, { fallback: true, gradient, watermarkOpacity: 0.13 })) };
+    return fallbackResponse(ticker, 'no_key');
   }
 
   try {
     const hit = await fetchLogoPng(ticker, secret);
-    const png = hit && hit.png;
-    if (!png) {
-      const { gradient } = fallbackHueTicker(ticker);
-      return { statusCode: 200, headers, body: JSON.stringify(leanJson(ticker, { fallback: true, gradient, watermarkOpacity: 0.13 })) };
+    if (!hit || hit.why) {
+      return fallbackResponse(ticker, hit && hit.why ? hit.why : 'no_logo');
     }
+    const png = hit.png;
     let entry = await analyseLogoPng(png);
     entry = applyBrandOverride(entry, ov);
     const mask = entry.maskPng || png;
@@ -84,11 +114,12 @@ const _handler = async (event) => {
         watermarkOpacity: 0.16,
       }),
       markBase64: mask.toString('base64'),
+      credits: hit.credits,
+      api: hit.route,
     };
-    return { statusCode: 200, headers, body: JSON.stringify(body) };
+    return { statusCode: 200, headers: HEADERS_HIT, body: JSON.stringify(body) };
   } catch (e) {
-    const { gradient } = fallbackHueTicker(ticker);
-    return { statusCode: 200, headers: { ...headers, 'Cache-Control': 'no-store' }, body: JSON.stringify(leanJson(ticker, { fallback: true, gradient, watermarkOpacity: 0.13 })) };
+    return fallbackResponse(ticker, `error:${safeWhy(e.message)}`);
   }
 };
 

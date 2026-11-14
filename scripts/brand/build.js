@@ -5,7 +5,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { loadTickerUniverse, shardKey } = require('./ticker-universe');
-const { fetchLogoPng, mapWithBackoff, PRICE_PER_BRAND_USD } = require('./logo-fetch');
+const { fetchLogoPng: fetchLogoDev } = require('../../netlify/lib/logo-dev');
+const { mapWithBackoff, PRICE_PER_BRAND_USD } = require('./logo-fetch');
 const { analyseLogoPng, applyBrandOverride } = require('../../netlify/lib/wheelbrand-image');
 const { fallbackHueTicker, bgCssFromGradient, etfBg } = require('../../netlify/lib/wheelbrand-color');
 
@@ -192,7 +193,7 @@ async function main() {
     if (args.mockDemo && DEMO_TICKERS.includes(job.sym)) {
       png = await mockLogoPng(job.sym);
     } else if (secret) {
-      const hit = await mapWithBackoff([job.sym], async (s) => fetchLogoPng(s, secret)).then((r) => r[0]);
+      const hit = await mapWithBackoff([job.sym], async (s) => fetchLogoDev(s, secret)).then((r) => r[0]);
       png = hit && hit.png;
     }
 

@@ -1,46 +1,16 @@
 'use strict';
 
-const BRAND_API = 'https://api.logo.dev/v2/brands';
+const { fetchLogoPng } = require('../../netlify/lib/logo-dev');
+
 const API_REQ_PER_MIN = 100;
 const CONCURRENT = 5;
 const MS_PER_REQ = Math.ceil(60000 / API_REQ_PER_MIN);
 
-/** Brand lookup (incl. logo download URL) — $0.05/request; same brand free 24h. @see https://www.logo.dev/pricing */
-const PRICE_PER_BRAND_USD = 0.05;
+/** Brand lookup fallback in logo-dev: Logo route 2 credits, Brand 5. @see https://www.logo.dev/docs/platform/credits */
+const PRICE_PER_BRAND_USD = 0.02;
 
 async function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-/**
- * @returns {Promise<{ png: Buffer, brandJson?: object }|null>}
- */
-async function fetchLogoPng(ticker, secretKey, fetchImpl = fetch) {
-  const sym = encodeURIComponent(String(ticker).toUpperCase());
-  const url = `${BRAND_API}?ticker=${sym}`;
-  const res = await fetchImpl(url, {
-    headers: { Authorization: `Bearer ${secretKey}`, Accept: 'application/json' },
-    signal: AbortSignal.timeout(45000),
-  });
-  if (res.status === 404 || res.status === 202) return null;
-  if (res.status === 402) throw new Error('Logo.dev API credits exhausted (402)');
-  if (res.status === 429) {
-    const err = new Error('rate limited');
-    err.retryAfter = Number(res.headers.get('retry-after') || 60);
-    throw err;
-  }
-  if (!res.ok) throw new Error(`Brand API HTTP ${res.status}`);
-  const j = await res.json();
-  const logoUrl =
-    j &&
-    (j.logo && (j.logo.url || j.logo.href)) ||
-    (j.logos && j.logos[0] && j.logos[0].url) ||
-  null;
-  if (!logoUrl) return null;
-  const img = await fetchImpl(logoUrl, { signal: AbortSignal.timeout(45000) });
-  if (!img.ok) return null;
-  const png = Buffer.from(await img.arrayBuffer());
-  return { png, brandJson: j };
 }
 
 class RateLimiter {
