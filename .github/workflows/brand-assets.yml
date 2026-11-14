@@ -2,7 +2,12 @@ name: Brand assets (dev)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - scripts/brand/seed.trigger
   schedule:
+    # Weekly cron only runs when this workflow file exists on the repo default branch (main).
     - cron: '0 6 * * 1'
 
 jobs:

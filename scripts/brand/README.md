@@ -58,4 +58,23 @@ Incremental state lives in `scripts/brand/data/build-state.json` (logo hashes + 
 
 ## GitHub Action
 
-`.github/workflows/brand-assets.yml` — `workflow_dispatch` and weekly cron on **dev** only. Skips cleanly when the secret is missing.
+`.github/workflows/brand-assets.yml` checks out **dev**, seeds top-250 logos when `LOGO_DEV_SECRET_KEY` is set, and commits shards under `app/brand/`.
+
+**Triggers**
+
+| Trigger | When it runs |
+|---------|----------------|
+| Push to `dev` touching `scripts/brand/seed.trigger` | Immediate seed (safe: commits from the job only change `app/brand/`, `scripts/brand/data/`, and optionally `top250-options.json` — not `seed.trigger`, so the job cannot loop). |
+| `workflow_dispatch` | Only if the workflow is visible on the branch you select (often blocked when the workflow is not on the default branch). |
+| Weekly cron (`0 6 * * 1`) | **Does not run today:** scheduled workflows use the copy of the file on the **default branch** (`main`). Until this workflow is merged to `main`, only the `seed.trigger` push path runs it on `dev`. |
+
+**Re-run the seed manually (dev):** bump or touch the trigger file and push to `dev`:
+
+```bash
+date -u +%Y-%m-%dT%H:%M:%SZ > scripts/brand/seed.trigger
+git add scripts/brand/seed.trigger
+git commit -m "chore(brand): trigger top-250 seed"
+git push origin dev
+```
+
+Skips Logo.dev fetch when the repo secret is missing (dry build only).
