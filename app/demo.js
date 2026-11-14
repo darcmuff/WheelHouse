@@ -85,7 +85,7 @@
     tr('dw-amd','AMD','IN',a2,{strike:155,premium:155});
     tr('dw-amd','AMD','STOC',add(days(iso(T),a2)+3),{strike:165,expiry:a3,premium:2.20,exp:true});
     tr('dw-amd','AMD','STOC',add(-10),{strike:165,expiry:fri(10),premium:2.60});
-    // SOFI: assigned, covered calls, called away (closed rotation), then a fresh put.
+    // SOFI: assigned, covered calls, called away (closed wheel), then a fresh put.
     var s1=fri(-129),s2=fri(-108),s3=fri(-87);
     tr('dw-sofi1','SOFI','CSP',add(-150),{strike:15,expiry:s1,premium:0.32,shares:500});
     tr('dw-sofi1','SOFI','IN',s1,{strike:15,premium:15,shares:500});

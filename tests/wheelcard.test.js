@@ -80,7 +80,7 @@ test('v103 continuity: wheel card controls/formats match LEAP card', () => {
   assert.ok(!SRC.includes('Hide trades'));
   assert.ok(SRC.includes(`onclick="toggleStatus('\${wheel.id}')">\${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('\${wheel.id}')">Edit</button>`));
   assert.ok(SRC.includes('const exp=!collapsedWheels.has(wheel.id);'));
-  assert.ok(SRC.includes('Delete rotation'));
+  assert.ok(SRC.includes('Delete wheel'));
   assert.ok(SRC.includes(`fmtStrike=k=>'$'+fmt2(k).replace(/\\.00$/,'')`));
   assert.ok(SRC.includes('fmtMoney(-Math.abs(v))'));
 });

@@ -118,7 +118,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 #content{flex:1;padding:0.75rem 0.875rem 2.5rem;overflow-x:hidden;min-width:0}
 
 
-/* ── ROTATION WINDOWS ── */
+/* ── WHEEL WINDOWS ── */
 /* ── POSITION TOOLBAR ── */
 .pos-toolbar{
   display:flex;align-items:center;gap:0.625rem;padding:0 0 0.625rem 0;flex-wrap:wrap;
@@ -213,7 +213,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .rotation-window:hover{border-color:var(--border2)}
 .rotation-window.rot-open{border-left:0.25rem solid var(--orange)}
 .rotation-window.rot-closed{border-left:0.25rem solid var(--red)}
-/* ── ROTATION HEADER TOP ROW ── */
+/* ── WHEEL HEADER TOP ROW ── */
 .rot-header{
   display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;
   cursor:pointer;user-select:none;background:none;
@@ -253,7 +253,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .rot-badge.closed{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}
 .rot-expand{font-size:0.8125rem;color:var(--text3);transition:transform .2s,color .15s;flex-shrink:0}
 .rot-expand.open{transform:rotate(90deg)}
-/* ── FIXED 6-COLUMN METRICS BAR (identical on every rotation) ── */
+/* ── FIXED 6-COLUMN METRICS BAR (identical on every wheel) ── */
 .rot-metrics-bar{
   display:grid;grid-template-columns:repeat(6,1fr);
   border-top:1px solid var(--border);background:var(--bg3);
@@ -784,7 +784,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .act-net-sub,.act-split,.act-note{display:block;font-size:0.7rem;color:var(--text3)}
 .act-note{margin-top:0.3rem}
 
-/* ── Rotation detail (A) ── */
+/* ── Wheel detail (A) ── */
 .trade-body{border-top:1px solid var(--bg3);margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;overflow:hidden}
 .thead-row{background:transparent;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.6rem;color:var(--text3);border-bottom:1px solid var(--border);padding:0.5rem 0.875rem}
 .trow{border-top:1px solid var(--bg3);padding:0.5rem 0.875rem;font-size:0.7rem}.trow:hover{background:var(--bg)}
@@ -1010,19 +1010,19 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   <div class="sel-list" id="sel-list"></div>
 </div>
 
-<!-- MODAL: Rotation -->
+<!-- MODAL: Wheel -->
 <div class="mb" id="mWheel">
   <div class="mbox">
-    <div class="mtitle"><span id="mWheelTitle">New Rotation</span><span class="mx" onclick="closeModal('mWheel')">✕</span></div>
+    <div class="mtitle"><span id="mWheelTitle">New Wheel</span><span class="mx" onclick="closeModal('mWheel')">✕</span></div>
     <div class="fg">
       <div class="fld"><label>Ticker</label><input id="wf-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase"></div>
-      <div class="fld wf-edit-only"><label>Label</label><input id="wf-label" type="text" placeholder="Rotation 1 — Sep 2025"></div>
+      <div class="fld wf-edit-only"><label>Label</label><input id="wf-label" type="text" placeholder="Wheel 1 — Sep 2025"></div>
       <div class="fld wf-edit-only"><label>Status</label><select id="wf-status"><option value="open">Open</option><option value="closed">Closed</option></select></div>
       <div class="fld wf-edit-only"><label>Current Price ($)</label><input id="wf-price" type="number" step="0.01"></div>
       <div class="fld s2 wf-edit-only"><label>Notes</label><textarea id="wf-notes" rows="2"></textarea></div>
     </div>
     <input type="hidden" id="wf-id">
-    <div class="mfoot"><button class="btn btn-danger wf-edit-only" style="margin-right:auto" onclick="const i=document.getElementById('wf-id').value;if(i){closeModal('mWheel');deleteWheel(i);}">Delete rotation</button><button class="btn btn-ghost" onclick="closeModal('mWheel')">Cancel</button><button class="btn btn-primary" onclick="saveWheel()">Save</button></div>
+    <div class="mfoot"><button class="btn btn-danger wf-edit-only" style="margin-right:auto" onclick="const i=document.getElementById('wf-id').value;if(i){closeModal('mWheel');deleteWheel(i);}">Delete wheel</button><button class="btn btn-ghost" onclick="closeModal('mWheel')">Cancel</button><button class="btn btn-primary" onclick="saveWheel()">Save</button></div>
   </div>
 </div>
 
@@ -1258,7 +1258,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <button class="btn btn-ghost" id="of-addleg" style="padding:0.1875rem 0.625rem;font-size:0.6875rem" onclick="optAddLeg()">+ Leg</button>
     <div id="of-mark-wrap" style="margin-top:0.625rem"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.375rem;margin-top:0.5rem">
-      <div class="fld"><label>Attach to rotation <small style="color:#555">optional — display only</small></label><select id="of-wheel"></select></div>
+      <div class="fld"><label>Attach to wheel <small style="color:#555">optional — display only</small></label><select id="of-wheel"></select></div>
       <div class="fld"><label>Notes</label><input id="of-notes" type="text"></div>
     </div>
     <input type="hidden" id="of-group">
@@ -1522,7 +1522,7 @@ async function loadDBFromFirestore(userId){
   try{const oSnap=await listenServer(collection(_fsDb,'users',userId,'optlegs'));const real=oSnap.docs.map(d=>d.data());if(optDemo){_realOpts=real;db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}else db.opts=real;}
   catch(e){console.warn('Options legs load failed (check Firestore rules for optlegs):',e.message);db.opts=[];_optsLoadError=e.message;if(optDemo){_realOpts=[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}}
   render();
-  // Show onboarding only after a confirmed-successful load with genuinely no rotations
+  // Show onboarding only after a confirmed-successful load with genuinely no wheels
   const ob=document.getElementById('onboard-overlay');
   if(ob)ob.style.display=needsOnboarding(db,localStorage.getItem('wh-onboardSkipped')==='1')?'flex':'none';
 }
@@ -1755,8 +1755,8 @@ function optionsLib(){
       if(l.closeDate&&l.entryDate&&l.closeDate<l.entryDate)out.push({sev:'red',legId:l.id,text:`${nm(l)} closed before it was opened`});
       if(l.entryDate&&l.expiry&&l.entryDate>l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} opened after its expiry`});
       if(l.parentLeapId&&!legs.some(x=>x.id===l.parentLeapId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} was sold against a LEAP that no longer exists — shown under Other options`});
-      if(l.wheelId&&!wheels.some(w=>w.id===l.wheelId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is attached to a rotation that no longer exists`});
-      if(l.wheelId){const w=wheels.find(w=>w.id===l.wheelId);if(w&&w.ticker&&w.ticker!==l.underlying)out.push({sev:'grey',legId:l.id,text:`${nm(l)} is attached to the ${w.ticker} rotation — different underlying`});}
+      if(l.wheelId&&!wheels.some(w=>w.id===l.wheelId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is attached to a wheel that no longer exists`});
+      if(l.wheelId){const w=wheels.find(w=>w.id===l.wheelId);if(w&&w.ticker&&w.ticker!==l.underlying)out.push({sev:'grey',legId:l.id,text:`${nm(l)} is attached to the ${w.ticker} wheel — different underlying`});}
       // A missing quote is shown on the LEAP card, not as a Home nag. The saved date moves when a quote arrives.
       const fp=`${l.underlying}|${l.type}|${l.strike}|${l.expiry}|${l.side}|${l.entryDate}|${l.qty}|${l.entryPrice}`;(seen[fp]=seen[fp]||[]).push(l);
     });
@@ -1792,7 +1792,7 @@ function calcWheel(wheel){
   const premiumNet=premiumCredits-premiumDebits;
   const netCashOut=debits-credits;
   // Adjusted cost basis per share held (standard wheel method): what the shares still held cost
-  // (first in, first out, incl. fees on the IN), minus ALL net option premium on this rotation (puts before
+  // (first in, first out, incl. fees on the IN), minus ALL net option premium on this wheel (puts before
   // assignment + calls, buybacks add back) and dividends. Shares already sold are settled in Shares P&L and
   // don't distort the basis of the ones left. With no sales this equals the old net-cash figure.
   const divs=trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0);
@@ -2006,8 +2006,8 @@ function calcMonthlyPnL(){
   }));
 }
 
-// Share P&L, FIFO per rotation: each OUT is matched against that rotation's own IN lots.
-// Read-only over trades. Returns realised events {wheelId,date,shares,proceeds,cost,pnl} and open lots per rotation.
+// Share P&L, FIFO per wheel: each OUT is matched against that wheel's own IN lots.
+// Read-only over trades. Returns realised events {wheelId,date,shares,proceeds,cost,pnl} and open lots per wheel.
 function shareRealisations(trades){
   const byRot={};
   trades.forEach(t=>{if(t.action!=='IN'&&t.action!=='OUT')return;const k=t.wheelId||('tk:'+(t.ticker||''));(byRot[k]=byRot[k]||[]).push(t);});
@@ -2027,7 +2027,7 @@ function shareRealisations(trades){
   return{events,open};
 }
 
-// Per-rotation share figures: Shares P&L (realised, FIFO) and Unrealised (open shares at price minus their FIFO cost).
+// Per-wheel share figures: Shares P&L (realised, FIFO) and Unrealised (open shares at price minus their FIFO cost).
 // priceOf(wheel) -> number|null. Read-only.
 function rotationShareStats(wheel,trades,priceOf){
   const sr=shareRealisations(trades.filter(t=>t.wheelId===wheel.id));
@@ -2037,7 +2037,7 @@ function rotationShareStats(wheel,trades,priceOf){
   const unrealised=o.shares>0&&price!=null?price*o.shares-o.cost:(o.shares>0?null:0);
   return{realised,openShares:o.shares,openCost:o.cost,unrealised};
 }
-// Unrealised across open rotations. Returns {value, unpriced} (unpriced = rotations holding shares with no price).
+// Unrealised across open wheels. Returns {value, unpriced} (unpriced = wheels holding shares with no price).
 function calcUnrealised(wheels,trades,priceOf){
   let value=0,unpriced=0;
   wheels.filter(w=>w.status==='open').forEach(w=>{const r=rotationShareStats(w,trades,priceOf);if(r.unrealised==null)unpriced++;else value+=r.unrealised;});
@@ -2102,7 +2102,7 @@ function calcOverall(){
     if(w.status==='open'){open++;sh+=m.sharesHeld;}
     else{
       closed++;
-      // Win/loss on option income (premium net) for this rotation
+      // Win/loss on option income (premium net) for this wheel
       if(m.premiumRealised>=0)wins++;else losses++;
     }
   });
@@ -2200,7 +2200,7 @@ function calcYTD(){
   // realised only: premium banked this year (bought back / expired / assigned), never open sells
   sc=0;sd=0;realisedPremium(db.trades).events.forEach(e=>{if(!e.date||e.date<start)return;if(e.amount>=0)sc+=e.amount;else sd-=e.amount;});
   const optNet=sc-sd;
-  // Share Realised P&L this year: each sale this year against its own rotation's FIFO cost (may be negative)
+  // Share Realised P&L this year: each sale this year against its own wheel's FIFO cost (may be negative)
   const stockIncome=shareRealisations(db.trades).events.filter(e=>e.date>=start).reduce((a,e)=>a+e.pnl,0);
   const stockNet=stockOut-stockIn;
   const capDeployedYTD=stockNet<0?-stockNet:0;
@@ -2604,7 +2604,7 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
   const money=n=>n==null?'—':`<span class="${n>=0?'g':'r'}">${fmtMoney(n)}</span>`;
   const card=(lbl,val,sub='')=>`<div class="dcard"><div style="font-size:0.6875rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${lbl}</div><div style="font-size:1.25rem;font-weight:600;margin-top:0.25rem">${val}</div>${sub?`<div style="font-size:0.6875rem;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>`;
   const chip=(k,v,lbl)=>`<button class="btn ${f[k]===v?'btn-primary':'btn-ghost'}" style="padding:0.25rem 0.5625rem;font-size:0.6875rem" onclick="setOptFilter('${k}','${v}')">${lbl}</button>`;
-  const wname=id=>{const w=db.wheels.find(w=>w.id===id);return w?`${esc(w.ticker)} · ${esc(w.label||'')}`:'(missing rotation)';};
+  const wname=id=>{const w=db.wheels.find(w=>w.id===id);return w?`${esc(w.ticker)} · ${esc(w.label||'')}`:'(missing wheel)';};
   const rows=groups.map(g=>{
     const open=g.legs.filter(l=>l.status==='open');
     let th=0,thOk=false;open.forEach(l=>{const gk=OPTS.legGreeks(l,spots[l.underlying],today);if(gk){th+=gk.theta;thOk=true;}});
@@ -2622,7 +2622,7 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
   const healthH=issues.length?`<div class="hy-box" style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.25rem 0.75rem 0.5rem"><div style="font-size:0.75rem;color:var(--text3);margin:0.375rem 0">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(healthItemHtml).join('')}</div>`:'';
   // linked-to-rotation summary (display only; wheel P&L untouched)
   const byW={};legs.filter(l=>l.wheelId).forEach(l=>{const p=OPTS.legPnL(l);const o=byW[l.wheelId]=byW[l.wheelId]||{r:0,u:0};o.r+=p.realized;if(p.unrealized!=null)o.u+=p.unrealized;});
-  const linkH=Object.keys(byW).length?`<div style="margin-top:0.875rem;font-size:0.75rem;color:var(--text3)">Attached to rotations (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
+  const linkH=Object.keys(byW).length?`<div style="margin-top:0.875rem;font-size:0.75rem;color:var(--text3)">Attached to wheels (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
   const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
   const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample positions shown <b>instead of</b> your real ones. Nothing here is saved; edits, closes and rolls stay in memory only. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
   return`${err}${demoH}
@@ -3844,7 +3844,7 @@ function renderPositions(){
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
   </div>${selTipHtml()}`;
 
-  // Render each rotation
+  // Render each wheel
   const cards=visibleWheels.map(w=>{
     if(minimised.has(w.id))return renderRotationMini(w);
     return renderRotationWindow(w);
@@ -3893,7 +3893,7 @@ function renderRotationMini(wheel){
       <span>${cDte}</span>
       <span></span>
       <span class="mini-badge ${isOpen?'open':'closed'}">${isOpen?'Live':'Closed'}</span>
-      <button class="mini-hide" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide rotation">✕</button>
+      <button class="mini-hide" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide wheel">✕</button>
     </div>
   </div>`;
 }
@@ -4452,7 +4452,7 @@ function renderRotationWindow(wheel){
     :`<div class="rmb-val m fs-sm">No open leg</div>
       <div class="rmb-sub">${isOpen?'Waiting for entry':'Strategy closed'}</div>`;
 
-  // Per-rotation capital deployed (net stock cash still in play)
+  // Per-wheel capital deployed (net stock cash still in play)
   const rotStockIN=m.trades.filter(t=>t.action==='IN').reduce((s,t)=>s+(t.total||0),0);
   const rotStockOUT=m.trades.filter(t=>t.action==='OUT').reduce((s,t)=>s+(t.total||0),0);
   const rotCapDeployed=m.sharesHeld>0?Math.max(0,rotStockIN-rotStockOUT):0;
@@ -4905,7 +4905,7 @@ function renderLog(){
   <div class="log-wrap">
     <table class="lt">
       <thead><tr>
-        ${th('ticker','Ticker')}${th('action','Action')}<th>Rotation</th>
+        ${th('ticker','Ticker')}${th('action','Action')}<th>Wheel</th>
         ${th('entered','Entered')}${th('expiry','Expiry')}
         ${th('strike','Strike')}${th('premium','Premium')}<th>Fees</th>
         ${th('shares','Shares')}${th('total','Total')}
@@ -4919,7 +4919,7 @@ function renderLog(){
 // ── DASHBOARD — redesigned ──
 // ── DATA HEALTH ──
 // Detects inconsistent trade records. Detect-and-ask only — never mutates anything.
-// One lifecycle walk per rotation: tracks open option legs + a running share ledger.
+// One lifecycle walk per wheel: tracks open option legs + a running share ledger.
 // wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
 function allDataHealth(){
   let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+i.text}));}
@@ -4948,7 +4948,7 @@ function explainHealth(text){
   if(/closed before it was opened/.test(t))return row('The close date is earlier than the open date.','Edit the dates so the close is on or after the open.','edit-leg');
   if(/opened after its expiry/.test(t))return row('The open date is after the expiry, which cannot happen.','Edit the dates.','edit-leg');
   if(/no longer exists/.test(t)&&/LEAP/.test(t))return row('This call was sold against a LEAP that has been deleted.','Edit the call and attach it to a LEAP, or close it.','edit-leg');
-  if(/rotation that no longer exists/.test(t))return row('It points at a wheel that was deleted.','Edit it and clear or change the wheel.','edit-leg');
+  if(/(rotation|wheel) that no longer exists/.test(t))return row('It points at a wheel that was deleted.','Edit it and clear or change the wheel.','edit-leg');
   if(/different underlying/.test(t))return row('The option ticker and the wheel ticker are not the same.','Edit the link so both use the same ticker.','edit-leg');
   if(/identical details/.test(t))return row('The same details were saved more than once, often by importing twice.','Delete the extra copy, or leave it if they are real partial fills.','edit');
   if(/same fill recorded twice/.test(t))return row('A wheel trade and an option leg share the ticker, strike, expiry and day.','Check both and delete the one you did not mean to keep. Nothing is removed for you.','edit');
@@ -5303,7 +5303,7 @@ function renderStatsOverview(){
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
   const avgArocVal=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
-  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open rotation${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average annualised return on capital across your open rotations, realised only: (premium banked from closed, expired or assigned options ÷ capital at risk) × (365 ÷ days held). Premium on open options is not counted.');
+  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open wheel${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average annualised return on capital across your open wheels, realised only: (premium banked from closed, expired or assigned options ÷ capital at risk) × (365 ÷ days held). Premium on open options is not counted.');
 
 
   // ── Positions table ──
@@ -5321,7 +5321,7 @@ function renderStatsOverview(){
     const pctToStrike=price!=null&&strike?((price-strike)/strike*100):null;
     const pctCol=pctToStrike===null?'var(--text3)':pctToStrike<0?'var(--red)':pctToStrike<5?'var(--yellow)':'var(--green)';
     const basis=m.sharesHeld>0&&m.breakeven!=null?'$'+fmt2(m.breakeven):'—';
-    return`<div class="d-table-row" style="grid-template-columns:${posCols};gap:0.75rem;cursor:pointer" onclick="goToWheel('${w.id}')" title="Go to rotation">
+    return`<div class="d-table-row" style="grid-template-columns:${posCols};gap:0.75rem;cursor:pointer" onclick="goToWheel('${w.id}')" title="Go to wheel">
       <span style="font-weight:600;color:var(--orange)">${esc(w.ticker)}</span>
       <span><span class="d-phase ${ph.cls}">${ph.label}</span></span>
       <span class="t2-nw">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:600;margin-left:0.375rem">/ ${dte}d</span>`:''}</span>
@@ -5336,7 +5336,7 @@ function renderStatsOverview(){
   // ── Recent activity ──
   const recCols='minmax(4.6875rem,0.9fr) minmax(4.0625rem,0.7fr) minmax(3.25rem,0.5fr) minmax(4.0625rem,0.7fr) minmax(4.6875rem,0.9fr) minmax(5.625rem,1.2fr) minmax(4.375rem,0.8fr)';
   const recHdr=`<div class="d-table-hdr" style="grid-template-columns:${recCols};gap:0.75rem">
-    <span>Date</span><span>Ticker</span><span>Action</span><span>Strike</span><span>Expiry</span><span>Rotation</span><span style="text-align:right">Amount</span>
+    <span>Date</span><span>Ticker</span><span>Action</span><span>Strike</span><span>Expiry</span><span>Wheel</span><span style="text-align:right">Amount</span>
   </div>`;
   const recRows=recentTrades.map(t=>{
     const w=db.wheels.find(x=>x.id===t.wheelId);
@@ -5516,7 +5516,7 @@ function renderMonthlyRealised(){
   const showDiv=sh.some(r=>r.divs);
   const pg=r=>(r.shareGain||0)+(r.leapGain||0),pl=r=>(r.shareLoss||0)+(r.leapLoss||0);
   const posRows=sh.map(r=>({...r,posGain:pg(r),posLoss:pl(r),posNet:(r.shares||0)+(r.leapNet||0)+(r.divs||0)}));
-  if(sh.length)html+=panel('Shares &amp; LEAPs P&amp;L',`Realised only, covering shares and LEAPs. Each share sale (called away or sold) is matched against what those shares cost in the same rotation, first in, first out; each long LEAP counts when it is sold or expires. Booked in the month it closed. Gains = closed above cost, Losses = closed below cost.${showDiv?' Dividends have their own column and are included in Net.':''} Shares and LEAPs still held are in Unrealised. PMCC short calls are in Monthly P&L above.`,
+  if(sh.length)html+=panel('Shares &amp; LEAPs P&amp;L',`Realised only, covering shares and LEAPs. Each share sale (called away or sold) is matched against what those shares cost in the same wheel, first in, first out; each long LEAP counts when it is sold or expires. Booked in the month it closed. Gains = closed above cost, Losses = closed below cost.${showDiv?' Dividends have their own column and are included in Net.':''} Shares and LEAPs still held are in Unrealised. PMCC short calls are in Monthly P&L above.`,
     ['Gains','Losses',...(showDiv?['Dividends']:[]),'Net'],posRows,['posGain','posLoss','divs','posNet'],(l,r,c)=>tr(l,c,cell(r.posGain,'g')+cell(r.posLoss?-r.posLoss:0,'r')+(showDiv?cell(r.divs,'g'):'')+pcell(r.posNet)));
   return html;
 }
@@ -5693,7 +5693,7 @@ function quickAddRotation(symbol){
   const existing=db.wheels.filter(w=>w.ticker===ticker).length;
   const now=new Date();
   const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
-  const label=`Rotation ${existing+1} — ${mon} ${now.getFullYear()}`;
+  const label=`Wheel ${existing+1} — ${mon} ${now.getFullYear()}`;
   const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
   const wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:now.toISOString().slice(0,10),sortOrder:mo+1};
   db.wheels.push(wheel);
@@ -5714,8 +5714,8 @@ function openNewPos(){
   document.getElementById('wf-status').value='open';
   document.getElementById('wf-price').value='';
   document.getElementById('wf-notes').value='';
-  document.getElementById('mWheelTitle').textContent='New Rotation';
-  // Hide non-essential fields for new rotation
+  document.getElementById('mWheelTitle').textContent='New Wheel';
+  // Hide non-essential fields for new wheel
   document.querySelectorAll('.wf-edit-only').forEach(el=>el.style.display='none');
   openModal('mWheel');
   setTimeout(()=>document.getElementById('wf-ticker').focus(),100);
@@ -5757,12 +5757,12 @@ function saveWheel(){
   if(id){wheel=db.wheels.find(x=>x.id===id);if(data.status==='open'&&wheel.status!=='open'&&!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}Object.assign(wheel,data);}
   else{
     if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
-    // Auto-generate label: "Rotation N" based on existing rotations for this ticker
+    // Auto-generate label: "Wheel N" based on existing wheels for this ticker
     const existing=db.wheels.filter(w=>w.ticker===ticker).length;
     if(!data.label){
       const now=new Date();
       const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
-      data.label=`Rotation ${existing+1} — ${mon} ${now.getFullYear()}`;
+      data.label=`Wheel ${existing+1} — ${mon} ${now.getFullYear()}`;
     }
     data.status='open';
     const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
@@ -5787,7 +5787,7 @@ function moveWheel(id,dir){
 }
 function toggleStatus(id){const w=db.wheels.find(x=>x.id===id);if(!w)return;w.status=w.status==='open'?'closed':'open';_saveWheel(w);render();}
 function deleteWheel(id){
-  if(!confirm('Delete this rotation and ALL its trades? Cannot be undone.'))return;
+  if(!confirm('Delete this wheel and ALL its trades? Cannot be undone.'))return;
   db.trades.filter(t=>t.wheelId===id).forEach(t=>_deleteTradeDoc(t.id));
   _deleteWheelDoc(id);
   db.wheels=db.wheels.filter(w=>w.id!==id);
@@ -5806,7 +5806,7 @@ function wheelRunSpan(w){
 function wheelFace(w){
   const tk=String(w.ticker||'').toUpperCase();
   let co=String(w.company||'').trim();
-  if(!co||/^rotation\b/i.test(co)){const row=(window.POPULAR&&POPULAR.rows||[]).find(r=>String(r[0]).toUpperCase()===tk);co=row&&row[1]?String(row[1]):'';}
+  if(!co||/^(rotation|wheel)\b/i.test(co)){const row=(window.POPULAR&&POPULAR.rows||[]).find(r=>String(r[0]).toUpperCase()===tk);co=row&&row[1]?String(row[1]):'';}
   const name=co&&co!==tk?co+' / '+tk:(tk||'Wheel');
   const span=wheelRunSpan(w);
   return span?name+' · '+span:name;
@@ -6676,7 +6676,7 @@ function doImport(){
       const existing=db.wheels.filter(w=>w.ticker===ticker).length;
       const now=new Date();
       const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
-      const label=`Rotation ${existing+1} — ${mon} ${now.getFullYear()}`;
+      const label=`Wheel ${existing+1} — ${mon} ${now.getFullYear()}`;
       const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
       wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};
       db.wheels.push(wheel);newWheels.push(wheel);newWheelTickers.add(ticker);
@@ -6688,7 +6688,7 @@ function doImport(){
   newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');
   document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();render();
 
-  // Fetch logos and prices for any new rotations
+  // Fetch logos and prices for any new wheels
   newWheelTickers.forEach(ticker=>{
     fetchSymbol(ticker).then(()=>{
       const w=db.wheels.find(x=>x.ticker===ticker&&x.status==='open');
@@ -6852,7 +6852,7 @@ function renderAnalytics(){
   // ── Section 1: Performance Overview ──
   const perfStats=`<div class="a-stat-grid">
     ${stat(fmtMoney(s.totalRealised),'Wheel Realised P&L','all-time: premium + shares + dividends',s.totalRealised>=0?'var(--green)':'var(--red)','Everything earned from the wheel — option premiums, stock sales, and dividends. Open stock positions excluded.')}
-    ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed rotations','var(--orange)','Average annualised return on capital across closed rotations, realised only: (realised premium ÷ capital at risk) × (365 ÷ days held).')}
+    ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed wheels','var(--orange)','Average annualised return on capital across closed wheels, realised only: (realised premium ÷ capital at risk) × (365 ÷ days held).')}
     ${stat(sortinoStr,'Sortino Ratio','risk-adjusted','var(--text)','Risk-adjusted return using only downside volatility. Higher is better. Unlike Sharpe, it does not penalise upside variance — fairer for option-selling strategies.')}
     ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--red)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
   </div>
@@ -6994,7 +6994,7 @@ function renderAnalytics(){
     ${stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
   </div>`;
 
-  // ── Section 7: Rotation Scoreboard ──
+  // ── Section 7: Wheel Scoreboard ──
   const rotRows=db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).map(w=>{
     const m=calcWheel(w);const ar=calcAROC(w,m);
     const rotIn=m.trades.filter(t=>t.action==='IN').reduce((s,t)=>s+(t.total||0),0);
@@ -7005,7 +7005,7 @@ function renderAnalytics(){
     const cr=cycleReturn(w,m,rotationShareStats(w,db.trades,_priceOf),rotDiv);
     return`<tr>
       <td style="font-weight:600;color:var(--orange)">${w.sortOrder||'?'}</td>
-      <td>${(w.label||w.ticker).replace(/^Rotation\s+\d+\s*[—–\-]+\s*/i,'')}</td>
+      <td>${(w.label||w.ticker).replace(/^(Rotation|Wheel)\s+\d+\s*[—–\-]+\s*/i,'')}</td>
       <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:0.625rem;font-size:0.5625rem">${w.status==='open'?'● Open':'Closed'}</span></td>
       <td>${m.trades.length}</td>
       <td class="g">${fmtMoney(m.premiumCredits)}</td>
@@ -7029,7 +7029,7 @@ function renderAnalytics(){
   return`<div class="a-wrap">
     <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:1.25rem">
       <span style="font-size:1.125rem;font-weight:400;color:var(--orange);letter-spacing:-0.5px">Analytics</span>
-      <span style="font-size:0.6875rem;color:var(--text3)">All-time performance · ${totalTrades} trades · ${db.wheels.length} rotations</span>
+      <span style="font-size:0.6875rem;color:var(--text3)">All-time performance · ${totalTrades} trades · ${db.wheels.length} wheels</span>
     </div>
 
     <div class="a-section">${sec('Performance','Realised P&L, premium, returns & records',true)}${perfStats}
@@ -7065,8 +7065,8 @@ function renderAnalytics(){
 
     <div class="a-section">${sec('Risk & Exposure','Capital deployed, exposure & fees')}${riskStats}${secEnd}</div>
 
-    <div class="a-section">${sec('Rotation Scoreboard','Per-rotation performance')}
-      <table class="a-table"><thead><tr><th>#</th><th>Rotation</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th>Cycle /yr ${ii(`Realised only. AROC uses realised premium. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table>
+    <div class="a-section">${sec('Wheel Scoreboard','Per-wheel performance')}
+      <table class="a-table"><thead><tr><th>#</th><th>Wheel</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th>Cycle /yr ${ii(`Realised only. AROC uses realised premium. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table>
     ${secEnd}</div>
   </div>`;
 }
@@ -7109,7 +7109,7 @@ function exportCSV(){
     if(!q)return true;
     return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
   });
-  const hdr=['Ticker','Action','Rotation','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment'];
+  const hdr=['Ticker','Action','Wheel','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment'];
   const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
   const csv=[hdr.join(','),...rows].join('\n');
   const suffix=q?`-${q}`:'';
@@ -7718,7 +7718,7 @@ async function onboardSubmit(){
   const userId=_confirmedUid;
   if(!userId){console.error('Onboard: no confirmed UID — should not happen');return;}
   const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
-  const newWheel={id:wheelId,ticker:ticker,label:ticker+' — Rotation 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()};
+  const newWheel={id:wheelId,ticker:ticker,label:ticker+' — Wheel 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()};
   try{
     await setDoc(doc(_fsDb,'users',userId,'wheels',wheelId),newWheel);
     db.wheels.push(newWheel);
@@ -8046,7 +8046,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
 
     // Load from Firestore — halt boot on failure rather than booting empty
     loadingBar.style.width = '30%';
-    loadingText.textContent = 'Loading rotations...';
+    loadingText.textContent = 'Loading wheels...';
     try {
       loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
       await loadDBFromFirestore(user.uid);
