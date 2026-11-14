@@ -1,7 +1,7 @@
 {
  "generatedAt": "2026-11-14T23:18:03.106Z",
  "universe": "top250-options",
- "listPath": "/agent/repos/WheelHouse/app/brand/top250-options.json",
+ "listPath": "app/brand/top250-options.json",
  "sources": [
   {
    "name": "Macroption — Most Active Stocks by Options Volume 2026",
