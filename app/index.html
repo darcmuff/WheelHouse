@@ -1312,9 +1312,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Monthly return vs</span>
           <select id="ret-base" onchange="saveReturnSettings()" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem;cursor:pointer"><option value="caw">Capital at work</option><option value="account">Account size</option></select></div>
         <div id="ret-acct-row" style="display:none;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Account size</span>
-          <input id="ret-account" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 50000" onchange="saveReturnSettings()" style="width:6.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"></div>
+          <input id="ret-account" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 50000" oninput="saveReturnSettings()" onchange="saveReturnSettings()" style="width:6.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Monthly target</span>
-          <span style="display:flex;align-items:center;gap:0.25rem"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onchange="saveReturnSettings()" style="width:3.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"><span style="font-size:0.75rem;color:var(--text3)">%</span></span></div>
+          <span style="display:flex;align-items:center;gap:0.25rem"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" oninput="saveReturnSettings()" onchange="saveReturnSettings()" style="width:3.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"><span style="font-size:0.75rem;color:var(--text3)">%</span></span></div>
         <div style="font-size:0.6875rem;color:var(--text3)">Banked profit only. Leave the target empty to switch it off.</div>
       </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
@@ -7760,14 +7760,32 @@ function openSettings(){
 }
 function fillReturnSettings(){
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]),b=document.getElementById('ret-base');if(!b)return;
-  b.value=rs.base;document.getElementById('ret-account').value=rs.account||'';document.getElementById('ret-target').value=rs.target||'';
-  document.getElementById('ret-acct-row').style.display=rs.base==='account'||b.value==='account'?'flex':'none';
+  // keep "Account size" picked while the amount is still blank, so the box doesn't vanish before it's typed
+  let rawBase=null;try{rawBase=JSON.parse(localStorage.getItem('wh-returnSet')||'null')?.base;}catch(e){}
+  b.value=rawBase==='account'?'account':rs.base;document.getElementById('ret-account').value=rs.account||'';document.getElementById('ret-target').value=rs.target||'';
+  document.getElementById('ret-acct-row').style.display=b.value==='account'?'flex':'none';
 }
 function saveReturnSettings(){
   const b=document.getElementById('ret-base').value,a=+document.getElementById('ret-account').value||0,t=+document.getElementById('ret-target').value||0;
   localStorage.setItem('wh-returnSet',JSON.stringify({base:b,account:a>0?a:0,target:t>0?t:null}));
   document.getElementById('ret-acct-row').style.display=b==='account'?'flex':'none';
+  persistReturnSettings();
   render();
+}
+// Return settings follow the account across devices (users/{uid}/prefs/return).
+function persistReturnSettings(){
+  if(APP_DEMO||!_fsDb||!_confirmedUid)return;
+  let v=null;try{v=JSON.parse(localStorage.getItem('wh-returnSet')||'null');}catch(e){return;}
+  if(!v)return;
+  _fsSetDoc(_fsDoc(_fsDb,'users',_confirmedUid,'prefs','return'),v).catch(e=>console.warn('Return settings save failed:',e.message));
+}
+async function loadReturnSettings(uid){
+  if(APP_DEMO||!_fsDb||!uid)return;
+  try{
+    const sn=await listenServer(doc(_fsDb,'users',uid,'prefs','return'));
+    if(sn.exists()){const d=sn.data();localStorage.setItem('wh-returnSet',JSON.stringify({base:d.base==='account'?'account':'caw',account:+d.account>0?+d.account:0,target:+d.target>0?+d.target:null}));}
+    else if(localStorage.getItem('wh-returnSet'))persistReturnSettings();
+  }catch(e){console.warn('Return settings load failed:',e.message);}
 }
 function setDateFmt(val){
   dateFmt=val;
@@ -8012,6 +8030,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
       loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
       await loadDBFromFirestore(user.uid);
       await loadHealthDismiss(user.uid);
+      await loadReturnSettings(user.uid);
     } catch (e) {
       console.error('Load failed:', e);
       loadingText.innerHTML = 'Could not load your data — check your connection. '
