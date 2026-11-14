@@ -3781,7 +3781,7 @@ function renderSidebar(){
   document.querySelectorAll('.nav-health-badge').forEach(_hb=>{
     const _hi=openHealth();
     if(_hi.length){
-      const worst=_hi.some(i=>i.sev==='red')?'var(--red)':_hi.some(i=>i.sev==='amber')?'var(--yellow)':'var(--text3)';
+      const worst=_hi.some(i=>i.sev==='red')?'var(--red)':'var(--text3)';
       _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:0.625rem;font-weight:600;border-radius:0.5625rem;padding:1px 0.4375rem;line-height:1.4">${_hi.length}</span>`;
     }else _hb.innerHTML='';
   });
