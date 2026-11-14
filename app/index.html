@@ -5018,7 +5018,7 @@ function healthItemHtml(i){
   const act=healthAction(i);
   const key=healthKey(i).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const dot=i.sev==='red'?'r':i.sev==='amber'?'a':'g';
-  return `<div class="hy"><button type="button" class="hy-sum" onclick="this.parentElement.classList.toggle('open')"><span class="ny-dot ${dot}"></span><span class="hy-what">${esc(i.text)}</span></button><div class="hy-more"><div>${esc(e.why)}</div><div>${esc(e.how)}</div><div class="hy-acts">${act?`<button type="button" class="btn btn-primary btn-sm" onclick="${act.fn}">${esc(act.label)}</button>`:''}<button type="button" class="btn btn-ghost btn-sm" onclick="dismissHealth('${key}')">Dismiss</button></div></div></div>`;
+  return `<div class="hy open"><div class="hy-sum" style="cursor:default"><span class="ny-dot ${dot}"></span><span class="hy-what">${esc(i.text)}</span></div><div class="hy-more"><div>${esc(e.why)}</div><div>${esc(e.how)}</div><div class="hy-acts">${act?`<button type="button" class="btn btn-primary btn-sm" onclick="${act.fn}">${esc(act.label)}</button>`:''}<button type="button" class="btn btn-ghost btn-sm" onclick="dismissHealth('${key}')">Dismiss</button></div></div></div>`;
 }
 function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
 function runDataHealth(){
