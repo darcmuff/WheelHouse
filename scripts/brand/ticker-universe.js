@@ -83,7 +83,7 @@ function snapshotFromTop250(doc, extraTickers = []) {
   return {
     generatedAt: doc.generatedAt || new Date().toISOString(),
     universe: 'top250-options',
-    listPath: APP_LIST,
+    listPath: 'app/brand/top250-options.json',
     sources: doc.sources || [],
     metric: doc.metric,
     approximation: !!doc.approximation,
