@@ -3,7 +3,12 @@
   "private": true,
   "scripts": {
     "sim": "node tools/onboard-sim/run.js",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "brand": "node scripts/brand/build.js",
+    "brand:mock": "node scripts/brand/build.js --mock-demo --incremental --force KO AMD SOFI AAPL MSFT"
+  },
+  "dependencies": {
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "playwright": "1.49.1"

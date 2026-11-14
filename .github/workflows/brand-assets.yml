@@ -1,0 +1,46 @@
+name: Brand assets (dev)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  brand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install
+        run: npm ci
+      - name: Refresh ticker lists (dry run)
+        run: node scripts/brand/build.js --refresh-lists
+      - name: Incremental brand build
+        id: build
+        env:
+          LOGO_DEV_SECRET_KEY: ${{ secrets.LOGO_DEV_SECRET_KEY }}
+        run: |
+          if [ -z "$LOGO_DEV_SECRET_KEY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            node scripts/brand/build.js --refresh-lists
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          node scripts/brand/build.js --incremental
+      - name: Commit to dev
+        if: steps.build.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/brand scripts/brand/data
+          if git diff --staged --quiet; then echo "No brand changes"; exit 0; fi
+          git commit -m "chore(brand): weekly Logo.dev asset refresh [skip ci]"
+          git push origin dev
