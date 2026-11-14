@@ -3,4 +3,4 @@
   external_node_modules = ["sharp"]
 
 [functions.brand]
-  included_files = ["app/brand/overrides.json"]
+  included_files = ["app/brand/overrides.json", "app/brand/top250-options.json"]

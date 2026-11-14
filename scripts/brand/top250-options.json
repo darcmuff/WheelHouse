@@ -1,0 +1,2115 @@
+{
+  "generatedAt": "2026-11-14T23:18:03.106Z",
+  "limit": 250,
+  "metric": "YTD 2026 average daily options contract volume (all expirations), CBOE-family exchanges — Macroption table; cross-checked against ElixStocks OCC daily snapshot.",
+  "approximation": true,
+  "approximationNote": "Primary ordering is Macroption YTD average daily volume (data through late Aug 2026 per that page). ElixStocks provides a more recent single-day OCC volume snapshot for validation, not re-ranking. ETFs and broad indexes excluded via blocklist and name filter.",
+  "sources": [
+    {
+      "name": "Macroption — Most Active Stocks by Options Volume 2026",
+      "url": "https://www.macroption.com/stock-options-volume/",
+      "field": "avg_daily_volume"
+    },
+    {
+      "name": "ElixStocks — Options volume by day (OCC)",
+      "url": "https://elixstocks.com/options",
+      "field": "contracts_traded",
+      "tradingDay": "Nov 11, 2026"
+    }
+  ],
+  "skippedWhileBuilding": [],
+  "tickers": [
+    {
+      "rank": 1,
+      "symbol": "NVDA",
+      "avgDailyVolume": 770401,
+      "name": "NVIDIA Corp",
+      "macroptionRank": 1,
+      "elixDailyRank": 3
+    },
+    {
+      "rank": 2,
+      "symbol": "TSLA",
+      "avgDailyVolume": 588277,
+      "name": "Tesla Inc",
+      "macroptionRank": 2,
+      "elixDailyRank": 4
+    },
+    {
+      "rank": 3,
+      "symbol": "AAPL",
+      "avgDailyVolume": 256663,
+      "name": "Apple Inc",
+      "macroptionRank": 3,
+      "elixDailyRank": 7
+    },
+    {
+      "rank": 4,
+      "symbol": "AMZN",
+      "avgDailyVolume": 197398,
+      "name": "Amazon.com Inc",
+      "macroptionRank": 4,
+      "elixDailyRank": 12
+    },
+    {
+      "rank": 5,
+      "symbol": "MSFT",
+      "avgDailyVolume": 193707,
+      "name": "Microsoft Corporation",
+      "macroptionRank": 5,
+      "elixDailyRank": 11
+    },
+    {
+      "rank": 6,
+      "symbol": "INTC",
+      "avgDailyVolume": 188672,
+      "name": "Intel Corp",
+      "macroptionRank": 6,
+      "elixDailyRank": 13
+    },
+    {
+      "rank": 7,
+      "symbol": "MU",
+      "avgDailyVolume": 167344,
+      "name": "Micron Technology Inc",
+      "macroptionRank": 7,
+      "elixDailyRank": 5
+    },
+    {
+      "rank": 8,
+      "symbol": "PLTR",
+      "avgDailyVolume": 146023,
+      "name": "Palantir Technologies Inc - Class A",
+      "macroptionRank": 8,
+      "elixDailyRank": 28
+    },
+    {
+      "rank": 9,
+      "symbol": "META",
+      "avgDailyVolume": 141715,
+      "name": "Meta Platforms Inc - Class A",
+      "macroptionRank": 9,
+      "elixDailyRank": 14
+    },
+    {
+      "rank": 10,
+      "symbol": "MSTR",
+      "avgDailyVolume": 140132,
+      "name": "Strategy Inc - Class A",
+      "macroptionRank": 10,
+      "elixDailyRank": 26
+    },
+    {
+      "rank": 11,
+      "symbol": "AMD",
+      "avgDailyVolume": 125927,
+      "name": "Advanced Micro Devices Inc",
+      "macroptionRank": 11,
+      "elixDailyRank": 6
+    },
+    {
+      "rank": 12,
+      "symbol": "NFLX",
+      "avgDailyVolume": 115231,
+      "name": "Netflix Inc",
+      "macroptionRank": 12,
+      "elixDailyRank": 29
+    },
+    {
+      "rank": 13,
+      "symbol": "GOOGL",
+      "avgDailyVolume": 110078,
+      "name": "Alphabet Inc - Class A",
+      "macroptionRank": 13,
+      "elixDailyRank": 16
+    },
+    {
+      "rank": 14,
+      "symbol": "SMCI",
+      "avgDailyVolume": 99285,
+      "name": "Super Micro Computer Inc",
+      "macroptionRank": 14,
+      "elixDailyRank": 22
+    },
+    {
+      "rank": 15,
+      "symbol": "SOFI",
+      "avgDailyVolume": 98821,
+      "name": "SoFi Technologies Inc",
+      "macroptionRank": 15,
+      "elixDailyRank": 24
+    },
+    {
+      "rank": 16,
+      "symbol": "MARA",
+      "avgDailyVolume": 86827,
+      "name": "MARA Holdings Inc (formerly Marathon Digital Holdings Inc)",
+      "macroptionRank": 16,
+      "elixDailyRank": 36
+    },
+    {
+      "rank": 17,
+      "symbol": "IREN",
+      "avgDailyVolume": 84853,
+      "name": "Iris Energy Ltd",
+      "macroptionRank": 17,
+      "elixDailyRank": 20
+    },
+    {
+      "rank": 18,
+      "symbol": "SPCX",
+      "avgDailyVolume": 81725,
+      "name": "Space Exploration Technologies Corp - Class A",
+      "macroptionRank": 18,
+      "elixDailyRank": 8
+    },
+    {
+      "rank": 19,
+      "symbol": "ORCL",
+      "avgDailyVolume": 75731,
+      "name": "Oracle Corp",
+      "macroptionRank": 19,
+      "elixDailyRank": 21
+    },
+    {
+      "rank": 20,
+      "symbol": "AVGO",
+      "avgDailyVolume": 72318,
+      "name": "Broadcom Inc",
+      "macroptionRank": 20,
+      "elixDailyRank": 17
+    },
+    {
+      "rank": 21,
+      "symbol": "HOOD",
+      "avgDailyVolume": 72254,
+      "name": "Robinhood Markets Inc - Class A",
+      "macroptionRank": 21,
+      "elixDailyRank": 30
+    },
+    {
+      "rank": 22,
+      "symbol": "NOK",
+      "avgDailyVolume": 56459,
+      "name": "Nokia Corp",
+      "macroptionRank": 22,
+      "elixDailyRank": 61
+    },
+    {
+      "rank": 23,
+      "symbol": "COIN",
+      "avgDailyVolume": 55177,
+      "name": "Coinbase Global Inc - Class A",
+      "macroptionRank": 23,
+      "elixDailyRank": 53
+    },
+    {
+      "rank": 24,
+      "symbol": "GOOG",
+      "avgDailyVolume": 51048,
+      "name": "Alphabet Inc - Class C",
+      "macroptionRank": 24,
+      "elixDailyRank": 32
+    },
+    {
+      "rank": 25,
+      "symbol": "NBIS",
+      "avgDailyVolume": 50136,
+      "name": "Nebius Group N.V. - Class A",
+      "macroptionRank": 25,
+      "elixDailyRank": 19
+    },
+    {
+      "rank": 26,
+      "symbol": "CRWV",
+      "avgDailyVolume": 49765,
+      "name": "CoreWeave Inc - Class A",
+      "macroptionRank": 26,
+      "elixDailyRank": 9
+    },
+    {
+      "rank": 27,
+      "symbol": "ONDS",
+      "avgDailyVolume": 48802,
+      "name": "Ondas Holdings Inc",
+      "macroptionRank": 27,
+      "elixDailyRank": 39
+    },
+    {
+      "rank": 28,
+      "symbol": "TSM",
+      "avgDailyVolume": 44189,
+      "name": "Taiwan Semiconductor Manufacturing",
+      "macroptionRank": 28,
+      "elixDailyRank": 35
+    },
+    {
+      "rank": 29,
+      "symbol": "BMNR",
+      "avgDailyVolume": 43812,
+      "name": "BitMine Immersion Technologies Inc",
+      "macroptionRank": 29
+    },
+    {
+      "rank": 30,
+      "symbol": "BABA",
+      "avgDailyVolume": 42606,
+      "name": "Alibaba Group Holding Ltd",
+      "macroptionRank": 30,
+      "elixDailyRank": 48
+    },
+    {
+      "rank": 31,
+      "symbol": "SNDK",
+      "avgDailyVolume": 42546,
+      "name": "Sandisk Corp",
+      "macroptionRank": 31,
+      "elixDailyRank": 25
+    },
+    {
+      "rank": 32,
+      "symbol": "MRVL",
+      "avgDailyVolume": 40916,
+      "name": "Marvell Technology Inc",
+      "macroptionRank": 32,
+      "elixDailyRank": 27
+    },
+    {
+      "rank": 33,
+      "symbol": "GME",
+      "avgDailyVolume": 40416,
+      "name": "Gamestop Corporation - Class A",
+      "macroptionRank": 33
+    },
+    {
+      "rank": 34,
+      "symbol": "ASTS",
+      "avgDailyVolume": 39897,
+      "name": "AST SpaceMobile Inc - Class A",
+      "macroptionRank": 34,
+      "elixDailyRank": 49
+    },
+    {
+      "rank": 35,
+      "symbol": "HIMS",
+      "avgDailyVolume": 38716,
+      "name": "Hims &amp; Hers Health Inc - Class A",
+      "macroptionRank": 35,
+      "elixDailyRank": 31
+    },
+    {
+      "rank": 36,
+      "symbol": "WULF",
+      "avgDailyVolume": 36052,
+      "name": "TeraWulf Inc",
+      "macroptionRank": 36,
+      "elixDailyRank": 15
+    },
+    {
+      "rank": 37,
+      "symbol": "NOW",
+      "avgDailyVolume": 34740,
+      "name": "ServiceNow Inc",
+      "macroptionRank": 37,
+      "elixDailyRank": 51
+    },
+    {
+      "rank": 38,
+      "symbol": "BAC",
+      "avgDailyVolume": 34649,
+      "name": "Bank Of America Corp",
+      "macroptionRank": 38,
+      "elixDailyRank": 55
+    },
+    {
+      "rank": 39,
+      "symbol": "RKLB",
+      "avgDailyVolume": 33349,
+      "name": "Rocket Lab USA Inc",
+      "macroptionRank": 39,
+      "elixDailyRank": 33
+    },
+    {
+      "rank": 40,
+      "symbol": "OPEN",
+      "avgDailyVolume": 32548,
+      "name": "Opendoor Technologies Inc",
+      "macroptionRank": 40
+    },
+    {
+      "rank": 41,
+      "symbol": "RIVN",
+      "avgDailyVolume": 32024,
+      "name": "Rivian Automotive Inc - Class A",
+      "macroptionRank": 41,
+      "elixDailyRank": 68
+    },
+    {
+      "rank": 42,
+      "symbol": "MRNA",
+      "avgDailyVolume": 30943,
+      "name": "Moderna Inc",
+      "macroptionRank": 42,
+      "elixDailyRank": 50
+    },
+    {
+      "rank": 43,
+      "symbol": "WMT",
+      "avgDailyVolume": 30676,
+      "name": "Walmart Inc",
+      "macroptionRank": 43,
+      "elixDailyRank": 47
+    },
+    {
+      "rank": 44,
+      "symbol": "NKE",
+      "avgDailyVolume": 30649,
+      "name": "Nike Inc - Class B",
+      "macroptionRank": 44,
+      "elixDailyRank": 43
+    },
+    {
+      "rank": 45,
+      "symbol": "F",
+      "avgDailyVolume": 29857,
+      "name": "Ford Motor Company",
+      "macroptionRank": 45,
+      "elixDailyRank": 84
+    },
+    {
+      "rank": 46,
+      "symbol": "CRCL",
+      "avgDailyVolume": 29347,
+      "name": "Circle Internet Group Inc - Class A",
+      "macroptionRank": 46,
+      "elixDailyRank": 67
+    },
+    {
+      "rank": 47,
+      "symbol": "AI",
+      "avgDailyVolume": 28693,
+      "name": "C3.ai Inc - Class A",
+      "macroptionRank": 47
+    },
+    {
+      "rank": 48,
+      "symbol": "PFE",
+      "avgDailyVolume": 27841,
+      "name": "Pfizer Inc",
+      "macroptionRank": 48,
+      "elixDailyRank": 79
+    },
+    {
+      "rank": 49,
+      "symbol": "AAL",
+      "avgDailyVolume": 27297,
+      "name": "American Airlines Group Inc",
+      "macroptionRank": 49,
+      "elixDailyRank": 86
+    },
+    {
+      "rank": 50,
+      "symbol": "PYPL",
+      "avgDailyVolume": 26623,
+      "name": "PayPal Holdings Inc</pre>",
+      "macroptionRank": 50
+    },
+    {
+      "rank": 51,
+      "symbol": "BE",
+      "avgDailyVolume": 26502,
+      "name": "Bloom Energy Corp - Class A",
+      "macroptionRank": 51,
+      "elixDailyRank": 34
+    },
+    {
+      "rank": 52,
+      "symbol": "CIFR",
+      "avgDailyVolume": 26280,
+      "name": "Cipher Mining Inc",
+      "macroptionRank": 52,
+      "elixDailyRank": 37
+    },
+    {
+      "rank": 53,
+      "symbol": "APLD",
+      "avgDailyVolume": 25927,
+      "name": "Applied Digital Corporation",
+      "macroptionRank": 53,
+      "elixDailyRank": 45
+    },
+    {
+      "rank": 54,
+      "symbol": "SNAP",
+      "avgDailyVolume": 25923,
+      "name": "Snap Inc - Class A",
+      "macroptionRank": 54
+    },
+    {
+      "rank": 55,
+      "symbol": "NIO",
+      "avgDailyVolume": 23939,
+      "name": "NIO Inc",
+      "macroptionRank": 55
+    },
+    {
+      "rank": 56,
+      "symbol": "UNH",
+      "avgDailyVolume": 23686,
+      "name": "Unitedhealth Group Inc",
+      "macroptionRank": 56,
+      "elixDailyRank": 69
+    },
+    {
+      "rank": 57,
+      "symbol": "NU",
+      "avgDailyVolume": 23580,
+      "name": "Nu Holdings Ltd Class A",
+      "macroptionRank": 57,
+      "elixDailyRank": 54
+    },
+    {
+      "rank": 58,
+      "symbol": "QCOM",
+      "avgDailyVolume": 23505,
+      "name": "Qualcomm Inc",
+      "macroptionRank": 58,
+      "elixDailyRank": 70
+    },
+    {
+      "rank": 59,
+      "symbol": "CORZ",
+      "avgDailyVolume": 23462,
+      "name": "Core Scientific Inc - New",
+      "macroptionRank": 59
+    },
+    {
+      "rank": 60,
+      "symbol": "XOM",
+      "avgDailyVolume": 22491,
+      "name": "Exxon Mobil Corp",
+      "macroptionRank": 60,
+      "elixDailyRank": 66
+    },
+    {
+      "rank": 61,
+      "symbol": "RIOT",
+      "avgDailyVolume": 22069,
+      "name": "Riot Platforms Inc",
+      "macroptionRank": 61,
+      "elixDailyRank": 40
+    },
+    {
+      "rank": 62,
+      "symbol": "POET",
+      "avgDailyVolume": 21806,
+      "name": "POET Technologies Inc",
+      "macroptionRank": 62
+    },
+    {
+      "rank": 63,
+      "symbol": "UBER",
+      "avgDailyVolume": 21415,
+      "name": "Uber Technologies Inc",
+      "macroptionRank": 63,
+      "elixDailyRank": 42
+    },
+    {
+      "rank": 64,
+      "symbol": "CRM",
+      "avgDailyVolume": 20785,
+      "name": "Salesforce Inc",
+      "macroptionRank": 64
+    },
+    {
+      "rank": 65,
+      "symbol": "RGTI",
+      "avgDailyVolume": 19457,
+      "name": "Rigetti Computing Inc",
+      "macroptionRank": 65
+    },
+    {
+      "rank": 66,
+      "symbol": "IONQ",
+      "avgDailyVolume": 19432,
+      "name": "IonQ Inc",
+      "macroptionRank": 66,
+      "elixDailyRank": 85
+    },
+    {
+      "rank": 67,
+      "symbol": "AMC",
+      "avgDailyVolume": 18644,
+      "name": "AMC Entertainment Holdings Inc - Class A",
+      "macroptionRank": 67
+    },
+    {
+      "rank": 68,
+      "symbol": "CVNA",
+      "avgDailyVolume": 18567,
+      "name": "Carvana Co. - Class A",
+      "macroptionRank": 68,
+      "elixDailyRank": 89
+    },
+    {
+      "rank": 69,
+      "symbol": "BA",
+      "avgDailyVolume": 18443,
+      "name": "Boeing Company",
+      "macroptionRank": 69,
+      "elixDailyRank": 63
+    },
+    {
+      "rank": 70,
+      "symbol": "EOSE",
+      "avgDailyVolume": 18017,
+      "name": "Eos Energy Enterprises Inc - Class A",
+      "macroptionRank": 70
+    },
+    {
+      "rank": 71,
+      "symbol": "SMR",
+      "avgDailyVolume": 17993,
+      "name": "NuScale Power Corporation - Class A",
+      "macroptionRank": 71
+    },
+    {
+      "rank": 72,
+      "symbol": "T",
+      "avgDailyVolume": 17531,
+      "name": "AT&amp;T Inc",
+      "macroptionRank": 72,
+      "elixDailyRank": 57
+    },
+    {
+      "rank": 73,
+      "symbol": "NVO",
+      "avgDailyVolume": 17189,
+      "name": "Novo Nordisk",
+      "macroptionRank": 73
+    },
+    {
+      "rank": 74,
+      "symbol": "CLSK",
+      "avgDailyVolume": 16748,
+      "name": "Cleanspark Inc",
+      "macroptionRank": 74
+    },
+    {
+      "rank": 75,
+      "symbol": "CSCO",
+      "avgDailyVolume": 16262,
+      "name": "Cisco Systems Inc",
+      "macroptionRank": 75,
+      "elixDailyRank": 72
+    },
+    {
+      "rank": 76,
+      "symbol": "ARM",
+      "avgDailyVolume": 16008,
+      "name": "Arm Holdings plc.",
+      "macroptionRank": 76,
+      "elixDailyRank": 44
+    },
+    {
+      "rank": 77,
+      "symbol": "BYND",
+      "avgDailyVolume": 15853,
+      "name": "Beyond Meat Inc",
+      "macroptionRank": 77
+    },
+    {
+      "rank": 78,
+      "symbol": "SOUN",
+      "avgDailyVolume": 15727,
+      "name": "SoundHound AI Inc - Class A",
+      "macroptionRank": 78
+    },
+    {
+      "rank": 79,
+      "symbol": "BULL",
+      "avgDailyVolume": 15525,
+      "name": "Webull Corporation",
+      "macroptionRank": 79
+    },
+    {
+      "rank": 80,
+      "symbol": "JPM",
+      "avgDailyVolume": 15473,
+      "name": "JPMorgan Chase &amp; Company",
+      "macroptionRank": 80
+    },
+    {
+      "rank": 81,
+      "symbol": "VZ",
+      "avgDailyVolume": 15460,
+      "name": "Verizon Communications Inc",
+      "macroptionRank": 81,
+      "elixDailyRank": 100
+    },
+    {
+      "rank": 82,
+      "symbol": "OXY",
+      "avgDailyVolume": 15239,
+      "name": "Occidental Petroleum Corp",
+      "macroptionRank": 82
+    },
+    {
+      "rank": 83,
+      "symbol": "OKLO",
+      "avgDailyVolume": 15044,
+      "name": "Oklo Inc",
+      "macroptionRank": 83,
+      "elixDailyRank": 92
+    },
+    {
+      "rank": 84,
+      "symbol": "DELL",
+      "avgDailyVolume": 14839,
+      "name": "Dell Technologies Inc - Class C",
+      "macroptionRank": 84,
+      "elixDailyRank": 41
+    },
+    {
+      "rank": 85,
+      "symbol": "FCX",
+      "avgDailyVolume": 14703,
+      "name": "Freeport-McMoRan Inc",
+      "macroptionRank": 85
+    },
+    {
+      "rank": 86,
+      "symbol": "C",
+      "avgDailyVolume": 14696,
+      "name": "Citigroup Inc",
+      "macroptionRank": 86,
+      "elixDailyRank": 94
+    },
+    {
+      "rank": 87,
+      "symbol": "IBM",
+      "avgDailyVolume": 14663,
+      "name": "International Business Machines Corp",
+      "macroptionRank": 87
+    },
+    {
+      "rank": 88,
+      "symbol": "NVTS",
+      "avgDailyVolume": 14516,
+      "name": "Navitas Semiconductor Corp",
+      "macroptionRank": 88
+    },
+    {
+      "rank": 89,
+      "symbol": "ADBE",
+      "avgDailyVolume": 14115,
+      "name": "Adobe Inc",
+      "macroptionRank": 89
+    },
+    {
+      "rank": 90,
+      "symbol": "QBTS",
+      "avgDailyVolume": 14049,
+      "name": "D-Wave Quantum Inc",
+      "macroptionRank": 90
+    },
+    {
+      "rank": 91,
+      "symbol": "PCG",
+      "avgDailyVolume": 13998,
+      "name": "PG&amp;E Corp",
+      "macroptionRank": 91,
+      "elixDailyRank": 52
+    },
+    {
+      "rank": 92,
+      "symbol": "TTD",
+      "avgDailyVolume": 13761,
+      "name": "Trade Desk Inc - Class A",
+      "macroptionRank": 92,
+      "elixDailyRank": 38
+    },
+    {
+      "rank": 93,
+      "symbol": "BTDR",
+      "avgDailyVolume": 13499,
+      "name": "Bitdeer Technologies Holding Company",
+      "macroptionRank": 93
+    },
+    {
+      "rank": 94,
+      "symbol": "RKT",
+      "avgDailyVolume": 13457,
+      "name": "Rocket Companies Inc Class A",
+      "macroptionRank": 94
+    },
+    {
+      "rank": 95,
+      "symbol": "WBD",
+      "avgDailyVolume": 13346,
+      "name": "Warner Bros. Discovery Inc - Class A",
+      "macroptionRank": 95
+    },
+    {
+      "rank": 96,
+      "symbol": "CRWD",
+      "avgDailyVolume": 13250,
+      "name": "Crowdstrike Holdings Inc - Class A",
+      "macroptionRank": 96,
+      "elixDailyRank": 71
+    },
+    {
+      "rank": 97,
+      "symbol": "AG",
+      "avgDailyVolume": 12860,
+      "name": "First Majestic Silver Corporation",
+      "macroptionRank": 97
+    },
+    {
+      "rank": 98,
+      "symbol": "KO",
+      "avgDailyVolume": 12829,
+      "name": "Coca-Cola Company",
+      "macroptionRank": 98,
+      "elixDailyRank": 78
+    },
+    {
+      "rank": 99,
+      "symbol": "CLF",
+      "avgDailyVolume": 12786,
+      "name": "Cleveland-Cliffs Inc",
+      "macroptionRank": 99
+    },
+    {
+      "rank": 100,
+      "symbol": "PLUG",
+      "avgDailyVolume": 12786,
+      "name": "Plug Power Inc",
+      "macroptionRank": 100
+    },
+    {
+      "rank": 101,
+      "symbol": "PATH",
+      "avgDailyVolume": 12764,
+      "name": "UiPath Inc - Class A",
+      "macroptionRank": 101
+    },
+    {
+      "rank": 102,
+      "symbol": "BBAI",
+      "avgDailyVolume": 12656,
+      "name": "BigBear.ai Holdings Inc",
+      "macroptionRank": 102
+    },
+    {
+      "rank": 103,
+      "symbol": "WFC",
+      "avgDailyVolume": 12558,
+      "name": "Wells Fargo &amp; Company",
+      "macroptionRank": 103,
+      "elixDailyRank": 98
+    },
+    {
+      "rank": 104,
+      "symbol": "GLW",
+      "avgDailyVolume": 12464,
+      "name": "Corning Inc",
+      "macroptionRank": 104,
+      "elixDailyRank": 83
+    },
+    {
+      "rank": 105,
+      "symbol": "CVX",
+      "avgDailyVolume": 12452,
+      "name": "Chevron Corp",
+      "macroptionRank": 105,
+      "elixDailyRank": 87
+    },
+    {
+      "rank": 106,
+      "symbol": "PDD",
+      "avgDailyVolume": 12241,
+      "name": "PDD Holdings Inc",
+      "macroptionRank": 106
+    },
+    {
+      "rank": 107,
+      "symbol": "CCL",
+      "avgDailyVolume": 12162,
+      "name": "Carnival Corporation Ltd (Paired Stock)",
+      "macroptionRank": 107
+    },
+    {
+      "rank": 108,
+      "symbol": "BB",
+      "avgDailyVolume": 11840,
+      "name": "BlackBerry Ltd",
+      "macroptionRank": 108
+    },
+    {
+      "rank": 109,
+      "symbol": "XYZ",
+      "avgDailyVolume": 11799,
+      "name": "Block Inc - Class A",
+      "macroptionRank": 109
+    },
+    {
+      "rank": 110,
+      "symbol": "AAOI",
+      "avgDailyVolume": 11737,
+      "name": "Applied Optoelectronics Inc",
+      "macroptionRank": 110,
+      "elixDailyRank": 62
+    },
+    {
+      "rank": 111,
+      "symbol": "USAR",
+      "avgDailyVolume": 11678,
+      "name": "USA Rare Earth Inc - Class A",
+      "macroptionRank": 111
+    },
+    {
+      "rank": 112,
+      "symbol": "OWL",
+      "avgDailyVolume": 11655,
+      "name": "Blue Owl Capital Inc - Class A",
+      "macroptionRank": 112
+    },
+    {
+      "rank": 113,
+      "symbol": "SHOP",
+      "avgDailyVolume": 11614,
+      "name": "Shopify Inc - Class A",
+      "macroptionRank": 113
+    },
+    {
+      "rank": 114,
+      "symbol": "ASST",
+      "avgDailyVolume": 11611,
+      "name": "Asset Entities Inc - Class B",
+      "macroptionRank": 114
+    },
+    {
+      "rank": 115,
+      "symbol": "HTZ",
+      "avgDailyVolume": 11584,
+      "name": "Hertz Global Holdings Inc (New)",
+      "macroptionRank": 115
+    },
+    {
+      "rank": 116,
+      "symbol": "ACHR",
+      "avgDailyVolume": 11497,
+      "name": "Archer Aviation Inc - Class A",
+      "macroptionRank": 116
+    },
+    {
+      "rank": 117,
+      "symbol": "FIG",
+      "avgDailyVolume": 11490,
+      "name": "Figma Inc - Class A",
+      "macroptionRank": 117
+    },
+    {
+      "rank": 118,
+      "symbol": "SPCE",
+      "avgDailyVolume": 11276,
+      "name": "Virgin Galactic Holdings Inc - Class A",
+      "macroptionRank": 118
+    },
+    {
+      "rank": 119,
+      "symbol": "WDC",
+      "avgDailyVolume": 11249,
+      "name": "Western Digital Corp",
+      "macroptionRank": 119,
+      "elixDailyRank": 97
+    },
+    {
+      "rank": 120,
+      "symbol": "RDDT",
+      "avgDailyVolume": 11220,
+      "name": "Reddit Inc - Class A",
+      "macroptionRank": 120,
+      "elixDailyRank": 74
+    },
+    {
+      "rank": 121,
+      "symbol": "LRCX",
+      "avgDailyVolume": 11157,
+      "name": "Lam Research Corp",
+      "macroptionRank": 121,
+      "elixDailyRank": 76
+    },
+    {
+      "rank": 122,
+      "symbol": "APP",
+      "avgDailyVolume": 11104,
+      "name": "Applovin Corp - Class A",
+      "macroptionRank": 122,
+      "elixDailyRank": 73
+    },
+    {
+      "rank": 123,
+      "symbol": "SNOW",
+      "avgDailyVolume": 10916,
+      "name": "Snowflake Inc - Class A",
+      "macroptionRank": 123
+    },
+    {
+      "rank": 124,
+      "symbol": "CMG",
+      "avgDailyVolume": 10908,
+      "name": "Chipotle Mexican Grill",
+      "macroptionRank": 124
+    },
+    {
+      "rank": 125,
+      "symbol": "FRMI",
+      "avgDailyVolume": 10856,
+      "name": "Fermi Inc",
+      "macroptionRank": 125
+    },
+    {
+      "rank": 126,
+      "symbol": "PANW",
+      "avgDailyVolume": 10810,
+      "name": "Palo Alto Networks Inc",
+      "macroptionRank": 126
+    },
+    {
+      "rank": 127,
+      "symbol": "RDW",
+      "avgDailyVolume": 10800,
+      "name": "Redwire Corporation",
+      "macroptionRank": 127
+    },
+    {
+      "rank": 128,
+      "symbol": "U",
+      "avgDailyVolume": 10611,
+      "name": "Unity Software Inc",
+      "macroptionRank": 128
+    },
+    {
+      "rank": 129,
+      "symbol": "BSX",
+      "avgDailyVolume": 10189,
+      "name": "Boston Scientific Corp",
+      "macroptionRank": 129
+    },
+    {
+      "rank": 130,
+      "symbol": "HL",
+      "avgDailyVolume": 10109,
+      "name": "Hecla Mining Company",
+      "macroptionRank": 130
+    },
+    {
+      "rank": 131,
+      "symbol": "QS",
+      "avgDailyVolume": 10075,
+      "name": "QuantumScape Corp - Class A",
+      "macroptionRank": 131
+    },
+    {
+      "rank": 132,
+      "symbol": "COST",
+      "avgDailyVolume": 10047,
+      "name": "Costco Wholesale Corp",
+      "macroptionRank": 132,
+      "elixDailyRank": 59
+    },
+    {
+      "rank": 133,
+      "symbol": "AMAT",
+      "avgDailyVolume": 10042,
+      "name": "Applied Materials Inc",
+      "macroptionRank": 133,
+      "elixDailyRank": 65
+    },
+    {
+      "rank": 134,
+      "symbol": "DIS",
+      "avgDailyVolume": 9989,
+      "name": "Walt Disney Co (The)",
+      "macroptionRank": 134
+    },
+    {
+      "rank": 135,
+      "symbol": "JD",
+      "avgDailyVolume": 9750,
+      "name": "JD.com Inc",
+      "macroptionRank": 135
+    },
+    {
+      "rank": 136,
+      "symbol": "HPE",
+      "avgDailyVolume": 9612,
+      "name": "Hewlett Packard Enterprise Company",
+      "macroptionRank": 136,
+      "elixDailyRank": 91
+    },
+    {
+      "rank": 137,
+      "symbol": "KEEL",
+      "avgDailyVolume": 9601,
+      "name": "Keel Infrastructure Corp",
+      "macroptionRank": 137
+    },
+    {
+      "rank": 138,
+      "symbol": "LLY",
+      "avgDailyVolume": 9574,
+      "name": "Lilly(Eli) &amp; Company",
+      "macroptionRank": 138
+    },
+    {
+      "rank": 139,
+      "symbol": "LCID",
+      "avgDailyVolume": 9511,
+      "name": "Lucid Group Inc",
+      "macroptionRank": 139
+    },
+    {
+      "rank": 140,
+      "symbol": "RIG",
+      "avgDailyVolume": 9457,
+      "name": "Transocean Ltd",
+      "macroptionRank": 140
+    },
+    {
+      "rank": 141,
+      "symbol": "TE",
+      "avgDailyVolume": 9180,
+      "name": "T1 Energy Inc",
+      "macroptionRank": 141
+    },
+    {
+      "rank": 142,
+      "symbol": "DKNG",
+      "avgDailyVolume": 9160,
+      "name": "DraftKings Inc - Class A",
+      "macroptionRank": 142
+    },
+    {
+      "rank": 143,
+      "symbol": "BRK-B",
+      "avgDailyVolume": 9063,
+      "name": "BRK.B",
+      "macroptionRank": 143
+    },
+    {
+      "rank": 144,
+      "symbol": "CDE",
+      "avgDailyVolume": 8998,
+      "name": "Coeur Mining Inc",
+      "macroptionRank": 144
+    },
+    {
+      "rank": 145,
+      "symbol": "GS",
+      "avgDailyVolume": 8864,
+      "name": "Goldman Sachs Group Inc",
+      "macroptionRank": 145,
+      "elixDailyRank": 96
+    },
+    {
+      "rank": 146,
+      "symbol": "RBLX",
+      "avgDailyVolume": 8668,
+      "name": "Roblox Corporation - Class A",
+      "macroptionRank": 146
+    },
+    {
+      "rank": 147,
+      "symbol": "ET",
+      "avgDailyVolume": 8654,
+      "name": "Energy Transfer LP",
+      "macroptionRank": 147
+    },
+    {
+      "rank": 148,
+      "symbol": "PBR",
+      "avgDailyVolume": 8613,
+      "name": "Petroleo Brasileiro S.A. Petrobras",
+      "macroptionRank": 148,
+      "elixDailyRank": 46
+    },
+    {
+      "rank": 149,
+      "symbol": "VG",
+      "avgDailyVolume": 8536,
+      "name": "Venture Global Inc - Class A",
+      "macroptionRank": 149
+    },
+    {
+      "rank": 150,
+      "symbol": "QUBT",
+      "avgDailyVolume": 8453,
+      "name": "Quantum Computing Inc",
+      "macroptionRank": 150
+    },
+    {
+      "rank": 151,
+      "symbol": "CMCSA",
+      "avgDailyVolume": 8371,
+      "name": "Comcast Corp - Class A",
+      "macroptionRank": 151
+    },
+    {
+      "rank": 152,
+      "symbol": "SKHY",
+      "avgDailyVolume": 8365,
+      "name": "SK Hynix Inc",
+      "macroptionRank": 152
+    },
+    {
+      "rank": 153,
+      "symbol": "LUNR",
+      "avgDailyVolume": 8095,
+      "name": "Intuitive Machines Inc - Class A",
+      "macroptionRank": 153
+    },
+    {
+      "rank": 154,
+      "symbol": "DAL",
+      "avgDailyVolume": 8058,
+      "name": "Delta Air Lines Inc",
+      "macroptionRank": 154
+    },
+    {
+      "rank": 155,
+      "symbol": "WEN",
+      "avgDailyVolume": 8037,
+      "name": "Wendy`s Co - Class A",
+      "macroptionRank": 155
+    },
+    {
+      "rank": 156,
+      "symbol": "DVN",
+      "avgDailyVolume": 7898,
+      "name": "Devon Energy Corp",
+      "macroptionRank": 156
+    },
+    {
+      "rank": 157,
+      "symbol": "JOBY",
+      "avgDailyVolume": 7667,
+      "name": "Joby Aviation Inc",
+      "macroptionRank": 157
+    },
+    {
+      "rank": 158,
+      "symbol": "B",
+      "avgDailyVolume": 7630,
+      "name": "Barrick Gold Corp",
+      "macroptionRank": 158,
+      "elixDailyRank": 93
+    },
+    {
+      "rank": 159,
+      "symbol": "VRT",
+      "avgDailyVolume": 7622,
+      "name": "Vertiv Holdings Co - Class A",
+      "macroptionRank": 159
+    },
+    {
+      "rank": 160,
+      "symbol": "ALAB",
+      "avgDailyVolume": 7524,
+      "name": "Astera Labs Inc",
+      "macroptionRank": 160,
+      "elixDailyRank": 82
+    },
+    {
+      "rank": 161,
+      "symbol": "MRK",
+      "avgDailyVolume": 7470,
+      "name": "Merck &amp; Co Inc",
+      "macroptionRank": 161
+    },
+    {
+      "rank": 162,
+      "symbol": "SLS",
+      "avgDailyVolume": 7327,
+      "name": "SELLAS Life Sciences Group Inc",
+      "macroptionRank": 162
+    },
+    {
+      "rank": 163,
+      "symbol": "V",
+      "avgDailyVolume": 7305,
+      "name": "Visa Inc - Class A",
+      "macroptionRank": 163
+    },
+    {
+      "rank": 164,
+      "symbol": "LYFT",
+      "avgDailyVolume": 7283,
+      "name": "Lyft Inc Cls A",
+      "macroptionRank": 164
+    },
+    {
+      "rank": 165,
+      "symbol": "GRAB",
+      "avgDailyVolume": 7211,
+      "name": "Grab Holdings Ltd - Class A",
+      "macroptionRank": 165
+    },
+    {
+      "rank": 166,
+      "symbol": "CPNG",
+      "avgDailyVolume": 7172,
+      "name": "Coupang Inc - Class A",
+      "macroptionRank": 166
+    },
+    {
+      "rank": 167,
+      "symbol": "LULU",
+      "avgDailyVolume": 7154,
+      "name": "Lululemon Athletica Inc",
+      "macroptionRank": 167
+    },
+    {
+      "rank": 168,
+      "symbol": "TGT",
+      "avgDailyVolume": 7103,
+      "name": "Target Corp",
+      "macroptionRank": 168
+    },
+    {
+      "rank": 169,
+      "symbol": "ZETA",
+      "avgDailyVolume": 7079,
+      "name": "Zeta Global Holdings Corp - Class A",
+      "macroptionRank": 169
+    },
+    {
+      "rank": 170,
+      "symbol": "VST",
+      "avgDailyVolume": 7076,
+      "name": "Vistra Corp",
+      "macroptionRank": 170,
+      "elixDailyRank": 58
+    },
+    {
+      "rank": 171,
+      "symbol": "ANET",
+      "avgDailyVolume": 7046,
+      "name": "Arista Networks Inc",
+      "macroptionRank": 171
+    },
+    {
+      "rank": 172,
+      "symbol": "HPQ",
+      "avgDailyVolume": 7019,
+      "name": "HP Inc",
+      "macroptionRank": 172
+    },
+    {
+      "rank": 173,
+      "symbol": "GLXY",
+      "avgDailyVolume": 7014,
+      "name": "Galaxy Digital",
+      "macroptionRank": 173
+    },
+    {
+      "rank": 174,
+      "symbol": "CELH",
+      "avgDailyVolume": 6989,
+      "name": "Celsius Holdings Inc",
+      "macroptionRank": 174
+    },
+    {
+      "rank": 175,
+      "symbol": "AGNC",
+      "avgDailyVolume": 6984,
+      "name": "AGNC Investment Corp",
+      "macroptionRank": 175
+    },
+    {
+      "rank": 176,
+      "symbol": "JBLU",
+      "avgDailyVolume": 6974,
+      "name": "Jetblue Airways Corp",
+      "macroptionRank": 176
+    },
+    {
+      "rank": 177,
+      "symbol": "MP",
+      "avgDailyVolume": 6943,
+      "name": "MP Materials Corporation",
+      "macroptionRank": 177
+    },
+    {
+      "rank": 178,
+      "symbol": "NCLH",
+      "avgDailyVolume": 6925,
+      "name": "Norwegian Cruise Line Holdings Ltd",
+      "macroptionRank": 178
+    },
+    {
+      "rank": 179,
+      "symbol": "LITE",
+      "avgDailyVolume": 6896,
+      "name": "Lumentum Holdings Inc",
+      "macroptionRank": 179,
+      "elixDailyRank": 64
+    },
+    {
+      "rank": 180,
+      "symbol": "CRML",
+      "avgDailyVolume": 6884,
+      "name": "Critical Metals Corp",
+      "macroptionRank": 180
+    },
+    {
+      "rank": 181,
+      "symbol": "ENPH",
+      "avgDailyVolume": 6870,
+      "name": "Enphase Energy Inc",
+      "macroptionRank": 181
+    },
+    {
+      "rank": 182,
+      "symbol": "UUUU",
+      "avgDailyVolume": 6847,
+      "name": "Energy Fuels Inc",
+      "macroptionRank": 182
+    },
+    {
+      "rank": 183,
+      "symbol": "BMY",
+      "avgDailyVolume": 6835,
+      "name": "Bristol-Myers Squibb Company",
+      "macroptionRank": 183,
+      "elixDailyRank": 95
+    },
+    {
+      "rank": 184,
+      "symbol": "JNJ",
+      "avgDailyVolume": 6772,
+      "name": "Johnson &amp; Johnson",
+      "macroptionRank": 184
+    },
+    {
+      "rank": 185,
+      "symbol": "CAT",
+      "avgDailyVolume": 6758,
+      "name": "Caterpillar Inc",
+      "macroptionRank": 185
+    },
+    {
+      "rank": 186,
+      "symbol": "XPEV",
+      "avgDailyVolume": 6709,
+      "name": "XPeng Inc",
+      "macroptionRank": 186
+    },
+    {
+      "rank": 187,
+      "symbol": "CLOV",
+      "avgDailyVolume": 6647,
+      "name": "Clover Health Investments Corp - Class A",
+      "macroptionRank": 187
+    },
+    {
+      "rank": 188,
+      "symbol": "SBET",
+      "avgDailyVolume": 6574,
+      "name": "SharpLink Gaming Inc",
+      "macroptionRank": 188
+    },
+    {
+      "rank": 189,
+      "symbol": "BIDU",
+      "avgDailyVolume": 6533,
+      "name": "Baidu Inc",
+      "macroptionRank": 189
+    },
+    {
+      "rank": 190,
+      "symbol": "IBRX",
+      "avgDailyVolume": 6494,
+      "name": "ImmunityBio Inc",
+      "macroptionRank": 190
+    },
+    {
+      "rank": 191,
+      "symbol": "SBUX",
+      "avgDailyVolume": 6409,
+      "name": "Starbucks Corp",
+      "macroptionRank": 191
+    },
+    {
+      "rank": 192,
+      "symbol": "RCAT",
+      "avgDailyVolume": 6349,
+      "name": "Red Cat Holdings Inc",
+      "macroptionRank": 192
+    },
+    {
+      "rank": 193,
+      "symbol": "DOW",
+      "avgDailyVolume": 6122,
+      "name": "Dow Inc",
+      "macroptionRank": 193
+    },
+    {
+      "rank": 194,
+      "symbol": "UAL",
+      "avgDailyVolume": 6104,
+      "name": "United Airlines Holdings Inc",
+      "macroptionRank": 194
+    },
+    {
+      "rank": 195,
+      "symbol": "OSCR",
+      "avgDailyVolume": 6083,
+      "name": "Oscar Health Inc - Class A",
+      "macroptionRank": 195
+    },
+    {
+      "rank": 196,
+      "symbol": "UPS",
+      "avgDailyVolume": 6049,
+      "name": "United Parcel Service Inc - Class B",
+      "macroptionRank": 196,
+      "elixDailyRank": 77
+    },
+    {
+      "rank": 197,
+      "symbol": "DJT",
+      "avgDailyVolume": 6039,
+      "name": "Trump Media &amp; Technology Group Corp",
+      "macroptionRank": 197
+    },
+    {
+      "rank": 198,
+      "symbol": "VALE",
+      "avgDailyVolume": 6031,
+      "name": "Vale S.A.",
+      "macroptionRank": 198
+    },
+    {
+      "rank": 199,
+      "symbol": "TEM",
+      "avgDailyVolume": 6011,
+      "name": "Tempus AI Inc - Class A",
+      "macroptionRank": 199
+    },
+    {
+      "rank": 200,
+      "symbol": "KHC",
+      "avgDailyVolume": 5971,
+      "name": "Kraft Heinz Company",
+      "macroptionRank": 200
+    },
+    {
+      "rank": 201,
+      "symbol": "SLB",
+      "avgDailyVolume": 5945,
+      "name": "SLB",
+      "macroptionRank": 201
+    },
+    {
+      "rank": 202,
+      "symbol": "DDOG",
+      "avgDailyVolume": 5910,
+      "name": "Datadog Inc - Class A",
+      "macroptionRank": 202
+    },
+    {
+      "rank": 203,
+      "symbol": "SCHW",
+      "avgDailyVolume": 5882,
+      "name": "Charles Schwab Corp",
+      "macroptionRank": 203
+    },
+    {
+      "rank": 204,
+      "symbol": "NEM",
+      "avgDailyVolume": 5859,
+      "name": "Newmont Corp",
+      "macroptionRank": 204
+    },
+    {
+      "rank": 205,
+      "symbol": "PAAS",
+      "avgDailyVolume": 5847,
+      "name": "Pan American Silver Corp",
+      "macroptionRank": 205
+    },
+    {
+      "rank": 206,
+      "symbol": "PL",
+      "avgDailyVolume": 5757,
+      "name": "Planet Labs PBC - Class A",
+      "macroptionRank": 206
+    },
+    {
+      "rank": 207,
+      "symbol": "AXTI",
+      "avgDailyVolume": 5726,
+      "name": "AXT Inc",
+      "macroptionRank": 207
+    },
+    {
+      "rank": 208,
+      "symbol": "PTON",
+      "avgDailyVolume": 5686,
+      "name": "Peloton Interactive Inc - Class A",
+      "macroptionRank": 208
+    },
+    {
+      "rank": 209,
+      "symbol": "HD",
+      "avgDailyVolume": 5593,
+      "name": "Home Depot Inc",
+      "macroptionRank": 209
+    },
+    {
+      "rank": 210,
+      "symbol": "ASML",
+      "avgDailyVolume": 5588,
+      "name": "ASML Holding NV",
+      "macroptionRank": 210
+    },
+    {
+      "rank": 211,
+      "symbol": "ZS",
+      "avgDailyVolume": 5530,
+      "name": "Zscaler Inc",
+      "macroptionRank": 211
+    },
+    {
+      "rank": 212,
+      "symbol": "UPST",
+      "avgDailyVolume": 5521,
+      "name": "Upstart Holdings Inc",
+      "macroptionRank": 212
+    },
+    {
+      "rank": 213,
+      "symbol": "BTG",
+      "avgDailyVolume": 5463,
+      "name": "B2gold Corp",
+      "macroptionRank": 213
+    },
+    {
+      "rank": 214,
+      "symbol": "UAMY",
+      "avgDailyVolume": 5410,
+      "name": "United States Antimony Corp",
+      "macroptionRank": 214
+    },
+    {
+      "rank": 215,
+      "symbol": "PG",
+      "avgDailyVolume": 5396,
+      "name": "Procter &amp; Gamble Company",
+      "macroptionRank": 215
+    },
+    {
+      "rank": 216,
+      "symbol": "MCD",
+      "avgDailyVolume": 5359,
+      "name": "McDonald`s Corp",
+      "macroptionRank": 216
+    },
+    {
+      "rank": 217,
+      "symbol": "PEP",
+      "avgDailyVolume": 5348,
+      "name": "PepsiCo Inc",
+      "macroptionRank": 217
+    },
+    {
+      "rank": 218,
+      "symbol": "QXO",
+      "avgDailyVolume": 5300,
+      "name": "QXO Inc",
+      "macroptionRank": 218
+    },
+    {
+      "rank": 219,
+      "symbol": "FISV",
+      "avgDailyVolume": 5287,
+      "name": "Fiserv Inc",
+      "macroptionRank": 219
+    },
+    {
+      "rank": 220,
+      "symbol": "MO",
+      "avgDailyVolume": 5169,
+      "name": "Altria Group Inc",
+      "macroptionRank": 220
+    },
+    {
+      "rank": 221,
+      "symbol": "CVE",
+      "avgDailyVolume": 5166,
+      "name": "Cenovus Energy Inc",
+      "macroptionRank": 221
+    },
+    {
+      "rank": 222,
+      "symbol": "HUT",
+      "avgDailyVolume": 5146,
+      "name": "Hut 8 Corp",
+      "macroptionRank": 222,
+      "elixDailyRank": 88
+    },
+    {
+      "rank": 223,
+      "symbol": "GE",
+      "avgDailyVolume": 5136,
+      "name": "General Electric Company",
+      "macroptionRank": 223
+    },
+    {
+      "rank": 224,
+      "symbol": "PINS",
+      "avgDailyVolume": 5135,
+      "name": "Pinterest Inc - Class A",
+      "macroptionRank": 224
+    },
+    {
+      "rank": 225,
+      "symbol": "AA",
+      "avgDailyVolume": 5115,
+      "name": "Alcoa Corp",
+      "macroptionRank": 225
+    },
+    {
+      "rank": 226,
+      "symbol": "PSKY",
+      "avgDailyVolume": 5103,
+      "name": "Paramount Skydance Corp - Class B",
+      "macroptionRank": 226
+    },
+    {
+      "rank": 227,
+      "symbol": "CRDO",
+      "avgDailyVolume": 5070,
+      "name": "Credo Technology Group Holding Ltd",
+      "macroptionRank": 227
+    },
+    {
+      "rank": 228,
+      "symbol": "INTU",
+      "avgDailyVolume": 5050,
+      "name": "Intuit Inc",
+      "macroptionRank": 228
+    },
+    {
+      "rank": 229,
+      "symbol": "GEV",
+      "avgDailyVolume": 5034,
+      "name": "GE Vernova LLC",
+      "macroptionRank": 229
+    },
+    {
+      "rank": 230,
+      "symbol": "SATS",
+      "avgDailyVolume": 5026,
+      "name": "SATS",
+      "macroptionRank": 230
+    },
+    {
+      "rank": 231,
+      "symbol": "STX",
+      "avgDailyVolume": 4979,
+      "name": "Seagate Technology Holdings Plc",
+      "macroptionRank": 231,
+      "elixDailyRank": 90
+    },
+    {
+      "rank": 232,
+      "symbol": "COP",
+      "avgDailyVolume": 4962,
+      "name": "Conoco Phillips",
+      "macroptionRank": 232
+    },
+    {
+      "rank": 233,
+      "symbol": "CCJ",
+      "avgDailyVolume": 4947,
+      "name": "Cameco Corp",
+      "macroptionRank": 233
+    },
+    {
+      "rank": 234,
+      "symbol": "PURR",
+      "avgDailyVolume": 4906,
+      "name": "Hyperliquid Strategies Inc",
+      "macroptionRank": 234
+    },
+    {
+      "rank": 235,
+      "symbol": "ON",
+      "avgDailyVolume": 4903,
+      "name": "ON Semiconductor Corp",
+      "macroptionRank": 235
+    },
+    {
+      "rank": 236,
+      "symbol": "NET",
+      "avgDailyVolume": 4867,
+      "name": "Cloudflare Inc - Class A",
+      "macroptionRank": 236
+    },
+    {
+      "rank": 237,
+      "symbol": "FSLR",
+      "avgDailyVolume": 4859,
+      "name": "First Solar Inc",
+      "macroptionRank": 237
+    },
+    {
+      "rank": 238,
+      "symbol": "GM",
+      "avgDailyVolume": 4858,
+      "name": "General Motors Company",
+      "macroptionRank": 238
+    },
+    {
+      "rank": 239,
+      "symbol": "AFRM",
+      "avgDailyVolume": 4858,
+      "name": "Affirm Holdings Inc - Class A",
+      "macroptionRank": 239
+    },
+    {
+      "rank": 240,
+      "symbol": "CVS",
+      "avgDailyVolume": 4794,
+      "name": "CVS Health Corp",
+      "macroptionRank": 240
+    },
+    {
+      "rank": 241,
+      "symbol": "RUN",
+      "avgDailyVolume": 4762,
+      "name": "Sunrun Inc",
+      "macroptionRank": 241
+    },
+    {
+      "rank": 242,
+      "symbol": "RR",
+      "avgDailyVolume": 4683,
+      "name": "Richtech Robotics Inc - Class B",
+      "macroptionRank": 242
+    },
+    {
+      "rank": 243,
+      "symbol": "COHR",
+      "avgDailyVolume": 4679,
+      "name": "Coherent Corp",
+      "macroptionRank": 243,
+      "elixDailyRank": 75
+    },
+    {
+      "rank": 244,
+      "symbol": "MS",
+      "avgDailyVolume": 4677,
+      "name": "Morgan Stanley",
+      "macroptionRank": 244
+    },
+    {
+      "rank": 245,
+      "symbol": "LAC",
+      "avgDailyVolume": 4661,
+      "name": "Lithium Americas Corp (NewCo)",
+      "macroptionRank": 245
+    },
+    {
+      "rank": 246,
+      "symbol": "LUMN",
+      "avgDailyVolume": 4637,
+      "name": "Lumen Technologies Inc",
+      "macroptionRank": 246
+    },
+    {
+      "rank": 247,
+      "symbol": "LUV",
+      "avgDailyVolume": 4636,
+      "name": "Southwest Airlines Company",
+      "macroptionRank": 247
+    },
+    {
+      "rank": 248,
+      "symbol": "MOS",
+      "avgDailyVolume": 4534,
+      "name": "Mosaic Company",
+      "macroptionRank": 248
+    },
+    {
+      "rank": 249,
+      "symbol": "FSLY",
+      "avgDailyVolume": 4457,
+      "name": "Fastly Inc - Class A",
+      "macroptionRank": 249
+    },
+    {
+      "rank": 250,
+      "symbol": "LAES",
+      "avgDailyVolume": 4446,
+      "name": "SEALSQ Corp",
+      "macroptionRank": 250
+    }
+  ],
+  "symbols": [
+    "NVDA",
+    "TSLA",
+    "AAPL",
+    "AMZN",
+    "MSFT",
+    "INTC",
+    "MU",
+    "PLTR",
+    "META",
+    "MSTR",
+    "AMD",
+    "NFLX",
+    "GOOGL",
+    "SMCI",
+    "SOFI",
+    "MARA",
+    "IREN",
+    "SPCX",
+    "ORCL",
+    "AVGO",
+    "HOOD",
+    "NOK",
+    "COIN",
+    "GOOG",
+    "NBIS",
+    "CRWV",
+    "ONDS",
+    "TSM",
+    "BMNR",
+    "BABA",
+    "SNDK",
+    "MRVL",
+    "GME",
+    "ASTS",
+    "HIMS",
+    "WULF",
+    "NOW",
+    "BAC",
+    "RKLB",
+    "OPEN",
+    "RIVN",
+    "MRNA",
+    "WMT",
+    "NKE",
+    "F",
+    "CRCL",
+    "AI",
+    "PFE",
+    "AAL",
+    "PYPL",
+    "BE",
+    "CIFR",
+    "APLD",
+    "SNAP",
+    "NIO",
+    "UNH",
+    "NU",
+    "QCOM",
+    "CORZ",
+    "XOM",
+    "RIOT",
+    "POET",
+    "UBER",
+    "CRM",
+    "RGTI",
+    "IONQ",
+    "AMC",
+    "CVNA",
+    "BA",
+    "EOSE",
+    "SMR",
+    "T",
+    "NVO",
+    "CLSK",
+    "CSCO",
+    "ARM",
+    "BYND",
+    "SOUN",
+    "BULL",
+    "JPM",
+    "VZ",
+    "OXY",
+    "OKLO",
+    "DELL",
+    "FCX",
+    "C",
+    "IBM",
+    "NVTS",
+    "ADBE",
+    "QBTS",
+    "PCG",
+    "TTD",
+    "BTDR",
+    "RKT",
+    "WBD",
+    "CRWD",
+    "AG",
+    "KO",
+    "CLF",
+    "PLUG",
+    "PATH",
+    "BBAI",
+    "WFC",
+    "GLW",
+    "CVX",
+    "PDD",
+    "CCL",
+    "BB",
+    "XYZ",
+    "AAOI",
+    "USAR",
+    "OWL",
+    "SHOP",
+    "ASST",
+    "HTZ",
+    "ACHR",
+    "FIG",
+    "SPCE",
+    "WDC",
+    "RDDT",
+    "LRCX",
+    "APP",
+    "SNOW",
+    "CMG",
+    "FRMI",
+    "PANW",
+    "RDW",
+    "U",
+    "BSX",
+    "HL",
+    "QS",
+    "COST",
+    "AMAT",
+    "DIS",
+    "JD",
+    "HPE",
+    "KEEL",
+    "LLY",
+    "LCID",
+    "RIG",
+    "TE",
+    "DKNG",
+    "BRK-B",
+    "CDE",
+    "GS",
+    "RBLX",
+    "ET",
+    "PBR",
+    "VG",
+    "QUBT",
+    "CMCSA",
+    "SKHY",
+    "LUNR",
+    "DAL",
+    "WEN",
+    "DVN",
+    "JOBY",
+    "B",
+    "VRT",
+    "ALAB",
+    "MRK",
+    "SLS",
+    "V",
+    "LYFT",
+    "GRAB",
+    "CPNG",
+    "LULU",
+    "TGT",
+    "ZETA",
+    "VST",
+    "ANET",
+    "HPQ",
+    "GLXY",
+    "CELH",
+    "AGNC",
+    "JBLU",
+    "MP",
+    "NCLH",
+    "LITE",
+    "CRML",
+    "ENPH",
+    "UUUU",
+    "BMY",
+    "JNJ",
+    "CAT",
+    "XPEV",
+    "CLOV",
+    "SBET",
+    "BIDU",
+    "IBRX",
+    "SBUX",
+    "RCAT",
+    "DOW",
+    "UAL",
+    "OSCR",
+    "UPS",
+    "DJT",
+    "VALE",
+    "TEM",
+    "KHC",
+    "SLB",
+    "DDOG",
+    "SCHW",
+    "NEM",
+    "PAAS",
+    "PL",
+    "AXTI",
+    "PTON",
+    "HD",
+    "ASML",
+    "ZS",
+    "UPST",
+    "BTG",
+    "UAMY",
+    "PG",
+    "MCD",
+    "PEP",
+    "QXO",
+    "FISV",
+    "MO",
+    "CVE",
+    "HUT",
+    "GE",
+    "PINS",
+    "AA",
+    "PSKY",
+    "CRDO",
+    "INTU",
+    "GEV",
+    "SATS",
+    "STX",
+    "COP",
+    "CCJ",
+    "PURR",
+    "ON",
+    "NET",
+    "FSLR",
+    "GM",
+    "AFRM",
+    "CVS",
+    "RUN",
+    "RR",
+    "COHR",
+    "MS",
+    "LAC",
+    "LUMN",
+    "LUV",
+    "MOS",
+    "FSLY",
+    "LAES"
+  ]
+}

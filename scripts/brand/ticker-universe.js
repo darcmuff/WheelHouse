@@ -1,10 +1,12 @@
-// Fetch S&P 500 + Nasdaq-listed symbols; cache snapshot on disk.
+// Default universe: top 250 US single-stock options volume. Legacy S&P 500 + Nasdaq union kept for reference.
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
+const { loadTop250Options, APP_LIST } = require('./top250-options');
 
 const SNAPSHOT = path.join(__dirname, 'data', 'tickers-snapshot.json');
+const SNAPSHOT_LEGACY = path.join(__dirname, 'data', 'tickers-snapshot-legacy.json');
 const NASDAQ_URL = 'https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt';
 // otherlisted.txt is intentionally omitted — universe is Nasdaq-listed ∪ S&P 500 only.
 
@@ -65,13 +67,60 @@ async function fetchText(url, fetchImpl = fetch) {
   return res.text();
 }
 
+function snapshotFromTop250(doc, extraTickers = []) {
+  const symbols = [...new Set([...(doc.symbols || []), ...extraTickers.map((s) => String(s).toUpperCase())])].sort();
+  const meta = Object.fromEntries(
+    (doc.tickers || []).map((t) => [t.symbol, { symbol: t.symbol, name: t.name || t.symbol, exchange: 'TOP250', etf: false }])
+  );
+  for (const raw of extraTickers) {
+    const sym = String(raw || '').trim().toUpperCase();
+    if (!sym || meta[sym]) continue;
+    meta[sym] = { symbol: sym, name: sym, exchange: 'EXTRA', etf: false };
+  }
+  for (const sym of symbols) {
+    if (!meta[sym]) meta[sym] = { symbol: sym, name: sym, exchange: 'TOP250', etf: false };
+  }
+  return {
+    generatedAt: doc.generatedAt || new Date().toISOString(),
+    universe: 'top250-options',
+    listPath: APP_LIST,
+    sources: doc.sources || [],
+    metric: doc.metric,
+    approximation: !!doc.approximation,
+    counts: { unique: symbols.length, etf: 0, top250: symbols.length },
+    symbols,
+    meta,
+  };
+}
+
 /**
+ * Top 250 US stocks by options volume (committed JSON). Pass `refresh: true` only to rebuild lists.
  * @param {{ refresh?: boolean, fetchImpl?: typeof fetch, extraTickers?: string[] }} opts
  */
 async function loadTickerUniverse(opts = {}) {
   const { refresh = false, fetchImpl = fetch, extraTickers = [] } = opts;
   if (!refresh && fs.existsSync(SNAPSHOT)) {
-    return JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
+    try {
+      const cached = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
+      if (cached.universe === 'top250-options' && Array.isArray(cached.symbols) && cached.symbols.length) return cached;
+    } catch {
+      /* rebuild */
+    }
+  }
+  const doc = loadTop250Options();
+  if (!doc.symbols?.length) throw new Error('top250-options.json missing — run node scripts/brand/fetch-top250-options.js');
+  const snapshot = snapshotFromTop250(doc, extraTickers);
+  fs.mkdirSync(path.dirname(SNAPSHOT), { recursive: true });
+  fs.writeFileSync(SNAPSHOT, JSON.stringify(snapshot, null, 1));
+  return snapshot;
+}
+
+/** Legacy S&P 500 ∪ Nasdaq — not used by default builds. */
+async function loadSp500NasdaqUniverse(opts = {}) {
+  const { refresh = false, fetchImpl = fetch, extraTickers = [] } = opts;
+  const snapPath = SNAPSHOT_LEGACY;
+  if (!refresh && fs.existsSync(snapPath)) {
+    return JSON.parse(fs.readFileSync(snapPath, 'utf8'));
   }
 
   const [nasdaqTxt, spHtml] = await Promise.all([fetchText(NASDAQ_URL, fetchImpl), fetchText(SP500_WIKI, fetchImpl)]);
@@ -97,6 +146,7 @@ async function loadTickerUniverse(opts = {}) {
   const symbols = [...bySym.keys()].sort();
   const snapshot = {
     generatedAt: new Date().toISOString(),
+    universe: 'sp500-nasdaq',
     sources: { nasdaq: NASDAQ_URL, sp500: SP500_WIKI },
     counts: {
       nasdaq: nasdaq.length,
@@ -109,8 +159,8 @@ async function loadTickerUniverse(opts = {}) {
     meta: Object.fromEntries(symbols.map((s) => [s, bySym.get(s)])),
   };
 
-  fs.mkdirSync(path.dirname(SNAPSHOT), { recursive: true });
-  fs.writeFileSync(SNAPSHOT, JSON.stringify(snapshot, null, 1));
+  fs.mkdirSync(path.dirname(snapPath), { recursive: true });
+  fs.writeFileSync(snapPath, JSON.stringify(snapshot, null, 1));
   return snapshot;
 }
 
@@ -119,4 +169,12 @@ function shardKey(symbol) {
   return /[a-z]/.test(c) ? c : '0-9';
 }
 
-module.exports = { loadTickerUniverse, SNAPSHOT, shardKey, parseNasdaqListed, parseOtherListed };
+module.exports = {
+  loadTickerUniverse,
+  loadSp500NasdaqUniverse,
+  SNAPSHOT,
+  SNAPSHOT_LEGACY,
+  shardKey,
+  parseNasdaqListed,
+  parseOtherListed,
+};

@@ -5,7 +5,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { loadTickerUniverse, shardKey } = require('./ticker-universe');
-const { fetchLogoPng: fetchLogoDev } = require('../../netlify/lib/logo-dev');
+const { fetchLogoPng: fetchLogoDev, CREDITS_LOGO } = require('../../netlify/lib/logo-dev');
+const { logoFetchAllowed, isHandMarkOnly, loadTop250Options } = require('./top250-options');
 const { mapWithBackoff, PRICE_PER_BRAND_USD } = require('./logo-fetch');
 const { analyseLogoPng, applyBrandOverride } = require('../../netlify/lib/wheelbrand-image');
 const { fallbackHueTicker, bgCssFromGradient, etfBg } = require('../../netlify/lib/wheelbrand-color');
@@ -47,6 +48,11 @@ function parseArgs(argv) {
     confirmCost: flags.has('--confirm-cost'),
     mockDemo: flags.has('--mock-demo'),
     force: flags.has('--force'),
+    seed: flags.has('--seed'),
+    minCredits: (() => {
+      const hit = argv.find((a) => a.startsWith('--min-credits='));
+      return hit ? Math.max(0, Number(hit.split('=')[1])) : 24;
+    })(),
     tickers: argv.filter((a) => !a.startsWith('--') && !a.startsWith('-')),
   };
 }
@@ -110,7 +116,12 @@ async function main() {
   delete overrides._doc;
 
   const snapshot = await loadTickerUniverse({ refresh: args.refreshLists, extraTickers: DEMO_TICKERS });
-  const universeHash = crypto.createHash('sha256').update(snapshot.symbols.join(',')).digest('hex').slice(0, 16);
+  const top250 = loadTop250Options();
+  const universeHash = crypto
+    .createHash('sha256')
+    .update(`${snapshot.universe || 'top250'}:${snapshot.symbols.join(',')}`)
+    .digest('hex')
+    .slice(0, 16);
 
   const state = readState();
   const symbols = args.tickers.length ? args.tickers.map((s) => s.toUpperCase()) : snapshot.symbols;
@@ -118,6 +129,10 @@ async function main() {
   const work = [];
   for (const sym of symbols) {
     const ov = overrides[sym] || {};
+    if (!logoFetchAllowed(sym, ov)) {
+      work.push({ sym, kind: 'fallback', reason: isHandMarkOnly(sym) ? 'hand_mark' : 'not_in_list' });
+      continue;
+    }
     if (ov.disable_logo) {
       work.push({ sym, kind: 'fallback' });
       continue;
@@ -137,12 +152,16 @@ async function main() {
   const estCost = toFetch.length * PRICE_PER_BRAND_USD;
 
   console.log('WheelHouse brand build');
-  console.log(`Universe: ${snapshot.counts.unique} symbols (ETFs: ${snapshot.counts.etf}, S&P500 tags: ${snapshot.counts.sp500})`);
+  const listNote = top250.approximation ? ' [approximate YTD ranking]' : '';
+  console.log(
+    `Universe: ${snapshot.counts.unique} symbols (${snapshot.universe || 'top250'}) — Logo.dev fetches only for allowlist${listNote}`
+  );
+  if (top250.sources?.length) console.log(`List sources: ${top250.sources.map((s) => s.url).join(' ; ')}`);
   console.log(`Work: ${work.length} tickers — fetch ${toFetch.length}, cached ${work.filter((w) => w.kind === 'cached').length}, fallback/ETF ${work.filter((w) => w.kind === 'fallback' || w.kind === 'etf').length}`);
   console.log(`Estimated Brand API cost ($${PRICE_PER_BRAND_USD}/req): $${estCost.toFixed(2)} for ${toFetch.length} new/changed tickers`);
   console.log('Free Community plan includes $5 API credits/mo (~100 Brand lookups). Repeats for the same brand are free 24h. Full universe needs Startup ($33/mo, $15 credits) or a phased seed.');
 
-  const mayFetch = args.full || args.incremental;
+  const mayFetch = args.full || args.incremental || args.seed;
   if (!mayFetch) {
     console.log('\nDry run only (default).');
     console.log('  Incremental (weekly): node scripts/brand/build.js --incremental');
@@ -175,6 +194,9 @@ async function main() {
 
   fs.mkdirSync(BRAND_DIR, { recursive: true });
   const built = {};
+  let creditsRemaining = null;
+  let creditsSpent = 0;
+  let logosFetched = 0;
 
   for (const job of work) {
     if (job.kind === 'fallback' || job.kind === 'etf') {
@@ -189,11 +211,23 @@ async function main() {
       }
     }
 
+    if (job.kind === 'fetch') {
+      if (creditsRemaining != null && creditsRemaining - CREDITS_LOGO < args.minCredits) {
+        console.warn(`Stopping: Credits-Remaining ${creditsRemaining} would drop below reserve ${args.minCredits}`);
+        break;
+      }
+    }
+
     let png;
     if (args.mockDemo && DEMO_TICKERS.includes(job.sym)) {
       png = await mockLogoPng(job.sym);
     } else if (secret) {
       const hit = await mapWithBackoff([job.sym], async (s) => fetchLogoDev(s, secret)).then((r) => r[0]);
+      if (hit && hit.creditsRemaining != null) creditsRemaining = hit.creditsRemaining;
+      if (hit && hit.png) {
+        creditsSpent += hit.credits || CREDITS_LOGO;
+        logosFetched += 1;
+      }
       png = hit && hit.png;
     }
 
@@ -227,8 +261,10 @@ async function main() {
   writeShards(built);
   state.listsHash = universeHash;
   state.lastBuildAt = new Date().toISOString();
+  state.credits = { spentThisRun: creditsSpent, remainingLast: creditsRemaining, logosFetched, minReserve: args.minCredits };
   writeState(state);
   console.log(`Wrote ${Object.keys(built).length} entries to ${BRAND_DIR}`);
+  console.log(`Logo.dev: fetched ${logosFetched} marks, spent ~${creditsSpent} credits; Credits-Remaining=${creditsRemaining ?? 'unknown'}`);
 }
 
 async function mockLogoPng(sym) {

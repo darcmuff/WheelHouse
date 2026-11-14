@@ -27,4 +27,16 @@ test('netlify.toml bundles sharp and overrides', () => {
   const toml = fs.readFileSync(path.join(__dirname, '..', 'netlify.toml'), 'utf8');
   assert.match(toml, /sharp/);
   assert.match(toml, /overrides\.json/);
+  assert.match(toml, /top250-options\.json/);
+});
+
+test('brand function: off-list tickers use not_in_list without Logo.dev', () => {
+  assert.match(SRC, /not_in_list/);
+  assert.match(SRC, /top250-options\.json/);
+});
+
+test('top250 list has 250 single-stock symbols', () => {
+  const j = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'brand', 'top250-options.json'), 'utf8'));
+  assert.strictEqual(j.symbols.length, 250);
+  assert.ok(j.sources && j.sources.length >= 1);
 });

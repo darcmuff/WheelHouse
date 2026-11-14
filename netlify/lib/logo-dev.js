@@ -39,6 +39,8 @@ async function fetchLogoPng(ticker, secretKey, fetchImpl = fetch) {
   let credits = CREDITS_LOGO;
   let j;
 
+  const creditsRemaining = logoRes.headers.get('credits-remaining') || logoRes.headers.get('Credits-Remaining');
+
   if (logoRes.ok) {
     j = await logoRes.json();
   } else {
@@ -65,7 +67,8 @@ async function fetchLogoPng(ticker, secretKey, fetchImpl = fetch) {
   if (!img.ok) return { why: `download_http:${img.status}` };
   const png = Buffer.from(await img.arrayBuffer());
   if (!png.length) return { why: 'empty_image' };
-  return { png, route, credits, brandJson: data };
+  const rem = creditsRemaining != null && creditsRemaining !== '' ? Number(creditsRemaining) : null;
+  return { png, route, credits, creditsRemaining: Number.isFinite(rem) ? rem : null, brandJson: data };
 }
 
 module.exports = { fetchLogoPng, CREDITS_LOGO, CREDITS_BRAND };

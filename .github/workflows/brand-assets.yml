@@ -21,26 +21,26 @@ jobs:
           node-version: '20'
       - name: Install
         run: npm ci
-      - name: Refresh ticker lists (dry run)
-        run: node scripts/brand/build.js --refresh-lists
-      - name: Incremental brand build
+      - name: Refresh top-250 list
+        run: node scripts/brand/fetch-top250-options.js
+      - name: Seed top-250 logos (credit-capped)
         id: build
         env:
           LOGO_DEV_SECRET_KEY: ${{ secrets.LOGO_DEV_SECRET_KEY }}
         run: |
           if [ -z "$LOGO_DEV_SECRET_KEY" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            node scripts/brand/build.js --refresh-lists
+            node scripts/brand/build.js
             exit 0
           fi
           echo "skip=false" >> "$GITHUB_OUTPUT"
-          node scripts/brand/build.js --incremental
+          node scripts/brand/build.js --seed --min-credits=24
       - name: Commit to dev
         if: steps.build.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/brand scripts/brand/data
+          git add app/brand scripts/brand/data scripts/brand/top250-options.json
           if git diff --staged --quiet; then echo "No brand changes"; exit 0; fi
-          git commit -m "chore(brand): weekly Logo.dev asset refresh [skip ci]"
+          git commit -m "chore(brand): top-250 Logo.dev seed [skip ci]"
           git push origin dev

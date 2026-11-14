@@ -18,8 +18,8 @@ That ticker uses the hash-hue letter watermark only (no Logo.dev fetch, no PNG).
 
 On each run the script loads (or refreshes) a cached snapshot at `scripts/brand/data/tickers-snapshot.json`:
 
-- Nasdaq Trader `nasdaqlisted.txt` and `otherlisted.txt` (test issues skipped; warrants/units/rights filtered by name/suffix; ETF flag respected)
-- Wikipedia S&P 500 constituents table
+- **Default universe:** `top250-options.json` — top 250 US **stocks** by options volume (Macroption YTD avg daily volume, cross-checked with ElixStocks OCC daily snapshot). ETFs/indexes excluded.
+- **Legacy** (not default): S&P 500 ∪ Nasdaq via `loadSp500NasdaqUniverse()` → `data/tickers-snapshot-legacy.json`
 - Demo tickers from `demo.js`
 
 ## Safety: no accidental full fetch

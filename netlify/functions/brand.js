@@ -9,6 +9,10 @@ const OVERRIDES_PATHS = [
   path.join(__dirname, '../../app/brand/overrides.json'),
   path.join(process.cwd(), 'app/brand/overrides.json'),
 ];
+const TOP250_PATHS = [
+  path.join(__dirname, '../../app/brand/top250-options.json'),
+  path.join(process.cwd(), 'app/brand/top250-options.json'),
+];
 
 const HEADERS_HIT = {
   'Content-Type': 'application/json',
@@ -34,6 +38,27 @@ function readOverrides() {
     }
   }
   return {};
+}
+
+function readTop250Allow() {
+  for (const p of TOP250_PATHS) {
+    try {
+      const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+      return new Set((j.symbols || []).map((s) => String(s).toUpperCase()));
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+const HAND_MARK_ONLY = new Set(['AMD', 'KO', 'NVDA', 'SOFI']);
+
+function logoAllowed(ticker, ov, allow) {
+  if (ov.disable_logo || ov.force_fallback) return false;
+  if (ov.allow_logo) return true;
+  if (HAND_MARK_ONLY.has(ticker)) return false;
+  return allow ? allow.has(ticker) : false;
 }
 
 function leanJson(sym, data) {
@@ -81,9 +106,14 @@ const _handler = async (event) => {
 
   const overrides = readOverrides();
   const ov = overrides[ticker] || {};
+  const top250 = readTop250Allow();
 
   if (ov.disable_logo || ov.force_fallback) {
     return fallbackResponse(ticker, 'disabled');
+  }
+
+  if (!logoAllowed(ticker, ov, top250)) {
+    return fallbackResponse(ticker, 'not_in_list');
   }
 
   if (etfBg(ticker)) {
