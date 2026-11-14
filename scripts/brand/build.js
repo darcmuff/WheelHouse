@@ -39,6 +39,39 @@ function writeState(st) {
   fs.writeFileSync(STATE, JSON.stringify(st, null, 1));
 }
 
+function leanToEntry(sym, lean) {
+  if (!lean || !lean.g) return null;
+  return {
+    fallback: !!lean.fb,
+    etf: !!lean.etf,
+    gradient: { frm: lean.g.f, to: lean.g.t, glow: lean.g.gl, kind: lean.g.k },
+    mark: lean.m || null,
+    aspect: lean.a,
+    watermarkOpacity: lean.wo != null ? lean.wo : 0.16,
+  };
+}
+
+/** Committed shard JSON (PNG masks are gitignored — reuse gradient + mark metadata on CI resume). */
+function loadShardSeeded() {
+  const out = {};
+  if (!fs.existsSync(SHARDS)) return out;
+  for (const f of fs.readdirSync(SHARDS).filter((x) => x.endsWith('.json'))) {
+    let bucket;
+    try {
+      bucket = JSON.parse(fs.readFileSync(path.join(SHARDS, f), 'utf8'));
+    } catch {
+      continue;
+    }
+    for (const [sym, lean] of Object.entries(bucket)) {
+      if (lean && lean.m && !lean.fb) {
+        const entry = leanToEntry(sym, lean);
+        if (entry) out[sym] = entry;
+      }
+    }
+  }
+  return out;
+}
+
 function parseArgs(argv) {
   const flags = new Set(argv.filter((a) => a.startsWith('--')));
   return {
@@ -124,6 +157,7 @@ async function main() {
     .slice(0, 16);
 
   const state = readState();
+  const shardSeeded = args.force ? {} : loadShardSeeded();
   const symbols = args.tickers.length ? args.tickers.map((s) => s.toUpperCase()) : snapshot.symbols;
 
   const work = [];
@@ -142,8 +176,12 @@ async function main() {
       work.push({ sym, kind: 'etf' });
       continue;
     }
-    const prev = state.tickers[sym];
     const ovHash = crypto.createHash('sha256').update(JSON.stringify(ov)).digest('hex').slice(0, 8);
+  if (!args.force && shardSeeded[sym]) {
+      work.push({ sym, kind: 'shard_seed', entry: shardSeeded[sym] });
+      continue;
+    }
+    const prev = state.tickers[sym];
     if (!args.force && prev && prev.overrideHash === ovHash && prev.logoHash) work.push({ sym, kind: 'cached', prev });
     else work.push({ sym, kind: 'fetch' });
   }
@@ -157,7 +195,8 @@ async function main() {
     `Universe: ${snapshot.counts.unique} symbols (${snapshot.universe || 'top250'}) — Logo.dev fetches only for allowlist${listNote}`
   );
   if (top250.sources?.length) console.log(`List sources: ${top250.sources.map((s) => s.url).join(' ; ')}`);
-  console.log(`Work: ${work.length} tickers — fetch ${toFetch.length}, cached ${work.filter((w) => w.kind === 'cached').length}, fallback/ETF ${work.filter((w) => w.kind === 'fallback' || w.kind === 'etf').length}`);
+  const shardReuse = work.filter((w) => w.kind === 'shard_seed').length;
+  console.log(`Work: ${work.length} tickers — fetch ${toFetch.length}, cached ${work.filter((w) => w.kind === 'cached').length}, shard-reuse ${shardReuse}, fallback/ETF ${work.filter((w) => w.kind === 'fallback' || w.kind === 'etf').length}`);
   console.log(`Estimated Brand API cost ($${PRICE_PER_BRAND_USD}/req): $${estCost.toFixed(2)} for ${toFetch.length} new/changed tickers`);
   console.log('Free Community plan includes $5 API credits/mo (~100 Brand lookups). Repeats for the same brand are free 24h. Full universe needs Startup ($33/mo, $15 credits) or a phased seed.');
 
@@ -197,10 +236,16 @@ async function main() {
   let creditsRemaining = null;
   let creditsSpent = 0;
   let logosFetched = 0;
+  let apiHalt = null;
+  const noLogo = [];
 
   for (const job of work) {
     if (job.kind === 'fallback' || job.kind === 'etf') {
       built[job.sym] = await buildFallback(job.sym, snapshot, overrides);
+      continue;
+    }
+    if (job.kind === 'shard_seed') {
+      built[job.sym] = { ...job.entry, mark: job.entry.mark || `${job.sym}.png` };
       continue;
     }
     if (job.kind === 'cached') {
@@ -209,20 +254,31 @@ async function main() {
         built[job.sym] = { ...job.prev.entry, mark: `${job.sym}.png` };
         continue;
       }
+      if (job.prev && job.prev.entry) {
+        built[job.sym] = { ...job.prev.entry, mark: job.prev.entry.mark || `${job.sym}.png` };
+        continue;
+      }
     }
 
     if (job.kind === 'fetch') {
+      if (apiHalt) {
+        built[job.sym] = await buildFallback(job.sym, snapshot, overrides);
+        continue;
+      }
       if (creditsRemaining != null && creditsRemaining - CREDITS_LOGO < args.minCredits) {
-        console.warn(`Stopping: Credits-Remaining ${creditsRemaining} would drop below reserve ${args.minCredits}`);
-        break;
+        apiHalt = `credit_reserve (Credits-Remaining=${creditsRemaining}, reserve=${args.minCredits})`;
+        console.warn(`Stopping Logo.dev: ${apiHalt}`);
+        built[job.sym] = await buildFallback(job.sym, snapshot, overrides);
+        continue;
       }
     }
 
     let png;
+    let hit;
     if (args.mockDemo && DEMO_TICKERS.includes(job.sym)) {
       png = await mockLogoPng(job.sym);
     } else if (secret) {
-      const hit = await mapWithBackoff([job.sym], async (s) => fetchLogoDev(s, secret)).then((r) => r[0]);
+      hit = await mapWithBackoff([job.sym], async (s) => fetchLogoDev(s, secret)).then((r) => r[0]);
       if (hit && hit.creditsRemaining != null) creditsRemaining = hit.creditsRemaining;
       if (hit && hit.png) {
         creditsSpent += hit.credits || CREDITS_LOGO;
@@ -232,8 +288,12 @@ async function main() {
     }
 
     if (!png) {
+      const why = (hit && hit.why) || 'no_png';
+      if (why === 'no_logo' || why === 'no_logo_url') noLogo.push({ sym: job.sym, why });
+      if (why === 'credits_exhausted') apiHalt = why;
+      if (why !== 'no_logo' && why !== 'no_logo_url') console.warn('miss', job.sym, why);
       built[job.sym] = await buildFallback(job.sym, snapshot, overrides);
-      state.tickers[job.sym] = { updatedAt: new Date().toISOString(), miss: true };
+      state.tickers[job.sym] = { updatedAt: new Date().toISOString(), miss: why };
       continue;
     }
 
@@ -261,10 +321,23 @@ async function main() {
   writeShards(built);
   state.listsHash = universeHash;
   state.lastBuildAt = new Date().toISOString();
-  state.credits = { spentThisRun: creditsSpent, remainingLast: creditsRemaining, logosFetched, minReserve: args.minCredits };
+  state.credits = {
+    spentThisRun: creditsSpent,
+    remainingLast: creditsRemaining,
+    logosFetched,
+    minReserve: args.minCredits,
+    apiHalt,
+    noLogoCount: noLogo.length,
+  };
+  if (noLogo.length) {
+    state.noLogo = noLogo;
+    console.log(`Logo.dev: no mark for ${noLogo.length} tickers: ${noLogo.map((x) => x.sym).join(', ')}`);
+  }
   writeState(state);
-  console.log(`Wrote ${Object.keys(built).length} entries to ${BRAND_DIR}`);
-  console.log(`Logo.dev: fetched ${logosFetched} marks, spent ~${creditsSpent} credits; Credits-Remaining=${creditsRemaining ?? 'unknown'}`);
+  const withMark = Object.values(built).filter((e) => e && e.mark && !e.fallback).length;
+  console.log(`Wrote ${Object.keys(built).length} entries to ${BRAND_DIR} (${withMark} with Logo.dev marks)`);
+  console.log(`Logo.dev: fetched ${logosFetched} marks this run, spent ~${creditsSpent} credits; Credits-Remaining=${creditsRemaining ?? 'unknown'}`);
+  if (apiHalt) console.warn(`Logo.dev halted: ${apiHalt}`);
 }
 
 async function mockLogoPng(sym) {
