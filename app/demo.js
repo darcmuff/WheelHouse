@@ -14,8 +14,8 @@
   S.removeItem=function(k){return ri.call(this,isLS(this)?PREFIX+k:k);};
 
   // 2. Made-up prices. Option prices from a simple Black-Scholes so marks, profit and greeks behave like the real thing.
-  var SPOT={KO:69.80,AMD:158.40,SOFI:16.40,AAPL:238.20,MSFT:452.00};
-  var IV={KO:0.18,AMD:0.45,SOFI:0.55,AAPL:0.27,MSFT:0.25};
+  var SPOT={KO:69.80,AMD:158.40,SOFI:16.40,AAPL:238.20,MSFT:452.00,NVDA:176.50};
+  var IV={KO:0.18,AMD:0.45,SOFI:0.55,AAPL:0.27,MSFT:0.25,NVDA:0.50};
   function N(x){var t=1/(1+0.2316419*Math.abs(x)),d=0.3989423*Math.exp(-x*x/2),p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p;}
   function bs(S0,K,T,v,call){var r=0.04;T=Math.max(T,1/365);var d1=(Math.log(S0/K)+(r+v*v/2)*T)/(v*Math.sqrt(T)),d2=d1-v*Math.sqrt(T);
     var price=call?S0*N(d1)-K*Math.exp(-r*T)*N(d2):K*Math.exp(-r*T)*N(-d2)-S0*N(-d1);
@@ -45,7 +45,7 @@
       if(fn==='extquote')return J({});
       if(fn==='profile'){var svg='<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="#1f2937"/><text x="32" y="42" text-anchor="middle" font-size="28" font-family="sans-serif" fill="#fff">'+(sym.charAt(0)||'?')+'</text></svg>';return J({logo:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)});}
       if(fn==='earnings')return J({});
-      if(fn==='symbol'){var q=(u.searchParams.get('q')||'').toLowerCase();var all=[{symbol:'KO',name:'Coca-Cola'},{symbol:'AMD',name:'Advanced Micro Devices'},{symbol:'SOFI',name:'SoFi'},{symbol:'AAPL',name:'Apple'},{symbol:'MSFT',name:'Microsoft'},{symbol:'TSLA',name:'Tesla'},{symbol:'SPCX',name:'Space Exploration Technologies'}];return J({results:all.filter(function(x){return x.symbol.toLowerCase().indexOf(q)>=0||x.name.toLowerCase().indexOf(q)>=0;}).slice(0,8)});}
+      if(fn==='symbol'){var q=(u.searchParams.get('q')||'').toLowerCase();var all=[{symbol:'KO',name:'Coca-Cola'},{symbol:'AMD',name:'Advanced Micro Devices'},{symbol:'SOFI',name:'SoFi'},{symbol:'AAPL',name:'Apple'},{symbol:'MSFT',name:'Microsoft'},{symbol:'TSLA',name:'Tesla'},{symbol:'SPCX',name:'Space Exploration Technologies'},{symbol:'NVDA',name:'Nvidia'}];return J({results:all.filter(function(x){return x.symbol.toLowerCase().indexOf(q)>=0||x.name.toLowerCase().indexOf(q)>=0;}).slice(0,8)});}
       return J({error:'Not available in the demo.'},503);
     }
     return realFetch(input,init);
@@ -104,9 +104,24 @@
     var c5=L({g:6,underlying:'MSFT',side:'short',parentLeapId:msft.id,strike:480,expiry:fri(-62),entryPrice:3.80,entryDate:add(-90),status:'closed',closePrice:1.10,closeDate:add(-70),closeFees:0.65});
     var c6=L({g:7,underlying:'MSFT',side:'short',parentLeapId:msft.id,strike:485,expiry:fri(-28),entryPrice:4.10,entryDate:add(-50),status:'expired',closePrice:0,closeDate:fri(-28)});
     var c7=L({g:8,underlying:'MSFT',side:'short',parentLeapId:msft.id,strike:490,expiry:fri(9),entryPrice:4.30,entryDate:add(-20),status:'closed',closePrice:1.25,closeDate:add(0),closeFees:0.65});
+    if(/^dev--/.test(location.hostname)){
+      wheels.push({id:'dw-nvda',ticker:'NVDA',label:'',company:'Nvidia',status:'open',lastPrice:null,notes:'Test wheel (dev only)',createdAt:add(-150),sortOrder:0});
+      var n1=fri(-136),n2=fri(-115),n3=fri(-94),n4=fri(-80),n5=fri(-59),n6=fri(-38),n7=fri(-17);
+      tr('dw-nvda','NVDA','CSP',add(-150),{strike:170,expiry:n1,premium:3.20,shares:200,exp:true});
+      tr('dw-nvda','NVDA','CSP',add(days(iso(T),n1)+3),{strike:175,expiry:n2,premium:3.60,shares:200,exp:true});
+      tr('dw-nvda','NVDA','CSP',add(days(iso(T),n2)+3),{strike:180,expiry:n3,premium:4.10,shares:200,exp:true});
+      tr('dw-nvda','NVDA','CSP',add(days(iso(T),n3)+3),{strike:185,expiry:n4,premium:4.40,shares:200});
+      tr('dw-nvda','NVDA','IN',n4,{strike:185,premium:185,shares:200});
+      tr('dw-nvda','NVDA','STOC',add(days(iso(T),n4)+3),{strike:190,expiry:n5,premium:3.30,shares:200,exp:true});
+      tr('dw-nvda','NVDA','STOC',add(days(iso(T),n5)+3),{strike:190,expiry:n6,premium:2.90,shares:200,exp:true});
+      tr('dw-nvda','NVDA','STOC',add(days(iso(T),n6)+3),{strike:187.5,expiry:n7,premium:2.60,shares:200,exp:true});
+      tr('dw-nvda','NVDA','STOC',add(-10),{strike:185,expiry:fri(11),premium:2.75,shares:200});
+    }
     return{wheels:wheels,trades:trades,opts:[aapl,msft,c1,c2,c3,c4,c5,c6,c7]};
   }
-  function load(){try{var raw=localStorage.getItem(DATA_KEY);if(raw){var d=JSON.parse(raw);if(d&&Array.isArray(d.wheels)&&Array.isArray(d.trades))return{wheels:d.wheels,trades:d.trades,opts:d.opts||[]};}}catch(e){}
+  function load(){try{var raw=localStorage.getItem(DATA_KEY);if(raw){var d=JSON.parse(raw);if(d&&Array.isArray(d.wheels)&&Array.isArray(d.trades)){
+      if(/^dev--/.test(location.hostname)&&!d.wheels.some(function(w){return w.id==='dw-nvda';})){/* fall through to reseed */}
+      else return{wheels:d.wheels,trades:d.trades,opts:d.opts||[]};}}catch(e){}
     var s=seed();save(s);try{localStorage.setItem('wh-returnSet',JSON.stringify({base:'caw',account:0,target:null}));}catch(e){}return s;}
   var tmr=null,pending=null;
   function save(db){pending=db;clearTimeout(tmr);tmr=setTimeout(function(){try{localStorage.setItem(DATA_KEY,JSON.stringify({wheels:pending.wheels,trades:pending.trades,opts:(pending.opts||[]).map(function(l){var o={};for(var x in l)o[x]=l[x];o.mark=null;o.markSrc=null;o.markAt=null;return o;})}));}catch(e){}},50);}
