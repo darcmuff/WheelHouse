@@ -297,6 +297,13 @@
     prime(tickers).then(() => repaintAll());
   }
 
+  function setMarks(marks) {
+    if (marks && typeof marks === 'object') {
+      globalThis.WC_MARKS = marks;
+      root.WC_MARKS = marks;
+    }
+  }
+
   return {
     key,
     bgSync,
@@ -311,5 +318,6 @@
     FALLBACK_HUES,
     handMarkSvg,
     prefersHandMark,
+    setMarks,
   };
 });
