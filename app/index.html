@@ -1312,10 +1312,10 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Monthly return vs</span>
           <select id="ret-base" onchange="saveReturnSettings()" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem;cursor:pointer"><option value="caw">Capital at work</option><option value="account">Account size</option></select></div>
         <div id="ret-acct-row" style="display:none;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Account size</span>
-          <input id="ret-account" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 50000" oninput="saveReturnSettings()" onchange="saveReturnSettings()" style="width:6.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"></div>
+          <input id="ret-account" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 50000" oninput="saveReturnSettings()" onchange="saveReturnSettings()" onkeydown="if(event.key==='Enter'){saveReturnSettings(true)}" style="width:6.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.8125rem;color:var(--text2)">Monthly target</span>
           <span style="display:flex;align-items:center;gap:0.25rem"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" oninput="saveReturnSettings()" onchange="saveReturnSettings()" style="width:3.5rem;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:0.25rem;padding:2px 0.375rem;font-size:0.6875rem"><span style="font-size:0.75rem;color:var(--text3)">%</span></span></div>
-        <div style="font-size:0.6875rem;color:var(--text3)">Banked profit only. Leave the target empty to switch it off.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem"><span style="font-size:0.6875rem;color:var(--text3)">Banked profit only. Leave the target empty to switch it off.</span><span style="display:flex;align-items:center;gap:0.375rem"><span id="ret-saved" style="font-size:0.6875rem;color:var(--green);display:none">Saved</span><button type="button" class="btn btn-primary btn-sm" onclick="saveReturnSettings(true)">Save</button></span></div>
       </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
@@ -1965,7 +1965,8 @@ function realisedPremium(trades,today){
 function currentCapitalAtWork(){
   const sr=shareRealisations(db.trades);
   const shareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((sr.open[w.id]||{}).cost||0),0);
-  return capitalAtWork(calcCapitalStats().atRisk,shareCost,db.opts||[],null);
+  let acct=0;try{acct=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]).account;}catch(e){}
+  return capitalAtWork(calcCapitalStats().atRisk,shareCost,db.opts||[],acct);
 }
 // Pure: capital at work as % of the account size the user set; null when no account size.
 function utilisation(cawTotal,accountSize){return accountSize>0?Math.round(cawTotal/accountSize*1000)/10:null;}
@@ -5443,7 +5444,7 @@ function renderHome(){
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">This year ${ii(`Same as this month, since 1 January. Realised options only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · PMCC calls ${sgn(F.year.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price, plus premium on open wheel options.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Open premium ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}</div></div>
-    <div class="hk"><div class="hk-l">Capital at work ${ii(`Open put collateral, open shares and open LEAP cost. Return this month uses this figure.`)}</div><div class="hk-v">${fmtMoney(caw.total).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}</div></div>
+    <div class="hk"><div class="hk-l">Capital at work ${ii(`Open put collateral, open shares and open LEAP cost. Return this month uses this figure.`)}</div><div class="hk-v">${fmtMoney(caw.total).replace(/\.\d\d$/,'')}${caw.pct!=null?` <small>${caw.pct.toFixed(0)}%</small>`:''}</div><div class="hk-s">Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}${caw.pct!=null&&rs.account>0?` · of ${fmtMoney(rs.account).replace(/\.\d\d$/,'')} account`:''}</div></div>
     <div class="hk"><div class="hk-l">Win rate ${ii(`Closed sold options only, incl. PMCC calls. A win kept the premium or was bought back cheaper. Open options don’t count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
     <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
@@ -7765,12 +7766,13 @@ function fillReturnSettings(){
   b.value=rawBase==='account'?'account':rs.base;document.getElementById('ret-account').value=rs.account||'';document.getElementById('ret-target').value=rs.target||'';
   document.getElementById('ret-acct-row').style.display=b.value==='account'?'flex':'none';
 }
-function saveReturnSettings(){
+function saveReturnSettings(flash){
   const b=document.getElementById('ret-base').value,a=+document.getElementById('ret-account').value||0,t=+document.getElementById('ret-target').value||0;
   localStorage.setItem('wh-returnSet',JSON.stringify({base:b,account:a>0?a:0,target:t>0?t:null}));
   document.getElementById('ret-acct-row').style.display=b==='account'?'flex':'none';
   persistReturnSettings();
   render();
+  if(flash){const sv=document.getElementById('ret-saved');if(sv){sv.style.display='inline';clearTimeout(window._retSavedT);window._retSavedT=setTimeout(()=>{sv.style.display='none';},2000);}}
 }
 // Return settings follow the account across devices (users/{uid}/prefs/return).
 function persistReturnSettings(){
