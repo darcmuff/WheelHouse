@@ -9,6 +9,7 @@
   const FALLBACK_HUES = [262, 285, 305, 330, 15, 32, 150, 170, 195, 215, 235, 248];
   const CACHE = new Map();
   const SHARD_CACHE = new Map();
+  const SHARD_MISSING = new Set();
   let INDEX = null;
   let INDEX_PROMISE = null;
   const HAND_POS = {
@@ -17,6 +18,7 @@
     NVDA: [600, 399, -150, -40, -15, '#76B900', 0.38],
     SOFI: [660, 193, -150, -4, -14, '#fff', 0.17],
   };
+  const HAND_TICKERS = new Set(Object.keys(HAND_POS));
   const LEGACY_BG = {
     AMD: 'radial-gradient(60% 120% at 92% 18%,rgba(237,28,36,.55) 0%,rgba(237,28,36,0) 70%),linear-gradient(104deg,#060607 0%,#121012 34%,#3a0a0e 58%,#86101a 82%,#b3121c 100%)',
     KO: 'radial-gradient(55% 110% at 94% 20%,rgba(255,40,40,.45) 0%,rgba(255,40,40,0) 70%),linear-gradient(104deg,#3d0003 0%,#64000a 36%,#98000b 66%,#c4000a 100%)',
@@ -118,25 +120,35 @@
   }
 
   function handMarkSvg(tk) {
-    const marks = typeof WC_MARKS !== 'undefined' ? WC_MARKS : {};
+    const g = typeof globalThis !== 'undefined' ? globalThis : root;
+    const marks = (g && g.WC_MARKS) || {};
     return marks[key(tk)] || null;
+  }
+
+  function prefersHandMark(k) {
+    return HAND_TICKERS.has(k) && !!handMarkSvg(k) && !!HAND_POS[k];
+  }
+
+  function handMarkHtml(k) {
+    const pos = HAND_POS[k];
+    const svg = handMarkSvg(k);
+    if (!svg || !pos) return null;
+    const u = "url('data:image/svg+xml," + encodeURIComponent(svg).replace(/'/g, '%27') + "')";
+    return `<div class="wc-art" aria-hidden="true"><div class="wc-lgw" style="--w:${pos[0]};--h:${pos[1]};--x:${pos[2]};--y:${pos[3]};--r:${pos[4]}deg"><i style="--m:${u};background:${pos[5]};opacity:${pos[6]}"></i></div></div>`;
   }
 
   function artHtml(tk) {
     const k = key(tk);
     const hit = CACHE.get(k);
-    const pos = HAND_POS[k];
-    const svg = handMarkSvg(k);
-    if (svg && pos && (!hit || hit.keepHandMark)) {
-      const u = "url('data:image/svg+xml," + encodeURIComponent(svg).replace(/'/g, '%27') + "')";
-      return `<div class="wc-art" aria-hidden="true"><div class="wc-lgw" style="--w:${pos[0]};--h:${pos[1]};--x:${pos[2]};--y:${pos[3]};--r:${pos[4]}deg"><i style="--m:${u};background:${pos[5]};opacity:${pos[6]}"></i></div></div>`;
-    }
+    const hand = handMarkHtml(k);
+    if (hand && (!hit || hit.keepHandMark || hit.hand)) return hand;
     if (hit && hit.m && !hit.fb && !hit.keepHandMark) {
       const op = hit.wo != null ? hit.wo : 0.16;
       const asp = hit.a || 1;
       const src = hit.maskUrl ? hit.maskUrl : `brand/${k}.png`;
       return `<div class="wc-art" aria-hidden="true"><div class="wc-lgw wc-png" style="--w:${Math.round(420 * asp)};--h:420;--x:-120;--y:40;--r:-14deg"><i style="--m:url('${src}');background:#fff;opacity:${op}"></i></div></div>`;
     }
+    if (hand) return hand;
     return `<div class="wc-art" aria-hidden="true"><span class="wc-tk">${escHtml(k.slice(0, 6) || '?')}</span></div>`;
   }
 
@@ -155,8 +167,8 @@
     INDEX_PROMISE = fetch('brand/index.json', { cache: 'force-cache' })
       .then((r) => (r.ok ? r.json() : { shards: [] }))
       .then((j) => {
-        INDEX = j;
-        return j;
+        INDEX = j && Array.isArray(j.shards) ? j : { shards: [], v: 1 };
+        return INDEX;
       })
       .catch(() => {
         INDEX = { shards: [] };
@@ -165,8 +177,19 @@
     return INDEX_PROMISE;
   }
 
+  function shardExists(name) {
+    return INDEX && Array.isArray(INDEX.shards) && INDEX.shards.indexOf(name) >= 0;
+  }
+
   function loadShard(name) {
+    if (SHARD_MISSING.has(name)) return Promise.resolve({});
     if (SHARD_CACHE.has(name)) return SHARD_CACHE.get(name);
+    if (!shardExists(name)) {
+      SHARD_MISSING.add(name);
+      const empty = Promise.resolve({});
+      SHARD_CACHE.set(name, empty);
+      return empty;
+    }
     const p = fetch(`brand/shards/${name}.json`, { cache: 'force-cache' })
       .then((r) => (r.ok ? r.json() : {}))
       .catch(() => ({}));
@@ -188,47 +211,59 @@
     };
   }
 
+  function fetchBrandRemote(k) {
+    return fetch(`/.netlify/functions/brand?ticker=${encodeURIComponent(k)}`, { signal: AbortSignal.timeout(25000) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const e = normalizeRemote(j);
+        if (!e) {
+          const miss = { fb: true };
+          if (prefersHandMark(k)) {
+            miss.keepHandMark = true;
+            miss.hand = true;
+          }
+          CACHE.set(k, miss);
+          return miss;
+        }
+        if (j && j.markBase64 && !e.fb) {
+          e.maskUrl = `data:image/png;base64,${j.markBase64}`;
+          e.m = true;
+        }
+        if (prefersHandMark(k)) {
+          e.keepHandMark = true;
+        }
+        CACHE.set(k, e);
+        return e;
+      })
+      .catch(() => {
+        const miss = { fb: true, keepHandMark: prefersHandMark(k), hand: prefersHandMark(k) };
+        CACHE.set(k, miss);
+        return miss;
+      });
+  }
+
   function getBrand(ticker) {
     const k = key(ticker);
     if (CACHE.has(k)) return Promise.resolve(CACHE.get(k));
+    if (prefersHandMark(k)) {
+      const e = { keepHandMark: true, hand: true };
+      CACHE.set(k, e);
+      return Promise.resolve(e);
+    }
     const shard = shardFor(k);
     return loadIndex()
       .then(() => loadShard(shard))
       .then((shardData) => {
         if (shardData[k]) {
           const e = shardData[k];
-          if (HAND_POS[k] && handMarkSvg(k)) e.keepHandMark = true;
+          if (prefersHandMark(k)) {
+            e.keepHandMark = true;
+            e.hand = true;
+          }
           CACHE.set(k, e);
           return e;
         }
-        return fetch(`/.netlify/functions/brand?ticker=${encodeURIComponent(k)}`, { signal: AbortSignal.timeout(25000) })
-          .then((r) => (r.ok ? r.json() : null))
-          .then((j) => {
-            const e = normalizeRemote(j);
-            if (e) {
-              if (j && j.markBase64 && !e.fb) {
-                try {
-                  const bin = atob(j.markBase64);
-                  const bytes = new Uint8Array(bin.length);
-                  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-                  const blob = new Blob([bytes], { type: 'image/png' });
-                  e.maskUrl = URL.createObjectURL(blob);
-                  e.m = true;
-                } catch (err) { /* letters fallback */ }
-              }
-              if (HAND_POS[k] && handMarkSvg(k)) e.keepHandMark = true;
-              CACHE.set(k, e);
-              return e;
-            }
-            const miss = { fb: true };
-            CACHE.set(k, miss);
-            return miss;
-          })
-          .catch(() => {
-            const miss = { fb: true };
-            CACHE.set(k, miss);
-            return miss;
-          });
+        return fetchBrandRemote(k);
       });
   }
 
@@ -245,7 +280,8 @@
     if (art) {
       const wrap = document.createElement('div');
       wrap.innerHTML = artHtml(k);
-      art.replaceWith(wrap.firstChild);
+      const next = wrap.firstChild;
+      if (next) art.replaceWith(next);
     }
   }
 
@@ -273,5 +309,7 @@
     hashBg,
     fnv1a,
     FALLBACK_HUES,
+    handMarkSvg,
+    prefersHandMark,
   };
 });
