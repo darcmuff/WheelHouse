@@ -120,8 +120,8 @@
     return{wheels:wheels,trades:trades,opts:[aapl,msft,c1,c2,c3,c4,c5,c6,c7]};
   }
   function load(){try{var raw=localStorage.getItem(DATA_KEY);if(raw){var d=JSON.parse(raw);if(d&&Array.isArray(d.wheels)&&Array.isArray(d.trades)){
-      if(/^dev--/.test(location.hostname)&&!d.wheels.some(function(w){return w.id==='dw-nvda';})){/* fall through to reseed */}
-      else return{wheels:d.wheels,trades:d.trades,opts:d.opts||[]};}}catch(e){}
+      var needNvda=/^dev--/.test(location.hostname)&&!d.wheels.some(function(w){return w.id==='dw-nvda';});
+      if(!needNvda)return{wheels:d.wheels,trades:d.trades,opts:d.opts||[]};}}}catch(e){}
     var s=seed();save(s);try{localStorage.setItem('wh-returnSet',JSON.stringify({base:'caw',account:0,target:null}));}catch(e){}return s;}
   var tmr=null,pending=null;
   function save(db){pending=db;clearTimeout(tmr);tmr=setTimeout(function(){try{localStorage.setItem(DATA_KEY,JSON.stringify({wheels:pending.wheels,trades:pending.trades,opts:(pending.opts||[]).map(function(l){var o={};for(var x in l)o[x]=l[x];o.mark=null;o.markSrc=null;o.markAt=null;return o;})}));}catch(e){}},50);}
