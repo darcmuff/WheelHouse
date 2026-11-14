@@ -1,10 +1,11 @@
 // Wheel card brand lookup: shard JSON → Netlify function → hash-hue fallback.
 (function (root, factory) {
-  const api = factory();
+  const api = factory(root);
   root.WcBrand = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-})(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this, function () {
+})(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this, function (root) {
   'use strict';
+  const GLOBAL = typeof globalThis !== 'undefined' ? globalThis : root;
 
   const FALLBACK_HUES = [262, 285, 305, 330, 15, 32, 150, 170, 195, 215, 235, 248];
   const CACHE = new Map();
@@ -295,13 +296,23 @@
   }
 
   function afterPositionsRender(tickers) {
-    prime(tickers).then(() => repaintAll());
+    try {
+      prime(tickers)
+        .then(() => repaintAll())
+        .catch((e) => console.warn('WcBrand.afterPositionsRender failed', e));
+    } catch (e) {
+      console.warn('WcBrand.afterPositionsRender failed', e);
+    }
   }
 
   function setMarks(marks) {
-    if (marks && typeof marks === 'object') {
-      globalThis.WC_MARKS = marks;
-      root.WC_MARKS = marks;
+    try {
+      if (marks && typeof marks === 'object') {
+        GLOBAL.WC_MARKS = marks;
+        root.WC_MARKS = marks;
+      }
+    } catch (e) {
+      console.warn('WcBrand.setMarks failed', e);
     }
   }
 
