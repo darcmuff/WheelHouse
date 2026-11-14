@@ -1037,6 +1037,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
           <option value="STC">STC — Sell To Close</option>
           <option value="STOC">STOC — Sell To Open Call (Covered)</option>
           <option value="IN">IN — Buy Shares (assignment)</option>
+          <option value="IN_MKT">IN — Buy Shares (open market)</option>
           <option value="OUT">OUT — Sell Shares</option>
           <option value="DIV">DIV — Dividend</option>
         </select>
@@ -1105,7 +1106,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
               <option value="BTC">BTC — Buy To Close</option>
               <option value="STC">STC — Sell To Close</option>
               <option value="STOC">STOC — Sell To Open Call</option>
-              <option value="IN">IN — Buy Shares</option>
+              <option value="IN">IN — Buy Shares (assignment)</option>
+              <option value="IN_MKT">IN — Buy Shares (open market)</option>
               <option value="OUT">OUT — Sell Shares</option>
               <option value="DIV">DIV — Dividend</option>
             </select>
@@ -1595,7 +1597,8 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 
 const CREDITS=new Set(['CSP','STOC','STO','STC','OUT','DIV']); // STC receives cash; STO = PMCC short call
 const OPTIONS=new Set(['CSP','BTC','STOC','STC']);
-const STOCKS=new Set(['IN','OUT']);
+const STOCKS=new Set(['IN','IN_MKT','OUT']);
+function actionFromSelect(a){return a==='IN_MKT'?'IN':a;}
 function isCredit(a){return CREDITS.has(a);}
 function selCash(action,total){const n=+total||0;if(n<0)return Math.round(n*100)/100;return Math.round((isCredit(action)?n:-n)*100)/100;}
 function selCt(action,shares){if(action!=='CSP'&&action!=='BTC'&&action!=='STOC'&&action!=='STC'&&action!=='STO')return 0;const sh=+shares||0;return sh>0?Math.round(sh)/100:0;}
@@ -4912,10 +4915,29 @@ function shownHealth(list){
   return (list||[]).filter(i=>!d.has(healthKey(i)));
 }
 function openHealth(){return shownHealth(allDataHealth());}
+function _healthDismissMerged(remote){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  return [...new Set([...raw,...(remote||[])])].slice(-200);
+}
+async function loadHealthDismiss(uid){
+  if(APP_DEMO||!_fsDb||!uid)return;
+  try{
+    const sn=await listenServer(doc(_fsDb,'users',uid,'prefs','health'));
+    const merged=_healthDismissMerged(sn.exists()?sn.data().dismiss:null);
+    localStorage.setItem('wh-health-dismiss',JSON.stringify(merged));
+  }catch(e){console.warn('Health dismiss load failed:',e.message);}
+}
+function persistHealthDismiss(){
+  if(APP_DEMO||!_fsDb||!_confirmedUid)return;
+  let dismiss=[];try{dismiss=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){return;}
+  _fsSetDoc(_fsDoc(_fsDb,'users',_confirmedUid,'prefs','health'),{dismiss:[...new Set(dismiss)].slice(-200)},{merge:true})
+    .catch(e=>console.warn('Health dismiss save failed:',e.message));
+}
 function dismissHealth(key){
   let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
   const s=new Set(raw);s.add(key);
   localStorage.setItem('wh-health-dismiss',JSON.stringify([...s].slice(-200)));
+  persistHealthDismiss();
   _nyOpen=true;render();
 }
 function healthAction(i){
@@ -4998,6 +5020,9 @@ function runDataHealth(){
           if(!consumedAny)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action}${t.strike?' $'+fmt2(t.strike):''} on ${fmtDateFull(t.entered)} closes nothing — no matching open position (orphan closer)`});
         }
       }else if(t.action==='IN'){
+        if(t.openMarket){
+          sharesHeld+=Number(t.shares)||0;
+        }else{
         // Assignments settle at strike × shares — derive the strike when it wasn't recorded
         let ks=Number(t.strike);
         if((!ks||isNaN(ks))&&t.shares&&t.total)ks=Math.round((Number(t.total)/Number(t.shares))*100)/100;
@@ -5017,25 +5042,19 @@ function runDataHealth(){
           if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless&&Number(o.strike)===ks);
           if(j<0)j=bestAssignable(o=>!o.expiredWorthless);
           if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless);
-          if(j<0)j=bestAssignable(o=>Number(o.strike)===ks);
-          if(j<0)j=open.findIndex(o=>o.action==='CSP'&&Number(o.strike)===ks);
-          if(j<0)j=bestAssignable(()=>true);
-          if(j<0)j=open.findIndex(o=>o.action==='CSP');
           return j;
         };
-        const assignFlagMsg=o=>issues.push({sev:'red',wheelId:w.id,tradeId:o.id,text:`${tk} CSP $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but shares were assigned against it on ${fmtDateFull(t.entered)} — it can't be both`});
         let inRem=Number(t.shares)||0;
         if(inRem<=0){ // assignment with no share count: consume one whole leg
           const j=findCSP();
           if(j<0)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} assignment (IN) on ${fmtDateFull(t.entered)} has no open CSP behind it — shares appeared from nowhere`});
-          else{const o=open[j];if(o.expiredWorthless)assignFlagMsg(o);open.splice(j,1);}
+          else open.splice(j,1);
         }else{
           let consumedAny=false;
           while(inRem>0){ // partial assignments are real broker behaviour — consume shares across legs
             const j=findCSP();
             if(j<0)break;
             const o=open[j];
-            if(o.expiredWorthless)assignFlagMsg(o);
             consumedAny=true;
             const take=Math.min(inRem,o._rem||inRem);
             o._rem-=take;inRem-=take;
@@ -5044,6 +5063,7 @@ function runDataHealth(){
           if(!consumedAny)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} assignment (IN) on ${fmtDateFull(t.entered)} has no open CSP behind it — shares appeared from nowhere`});
         }
         sharesHeld+=Number(t.shares)||0;
+        }
       }else if(t.action==='OUT'){
         const sh=Number(t.shares)||0;
         if(sh>sharesHeld)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} OUT of ${sh} shares on ${fmtDateFull(t.entered)} but only ${sharesHeld} held at that point`});
@@ -5814,11 +5834,12 @@ function openAddTrade(wheelId){
 }
 function openEditTrade(id){
   const t=db.trades.find(x=>x.id===id);if(!t)return;
-  if(![...document.getElementById('tf-action').options].some(o=>o.value===t.action)){
+  const actSel=t.action==='IN'&&t.openMarket?'IN_MKT':t.action;
+  if(![...document.getElementById('tf-action').options].some(o=>o.value===actSel)){
     alert(`Action ${t.action} can't be edited here yet.`);return; // never silently convert
   }
   document.getElementById('tf-id').value=t.id;document.getElementById('tf-ticker').value=t.ticker;
-  document.getElementById('tf-action').value=t.action;document.getElementById('tf-entered').value=t.entered;
+  document.getElementById('tf-action').value=actSel;document.getElementById('tf-entered').value=t.entered;
   document.getElementById('tf-expiry').value=t.expiry||'';document.getElementById('tf-strike').value=t.strike||'';
   document.getElementById('tf-delta').value=t.delta||'';
   document.getElementById('tf-premium').value=t.premium||'';document.getElementById('tf-shares').value=t.shares||'';
@@ -5864,7 +5885,7 @@ function onActionChange(){
   autoCalcTotal();
 }
 function autoCalcTotal(){
-  const a=document.getElementById('tf-action').value;
+  const a=actionFromSelect(document.getElementById('tf-action').value);
   const p=parseFloat(document.getElementById('tf-premium').value)||0;
   const s=parseFloat(document.getElementById('tf-shares').value)||0;
   const f=parseFloat(document.getElementById('tf-fees').value)||0;
@@ -5891,7 +5912,9 @@ function saveTrade(){
     const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
     if(ex){wheelId=ex.id;}else{if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
-  const action=document.getElementById('tf-action').value;
+  const selAction=document.getElementById('tf-action').value;
+  const action=actionFromSelect(selAction);
+  const openMarket=selAction==='IN_MKT';
   const deltaRaw=parseFloat(document.getElementById('tf-delta').value);
   const premium=parseFloat(document.getElementById('tf-premium').value)||0;
   const fees=parseFloat(document.getElementById('tf-fees').value)||0;
@@ -5903,6 +5926,7 @@ function saveTrade(){
     premium,fees,shares,total,
     days:parseFloat(document.getElementById('tf-days').value)||0,ppd:parseFloat(document.getElementById('tf-ppd').value)||0,
     verified:false,comment:document.getElementById('tf-comment').value.trim()};
+  if(action==='IN'){if(openMarket)data.openMarket=true;else delete data.openMarket;}
   if(id){
     const idx=db.trades.findIndex(t=>t.id===id);
     if(idx>=0){
@@ -5913,6 +5937,7 @@ function saveTrade(){
       updated.verified=old.verified||false;                    // preserve verification status
       if(old.currentPrice!=null&&old.currentPrice!==''){updated.currentPrice=old.currentPrice;updated.currentPriceAt=old.currentPriceAt||null;}
       if(action==='CSP'||action==='STOC'){const raw=document.getElementById('current-price').value.trim();if(raw===''){delete updated.currentPrice;delete updated.currentPriceAt;}else if(!(old.currentPrice!=null&&+old.currentPrice===+raw)){updated.currentPrice=+raw;updated.currentPriceAt=new Date().toISOString();}}
+      if(action==='IN'){if(openMarket)updated.openMarket=true;else delete updated.openMarket;}
       db.trades[idx]=updated;
     }
   }
@@ -7078,7 +7103,7 @@ function onPMActionChange(){
   autoCalcPMTotal();
 }
 function autoCalcPMTotal(){
-  const a=document.getElementById('pm-action').value;
+  const a=actionFromSelect(document.getElementById('pm-action').value);
   const p=parseFloat(document.getElementById('pm-premium').value)||0;
   const s=parseFloat(document.getElementById('pm-shares').value)||0;
   const f=parseFloat(document.getElementById('pm-fees').value)||0;
@@ -7090,7 +7115,9 @@ function savePMTrade(){
   const ticker=document.getElementById('pm-ticker').value.toUpperCase().trim();
   const entered=document.getElementById('pm-entered').value;
   if(!ticker){alert('Ticker required');return;}if(!entered){alert('Entry date required');return;}
-  const action=document.getElementById('pm-action').value;
+  const selAction=document.getElementById('pm-action').value;
+  const action=actionFromSelect(selAction);
+  const openMarket=selAction==='IN_MKT';
   const expiry=document.getElementById('pm-expiry').value||null;
   let wheelId=document.getElementById('pm-wheel').value;
   if(wheelId==='new'||!wheelId){
@@ -7108,6 +7135,7 @@ function savePMTrade(){
     delta:isNaN(deltaRaw)?null:deltaRaw,
     premium,fees,shares,total,days,ppd:days>0?total/days:0,
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
+  if(action==='IN'&&openMarket)newTrade.openMarket=true;
   if(action==='CSP'||action==='STOC'){const raw=document.getElementById('pm-current-price').value.trim();if(raw!==''&&+raw>=0){newTrade.currentPrice=+raw;newTrade.currentPriceAt=new Date().toISOString();}}
   const _firstTrade=!db.trades.length;
   db.trades.push(newTrade);expanded.add(wheelId);
@@ -7917,6 +7945,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
     try {
       loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
       await loadDBFromFirestore(user.uid);
+      await loadHealthDismiss(user.uid);
     } catch (e) {
       console.error('Load failed:', e);
       loadingText.innerHTML = 'Could not load your data — check your connection. '
