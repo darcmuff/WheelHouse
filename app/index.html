@@ -2837,7 +2837,7 @@ function renderPmccListRow(e,spot,today){
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
     <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
     <span class="to-strike m">${esc(ts)}</span>
-    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}${e.open&&isSto&&c?cpEditor(c.id,c.mark,c.markAt,'saveOptCurrentPrice'):''}</span>
+    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}</span>
     <span>${e.qty?e.qty*100:'—'}</span>
     <span class="${e.total>=0?'g':'r'}">${fmtMoney(e.total)}</span>
     <span>${e.fees?'$'+fmt2(e.fees):'—'}</span>
@@ -2961,7 +2961,6 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
-  <div style="margin:0.5rem 0.875rem 0">${cpEditor(l.id,l.mark,l.markAt,'saveOptCurrentPrice')}</div>
   ${renderPmcc(l,today,spot,true)}
 `:''}</div>`;
   }
@@ -4716,7 +4715,7 @@ function renderTradeRow(t,wheelTrades,opts){
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?fmtStrike(t.strike):'—'}</span>
     ${hasExtra?opts.extraAfterStrike:''}
-    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}${opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?cpEditor(t.id,t.currentPrice,t.currentPriceAt,'saveWheelCurrentPrice'):''}</span>
+    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
     <span style="white-space:nowrap">${opts.list?(()=>{const lab=wheelRemainLabel(t,wheelTrades,opts.list.today);return lab?esc(lab):(t.shares||'—');})():(t.shares||'—')}</span>
     <span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>
     <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
