@@ -24,7 +24,7 @@ const stubs = [
   "function buildRollChain(){return null;}"
 ].join('');
 const S = new Function(stubs + scanCode + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','renderPmcc','listCut','listMoreBtn','pmccShortEvents','pmccClosedCaptured','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
+  ['splitLeapLegs','pmccShortsFor','pmccStats','pmccFormLeg','_fdShort','pmccTradeEvents','pmccLegToTrade','toStrike','tradeTableHead','pmccShortProfit','pmccChainPriorNet','pmccRollParents','strikeStep','nearStrike','exactSubset','pmccChainMap','renderPmcc','listCut','listMoreBtn','pmccShortEvents','pmccClosedCaptured','cpDate','cpEditor','renderPmccListRow','optsToCSV','calcTradeROC','isCredit','renderTradeRow','capturedCellHtml','ppdCellHtml'].map(extractFn).join('\n') +
   `\nconst listShowAll=new Set();const B=brokerCSVLib();return {db,get writes(){return writes},OPTS,scan:t=>pmccScan(t,B,'2026-10-21'),scanAt:(t,d)=>pmccScan(t,B,d),leapAt:(t,d)=>leapScan(t,B,d),splitLeapLegs,pmccShortsFor,pmccStats,pmccFormLeg,pmccTradeEvents,pmccLegToTrade,toStrike,tradeTableHead,renderPmcc,optsToCSV,setOpts:o=>{db.opts=o}};`)();
 
 const today = '2026-10-21';

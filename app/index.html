@@ -300,9 +300,6 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
   .sel-tip{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;margin:0 0 0.625rem;padding:0.4rem 0.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;font-size:0.75rem;color:var(--text2)}
   .sel-tip-x{border:0;background:transparent;color:var(--text3);cursor:pointer;font-size:0.875rem;line-height:1}
 }
-.roll-opt{display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text2);margin:0.25rem 0 0.5rem}
-.roll-opt input{accent-color:var(--orange)}
-#tf-roll-box[hidden],#pm-roll-box[hidden],#pcc-roll-box[hidden],#paste-roll-box[hidden]{display:none !important}
 .trow{
   display:grid;
   grid-template-columns:minmax(0,52fr) minmax(0,78fr) minmax(0,78fr) minmax(0,58fr) minmax(0,58fr) minmax(0,48fr) minmax(0,78fr) minmax(0,46fr) minmax(0,78fr) minmax(0,52fr) minmax(0,36fr);
@@ -316,6 +313,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .trow.expired-trade{border-left:0.1875rem solid var(--green);padding-left:0.8125rem;background:rgba(34,197,94,0.04)}
 .exp-badge{font-size:0.625rem;font-weight:600;color:var(--green);letter-spacing:.5px;vertical-align:middle}
 .ab{padding:0.1875rem 0.5rem;border-radius:0.25rem;font-size:0.6875rem;font-weight:600;white-space:nowrap;display:inline-block;letter-spacing:.3px}
+.cp-edit{display:flex;flex-direction:column;gap:0.1rem;margin-top:0.2rem;font-size:0.6rem;font-weight:400;color:var(--text3);line-height:1.2}.cp-edit span{display:inline-flex;align-items:center;gap:0.15rem;color:var(--text2)}.cp-edit input{width:4.5rem;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:0.25rem;padding:0 0.2rem}
 .ab-CSP{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.28)}
 .ab-BTC{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.28)}
 .ab-STOC{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.28)}
@@ -526,11 +524,17 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .fld{display:flex;flex-direction:column;gap:0.1875rem}
 .fld.s2{grid-column:span 2}
 .fld label{font-size:0.625rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
-.fld input,.fld select,.fld textarea{
+.fld input,.fld select,.fld textarea,.wh-pick-btn{
   background:var(--bg);border:1px solid var(--border2);color:var(--text);
   padding:0.375rem 0.5625rem;border-radius:0.375rem;font-size:0.8125rem;width:100%;transition:border-color .15s;
 }
-.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--orange)}
+.fld input:focus,.fld select:focus,.fld textarea:focus,.wh-pick-btn:focus{outline:none;border-color:var(--orange)}
+.wh-pick{position:relative}.wh-pick-btn{display:flex;align-items:center;gap:0.4rem;text-align:left;cursor:pointer}
+.wh-pick-face{display:flex;align-items:center;gap:0.4rem;flex:1;min-width:0}.wh-caret{color:var(--text3);font-size:0.7rem}
+.wh-pick-face .rot-logo,.wh-opt .rot-logo{width:1.125rem;height:1.125rem}
+.wh-pick-list{position:absolute;z-index:30;left:0;right:0;top:calc(100% + 2px);background:var(--bg);border:1px solid var(--border2);border-radius:0.375rem;max-height:14rem;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.wh-opt{display:flex;align-items:center;gap:0.4rem;width:100%;background:none;border:0;color:var(--text);padding:0.4rem 0.5625rem;font-size:0.8125rem;cursor:pointer;text-align:left}
+.wh-opt:hover,.wh-opt.on{background:var(--bg3)}
 .fld input[readonly]{color:var(--text3)}
 .fld textarea{resize:vertical;min-height:2.25rem}
 .mfoot{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.625rem;padding-top:0.625rem;border-top:1px solid var(--border)}
@@ -799,14 +803,14 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .mbox{background:var(--bg2);border:1px solid var(--border);border-radius:1.25rem;box-shadow:0 12px 40px rgba(20,24,20,.18);padding:1.375rem 1.5rem}
 .mtitle{color:var(--text);font-size:0.95rem;font-weight:600}
 .fld label{text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2);font-size:0.625rem}
-.fld input,.fld select,.fld textarea,.mbox textarea,.mbox input[type=text]{background:var(--bg)!important;border:1px solid var(--border)!important;border-radius:0.625rem!important;color:var(--text)!important}
+.fld input,.fld select,.fld textarea,.wh-pick-btn,.mbox textarea,.mbox input[type=text]{background:var(--bg)!important;border:1px solid var(--border)!important;border-radius:0.625rem!important;color:var(--text)!important}
 .fld input:focus,.fld select:focus,.fld textarea:focus,.mbox textarea:focus{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeD)}
 .mfoot{border-top:1px solid var(--bg3)}
 .hint{color:var(--text3)}
 .imp-drop{border:1.5px dashed var(--border2);background:var(--bg);color:var(--text2);border-radius:0.875rem}
 .imp-drop.drag{background:var(--orangeL);border-color:var(--orange)}
 #mSettings{background:rgba(29,32,30,.12)}
-#mSettings .mbox{width:15rem;border-radius:1rem;padding:0.875rem 0.75rem}
+#mSettings .mbox{width:26rem;max-width:calc(100vw - 1.5rem);max-height:calc(100vh - 1.5rem);overflow:auto;border-radius:1rem;padding:0.875rem 0.75rem}
 #mSettings .btn{border-radius:0.625rem}
 .btn-ghost{background:var(--bg2);border:1px solid var(--border);color:var(--text)}.btn-ghost:hover{background:var(--bg3)}
 /* dark theme tune-up */
@@ -1025,7 +1029,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mTradeTitle">Add Trade</span><span class="mx" onclick="closeModal('mTrade')">✕</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
       <div class="fld"><label>Ticker</label><input id="tf-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase" oninput="onTickerInput()"></div>
-      <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="tf-wheel" onchange="fillRollSelect('tf-roll-from',this.value,document.getElementById('tf-id').value)"></select></div>
+      <div class="fld" style="grid-column:span 2"><label for="tf-wheel-btn">Wheel</label><div class="wh-pick"><input type="hidden" id="tf-wheel"><button type="button" class="wh-pick-btn" id="tf-wheel-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div></div>
       <div class="fld"><label>Action</label>
         <select id="tf-action" onchange="onActionChange()">
           <option value="CSP">CSP — Cash Secured Put</option>
@@ -1042,13 +1046,13 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld" id="tg-strike"><label>Strike ($)</label><input id="tf-strike" type="number" step="0.01"></div>
       <div class="fld" id="tg-delta"><label>Delta <small style="color:#555">optional</small></label><input id="tf-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30"></div>
       <div class="fld"><label id="tf-prem-lbl">Premium per Share</label><input id="tf-premium" type="number" step="0.0001" placeholder="0.0000" oninput="autoCalcTotal()"></div>
+      <div class="fld" id="tg-current-price" style="display:none"><label for="current-price">Current price</label><input id="current-price" name="current-price" aria-label="Current price" type="number" step="0.0001" placeholder="0.0000"></div>
       <div class="fld"><label>Shares</label><input id="tf-shares" type="number" step="1" placeholder="100" oninput="autoCalcTotal()"></div>
       <div class="fld"><label>Fees ($)</label><input id="tf-fees" type="number" step="0.01" value="0" oninput="autoCalcTotal()"></div>
       <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="tf-total" type="number" step="0.01" readonly></div>
       <div class="fld"><label>DTE <small style="color:#555">auto</small></label><input id="tf-days" type="number" step="1" oninput="autoCalcPPD()"></div>
       <div class="fld"><label>PPD ($) <small style="color:#555">auto</small></label><input id="tf-ppd" type="number" step="0.01" readonly></div>
       <div class="fld" style="grid-column:span 3"><label>Comment</label><textarea id="tf-comment" rows="1"></textarea></div>
-      <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="tf-roll" onchange="document.getElementById('tf-roll-box').hidden=!this.checked"> Mark as roll</label><div id="tf-roll-box" hidden class="fld"><label>Rolls from</label><select id="tf-roll-from"><option value="">Choose a trade</option></select></div></div>
       <div class="fld" style="grid-column:span 3;display:none" id="tg-created-at"><label>Date Added <small style="color:#555">auto</small></label><input id="tf-created-at" type="text" readonly style="color:var(--text3);background:var(--bg3);cursor:default"></div>
     </div>
     <input type="hidden" id="tf-id">
@@ -1094,7 +1098,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div id="paste-panel-manual" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5625rem;margin-bottom:0.5625rem">
           <div class="fld"><label>Ticker</label><input id="pm-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase" oninput="onPMTickerInput()"></div>
-          <div class="fld" style="grid-column:span 2"><label>Rotation</label><select id="pm-wheel" onchange="fillRollSelect('pm-roll-from',this.value)"></select></div>
+          <div class="fld" style="grid-column:span 2"><label>Wheel</label><div class="wh-pick"><input type="hidden" id="pm-wheel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div></div>
           <div class="fld"><label>Action</label>
             <select id="pm-action" onchange="onPMActionChange()">
               <option value="CSP">CSP — Cash Secured Put</option>
@@ -1111,11 +1115,11 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
           <div class="fld" id="pmg-strike"><label>Strike ($)</label><input id="pm-strike" type="number" step="0.01"></div>
           <div class="fld" id="pmg-delta"><label>Delta <small style="color:#555">optional</small></label><input id="pm-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30"></div>
           <div class="fld"><label id="pm-prem-lbl">Premium per Share</label><input id="pm-premium" type="number" step="0.0001" placeholder="0.0000" oninput="autoCalcPMTotal()"></div>
+          <div class="fld" id="pm-cp-wrap"><label for="pm-current-price">Current price</label><input id="pm-current-price" name="current-price" aria-label="Current price" type="number" step="0.0001" placeholder="0.0000"></div>
           <div class="fld"><label>Shares</label><input id="pm-shares" type="number" step="1" placeholder="100" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Fees ($)</label><input id="pm-fees" type="number" step="0.01" value="0" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="pm-total" type="number" step="0.01" readonly></div>
           <div class="fld"><label>Comment</label><input id="pm-comment" type="text"></div>
-          <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="pm-roll" onchange="document.getElementById('pm-roll-box').hidden=!this.checked"> Mark as roll</label><div id="pm-roll-box" hidden class="fld"><label>Rolls from</label><select id="pm-roll-from"><option value="">Choose a trade</option></select></div></div>
         </div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="savePMTrade()">Save Trade</button></div>
       </div>
@@ -1156,7 +1160,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>Date bought</label><input id="lf-date" type="date"></div>
       <div class="fld"><label>Fees total ($)</label><input id="lf-fees" type="number" step="0.01" value="0"></div>
       <div class="fld"><label>Review date <small style="color:#555">optional</small></label><input id="lf-review" type="date"></div>
-      <div class="fld" id="lf-mark-wrap"><label>Manual mark / share</label><input id="lf-mark" type="number" step="0.01"></div>
+      <div class="fld" id="lf-mark-wrap"><label for="lf-mark">Current price</label><input id="lf-mark" name="current-price" aria-label="Current price" type="number" step="0.01"></div>
     </div>
     <div class="fld"><label>Notes / thesis</label><input id="lf-notes" type="text"></div>
     <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem">
@@ -1177,6 +1181,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>Expiry</label><input id="pe-expiry" type="date"></div>
       <div class="fld"><label>Contracts</label><input id="pe-qty" type="number" step="1"></div>
       <div class="fld"><label>Sell price / sh</label><input id="pe-price" type="number" step="0.01"></div>
+      <div class="fld" id="pe-cp-wrap"><label for="pe-current-price">Current price</label><input id="pe-current-price" name="current-price" aria-label="Current price" type="number" step="0.01"></div>
       <div class="fld"><label>Sold on</label><input id="pe-date" type="date"></div>
       <div class="fld"><label>Fees</label><input id="pe-fees" type="number" step="0.01"></div>
     </div>
@@ -1223,10 +1228,10 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <div class="fld"><label>Expiry</label><input id="pcc-expiry" type="date"></div>
       <div class="fld"><label>Contracts</label><input id="pcc-qty" type="number" step="1" min="1" value="1"></div>
       <div class="fld"><label id="pcc-price-lbl">Premium / share</label><input id="pcc-price" type="number" step="0.01"></div>
+      <div class="fld" id="pcc-cp-wrap"><label for="pcc-current-price">Current price</label><input id="pcc-current-price" name="current-price" aria-label="Current price" type="number" step="0.01" placeholder="0.00"></div>
       <div class="fld"><label id="pcc-date-lbl">Date sold</label><input id="pcc-date" type="date"></div>
       <div class="fld"><label>Fees total ($)</label><input id="pcc-fees" type="number" step="0.01" value="0"></div>
       <div class="fld" style="grid-column:span 2"><label>Notes</label><input id="pcc-notes" type="text"></div>
-      <div style="grid-column:span 3"><label class="roll-opt"><input type="checkbox" id="pcc-roll" onchange="document.getElementById('pcc-roll-box').hidden=!this.checked"> Mark as roll</label><div id="pcc-roll-box" hidden class="fld"><label>Rolls from</label><select id="pcc-roll-from"><option value="">Choose a trade</option></select></div></div>
     </div>
     <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" onclick="savePmcc()">Save</button></div>
     </div>
@@ -1315,6 +1320,14 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
       <button id="settings-export" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem" onclick="exportMyData()">⇩ Export my data</button>
       <a id="settings-legal" href="legal.html" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;text-decoration:none;color:var(--text2)">Privacy, terms &amp; disclaimer</a>
       <div class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;white-space:normal;align-items:flex-start;flex-direction:column;gap:0.15rem;cursor:default"><a id="settings-support" href="mailto:support@optrack.app?subject=OpTrack%20support" style="color:inherit;text-decoration:none">Contact support</a><span style="font-size:0.6875rem;color:var(--text3);user-select:text">support@optrack.app</span></div>
+      <div style="border-top:1px solid var(--border);margin:0"></div>
+      <div id="settings-about" style="padding:0.25rem 0.875rem 0.375rem;display:flex;flex-direction:column;gap:0.625rem">
+        <div style="font-size:0.8125rem;font-weight:600;color:var(--text)">About Me</div>
+        <p style="margin:0;font-size:0.8125rem;line-height:1.5;color:var(--text2)">I'm Marc. I'm semi-retired, and most of my working life was spent with my hands as a welder, an embroiderer and then a self-employed handyman. These days OpTrack headquarters is a caravan somewhere in Cornwall.</p>
+        <p style="margin:0;font-size:0.8125rem;line-height:1.5;color:var(--text2)">In 2024 I had a stroke. I used to be good with my hands. Now I'm just good with my hand. It slowed me down, but it also gave me time to learn new things. I taught myself options trading, and I wanted a simple way to keep track of my trades. Everything I tried was too fiddly or too expensive. So I taught myself to build apps and made OpTrack.</p>
+        <p style="margin:0;font-size:0.8125rem;line-height:1.5;color:var(--text2)">It does one job. You log your option trades, see what's open, and see what you've actually made. There's no hype, no tips and no nonsense.</p>
+        <p style="margin:0;font-size:0.8125rem;line-height:1.5;color:var(--text2)">I use it every week myself. If you've got an idea or something's not working, DM me on X. I'm always happy to hear from people.</p>
+      </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <div id="settings-user" style="font-size:0.6875rem;color:var(--text3);padding:0 0.875rem"></div>
       <div id="settings-plan" style="display:none;font-size:0.75rem;color:var(--text2);padding:0 0.875rem"></div>
@@ -2538,7 +2551,7 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
     const open=g.legs.filter(l=>l.status==='open');
     let th=0,thOk=false;open.forEach(l=>{const gk=OPTS.legGreeks(l,spots[l.underlying],today);if(gk){th+=gk.theta;thOk=true;}});
     const linked=g.legs.find(l=>l.wheelId);
-    const acts=g.status==='open'?`<button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.6875rem" onclick="openOptClose('${g.id}','close')">Close</button><button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.6875rem" onclick="openOptClose('${g.id}','roll')">Roll</button>`:'';
+    const acts=g.status==='open'?`<button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.6875rem" onclick="openOptClose('${g.id}','close')">Close</button>`:'';
     return`<tr>
       <td><b>${esc(g.legs[0].underlying)}</b><div style="font-size:0.6875rem;color:var(--text3)">${esc(g.strategy)}${linked?` · ↳ ${wname(linked.wheelId)}`:''}</div></td>
       <td>${g.legs.map(_legLine).join('')}</td>
@@ -2748,6 +2761,10 @@ function pmccClosedCaptured(c){
   if(net!=null){const cc=capturedCellHtml(0,net,false);return {html:cc.html.replace(/^0% /,''),color:cc.color};}
   return null;
 }
+function cpDate(iso){if(!iso)return'';const d=new Date(iso);return isNaN(+d)?'':d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+function cpEditor(id,value,when,saveFn){const v=value!=null&&value!==''?String(value):'';const whenTxt=v!==''?cpDate(when):'';return `<label class="cp-edit" onclick="event.stopPropagation()">Current price<span>Now $<input id="current-price-${esc(id)}" name="current-price" aria-label="Current price" type="number" step="0.0001" value="${esc(v)}" onchange="${saveFn}('${id}',this.value)">${whenTxt?` · ${esc(whenTxt)}`:''}</span></label>`;}
+function saveWheelCurrentPrice(id,raw){const t=(db.trades||[]).find(x=>x.id===id);if(!t)return;const v=String(raw==null?'':raw).trim();if(v===''){if(t.currentPrice==null)return;delete t.currentPrice;delete t.currentPriceAt;}else{const n=+v;if(!(n>=0))return;if(t.currentPrice!=null&&+t.currentPrice===n)return;t.currentPrice=n;t.currentPriceAt=new Date().toISOString();}_saveTrade(t);render();}
+function saveOptCurrentPrice(id,raw){const i=(db.opts||[]).findIndex(x=>x.id===id);if(i<0)return;const l=db.opts[i];const v=String(raw==null?'':raw).trim();if(v===''){if(l.mark==null||l.mark==='')return;l.mark=null;l.markAt=null;l.markSrc=null;}else{const n=+v;if(!(n>=0))return;if(l.markSrc==='manual'&&l.mark!=null&&+l.mark===n)return;l.mark=n;l.markSrc='manual';l.markAt=new Date().toISOString();l.delta=null;l.theta=null;l.iv=null;}_saveOpt(l);render();}
 function renderPmccListRow(e,spot,today){
   const c=e.leg;
   const isSto=e.action==='STO';
@@ -2776,7 +2793,7 @@ function renderPmccListRow(e,spot,today){
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
     <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
     <span class="to-strike m">${esc(ts)}</span>
-    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}</span>
+    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}${e.open&&isSto&&c?cpEditor(c.id,c.mark,c.markAt,'saveOptCurrentPrice'):''}</span>
     <span>${e.qty?e.qty*100:'—'}</span>
     <span class="${e.total>=0?'g':'r'}">${fmtMoney(e.total)}</span>
     <span>${e.fees?'$'+fmt2(e.fees):'—'}</span>
@@ -2814,13 +2831,15 @@ function pmccEditLeg(l,f){
   if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};if(!(qty>0))return{err:'Enter the contracts'};if(!(price>=0))return{err:'Enter the sell price'};
   const n={...l,strike,expiry:f.expiry,qty,entryPrice:price,entryDate:f.date||l.entryDate||null,fees:+f.fees||0};
   if(l.status==='closed'){const cp=parseFloat(f.cprice);if(!(cp>=0))return{err:'Enter the buyback price'};n.closePrice=cp;n.closeDate=f.cdate||l.closeDate;n.closeFees=+f.cfees||0;}
+  if(l.status==='open'&&f.mark!=null){const raw=String(f.mark).trim();if(raw===''){n.mark=null;n.markAt=null;n.markSrc=null;}else if(!(l.mark!=null&&l.mark!==''&&+raw===+l.mark)){n.mark=+raw;n.markSrc='manual';n.markAt=new Date().toISOString();n.delta=null;n.theta=null;n.iv=null;}}
   return{leg:n};
 }
 function openPmccLegEdit(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
   const v=(k,x)=>document.getElementById(k).value=x??'';
   v('pe-id',l.id);v('pe-strike',l.strike);v('pe-expiry',l.expiry);v('pe-qty',l.qty);v('pe-price',l.entryPrice);v('pe-date',l.entryDate);v('pe-fees',l.fees??0);
-  v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);
+  v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);v('pe-current-price',l.mark);
+  document.getElementById('pe-cp-wrap').style.display=l.status==='open'?'':'none';
   document.getElementById('pe-close').style.display=l.status==='closed'?'grid':'none';
   document.getElementById('pe-exp').style.display=l.status==='open'?'':'none';
   document.getElementById('pe-err').style.display='none';
@@ -2829,7 +2848,7 @@ function openPmccLegEdit(id){
 }
 function savePmccLeg(){
   const g=k=>document.getElementById(k).value,i=(db.opts||[]).findIndex(x=>x.id===g('pe-id'));if(i<0)return;
-  const r=pmccEditLeg(db.opts[i],{strike:g('pe-strike'),expiry:g('pe-expiry'),qty:g('pe-qty'),price:g('pe-price'),date:g('pe-date'),fees:g('pe-fees'),cprice:g('pe-cprice'),cdate:g('pe-cdate'),cfees:g('pe-cfees')});
+  const r=pmccEditLeg(db.opts[i],{strike:g('pe-strike'),expiry:g('pe-expiry'),qty:g('pe-qty'),price:g('pe-price'),date:g('pe-date'),fees:g('pe-fees'),cprice:g('pe-cprice'),cdate:g('pe-cdate'),cfees:g('pe-cfees'),mark:g('pe-current-price')});
   const e=document.getElementById('pe-err');if(r.err){e.textContent=r.err;e.style.display='block';return;}
   db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmccLeg');render();
 }
@@ -2869,7 +2888,7 @@ function renderLeapCard(l,spot,today){
   const note=rev?`◷ ${rev}`:'';
   const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:'';
   const gid=l.groupId||l.id;
-  const btns=`${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','roll')">Roll</button><button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
+  const btns=`${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
   let row;
   if(open){
     const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
@@ -2890,7 +2909,7 @@ function renderLeapCard(l,spot,today){
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapRoll('${esc(l.id)}')">Roll</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${l.markWhy==='none'?`<div class="lc-quiet" onclick="event.stopPropagation()">No fresh quote${l.mark!=null&&l.markAt?` · last price $${Number(l.mark).toFixed(2)} on ${_fdShort(String(l.markAt).slice(0,10))}`:''}. <button type="button" class="btn btn-ghost btn-sm" onclick="refreshLegMark('${esc(l.id)}')">Refresh price</button><button type="button" class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Enter mark manually</button></div>`:''}
     ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
@@ -2898,6 +2917,7 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.6875rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
+  <div style="margin:0.5rem 0.875rem 0">${cpEditor(l.id,l.mark,l.markAt,'saveOptCurrentPrice')}</div>
   ${renderPmcc(l,today,spot,true)}
 `:''}</div>`;
   }
@@ -3082,7 +3102,7 @@ function openPmccSell(leapId){
   const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
   const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
   const v=(k,x)=>document.getElementById(k).value=x??'';
-  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste'].forEach(k=>v(k,''));
+  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste','pcc-current-price'].forEach(k=>v(k,''));
   v('pcc-qty',Math.max(1,(+L.qty||1)-P.open.reduce((a,l)=>a+(+l.qty||0),0)));v('pcc-fees','0');v('pcc-date',new Date().toISOString().slice(0,10));
   document.getElementById('mPmccTitle').textContent=`Add trade · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
   document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
@@ -3130,6 +3150,7 @@ function pmccSide(a){
   on('pcc-side-sto',a==='sto');on('pcc-side-btc',a==='btc');
   document.getElementById('pcc-price-lbl').textContent=a==='btc'?'Buyback price / share':'Premium / share';
   document.getElementById('pcc-date-lbl').textContent=a==='btc'?'Date bought':'Date sold';
+  const cp=document.getElementById('pcc-cp-wrap');if(cp)cp.style.display=a==='sto'?'':'none';
   if(a==='btc'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const open=L?pmccShortsFor(L,db.opts||[]).filter(s=>s.status==='open'):[];if(open.length===1)document.getElementById('pcc-qty').value=open[0].qty;}
   document.getElementById('pcc-err').style.display='none';
 }
@@ -3192,13 +3213,11 @@ function pmccRollPreview(r){
   const cash=x=>(x.price||0)*(x.qty||0)*100,net=(cash(r.kind==='short'?r.open:r.close)-cash(r.kind==='short'?r.close:r.open))-(r.close.fees||0)-(r.open.fees||0);
   return`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem"><span style="border:1px solid var(--orange);color:var(--orange);font-size:0.625rem;font-weight:600;padding:0.1875rem 0.625rem;border-radius:1.25rem">↻ ROLL</span><span style="margin-left:auto;font-weight:600;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit +':'Net debit -'}$${Math.abs(net).toFixed(2)}</span></div>
   <div style="display:flex;gap:0.5rem;align-items:stretch">${card(r.close,nm[0])}<div style="align-self:center;color:var(--orange)">→</div>${card(r.open,nm[1])}</div>
-  <label class="roll-opt"><input type="checkbox" id="pcc-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>
   <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save</button>`;
 }
 function pmccSaveRoll(){
   const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
-  const pair=document.getElementById('pcc-roll-pair');
-  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),pair&&pair.checked?true:false);
+  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),false);
   if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
   db.opts=db.opts||[];
   a.save.forEach(l=>{const i=db.opts.findIndex(x=>x.id===l.id);if(i>=0)db.opts[i]=l;else db.opts.push(l);_saveOpt(l);});
@@ -3257,7 +3276,8 @@ function savePmcc(){
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
   const d=pmccDupOf(r.leg,db.opts);
   if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
-  if(document.getElementById('pcc-roll').checked&&document.getElementById('pcc-roll-from').value)r.leg.rolledFrom=document.getElementById('pcc-roll-from').value;
+  const cpRaw=g('pcc-current-price').trim();
+  if(cpRaw!==''&&+cpRaw>=0){r.leg.mark=+cpRaw;r.leg.markSrc='manual';r.leg.markAt=new Date().toISOString();}
   r.leg.ts=new Date().toISOString();db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
 }
 function pmccClose(id,mode){
@@ -4614,6 +4634,7 @@ function wheelListCells(t,L){
     const d=dd(L.today,t.entered);if(d&&t.total)r.ppd=ppdCellHtml(t.total*(baseSh?openSh/baseSh:1)/d,d);
     const occ=wheelLegOcc(L.ticker,t),known=!!(L.marks&&Object.prototype.hasOwnProperty.call(L.marks,occ));
     const mark=L.marks?L.marks[occ]:null;
+    if(t.currentPrice!=null&&t.currentPrice!==''&&prem>0){const px=+t.currentPrice;const cv=Math.round(px*openSh*100)/100;const pf=Math.round((prem-px)*openSh*100)/100;const pct=Math.round((prem-px)/prem*100);const c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${px.toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;return r;}
     if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:openSh/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
@@ -4651,7 +4672,7 @@ function renderTradeRow(t,wheelTrades,opts){
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?fmtStrike(t.strike):'—'}</span>
     ${hasExtra?opts.extraAfterStrike:''}
-    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
+    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}${opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?cpEditor(t.id,t.currentPrice,t.currentPriceAt,'saveWheelCurrentPrice'):''}</span>
     <span style="white-space:nowrap">${opts.list?(()=>{const lab=wheelRemainLabel(t,wheelTrades,opts.list.today);return lab?esc(lab):(t.shares||'—');})():(t.shares||'—')}</span>
     <span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>
     <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
@@ -4744,8 +4765,21 @@ function actHeldValue(rows,priceOf,legs){
     if(mark>0)leaps+=mark*100*(+leg.qty||0);
     else leapPlain++;
   });
+  let closeCost=0;
+  const wheelRows=(rows||[]).filter(t=>!t.opt);
+  const slices=wheelCloseSlices(wheelRows);
+  wheelRows.forEach(t=>{
+    if((t.action!=='CSP'&&t.action!=='STOC')||t.currentPrice==null||t.currentPrice==='')return;
+    const left=slices.rem[t.id];
+    if(!(left>0))return;
+    closeCost+=(+t.currentPrice)*left;
+  });
+  (legs||[]).forEach(l=>{
+    if(!l||l.status!=='open'||l.side!=='short'||l.markSrc!=='manual'||l.mark==null||l.mark==='')return;
+    closeCost+=(+l.mark)*100*(+l.qty||0);
+  });
   const r=x=>Math.round(x*100)/100;
-  return {shares:r(shares),leaps:r(leaps),atCost,leapPlain};
+  return {shares:r(shares),leaps:r(leaps),closeCost:r(closeCost),atCost,leapPlain};
 }
 function setLogKind(k){
   if(k==='all')logKinds.clear();
@@ -4790,7 +4824,7 @@ function renderLog(){
   const pnl=actPnl(trades);
   const priceOf=tk=>{const q=typeof quotes!=='undefined'&&quotes[tk];if(q&&q.price>0)return q.price;const w=(db.wheels||[]).find(x=>String(x.ticker||'').toUpperCase()===String(tk||'').toUpperCase()&&x.lastPrice!=null);return w?+w.lastPrice:null;};
   const held=actHeldValue(trades,priceOf,db.opts||[]);
-  const totalRet=Math.round((pnl.net+held.shares+held.leaps)*100)/100;
+  const totalRet=Math.round((pnl.net+held.shares+held.leaps-(held.closeCost||0))*100)/100;
   const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));
   const kindsShown=ACT_KINDS.filter(([k])=>haveOther||k!=='other');
   const pills=[['all','All'],...kindsShown].map(([k,lbl])=>{
@@ -5396,7 +5430,7 @@ function renderMonthlyRealised(){
   const tr=(label,cls,cells)=>`<tr class="${cls||''}"><td>${label}</td>${cells}</tr>`;
   const opt=all.filter(r=>r.collected||r.loss);
   let html=opt.length?panel('Monthly P&amp;L',`Options only, realised: booked in the month an option closed, expired or was assigned/called away; open options are excluded. Premium collected = credits of wheel puts and calls that ended that month, sell-to-close credits and credits of PMCC short calls. Loss = buyback costs on wheel options and PMCC calls. Profit = Premium collected minus Loss. Share sales and closed LEAPs are in Shares & LEAPs P&L below.`,
-    ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'')+cell(r.loss?-r.loss:0,'r')+pcell(r.profit))):'';
+    ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'g')+cell(r.loss?-r.loss:0,'r')+pcell(r.profit))):'';
   // Positions: FIFO share sales + closed long LEAPs (+ dividends), one table
   const sh=all.filter(r=>r.shareSales||r.divs||r.leapGain||r.leapLoss);
   const showDiv=sh.some(r=>r.divs);
@@ -5681,16 +5715,84 @@ function deleteWheel(id){
   expanded.delete(id);render();
 }
 
-function populateWheelSelect(selectedId,ticker){
-  const sel=document.getElementById('tf-wheel');
-  sel.innerHTML='<option value="new">+ Create New Rotation</option>';
-  db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
-    const opt=document.createElement('option');
-    opt.value=w.id;opt.textContent=`${w.label||w.ticker} (${w.status})`;sel.appendChild(opt);
+function wheelRunSpan(w){
+  const dates=(db.trades||[]).filter(t=>t&&t.wheelId===w.id&&!t.expiredWorthless&&t.entered).map(t=>String(t.entered).slice(0,10)).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  const start=dates[0]||String(w.createdAt||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(start))return '';
+  if(w.status!=='closed')return fmtMonYear(start)+' – ongoing';
+  const end=dates.length?dates[dates.length-1]:start;
+  return fmtMonYear(start)+' – '+fmtMonYear(end);
+}
+function wheelFace(w){
+  const tk=String(w.ticker||'').toUpperCase();
+  let co=String(w.company||'').trim();
+  if(!co||/^rotation\b/i.test(co)){const row=(window.POPULAR&&POPULAR.rows||[]).find(r=>String(r[0]).toUpperCase()===tk);co=row&&row[1]?String(row[1]):'';}
+  const name=co&&co!==tk?co+' / '+tk:(tk||'Wheel');
+  const span=wheelRunSpan(w);
+  return span?name+' · '+span:name;
+}
+function wheelLogoHtml(ticker){const u=logos[String(ticker||'').toUpperCase()];return u?`<img src="${esc(u)}" class="rot-logo" alt="" onerror="this.style.display='none'">`:'';}
+function wheelPickItems(wheels){
+  return [{id:'new',ticker:'',text:'+ New wheel'}].concat((wheels||[]).map(w=>({id:w.id,ticker:w.ticker,text:wheelFace(w)})));
+}
+function pickWheelDefault(selectedId,ticker){
+  if(selectedId&&(selectedId==='new'||(db.wheels||[]).some(w=>w.id===selectedId)))return selectedId;
+  if(ticker){const op=(db.wheels||[]).find(w=>w.ticker===ticker&&w.status==='open');if(op)return op.id;}
+  return 'new';
+}
+function fillWheelPick(id,items,selectedId){
+  const hidden=document.getElementById(id);if(!hidden)return;
+  const root=hidden.closest('.wh-pick');if(!root)return;
+  const value=items.some(i=>i.id===selectedId)?selectedId:(items[0]?items[0].id:'new');
+  hidden.value=value;
+  root.querySelector('.wh-pick-list').innerHTML=items.map(i=>`<button type="button" class="wh-opt${i.id===value?' on':''}" data-id="${esc(i.id)}" onclick="chooseWheelPick('${esc(id)}','${esc(i.id)}')">${wheelLogoHtml(i.ticker)}<span>${esc(i.text)}</span></button>`).join('');
+  const cur=items.find(i=>i.id===value);
+  root.querySelector('.wh-pick-face').innerHTML=cur?wheelLogoHtml(cur.ticker)+`<span>${esc(cur.text)}</span>`:'';
+}
+function toggleWheelPick(btn){
+  const list=btn.parentElement.querySelector('.wh-pick-list');
+  const willOpen=list.hidden;
+  document.querySelectorAll('.wh-pick-list').forEach(l=>l.hidden=true);
+  document.querySelectorAll('.wh-pick-btn').forEach(b=>b.setAttribute('aria-expanded','false'));
+  if(!willOpen)return;
+  list.hidden=false;btn.setAttribute('aria-expanded','true');
+  const close=e=>{if(btn.parentElement.contains(e.target))return;list.hidden=true;btn.setAttribute('aria-expanded','false');document.removeEventListener('click',close,true);};
+  setTimeout(()=>document.addEventListener('click',close,true),0);
+}
+function chooseWheelPick(id,value){
+  const hidden=document.getElementById(id);if(!hidden)return;
+  const root=hidden.closest('.wh-pick');
+  hidden.value=value;
+  root.querySelectorAll('.wh-opt').forEach(b=>b.classList.toggle('on',b.dataset.id===value));
+  const on=root.querySelector('.wh-opt.on');
+  root.querySelector('.wh-pick-face').innerHTML=on?on.innerHTML:'';
+  root.querySelector('.wh-pick-list').hidden=true;
+  root.querySelector('.wh-pick-btn').setAttribute('aria-expanded','false');
+  if(id==='tf-wheel')fillRollSelect('tf-roll-from',value,document.getElementById('tf-id').value);
+  if(id==='pm-wheel')fillRollSelect('pm-roll-from',value);
+  if(id==='paste-wheel-sel')fillRollSelect('paste-roll-from',value);
+}
+function warmWheelLogos(){
+  const need=[...new Set((db.wheels||[]).map(w=>String(w.ticker||'').toUpperCase()).filter(t=>t&&logos[t]===undefined))];
+  if(!need.length)return;
+  Promise.all(need.map(fetchLogo)).then(()=>{
+    document.querySelectorAll('.wh-pick').forEach(root=>{
+      root.querySelectorAll('.wh-opt').forEach(b=>{
+        if(b.querySelector('img'))return;
+        const w=(db.wheels||[]).find(x=>x.id===b.dataset.id);
+        const logo=wheelLogoHtml(w&&w.ticker);
+        if(logo)b.insertAdjacentHTML('afterbegin',logo);
+      });
+      const on=root.querySelector('.wh-opt.on');
+      if(on)root.querySelector('.wh-pick-face').innerHTML=on.innerHTML;
+    });
   });
-  if(selectedId)sel.value=selectedId;
-  else if(ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
-  fillRollSelect('tf-roll-from',sel.value,document.getElementById('tf-id').value);
+}
+function populateWheelSelect(selectedId,ticker){
+  const wheels=[...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  fillWheelPick('tf-wheel',wheelPickItems(wheels),pickWheelDefault(selectedId,ticker));
+  fillRollSelect('tf-roll-from',document.getElementById('tf-wheel').value,document.getElementById('tf-id').value);
+  warmWheelLogos();
 }
 function openAddTrade(wheelId){
   document.getElementById('tf-id').value='';
@@ -5702,6 +5804,8 @@ function openAddTrade(wheelId){
   document.getElementById('tf-delete-btn').style.display='none';
   document.getElementById('tf-expired-btn').style.display='none';
   document.getElementById('tg-created-at').style.display='none';
+  document.getElementById('tg-current-price').style.display='none';
+  document.getElementById('current-price').value='';
   document.getElementById('mTradeTitle').textContent='Add Trade';
   const w=wheelId?db.wheels.find(x=>x.id===wheelId):null;
   document.getElementById('tf-ticker').value=w?.ticker||'SOFI';
@@ -5741,6 +5845,9 @@ function openEditTrade(id){
   }else{
     _expBtn.style.display='none';
   }
+  const cpOpen=(t.action==='CSP'||t.action==='STOC')&&!t.expiredWorthless&&walkLegPairs((db.trades||[]).filter(x=>x.wheelId===t.wheelId)).open.some(o=>o.id===t.id&&o._rem>0);
+  const cpBox=document.getElementById('tg-current-price');cpBox.style.display=cpOpen?'':'none';
+  document.getElementById('current-price').value=t.currentPrice!=null&&t.currentPrice!==''?t.currentPrice:'';
   const caDiv=document.getElementById('tg-created-at');
   if(t.createdAt){const caDate=t.createdAt.slice(0,10);document.getElementById('tf-created-at').value=fmtDateFull(caDate)+' ('+new Date(t.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+')';caDiv.style.display='';}
   else{caDiv.style.display='none';}
@@ -5801,16 +5908,16 @@ function saveTrade(){
     if(idx>=0){
       const old=db.trades[idx];
       const updated={id,...data,createdAt:old.createdAt||new Date().toISOString()};
-      if(document.getElementById('tf-roll').checked&&document.getElementById('tf-roll-from').value)linkWheelRoll(updated,document.getElementById('tf-roll-from').value);
-      else if(old.rollId)updated.rollId=old.rollId;                 // never write undefined to Firestore
+      if(old.rollId)updated.rollId=old.rollId;                 // keep a stored link; the form no longer edits it
       if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
       updated.verified=old.verified||false;                    // preserve verification status
+      if(old.currentPrice!=null&&old.currentPrice!==''){updated.currentPrice=old.currentPrice;updated.currentPriceAt=old.currentPriceAt||null;}
+      if(action==='CSP'||action==='STOC'){const raw=document.getElementById('current-price').value.trim();if(raw===''){delete updated.currentPrice;delete updated.currentPriceAt;}else if(!(old.currentPrice!=null&&+old.currentPrice===+raw)){updated.currentPrice=+raw;updated.currentPriceAt=new Date().toISOString();}}
       db.trades[idx]=updated;
     }
   }
   else{
     const newTrade={id:uid(),createdAt:new Date().toISOString(),...data};
-    if(document.getElementById('tf-roll').checked)linkWheelRoll(newTrade,document.getElementById('tf-roll-from').value);
     const _firstTrade=!db.trades.length;
     db.trades.push(newTrade);
     expanded.add(wheelId);
@@ -6947,7 +7054,7 @@ function switchPasteTab(tab){
     document.getElementById('pm-ticker').value=ticker;
     document.getElementById('pm-entered').value=new Date().toISOString().slice(0,10);
     document.getElementById('pm-action').value='CSP';
-    ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment'].forEach(id=>document.getElementById(id).value='');
+    ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment','pm-current-price'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('pm-fees').value='0';
     const pr=document.getElementById('pm-roll');if(pr){pr.checked=false;document.getElementById('pm-roll-box').hidden=true;}
     populatePMWheelSelect(wheelId,ticker);
@@ -6955,13 +7062,10 @@ function switchPasteTab(tab){
   }
 }
 function populatePMWheelSelect(wheelId,ticker){
-  const sel=document.getElementById('pm-wheel');
-  sel.innerHTML='<option value="new">+ New Rotation</option>';
-  db.wheels.filter(w=>!ticker||w.ticker===ticker).forEach(w=>{
-    sel.innerHTML+=`<option value="${w.id}" ${w.id===wheelId?'selected':''}>${esc(w.label||w.ticker)} ${w.status==='open'?'(Open)':'(Closed)'}</option>`;
-  });
-  if(!wheelId&&ticker){const op=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');if(op)sel.value=op.id;}
-  fillRollSelect('pm-roll-from',sel.value,'');
+  const wheels=(db.wheels||[]).filter(w=>!ticker||w.ticker===ticker).sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  fillWheelPick('pm-wheel',wheelPickItems(wheels),pickWheelDefault(wheelId,ticker));
+  fillRollSelect('pm-roll-from',document.getElementById('pm-wheel').value,'');
+  warmWheelLogos();
 }
 function onPMTickerInput(){const tk=document.getElementById('pm-ticker').value.toUpperCase().trim();populatePMWheelSelect(null,tk);}
 function onPMActionChange(){
@@ -6970,6 +7074,7 @@ function onPMActionChange(){
   document.getElementById('pmg-strike').style.opacity=isOpt?'1':'0.4';
   document.getElementById('pmg-delta').style.opacity=isSell?'1':'0.4';
   document.getElementById('pm-prem-lbl').textContent=STOCKS.has(a)?'Price per Share':'Premium per Share';
+  const cp=document.getElementById('pm-cp-wrap');if(cp)cp.style.display=isSell?'':'none';
   autoCalcPMTotal();
 }
 function autoCalcPMTotal(){
@@ -7003,7 +7108,7 @@ function savePMTrade(){
     delta:isNaN(deltaRaw)?null:deltaRaw,
     premium,fees,shares,total,days,ppd:days>0?total/days:0,
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
-  if(document.getElementById('pm-roll').checked)linkWheelRoll(newTrade,document.getElementById('pm-roll-from').value);
+  if(action==='CSP'||action==='STOC'){const raw=document.getElementById('pm-current-price').value.trim();if(raw!==''&&+raw>=0){newTrade.currentPrice=+raw;newTrade.currentPriceAt=new Date().toISOString();}}
   const _firstTrade=!db.trades.length;
   db.trades.push(newTrade);expanded.add(wheelId);
   _saveTrade(newTrade);closeModal('mPaste');render();
@@ -7024,7 +7129,7 @@ function showPasteStep1(){
   document.getElementById('paste-step2').style.display='none';
 }
 
-// A ticked "Mark as roll" shares one rollId with the trade the user picked. Nothing is chosen for them.
+// Fills a "rolls from" list when that control is on the page. Nothing is chosen for the user.
 function fillRollSelect(selId,wheelId,excludeId){
   const sel=document.getElementById(selId);if(!sel)return;
   const rows=(db.trades||[]).filter(t=>t&&t.wheelId===wheelId&&t.id!==excludeId).sort((a,b)=>String(b.entered||'').localeCompare(String(a.entered||'')));
@@ -7315,11 +7420,7 @@ function parseRollTrades(raw,todayISO){
 function showRollPreview(trades){
   const wheelId=document.getElementById('paste-wheelId').value;
   const ticker=trades[0].ticker;
-  let opts='<option value="new">+ Create New Rotation</option>';
-  db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
-    const sel=(wheelId&&w.id===wheelId)||(!wheelId&&w.ticker===ticker&&w.status==='open');
-    opts+=`<option value="${w.id}"${sel?' selected':''}>${esc(w.label||w.ticker)} (${w.status})</option>`;
-  });
+  const wheelHtml=`<div class="wh-pick"><input type="hidden" id="paste-wheel-sel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div>`;
   function tradeCard(p){
     const cr=isCredit(p.action);const col=cr?'var(--green)':'var(--red)';const borderCol=cr?'var(--green)':'var(--red)';
     return`<div style="background:var(--bg3);border:1px solid var(--border);border-left:0.1875rem solid ${borderCol};border-radius:0.5rem;padding:0.75rem;flex:1;min-width:0">
@@ -7348,10 +7449,11 @@ function showRollPreview(trades){
       <div style="display:flex;align-items:center;color:var(--orange);font-size:1.25rem;font-weight:600;flex-shrink:0">→</div>
       ${tradeCard(trades[1])}
     </div>
-    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel">${opts}</select></div>
-    <label class="roll-opt"><input type="checkbox" id="paste-roll-pair"> Mark as roll</label><div style="font-size:0.6875rem;color:var(--text3);margin:-0.25rem 0 0.5rem">Links these two legs. Leave off to keep them separate.</div>`;
+    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>`;
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
+  fillWheelPick('paste-wheel-sel',wheelPickItems([...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99))),pickWheelDefault(wheelId,ticker));
+  warmWheelLogos();
 }
 
 function parsePaste(){
@@ -7377,11 +7479,7 @@ function parsePaste(){
 function showPastePreview(p){
   const wheelId=document.getElementById('paste-wheelId').value;
   // Build wheel select
-  let opts='<option value="new">+ Create New Rotation</option>';
-  db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
-    const sel=(wheelId&&w.id===wheelId)||(!wheelId&&w.ticker===p.ticker&&w.status==='open');
-    opts+=`<option value="${w.id}"${sel?' selected':''}>${esc(w.label||w.ticker)} (${w.status})</option>`;
-  });
+  const wheelHtml=`<div class="wh-pick"><input type="hidden" id="paste-wheel-sel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div>`;
   const totalCol=isCredit(p.action)?'var(--green)':'var(--red)';
   const totalSign=isCredit(p.action)?'+':'-';
   document.getElementById('paste-preview').innerHTML=`
@@ -7401,9 +7499,9 @@ function showPastePreview(p){
         <div><div class="mini-lbl">Fees</div><div class="fs-sm">$${(p.fees||0).toFixed(2)}</div></div>
       </div>
     </div>
-    <div class="fld"><label>Assign to Rotation</label><select id="paste-wheel-sel" onchange="fillRollSelect('paste-roll-from',this.value)">${opts}</select></div>
-    <label class="roll-opt"><input type="checkbox" id="paste-roll-on" onchange="document.getElementById('paste-roll-box').hidden=!this.checked"> Mark as roll</label><div id="paste-roll-box" hidden class="fld"><label>Rolls from</label><select id="paste-roll-from"><option value="">Choose a trade</option></select></div>`;
-  fillRollSelect('paste-roll-from',document.getElementById('paste-wheel-sel').value);
+    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>`;
+  fillWheelPick('paste-wheel-sel',wheelPickItems([...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99))),pickWheelDefault(wheelId,p.ticker));
+  warmWheelLogos();
   document.getElementById('paste-step1').style.display='none';
   document.getElementById('paste-step2').style.display='block';
 }
@@ -7419,14 +7517,12 @@ function confirmParsed(){
       if(ex){wheelId=ex.id;}
       else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
-    const pair=document.getElementById('paste-roll-pair');
-    const rid=pair&&pair.checked?'roll_'+uid():null;
     const _firstTrade=!db.trades.length;
     trades.forEach(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
-        rollId:rid,verified:false,comment:'via SmartScan'};
+        verified:false,comment:'via SmartScan'};
       db.trades.push(nt);_saveTrade(nt);
     });
     expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
@@ -7447,8 +7543,6 @@ function confirmParsed(){
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
     verified:false,comment:'via SmartScan'};
-  const on=document.getElementById('paste-roll-on');
-  if(on&&on.checked)linkWheelRoll(nt,document.getElementById('paste-roll-from').value);
   db.trades.push(nt);_saveTrade(nt); // save only what was touched
   expanded.add(wheelId);
   closeModal('mPaste');parsedTradeData=null;
@@ -7943,6 +8037,7 @@ window.markExpiredFromModal = markExpiredFromModal;
 window.saveTrade = saveTrade;
 window.savePrice = savePrice;
 window.switchPasteTab = switchPasteTab;window.fillRollSelect = fillRollSelect;
+window.toggleWheelPick = toggleWheelPick;window.chooseWheelPick = chooseWheelPick;
 window.parsePaste = parsePaste;
 window.savePMTrade = savePMTrade;
 window.showPasteStep1 = showPasteStep1;
@@ -7982,6 +8077,8 @@ window.cyclePosSort = cyclePosSort;
 window.toggleSortMenu = toggleSortMenu;
 window.closeSortMenu = closeSortMenu;
 window.openEditTrade = openEditTrade;
+window.saveWheelCurrentPrice = saveWheelCurrentPrice;
+window.saveOptCurrentPrice = saveOptCurrentPrice;
 window.goToTrade = goToTrade;
 window.goToWheel = goToWheel; // module-scope rule: inline handlers need window exposure
 window.sortLog = sortLog;
