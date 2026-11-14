@@ -7,7 +7,7 @@ const path = require('path');
 const { loadTickerUniverse, shardKey } = require('./ticker-universe');
 const { fetchLogoPng: fetchLogoDev, CREDITS_LOGO } = require('../../netlify/lib/logo-dev');
 const { logoFetchAllowed, isHandMarkOnly, loadTop250Options } = require('./top250-options');
-const { mapWithBackoff, PRICE_PER_BRAND_USD } = require('./logo-fetch');
+const { mapWithBackoff, sleep, PRICE_PER_BRAND_USD } = require('./logo-fetch');
 const { analyseLogoPng, applyBrandOverride } = require('../../netlify/lib/wheelbrand-image');
 const { fallbackHueTicker, bgCssFromGradient, etfBg } = require('../../netlify/lib/wheelbrand-color');
 
@@ -278,19 +278,31 @@ async function main() {
     if (args.mockDemo && DEMO_TICKERS.includes(job.sym)) {
       png = await mockLogoPng(job.sym);
     } else if (secret) {
-      hit = await mapWithBackoff([job.sym], async (s) => fetchLogoDev(s, secret)).then((r) => r[0]);
-      if (hit && hit.creditsRemaining != null) creditsRemaining = hit.creditsRemaining;
-      if (hit && hit.png) {
-        creditsSpent += hit.credits || CREDITS_LOGO;
-        logosFetched += 1;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        hit = await mapWithBackoff([job.sym], async (s) => fetchLogoDev(s, secret)).then((r) => r[0]);
+        if (hit && hit.creditsRemaining != null) creditsRemaining = hit.creditsRemaining;
+        if (hit && hit.png) {
+          creditsSpent += hit.credits || CREDITS_LOGO;
+          logosFetched += 1;
+          png = hit.png;
+          break;
+        }
+        const why = hit && hit.why;
+        if (why === 'rate_limited' && attempt < 5) {
+          const waitMs = Math.min(120000, Math.max(2000, ((hit && hit.retryAfter) || 30) * 1000));
+          console.warn('rate_limited', job.sym, `retry in ${Math.round(waitMs / 1000)}s (${attempt + 1}/6)`);
+          await sleep(waitMs);
+          continue;
+        }
+        break;
       }
-      png = hit && hit.png;
     }
 
     if (!png) {
       const why = (hit && hit.why) || 'no_png';
       if (why === 'no_logo' || why === 'no_logo_url') noLogo.push({ sym: job.sym, why });
       if (why === 'credits_exhausted') apiHalt = why;
+      if (why === 'rate_limited' && !apiHalt) apiHalt = 'rate_limited';
       if (why !== 'no_logo' && why !== 'no_logo_url') console.warn('miss', job.sym, why);
       built[job.sym] = await buildFallback(job.sym, snapshot, overrides);
       state.tickers[job.sym] = { updatedAt: new Date().toISOString(), miss: why };

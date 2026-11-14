@@ -2,8 +2,8 @@
 
 const { fetchLogoPng } = require('../../netlify/lib/logo-dev');
 
-const API_REQ_PER_MIN = 100;
-const CONCURRENT = 5;
+const API_REQ_PER_MIN = 45;
+const CONCURRENT = 1;
 const MS_PER_REQ = Math.ceil(60000 / API_REQ_PER_MIN);
 
 /** Brand lookup fallback in logo-dev: Logo route 2 credits, Brand 5. @see https://www.logo.dev/docs/platform/credits */
@@ -73,6 +73,7 @@ async function mapWithBackoff(items, worker, { retries = 4 } = {}) {
 module.exports = {
   fetchLogoPng,
   mapWithBackoff,
+  sleep,
   PRICE_PER_BRAND_USD,
   PRICE_PER_LOGO_USD: PRICE_PER_BRAND_USD,
   API_REQ_PER_MIN,

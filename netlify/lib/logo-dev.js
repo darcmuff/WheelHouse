@@ -26,7 +26,9 @@ async function fetchLogoPng(ticker, secretKey, fetchImpl = fetch) {
     return { why: 'credits_exhausted' };
   }
   if (logoRes.status === 429) {
-    return { why: 'rate_limited' };
+    const raHdr = logoRes.headers.get('retry-after');
+    const retryAfter = raHdr != null && raHdr !== '' && Number.isFinite(Number(raHdr)) ? Number(raHdr) : 30;
+    return { why: 'rate_limited', retryAfter };
   }
   if (logoRes.status === 202) {
     return { why: 'indexing' };
