@@ -137,7 +137,7 @@
   function loadOverrides() {
     if (OVERRIDES) return Promise.resolve(OVERRIDES);
     if (OVERRIDES_PROMISE) return OVERRIDES_PROMISE;
-    OVERRIDES_PROMISE = fetch('brand/overrides.json', { cache: 'force-cache' })
+    OVERRIDES_PROMISE = fetch('brand/overrides.json', { cache: 'no-cache' })
       .then((r) => (r.ok ? r.json() : {}))
       .then((j) => {
         OVERRIDES = j && typeof j === 'object' ? j : {};
@@ -206,7 +206,7 @@
   function loadIndex() {
     if (INDEX) return Promise.resolve(INDEX);
     if (INDEX_PROMISE) return INDEX_PROMISE;
-    INDEX_PROMISE = fetch('brand/index.json', { cache: 'force-cache' })
+    INDEX_PROMISE = fetch('brand/index.json', { cache: 'no-cache' })
       .then((r) => (r.ok ? r.json() : { shards: [] }))
       .then((j) => {
         INDEX = j && Array.isArray(j.shards) ? j : { shards: [], v: 1 };
@@ -232,7 +232,7 @@
       SHARD_CACHE.set(name, empty);
       return empty;
     }
-    const p = fetch(`brand/shards/${name}.json`, { cache: 'force-cache' })
+    const p = fetch(`brand/shards/${name}.json`, { cache: 'no-cache' })
       .then((r) => (r.ok ? r.json() : {}))
       .catch(() => ({}));
     SHARD_CACHE.set(name, p);

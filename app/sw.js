@@ -1,5 +1,5 @@
 // WheelHouse service worker. Bump CACHE on every release.
-const CACHE='optrack-v252';
+const CACHE='optrack-v253';
 // Caches from earlier app names, deleted on update. Only the service-worker cache: your data and settings are untouched.
 const LEGACY = ['wheelhouse-'];
 const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
@@ -43,6 +43,14 @@ self.addEventListener('fetch', e => {
       if (res && res.ok && shell) { const c = res.clone(); caches.open(CACHE).then(x => x.put(SHELL, c)); }
       return res;
     }).catch(() => shell ? caches.match(SHELL) : caches.match(req, { ignoreSearch: true }).then(r => r || caches.match(SHELL))));
+    return;
+  }
+  // Brand data (overrides, index, shards) changes between deploys without a SW bump: network first, cache only for offline.
+  if (url.pathname.startsWith('/brand/') && url.pathname.endsWith('.json')) {
+    e.respondWith(fetch(req).then(res => {
+      if (res && res.ok && res.type === 'basic') { const c = res.clone(); caches.open(CACHE).then(x => x.put(req, c)); }
+      return res;
+    }).catch(() => caches.match(req, { ignoreSearch: true })));
     return;
   }
   // Cache first for same-origin static assets.
