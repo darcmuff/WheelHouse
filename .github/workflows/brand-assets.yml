@@ -45,7 +45,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/brand scripts/brand/data scripts/brand/top250-options.json
+          git add app/brand/index.json app/brand/shards app/brand/overrides.json
+          git add app/brand/*.png 2>/dev/null || true
+          git add scripts/brand/data scripts/brand/top250-options.json
           if git diff --staged --quiet; then echo "No brand changes"; exit 0; fi
           git commit -m "chore(brand): top-250 Logo.dev seed [skip ci]"
           git push origin dev

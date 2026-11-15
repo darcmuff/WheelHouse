@@ -4,3 +4,6 @@
 
 [functions.brand]
   included_files = ["app/brand/overrides.json", "app/brand/top250-options.json"]
+
+[functions."brand-mark"]
+  included_files = ["app/brand/*.png"]

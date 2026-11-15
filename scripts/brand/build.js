@@ -178,7 +178,12 @@ async function main() {
     }
     const ovHash = crypto.createHash('sha256').update(JSON.stringify(ov)).digest('hex').slice(0, 8);
   if (!args.force && shardSeeded[sym]) {
-      work.push({ sym, kind: 'shard_seed', entry: shardSeeded[sym] });
+      const pngPath = path.join(BRAND_DIR, `${sym}.png`);
+      if (fs.existsSync(pngPath)) {
+        work.push({ sym, kind: 'shard_seed', entry: shardSeeded[sym] });
+        continue;
+      }
+      work.push({ sym, kind: 'fetch', reason: 'missing_png' });
       continue;
     }
     const prev = state.tickers[sym];
