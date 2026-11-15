@@ -3923,7 +3923,7 @@ function renderPositions(){
     return renderRotationWindow(w);
   }).join('');
 
-  const legal=`<p class="wc-legal"><a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provided by Logo.dev</a>. Not affiliated with or endorsed by the companies shown.</p>`;
+  const legal=typeof WcBrand!=='undefined'&&WcBrand.logosEnabled&&WcBrand.logosEnabled()?`<p class="wc-legal"><a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provided by Logo.dev</a>. Not affiliated with or endorsed by the companies shown.</p>`:'';
   return toolbar+cards+legal;
 }
 

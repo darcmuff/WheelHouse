@@ -13,6 +13,9 @@
   const SHARD_MISSING = new Set();
   let INDEX = null;
   let INDEX_PROMISE = null;
+  let LOGOS_ENABLED = false;
+  let OVERRIDES = null;
+  let OVERRIDES_PROMISE = null;
   const HAND_POS = {
     AMD: [330, 325, -70, -20, -15, '#fff', 0.2],
     KO: [820, 258, -250, 78, -14, '#fff', 0.16],
@@ -127,7 +130,43 @@
     return marks[key(tk)] || null;
   }
 
+  function logosEnabled() {
+    return LOGOS_ENABLED;
+  }
+
+  function loadOverrides() {
+    if (OVERRIDES) return Promise.resolve(OVERRIDES);
+    if (OVERRIDES_PROMISE) return OVERRIDES_PROMISE;
+    OVERRIDES_PROMISE = fetch('brand/overrides.json', { cache: 'force-cache' })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((j) => {
+        OVERRIDES = j && typeof j === 'object' ? j : {};
+        if (typeof OVERRIDES.logos_enabled === 'boolean') LOGOS_ENABLED = OVERRIDES.logos_enabled;
+        return OVERRIDES;
+      })
+      .catch(() => {
+        OVERRIDES = {};
+        return OVERRIDES;
+      });
+    return OVERRIDES_PROMISE;
+  }
+
+  function lettersArtHtml(k) {
+    return `<div class="wc-art" aria-hidden="true"><span class="wc-tk">${escHtml(k.slice(0, 6) || '?')}</span></div>`;
+  }
+
+  function stripLogoFields(e) {
+    if (!e) return { fb: true };
+    const out = { ...e, fb: true };
+    delete out.m;
+    delete out.maskUrl;
+    delete out.keepHandMark;
+    delete out.hand;
+    return out;
+  }
+
   function prefersHandMark(k) {
+    if (!LOGOS_ENABLED) return false;
     return HAND_TICKERS.has(k) && !!handMarkSvg(k) && !!HAND_POS[k];
   }
 
@@ -141,6 +180,7 @@
 
   function artHtml(tk) {
     const k = key(tk);
+    if (!LOGOS_ENABLED) return lettersArtHtml(k);
     const hit = CACHE.get(k);
     const hand = handMarkHtml(k);
     if (hand && (!hit || hit.keepHandMark || hit.hand)) return hand;
@@ -214,6 +254,7 @@
   }
 
   function fetchBrandRemote(k) {
+    if (!LOGOS_ENABLED) return Promise.resolve({ fb: true });
     return fetch(`/.netlify/functions/brand?ticker=${encodeURIComponent(k)}`, { signal: AbortSignal.timeout(25000) })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
@@ -246,6 +287,20 @@
 
   function getBrand(ticker) {
     const k = key(ticker);
+    if (!LOGOS_ENABLED) {
+      if (CACHE.has(k)) return Promise.resolve(CACHE.get(k));
+      return loadOverrides().then(() => {
+        if (CACHE.has(k)) return CACHE.get(k);
+        const shard = shardFor(k);
+        return loadIndex()
+          .then(() => loadShard(shard))
+          .then((shardData) => {
+            const e = stripLogoFields(shardData[k] || null);
+            CACHE.set(k, e);
+            return e;
+          });
+      });
+    }
     if (CACHE.has(k)) return Promise.resolve(CACHE.get(k));
     if (prefersHandMark(k)) {
       const e = { keepHandMark: true, hand: true };
@@ -297,8 +352,20 @@
 
   function afterPositionsRender(tickers) {
     try {
-      prime(tickers)
-        .then(() => repaintAll())
+      loadOverrides()
+        .then(() => {
+          if (!LOGOS_ENABLED) {
+            if (tickers && tickers.length) {
+              tickers.forEach((t) => {
+                const k = key(t);
+                if (!CACHE.has(k)) CACHE.set(k, { fb: true });
+              });
+            }
+            repaintAll();
+            return;
+          }
+          return prime(tickers).then(() => repaintAll());
+        })
         .catch((e) => console.warn('WcBrand.afterPositionsRender failed', e));
     } catch (e) {
       console.warn('WcBrand.afterPositionsRender failed', e);
@@ -316,6 +383,8 @@
     }
   }
 
+  loadOverrides();
+
   return {
     key,
     bgSync,
@@ -330,6 +399,8 @@
     FALLBACK_HUES,
     handMarkSvg,
     prefersHandMark,
+    logosEnabled,
+    loadOverrides,
     setMarks,
   };
 });
