@@ -21,7 +21,9 @@
     KO: [820, 258, -250, 78, -14, '#fff', 0.16],
     NVDA: [600, 399, -150, -40, -15, '#76B900', 0.38],
     SOFI: [660, 193, -150, -4, -14, '#fff', 0.17],
-    SPCX: [700, 138, -40, 110, -14, '#fff', 0.2, 12], // wordmark: fade only the first 12% (default 45% would hide SPA)
+    SPCX: [700, 138, -40, 110, -14, '#fff', 0.2, 12],
+    TSLA: [420, 420, -120, 40, -14, '#fff', 0.16],
+    AMZN: [640, 172, -60, 120, -12, '#fff', 0.18, 20], // wordmark: fade only the first 12% (default 45% would hide SPA)
   };
   const HAND_TICKERS = new Set(Object.keys(HAND_POS));
   const G1_DARK_LIFT = 0.05925;
@@ -192,7 +194,11 @@
       const op = hit.wo != null ? hit.wo : 0.16;
       const asp = hit.a || 1;
       const src = hit.maskUrl ? hit.maskUrl : `brand/${k}.png`;
-      return `<div class="wc-art" aria-hidden="true"><div class="wc-lgw wc-png" style="--w:${Math.round(420 * asp)};--h:420;--x:-120;--y:40;--r:-14deg"><i style="--m:url('${src}');background:#fff;opacity:${op}"></i></div></div>`;
+      // Wide marks (wordmarks, the Amazon smile) are capped in width instead of being drawn 420px tall.
+      const w = Math.min(Math.round(420 * asp), 680);
+      const h = Math.round(w / asp);
+      const y = 40 + Math.round((420 - h) / 2);
+      return `<div class="wc-art" aria-hidden="true"><div class="wc-lgw wc-png" style="--w:${w};--h:${h};--x:-120;--y:${y};--r:-14deg"><i style="--m:url('${src}');background:#fff;opacity:${op}"></i></div></div>`;
     }
     if (hand) return hand;
     return `<div class="wc-art" aria-hidden="true"><span class="wc-tk">${escHtml(k.slice(0, 6) || '?')}</span></div>`;
@@ -306,11 +312,7 @@
       });
     }
     if (CACHE.has(k)) return Promise.resolve(CACHE.get(k));
-    if (prefersHandMark(k)) {
-      const e = { keepHandMark: true, hand: true };
-      CACHE.set(k, e);
-      return Promise.resolve(e);
-    }
+    // Hand-mark tickers still read their shard so the card keeps its brand gradient (TSLA red, AMZN orange).
     const shard = shardFor(k);
     return loadIndex()
       .then(() => loadShard(shard))
@@ -321,6 +323,11 @@
             e.keepHandMark = true;
             e.hand = true;
           }
+          CACHE.set(k, e);
+          return e;
+        }
+        if (prefersHandMark(k)) {
+          const e = { keepHandMark: true, hand: true };
           CACHE.set(k, e);
           return e;
         }

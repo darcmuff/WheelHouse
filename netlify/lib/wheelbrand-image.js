@@ -4,6 +4,9 @@
 const sharp = require('sharp');
 const { gradientFromBrand, unhex, hexc, oklch } = require('./wheelbrand-color');
 
+// Long side of a stored mask. Cards draw marks up to ~680 CSS px, so 1400 stays sharp on 2x screens.
+const MASK_MAX = 1400;
+
 function isNeutralRgb(rgb) {
   return oklch(rgb)[1] < 0.035;
 }
@@ -120,7 +123,14 @@ async function analyseLogoPng(pngBuf) {
     rgba[o + 2] = 255;
     rgba[o + 3] = a;
   }
-  const whitePng = await sharp(rgba, { raw: { width: cropW, height: cropH, channels: 4 } }).png().toBuffer();
+  // Full-resolution mask; only ever scaled down (to MASK_MAX on the long side), never up.
+  let img = sharp(rgba, { raw: { width: cropW, height: cropH, channels: 4 } });
+  if (Math.max(cropW, cropH) > MASK_MAX) {
+    img = sharp(await img.png().toBuffer()).resize(
+      cropW >= cropH ? { width: MASK_MAX, kernel: 'lanczos3' } : { height: MASK_MAX, kernel: 'lanczos3' }
+    );
+  }
+  const whitePng = await img.png({ compressionLevel: 9 }).toBuffer();
 
   return {
     brand,
@@ -263,4 +273,4 @@ function applyBrandOverride(entry, override) {
   return entry;
 }
 
-module.exports = { analyseLogoPng, applyBrandOverride, isNeutralRgb };
+module.exports = { analyseLogoPng, applyBrandOverride, isNeutralRgb, MASK_MAX };

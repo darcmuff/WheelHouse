@@ -6,6 +6,7 @@ const BRAND_API = 'https://api.logo.dev/v2/brands';
 /** Logo route: 2 credits; Brand route: 5 credits. @see https://www.logo.dev/docs/platform/credits */
 const CREDITS_LOGO = 2;
 const CREDITS_BRAND = 5;
+const DOWNLOAD_SIZE = 800;
 
 /**
  * @returns {Promise<{ png: Buffer, route: 'logo'|'brand', credits: number, brandJson?: object, why?: string }|{ why: string }>}
@@ -61,16 +62,35 @@ async function fetchLogoPng(ticker, secretKey, fetchImpl = fetch) {
   const logoUrl = logoObj && (logoObj.url || logoObj.href);
   if (!logoUrl) return { why: 'no_logo_url' };
 
+  // Largest free download: size is capped at 800 and retina doubles it (1600px). Downloads cost no credits.
   const dl = new URL(logoUrl);
   if (!dl.searchParams.has('format')) dl.searchParams.set('format', 'png');
-  if (!dl.searchParams.has('size')) dl.searchParams.set('size', '512');
+  if (!dl.searchParams.has('size')) dl.searchParams.set('size', String(DOWNLOAD_SIZE));
+  if (!dl.searchParams.has('retina')) dl.searchParams.set('retina', 'true');
 
   const img = await fetchImpl(dl.toString(), { signal: AbortSignal.timeout(45000) });
   if (!img.ok) return { why: `download_http:${img.status}` };
   const png = Buffer.from(await img.arrayBuffer());
   if (!png.length) return { why: 'empty_image' };
   const rem = creditsRemaining != null && creditsRemaining !== '' ? Number(creditsRemaining) : null;
-  return { png, route, credits, creditsRemaining: Number.isFinite(rem) ? rem : null, brandJson: data };
+  const meta = {
+    source: (logoObj && logoObj.source) || null,
+    etag: (logoObj && logoObj.etag) || null,
+    url: logoUrl,
+    expires_at: (logoObj && logoObj.expires_at) || null,
+    download: dl.toString(),
+  };
+  return { png, route, credits, creditsRemaining: Number.isFinite(rem) ? rem : null, brandJson: data, meta };
 }
 
-module.exports = { fetchLogoPng, CREDITS_LOGO, CREDITS_BRAND };
+/** Plan and credit balances. Not billed. */
+async function fetchAccount(secretKey, fetchImpl = fetch) {
+  const r = await fetchImpl('https://api.logo.dev/v2/account', {
+    headers: { Authorization: `Bearer ${secretKey}`, Accept: 'application/json' },
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!r.ok) return { why: `api_http:${r.status}` };
+  return r.json();
+}
+
+module.exports = { fetchLogoPng, fetchAccount, CREDITS_LOGO, CREDITS_BRAND, DOWNLOAD_SIZE };

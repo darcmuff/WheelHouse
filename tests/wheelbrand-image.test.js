@@ -37,3 +37,37 @@ test('transparent logo is not mistaken for a tile', async () => {
   assert.strictEqual(e.method, 'transparent');
   assert.ok((await maskAt(e, 0.5, 0.1)) > 200);
 });
+
+test('mask is stored at full resolution: never upscaled, capped at MASK_MAX', async () => {
+  const { MASK_MAX } = require('../netlify/lib/wheelbrand-image');
+  const small = await analyseLogoPng(await svgPng(`<rect width="512" height="512" rx="96" fill="#e31937"/>${T}`));
+  const s = await sharp(small.maskPng).metadata();
+  assert.ok(s.width <= 240 + 2 && s.height <= 280 + 2, `no upscale (${s.width}x${s.height})`);
+  const bigSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="3000"><rect width="3000" height="3000" rx="500" fill="#e31937"/><rect x="300" y="500" width="2400" height="2000" fill="#fff"/></svg>`;
+  const big = await analyseLogoPng(await sharp(Buffer.from(bigSvg)).png().toBuffer());
+  const b = await sharp(big.maskPng).metadata();
+  assert.ok(Math.max(b.width, b.height) <= MASK_MAX && Math.max(b.width, b.height) >= MASK_MAX - 2, `capped (${b.width}x${b.height})`);
+});
+
+test('Logo.dev download asks for the largest free size (800, retina)', async () => {
+  const { fetchLogoPng } = require('../netlify/lib/logo-dev');
+  const png = await svgPng(T);
+  let dlUrl = null;
+  const fake = async (url) => {
+    url = String(url);
+    if (url.startsWith('https://api.logo.dev')) {
+      return new Response(JSON.stringify({ logo: { url: 'https://img.logo.dev/assets/X', etag: 'e1', source: { width: 512, height: 512, is_vector: true } } }), {
+        status: 200,
+        headers: { 'credits-remaining': '30' },
+      });
+    }
+    dlUrl = new URL(url);
+    return new Response(png, { status: 200 });
+  };
+  const hit = await fetchLogoPng('TSLA', 'sk_test', fake);
+  assert.strictEqual(dlUrl.searchParams.get('size'), '800');
+  assert.strictEqual(dlUrl.searchParams.get('retina'), 'true');
+  assert.strictEqual(dlUrl.searchParams.get('format'), 'png');
+  assert.strictEqual(hit.meta.etag, 'e1');
+  assert.strictEqual(hit.creditsRemaining, 30);
+});

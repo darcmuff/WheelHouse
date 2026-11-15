@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { loadTickerUniverse, shardKey } = require('./ticker-universe');
-const { fetchLogoPng: fetchLogoDev, CREDITS_LOGO } = require('../../netlify/lib/logo-dev');
+const { fetchLogoPng: fetchLogoDev, fetchAccount, CREDITS_LOGO } = require('../../netlify/lib/logo-dev');
 const { logoFetchAllowed, isHandMarkOnly, loadTop250Options } = require('./top250-options');
 const { mapWithBackoff, sleep, PRICE_PER_BRAND_USD } = require('./logo-fetch');
 const { analyseLogoPng, applyBrandOverride } = require('../../netlify/lib/wheelbrand-image');
@@ -89,6 +89,8 @@ function parseArgs(argv) {
       return hit ? Math.max(0, Number(hit.split('=')[1])) : 24;
     })(),
     tickers: argv.filter((a) => !a.startsWith('--') && !a.startsWith('-')),
+    remask: flags.has('--remask'),
+    account: flags.has('--account'),
     refetch: (() => {
       const hit = argv.find((a) => a.startsWith('--refetch='));
       return hit ? hit.split('=')[1].split(/[\s,]+/).filter(Boolean).map((x) => x.toUpperCase()) : [];
@@ -149,10 +151,51 @@ async function buildFallback(sym, universe, overrides) {
 }
 
 /** `refetch: TSLA SPCX` in seed.trigger (or --refetch=TSLA,SPCX): re-fetch only those tickers, merge into existing shards. */
+function triggerLine(key) {
+  if (!fs.existsSync(TRIGGER)) return null;
+  const m = fs.readFileSync(TRIGGER, 'utf8').match(new RegExp(`^${key}:?\\s*(.*)$`, 'm'));
+  return m ? m[1].split(/[\s,]+/).filter(Boolean).map((x) => x.toUpperCase()) : null;
+}
+
 function refetchFromTrigger() {
-  if (!fs.existsSync(TRIGGER)) return [];
-  const m = fs.readFileSync(TRIGGER, 'utf8').match(/^refetch:\s*(.+)$/m);
-  return m ? m[1].split(/[\s,]+/).filter(Boolean).map((x) => x.toUpperCase()) : [];
+  return triggerLine('refetch') || [];
+}
+
+/** Keep the original download (and its metadata) so marks can be re-masked later without spending credits. */
+function saveRaw(sym, hit) {
+  fs.mkdirSync(RAW_DIR, { recursive: true });
+  fs.writeFileSync(path.join(RAW_DIR, `${sym}.png`), hit.png);
+  if (hit.meta) fs.writeFileSync(path.join(RAW_DIR, `${sym}.json`), JSON.stringify({ fetchedAt: new Date().toISOString(), ...hit.meta }, null, 1));
+}
+
+function mergeShardEntries(done) {
+  for (const [sym, entry] of Object.entries(done)) {
+    const file = path.join(SHARDS, `${shardKey(sym)}.json`);
+    const bucket = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+    bucket[sym] = leanEntry(sym, entry);
+    fs.writeFileSync(file, JSON.stringify(bucket));
+  }
+}
+
+/** Free: rebuild masks from saved originals in scripts/brand/data/raw (no Logo.dev calls). */
+async function remaskFromRaw(syms) {
+  const overrides = readOverrides();
+  const all = fs.existsSync(RAW_DIR) ? fs.readdirSync(RAW_DIR).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4)) : [];
+  const list = syms.length ? syms.filter((s) => all.includes(s)) : all;
+  const done = {};
+  for (const sym of list) {
+    let entry = await analyseLogoPng(fs.readFileSync(path.join(RAW_DIR, `${sym}.png`)));
+    if (!entry) {
+      console.warn('no usable mark in raw', sym);
+      continue;
+    }
+    entry = applyBrandOverride(entry, overrides[sym]);
+    fs.writeFileSync(path.join(BRAND_DIR, `${sym}.png`), entry.maskPng);
+    done[sym] = { fallback: false, gradient: entry.gradient, aspect: entry.aspect, mark: `${sym}.png`, watermarkOpacity: 0.16 };
+    console.log('remask', sym, entry.method, `aspect=${entry.aspect.toFixed(3)}`);
+  }
+  mergeShardEntries(done);
+  console.log(`Re-masked ${Object.keys(done).length} from raw (0 credits).`);
 }
 
 async function refetchOnly(syms, args, secret) {
@@ -186,8 +229,7 @@ async function refetchOnly(syms, args, secret) {
       continue;
     }
     creditsSpent += hit.credits || CREDITS_LOGO;
-    fs.mkdirSync(RAW_DIR, { recursive: true });
-    fs.writeFileSync(path.join(RAW_DIR, `${sym}.png`), hit.png);
+    saveRaw(sym, hit);
     let entry = await analyseLogoPng(hit.png);
     if (!entry) {
       console.warn('no usable mark in logo', sym);
@@ -198,12 +240,7 @@ async function refetchOnly(syms, args, secret) {
     done[sym] = { fallback: false, gradient: entry.gradient, aspect: entry.aspect, mark: `${sym}.png`, watermarkOpacity: 0.16 };
     console.log('ok', sym, entry.brandHex, entry.method, `route=${hit.route}`, `credits=${hit.credits}`, `aspect=${entry.aspect.toFixed(3)}`);
   }
-  for (const [sym, entry] of Object.entries(done)) {
-    const file = path.join(SHARDS, `${shardKey(sym)}.json`);
-    const bucket = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
-    bucket[sym] = leanEntry(sym, entry);
-    fs.writeFileSync(file, JSON.stringify(bucket));
-  }
+  mergeShardEntries(done);
   console.log(`Logo.dev: refetched ${Object.keys(done).length}/${syms.length}, spent ~${creditsSpent} credits; Credits-Remaining=${creditsRemaining ?? 'unknown'}`);
 }
 
@@ -211,7 +248,17 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const secret = process.env.LOGO_DEV_SECRET_KEY || '';
   const refetch = args.refetch.length ? args.refetch : args.seed && !args.tickers.length ? refetchFromTrigger() : [];
+  const fromTrigger = args.seed && !args.tickers.length;
+  if (args.account || (fromTrigger && triggerLine('account'))) {
+    if (!secret) return console.error('LOGO_DEV_SECRET_KEY missing; account check needs it.');
+    const acct = await fetchAccount(secret);
+    console.log('Logo.dev account (not billed):', JSON.stringify(acct));
+    if (!refetch.length && !(fromTrigger && triggerLine('remask'))) return;
+  }
+  const remask = args.remask ? args.tickers : fromTrigger ? triggerLine('remask') : null;
+  if (remask) await remaskFromRaw(remask);
   if (refetch.length) return refetchOnly(refetch, args, secret);
+  if (remask) return;
   const overrides = readOverrides();
   delete overrides._doc;
 
@@ -381,6 +428,7 @@ async function main() {
       continue;
     }
 
+    if (hit && hit.png) saveRaw(job.sym, hit);
     let entry = await analyseLogoPng(png);
     entry = applyBrandOverride(entry, overrides[job.sym]);
     const logoHash = sha(png);
