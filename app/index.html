@@ -847,9 +847,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .wc>*{position:relative;z-index:1}
 .wc>.wc-art{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:var(--wc-bg);border-radius:inherit}
 .wc.rot-closed>.wc-art{filter:saturate(.45)}
-.wc-lgw{--s:1;position:absolute;width:calc(var(--w)*var(--s)*1px);height:calc(var(--h)*var(--s)*1px);right:calc(var(--x)*var(--s)*1px);top:calc(var(--y)*var(--s)*1px);transform:rotate(var(--r));-webkit-mask-image:linear-gradient(100deg,transparent 0%,#000 45%);mask-image:linear-gradient(100deg,transparent 0%,#000 45%)}
+.wc-lgw{--s:1;position:absolute;width:calc(var(--w)*var(--s)*1px);height:calc(var(--h)*var(--s)*1px);right:calc(var(--x)*var(--s)*1px + 12%);top:calc(var(--y)*var(--s)*1px);transform:rotate(var(--r));-webkit-mask-image:linear-gradient(100deg,transparent 0%,#000 45%);mask-image:linear-gradient(100deg,transparent 0%,#000 45%)}
 .wc-lgw i{position:absolute;inset:0;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
-.wc-tk{position:absolute;right:-0.04em;top:-0.18em;font:700 12rem/1 Urbanist,sans-serif;letter-spacing:-0.02em;color:#fff;opacity:.13;transform:rotate(-14deg);transform-origin:100% 0;white-space:nowrap;-webkit-mask-image:linear-gradient(100deg,transparent 0%,#000 45%);mask-image:linear-gradient(100deg,transparent 0%,#000 45%)}
+.wc-tk{position:absolute;right:calc(-0.04em + 12%);top:-0.18em;font:700 12rem/1 Urbanist,sans-serif;letter-spacing:-0.02em;color:#fff;opacity:.13;transform:rotate(-14deg);transform-origin:100% 0;white-space:nowrap;-webkit-mask-image:linear-gradient(100deg,transparent 0%,#000 45%);mask-image:linear-gradient(100deg,transparent 0%,#000 45%)}
 /* white-on-gradient zones (the trade panel, open chart and What if? keep the normal colours) */
 .wc>.rot-header,.wc .wl-top,.wc .wl-steps,.wc .wl-memo,.wc .wl-facts,.wc>.wl-chart:not([open]){--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#9af0c4;--red:#ffc2b8;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--orangeL:rgba(255,255,255,.22);--border:rgba(255,255,255,.28);color:#fff}
 .wc>.rot-header{padding:1.125rem 1.375rem 0.25rem!important}
