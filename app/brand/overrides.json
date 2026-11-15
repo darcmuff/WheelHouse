@@ -3,7 +3,7 @@
   "logos_enabled": true,
   "MSFT": { "brand": "#0078d4", "note": "Pin Microsoft blue" },
   "META": { "brand": "#0866FF", "note": "Meta blue" },
-  "TSLA": { "brand": "#E31937", "note": "Tesla red", "letters_only": true },
+  "TSLA": { "brand": "#E31937", "note": "Tesla red" },
   "SPCX": {
     "brand": "#000000",
     "gradient": {
@@ -12,8 +12,7 @@
       "glow": "rgba(255,255,255,.16)",
       "kind": "brand"
     },
-    "note": "SpaceX black mark, black→dark grey gradient (G1 dark lift on frm)",
-    "letters_only": true
+    "note": "SpaceX black mark, black→dark grey gradient (G1 dark lift on frm)"
   },
   "NFLX": { "brand": "#E50914", "note": "Netflix red" },
   "IBM": { "brand": "#0530AD", "note": "IBM blue" },

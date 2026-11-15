@@ -21,6 +21,7 @@
     KO: [820, 258, -250, 78, -14, '#fff', 0.16],
     NVDA: [600, 399, -150, -40, -15, '#76B900', 0.38],
     SOFI: [660, 193, -150, -4, -14, '#fff', 0.17],
+    SPCX: [700, 138, -40, 110, -14, '#fff', 0.2, 12], // wordmark: fade only the first 12% (default 45% would hide SPA)
   };
   const HAND_TICKERS = new Set(Object.keys(HAND_POS));
   const G1_DARK_LIFT = 0.05925;
@@ -175,7 +176,8 @@
     const svg = handMarkSvg(k);
     if (!svg || !pos) return null;
     const u = "url('data:image/svg+xml," + encodeURIComponent(svg).replace(/'/g, '%27') + "')";
-    return `<div class="wc-art" aria-hidden="true"><div class="wc-lgw" style="--w:${pos[0]};--h:${pos[1]};--x:${pos[2]};--y:${pos[3]};--r:${pos[4]}deg"><i style="--m:${u};background:${pos[5]};opacity:${pos[6]}"></i></div></div>`;
+    const fade = pos[7] ? `;-webkit-mask-image:linear-gradient(100deg,transparent 0%,#000 ${pos[7]}%);mask-image:linear-gradient(100deg,transparent 0%,#000 ${pos[7]}%)` : '';
+    return `<div class="wc-art" aria-hidden="true"><div class="wc-lgw" style="--w:${pos[0]};--h:${pos[1]};--x:${pos[2]};--y:${pos[3]};--r:${pos[4]}deg${fade}"><i style="--m:${u};background:${pos[5]};opacity:${pos[6]}"></i></div></div>`;
   }
 
   function artHtml(tk) {
