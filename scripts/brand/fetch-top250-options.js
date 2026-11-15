@@ -121,5 +121,10 @@ async function main() {
 
 main().catch((e) => {
   console.error(e);
+  // A slow or down list source must not block a seed: keep the committed list.
+  if (fs.existsSync(OUT)) {
+    console.warn('Top-250 refresh failed; keeping the existing list.');
+    process.exit(0);
+  }
   process.exit(1);
 });
