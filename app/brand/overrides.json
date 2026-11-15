@@ -1,6 +1,6 @@
 {
   "_doc": "Per-ticker overrides. logos_enabled: global wheel-card artwork (Logo.dev + hand SVGs); false = ticker letters only. Per-ticker disable_logo forces letters. brand: hex overrides extracted colour.",
-  "logos_enabled": false,
+  "logos_enabled": true,
   "MSFT": { "brand": "#0078d4", "note": "Pin Microsoft blue" },
   "SPY": { "note": "ETF: issuer colour + letters" },
   "QQQ": { "note": "ETF: issuer colour + letters" }
