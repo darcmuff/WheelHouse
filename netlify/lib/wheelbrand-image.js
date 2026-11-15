@@ -32,10 +32,20 @@ async function analyseLogoPng(pngBuf) {
       borderRgb.push(p.slice(0, 3));
     }
   }
-  const borderUniform =
+  let borderUniform =
     opaqueBorder > border.length * 0.95 &&
     borderRgb.length &&
     Math.max(...borderRgb.map((r) => Math.max(...borderRgb[0].map((v, i) => Math.abs(v - r[i]))))) < 30;
+  // Tiles with see-through rounded corners, an inset tile, or slightly uneven edges: test the edge of the
+  // opaque tile itself (transparent pixels ignored) with a tolerance.
+  if (!borderUniform) {
+    const tile = tileEdge(px, W, H);
+    if (tile) {
+      borderUniform = true;
+      borderRgb.length = 0;
+      borderRgb.push(...tile);
+    }
+  }
 
   let brand;
   let neutral = false;
@@ -122,6 +132,54 @@ async function analyseLogoPng(pngBuf) {
     gradient: gradientFromBrand(brand, neutral),
     brandHex: hexc(brand),
   };
+}
+
+/**
+ * Edge colours of an opaque tile whose corners may be transparent (rounded) or that sits inset in the image.
+ * Returns the edge RGB samples when the opaque area is a large solid tile with a flat edge colour, else null.
+ */
+function tileEdge(px, W, H, tol = 30) {
+  let x0 = W, y0 = H, x1 = -1, y1 = -1, opaque = 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (px(x, y)[3] > 250) {
+        opaque++;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return null;
+  const bw = x1 - x0 + 1;
+  const bh = y1 - y0 + 1;
+  // A tile, not a transparent logo shape: big, and fills nearly all of its own bounding box.
+  if (bw * bh < W * H * 0.4 || opaque < bw * bh * 0.85) return null;
+  const inset = Math.max(1, Math.round(Math.min(bw, bh) * 0.015));
+  const edge = [];
+  const take = (x, y) => {
+    const p = px(x, y);
+    if (p[3] > 250) edge.push(p.slice(0, 3));
+  };
+  for (let y = y0; y <= y1; y++) {
+    let a = -1, b = -1;
+    for (let x = x0; x <= x1; x++) if (px(x, y)[3] > 250) { a = x; break; }
+    for (let x = x1; x >= x0; x--) if (px(x, y)[3] > 250) { b = x; break; }
+    if (a >= 0) { take(Math.min(x1, a + inset), y); take(Math.max(x0, b - inset), y); }
+  }
+  for (let x = x0; x <= x1; x++) {
+    let a = -1, b = -1;
+    for (let y = y0; y <= y1; y++) if (px(x, y)[3] > 250) { a = y; break; }
+    for (let y = y1; y >= y0; y--) if (px(x, y)[3] > 250) { b = y; break; }
+    if (a >= 0) { take(x, Math.min(y1, a + inset)); take(x, Math.max(y0, b - inset)); }
+  }
+  if (edge.length < 16) return null;
+  const med = medianRgb(edge);
+  const close = edge.filter((r) => Math.max(Math.abs(r[0] - med[0]), Math.abs(r[1] - med[1]), Math.abs(r[2] - med[2])) < tol);
+  // Uneven edges (a logo touching the tile edge, anti-aliasing) are fine as long as most of the edge is flat.
+  if (close.length < edge.length * 0.85) return null;
+  return close;
 }
 
 function medianRgb(list) {

@@ -17,6 +17,8 @@ const SHARDS = path.join(BRAND_DIR, 'shards');
 const OVERRIDES = path.join(BRAND_DIR, 'overrides.json');
 const INDEX = path.join(BRAND_DIR, 'index.json');
 const STATE = path.join(__dirname, 'data', 'build-state.json');
+const TRIGGER = path.join(__dirname, 'seed.trigger');
+const RAW_DIR = path.join(__dirname, 'data', 'raw');
 
 const DEMO_TICKERS = ['KO', 'AMD', 'SOFI', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY', 'QQQ', 'PAFO', 'MPAC', 'SPCX'];
 
@@ -87,6 +89,10 @@ function parseArgs(argv) {
       return hit ? Math.max(0, Number(hit.split('=')[1])) : 24;
     })(),
     tickers: argv.filter((a) => !a.startsWith('--') && !a.startsWith('-')),
+    refetch: (() => {
+      const hit = argv.find((a) => a.startsWith('--refetch='));
+      return hit ? hit.split('=')[1].split(/[\s,]+/).filter(Boolean).map((x) => x.toUpperCase()) : [];
+    })(),
   };
 }
 
@@ -142,9 +148,70 @@ async function buildFallback(sym, universe, overrides) {
   return { fallback: true, gradient, watermarkOpacity: 0.13 };
 }
 
+/** `refetch: TSLA SPCX` in seed.trigger (or --refetch=TSLA,SPCX): re-fetch only those tickers, merge into existing shards. */
+function refetchFromTrigger() {
+  if (!fs.existsSync(TRIGGER)) return [];
+  const m = fs.readFileSync(TRIGGER, 'utf8').match(/^refetch:\s*(.+)$/m);
+  return m ? m[1].split(/[\s,]+/).filter(Boolean).map((x) => x.toUpperCase()) : [];
+}
+
+async function refetchOnly(syms, args, secret) {
+  if (!secret) {
+    console.error('LOGO_DEV_SECRET_KEY missing; refetch needs it.');
+    process.exit(1);
+  }
+  const overrides = readOverrides();
+  delete overrides._doc;
+  let creditsRemaining = null;
+  let creditsSpent = 0;
+  const done = {};
+  console.log(`Refetch only: ${syms.join(', ')} (reserve ${args.minCredits} credits)`);
+  for (const sym of syms) {
+    if (creditsRemaining != null && creditsRemaining - CREDITS_LOGO < args.minCredits) {
+      console.warn(`Stopping Logo.dev before ${sym}: Credits-Remaining=${creditsRemaining}, reserve=${args.minCredits}`);
+      break;
+    }
+    let hit;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      hit = await fetchLogoDev(sym, secret);
+      if (hit && hit.creditsRemaining != null) creditsRemaining = hit.creditsRemaining;
+      if (hit && hit.why === 'rate_limited' && attempt < 5) {
+        await sleep(Math.min(120000, Math.max(2000, (hit.retryAfter || 30) * 1000)));
+        continue;
+      }
+      break;
+    }
+    if (!hit || !hit.png) {
+      console.warn('miss', sym, hit && hit.why);
+      continue;
+    }
+    creditsSpent += hit.credits || CREDITS_LOGO;
+    fs.mkdirSync(RAW_DIR, { recursive: true });
+    fs.writeFileSync(path.join(RAW_DIR, `${sym}.png`), hit.png);
+    let entry = await analyseLogoPng(hit.png);
+    if (!entry) {
+      console.warn('no usable mark in logo', sym);
+      continue;
+    }
+    entry = applyBrandOverride(entry, overrides[sym]);
+    fs.writeFileSync(path.join(BRAND_DIR, `${sym}.png`), entry.maskPng);
+    done[sym] = { fallback: false, gradient: entry.gradient, aspect: entry.aspect, mark: `${sym}.png`, watermarkOpacity: 0.16 };
+    console.log('ok', sym, entry.brandHex, entry.method, `route=${hit.route}`, `credits=${hit.credits}`, `aspect=${entry.aspect.toFixed(3)}`);
+  }
+  for (const [sym, entry] of Object.entries(done)) {
+    const file = path.join(SHARDS, `${shardKey(sym)}.json`);
+    const bucket = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+    bucket[sym] = leanEntry(sym, entry);
+    fs.writeFileSync(file, JSON.stringify(bucket));
+  }
+  console.log(`Logo.dev: refetched ${Object.keys(done).length}/${syms.length}, spent ~${creditsSpent} credits; Credits-Remaining=${creditsRemaining ?? 'unknown'}`);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const secret = process.env.LOGO_DEV_SECRET_KEY || '';
+  const refetch = args.refetch.length ? args.refetch : args.seed && !args.tickers.length ? refetchFromTrigger() : [];
+  if (refetch.length) return refetchOnly(refetch, args, secret);
   const overrides = readOverrides();
   delete overrides._doc;
 
