@@ -177,9 +177,25 @@ function dominantChromatic(data, W, H, channels, mask) {
 }
 
 function applyBrandOverride(entry, override) {
-  if (override && override.brand) {
+  if (!override || typeof override !== 'object') return entry;
+  if (override.gradient && typeof override.gradient === 'object') {
+    const g = override.gradient;
+    entry.colourFrom = 'override';
+    entry.gradient = {
+      frm: g.frm || g.f,
+      to: g.to || g.t,
+      glow: g.glow || g.gl,
+      kind: g.kind || g.k || 'brand',
+    };
+    if (override.brand) {
+      entry.brandHex = override.brand;
+      entry.brand = unhex(override.brand);
+    }
+    return entry;
+  }
+  if (override.brand) {
     const rgb = unhex(override.brand);
-    const neutral = isNeutralRgb(rgb);
+    const neutral = override.neutral === true ? true : override.neutral === false ? false : isNeutralRgb(rgb);
     entry.brandHex = override.brand;
     entry.brand = rgb;
     entry.neutral = neutral;
