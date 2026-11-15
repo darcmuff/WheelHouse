@@ -181,6 +181,8 @@
   function artHtml(tk) {
     const k = key(tk);
     if (!LOGOS_ENABLED) return lettersArtHtml(k);
+    const ov = OVERRIDES && OVERRIDES[k];
+    if (ov && (ov.letters_only || ov.disable_logo || ov.force_fallback)) return lettersArtHtml(k);
     const hit = CACHE.get(k);
     const hand = handMarkHtml(k);
     if (hand && (!hit || hit.keepHandMark || hit.hand)) return hand;
