@@ -30,12 +30,12 @@
 <!-- Firebase loaded inside main module script -->
 <style>
 :root{
-  --bg:#f6f5f1; --bg2:#ffffff; --bg3:#f0efe9; --bg4:#e4e2da;
-  --border:#e6e4dc; --border2:#d3d0c6;
+  --bg:#f8f9fc; --bg2:#ffffff; --bg3:#f1f2f6; --bg4:#e4e6eb;
+  --border:#e4e6eb; --border2:#d2d5dc;
   --orange:#FF5A36; --orange2:#e84a28; --orangeL:#ffe6df; --orangeD:rgba(255,90,54,0.08);
-  --text:#1d201e; --text2:#545a56; --text3:#8a908b;
+  --text:#110f15; --text2:#545a56; --text3:#5b5d62; --orange-safe:#b83a1a;
   --green:#2f7d57; --red:#b5483d; --blue:#3f6c9a; --yellow:#a8701c; --silver:#3c423e;
-  --shadow:0 1px 2px rgba(30,30,20,.04),0 2px 8px rgba(30,30,20,.04);
+  --shadow:0 2px 4px rgba(17,15,21,.05),0 8px 16px rgba(17,15,21,.06);
 }
 [data-theme="dark"]{
   --bg:      #18191c;
@@ -59,7 +59,7 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Inter,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body{font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums lining-nums;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 ::-webkit-scrollbar{width:0.375rem;height:0.375rem}
 ::-webkit-scrollbar-track{background:var(--bg2)}
@@ -865,7 +865,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 [data-theme="dark"] #topnav{background:color-mix(in srgb,var(--bg) 92%,transparent)}
 #demo-banner{position:sticky;top:0;z-index:70;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.4rem 1.5rem;background:#FFF1EC;color:#5a2a1c;border-bottom:1px solid #F5C9BA;font-size:0.8125rem}
 #demo-banner .db-act{display:flex;gap:0.5rem;align-items:center}#demo-banner button{background:transparent;border:1px solid #F5C9BA;border-radius:0.375rem;padding:0.2rem 0.6rem;color:inherit;cursor:pointer;font-size:0.75rem}
-#demo-banner .db-go{background:#FF5A36;color:#fff;text-decoration:none;border-radius:0.375rem;padding:0.25rem 0.75rem;font-weight:600;font-size:0.75rem}
+#demo-banner .db-go{background:var(--orange-safe);color:#fff;text-decoration:none;border-radius:0.375rem;padding:0.25rem 0.75rem;font-weight:600;font-size:0.75rem}
 .ot-demo #topnav{top:2.1rem}
 /* Soft SW update prompt — no auto-reload on deploy */
 /* Show/hide on password fields. Sits inside the right edge; colour follows the theme. */
@@ -947,6 +947,114 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 }
 .wc-legal{margin:0.5rem 0 1.25rem;font-size:0.75rem;font-weight:400;color:var(--text3);line-height:1.45}
 .wc-legal a{color:var(--text3);text-underline-offset:2px}
+
+/* ── OpTrack V2 (Michelle's handover): Urbanist, G1 heroes with T1s carbon, 12px cards, 6px buttons, AA greys ── */
+:root{--v2-carbon:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48ZyBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4xMCkiPjxyZWN0IHg9IjguMDAiIHk9IjAuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iMC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMDAiIHk9IjQuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iNC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMDAiIHk9IjguMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSI4LjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iNC4wMCIgeT0iMTIuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjwvZz48ZyBmaWxsPSJyZ2JhKDAsMCwwLC4xNCkiPjxyZWN0IHg9IjAuMDAiIHk9IjAuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSIwLjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iNC4wMCIgeT0iNC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjguMDAiIHk9IjQuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjAwIiB5PSI4LjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iMTIuMDAiIHk9IjguMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIwLjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjEyLjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjwvZz48ZyBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4xNikiPjxyZWN0IHg9IjAuMzUiIHk9IjAuMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjQuMzUiIHk9IjAuMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjguMDAiIHk9IjAuMzUiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjAuNyIvPjxyZWN0IHg9IjEyLjAwIiB5PSIwLjM1IiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSIwLjciLz48cmVjdCB4PSIwLjAwIiB5PSI0LjM1IiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSIwLjciLz48cmVjdCB4PSI0LjM1IiB5PSI0LjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjM1IiB5PSI0LjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iNC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iMC4wMCIgeT0iOC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iNC4wMCIgeT0iOC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iOC4zNSIgeT0iOC4wMCIgd2lkdGg9IjAuNyIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iMTIuMzUiIHk9IjguMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMzUiIHk9IjEyLjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSIxMi4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iOC4wMCIgeT0iMTIuMzUiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjAuNyIvPjxyZWN0IHg9IjEyLjM1IiB5PSIxMi4wMCIgd2lkdGg9IjAuNyIgaGVpZ2h0PSI0LjAwIi8+PC9nPjwvc3ZnPg==");--v2-fade:linear-gradient(90deg,#000 0%,#000 18%,rgba(0,0,0,.45) 38%,transparent 56%);
+  --v2-g1:radial-gradient(60% 120% at 92% 18%,rgba(255,90,54,.32) 0%,rgba(255,90,54,0) 70%),linear-gradient(104deg,#111111 0%,#1c0a0c 18%,#3a120e 42%,#6a1c10 70%,#a1290d 100%);
+  --v2-mut-dark:rgba(255,255,255,.88);--v2-pos-dark:#b6f5d4;--v2-neg-dark:#ffd4ce}
+html:not([data-theme="dark"]) body{background:var(--bg)}
+.btn{border-radius:6px}
+.btn-primary{background:var(--orange-safe);border-color:var(--orange-safe);color:#fff}
+.btn-primary:hover{background:#a3321a;border-color:#a3321a}
+.d-panel,.d-kpi,.leap-card,.a-chart-box,.a-stat,.chart-card,.rot-card,.astat,.hcard,.hk{border-radius:12px}
+.hk-wl b,.leap-sc .v,.lc-pct,.mpl-table td.num{font-weight:400!important}
+#content{box-sizing:border-box;max-width:1280px;padding-left:28px!important;padding-right:28px!important}
+#topnav{padding-left:max(1.5rem,calc((100% - 1280px)/2));padding-right:max(1.5rem,calc((100% - 1280px)/2))}
+html:not([data-theme="dark"]) #topnav{border-bottom-color:transparent}
+#demo-banner{padding-left:max(1.5rem,calc((100% - 1280px)/2));padding-right:max(1.5rem,calc((100% - 1280px)/2))}
+html:not([data-theme="dark"]) .tn-gear{color:var(--text2)}
+html:not([data-theme="dark"]) .tn-gear svg{fill:currentColor}
+/* hero: G1 + carbon fading from the left, gone by 56% */
+.v2-hero{position:relative;isolation:isolate;border-radius:12px;color:#fff;box-shadow:var(--shadow);margin-bottom:1rem}
+.v2-bg{position:absolute;inset:0;z-index:0;border-radius:inherit;overflow:hidden;background:var(--v2-g1);pointer-events:none}
+.v2-tex{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background-image:var(--v2-carbon);background-size:16px 16px;background-repeat:repeat;-webkit-mask-image:var(--v2-fade);mask-image:var(--v2-fade);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;opacity:.85}
+.v2-hero>.v2-copy,.v2-hero>.v2-strip{position:relative;z-index:1}
+.v2-copy{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:24px 32px 20px}
+.v2-hero h1{font-size:28px;line-height:1.15;font-weight:600;letter-spacing:-0.01em;margin:0}
+.v2-hero .v2-copy p{font-size:15px;font-weight:400;color:var(--v2-mut-dark);margin:6px 0 0}
+.v2-strip{background:rgba(0,0,0,.32);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);padding:18px 22px 20px;border-radius:0 0 12px 12px}
+/* home: the nine stats on the strip */
+.home .v2-hero{margin-bottom:0}
+.v2-home .v2-strip{display:flex;flex-direction:column;gap:8px}
+.v2-home .hk-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.v2-home .hk,.v2-home .hk-grid .hk{background:transparent;border:0;box-shadow:none;border-radius:8px;height:auto;min-height:0;padding:8px 14px;overflow:visible}
+.v2-home .hk-l{font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--v2-mut-dark)}
+.v2-home .hk-v,.v2-home .hk.big .hk-v,.v2-home .hk-grid .hk.big .hk-v{font-size:26px;font-weight:400;line-height:1.2;margin-top:4px;color:#fff}
+.v2-home .hk-s{font-size:12.35px;color:var(--v2-mut-dark);margin-top:4px;line-height:1.4}
+.v2-home .ii,.v2-home .ii:hover{color:var(--v2-mut-dark)}
+.v2-home .pos,.v2-home .g{color:var(--v2-pos-dark)}.v2-home .neg,.v2-home .r{color:var(--v2-neg-dark)}.v2-home .y{color:#ffe1a6}
+.v2-home .hk-wl{flex-direction:row;justify-content:space-between;align-items:flex-start;margin-top:2px}
+.v2-home .hk-wl>div{flex-direction:column;align-items:flex-start;gap:2px}
+.v2-home .hk-wl>div:last-child{align-items:flex-end}
+.v2-home .hk-wl span{color:var(--v2-mut-dark);font-size:12px}
+.v2-home .hk-wl b{font-size:26px;line-height:1.2;color:#fff;letter-spacing:0}
+.v2-home .hk-cog{color:#fff}.v2-home .hk-cog svg{fill:#fff}
+.v2-home .hk-back{background:#fff;color:var(--text)}
+@media(max-width:900px){.v2-home .hk-grid{grid-template-columns:1fr 1fr}.v2-copy{padding:20px 20px 16px}.v2-strip{padding:12px 10px 14px}}
+/* wheel page: hero bar with the real toolbar */
+.v2-bar{z-index:3}
+.v2-bar .v2-copy{align-items:center;padding:20px 32px}
+.v2-bar .pos-toolbar{display:flex;align-items:center;gap:10px;margin:0 0 0 auto;padding:0;flex-wrap:wrap;background:none;border:0}
+.v2-bar .pos-toolbar .toolbar-spacer{display:none}
+.v2-bar .rot-header-btn{width:32px;height:32px;border-radius:6px;border:1px solid rgba(255,255,255,.28);background:transparent;display:grid;place-items:center;padding:0}
+.v2-bar .rot-header-btn svg{width:16px;height:16px}
+.v2-bar .rot-header-btn svg:not([fill="none"]){fill:#fff}.v2-bar .rot-header-btn svg[stroke]{stroke:#fff}
+.v2-bar .rot-header-btn:hover{background:rgba(255,255,255,.12)}
+.v2-bar .nw,.v2-bar .nw-pill{height:32px}.v2-bar .nw-pill{font-size:13px;line-height:32px;border-radius:6px}
+.v2-bar .nw-box input{color:var(--text)}
+.v2-bar .pos-toolbar label{color:var(--v2-mut-dark);font-size:13px;font-weight:400;display:inline-flex;align-items:center;gap:6px}
+.v2-bar .pos-toolbar label input{accent-color:#fff}
+.v2-bar .sort-dropdown{color:var(--text)}
+@media(max-width:700px){.v2-bar .v2-copy{padding:14px 16px}.v2-bar h1{font-size:22px}}
+/* LEAPs page: plain white header box, four totals under a hairline */
+.v2-light{background:var(--bg2);color:var(--text)}
+.v2-light .v2-copy p{color:var(--text2)}
+.v2-light .v2-strip{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;border-top:1px solid var(--border);padding:16px 22px 20px}
+.v2-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;font-size:12px;color:var(--text2)}
+.v2-acts>span[title]{font-size:12px!important;color:var(--text2)!important;max-width:none!important}
+.v2-acts .leap-seg{border-radius:6px;border-color:rgba(17,15,21,.10)}
+.v2-acts .leap-seg button{height:32px;padding:0 14px;font-size:13px;font-weight:600;color:var(--text2);font-family:inherit}
+.v2-acts .leap-seg button.on{background:rgba(17,15,21,.06);color:var(--text)}
+.v2-acts .btn-primary{height:32px;padding:0 14px;font-size:13px}
+.v2-light .leap-sum{margin:0;gap:8px}
+.v2-light .leap-sc{background:transparent;border:0;border-radius:0;padding:8px 14px}
+.v2-light .leap-sc .l{font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--text3)}
+.v2-light .leap-sc .v{font-size:26px;line-height:1.2;margin-top:4px}
+.v2-light .leap-sc .lc-pct{font-size:13px!important;margin-top:2px}
+.v2-light .leap-sc .s{font-size:12px;color:var(--text2);margin-top:2px}
+.v2-light .leap-sc .v[style]{font-size:18px!important;line-height:1.3}
+/* LEAP card header: wheel-card direction A (brand G1, T1s carbon, angled logo nudged left like v251, 32% strip) */
+.leap-card.lcw{position:relative;isolation:isolate;background:#14161c;border:0!important;border-radius:12px;padding:0;overflow:hidden;color:#fff;box-shadow:0 2px 4px rgba(17,15,21,.05),0 8px 24px rgba(17,15,21,.08);margin-bottom:0}
+.lcw>.wc-art{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:var(--wc-bg);border-radius:inherit}
+.lcw>.lc-tex{z-index:0;opacity:.7}
+.lcw>*:not(.wc-art):not(.lc-tex){position:relative;z-index:1}
+.lcw .wc-lgw{--s:.78;top:-20px;right:calc(12% - 70px)}
+.lcw .wc-tk{font-size:8rem}
+.lcw>.lc-h,.lcw>.lc-quiet,.lcw>.lc-note,.lcw>.lc-hero,.lcw>.lc-bar{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#b6f5d4;--red:#ffd4ce;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--border:rgba(255,255,255,.28);color:#fff}
+.lcw>.lc-h{padding:16px 22px 8px}
+.lcw>.lc-h:last-child,.lcw>.lc-quiet:last-child{padding-bottom:16px}
+.lcw .lc-tk{font-size:18px;font-weight:600;color:#fff}
+.lcw .lc-ct{font-size:14px;color:var(--text2)}
+.lcw .lc-logo{display:none!important}
+.lcw .lc-lacts .btn{background:#fff;border-color:#fff;color:#110f15;font-weight:600;font-family:inherit}
+.lcw .lc-lacts .btn:hover{background:#f1f1f3}
+.lcw>.lc-quiet{padding:0 22px 8px}
+.lcw>.lc-quiet .btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:#fff}
+.lcw>.lc-note{padding:0 22px 6px;margin:0;font-size:12px}
+.lcw>.lc-hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0 22px 16px;padding:16px 20px;border-radius:12px;background:rgba(0,0,0,.32);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.lcw>.lc-hero>div:last-child:not(:first-child){text-align:left}
+.lcw .lc-k{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.lcw .lc-v,.lcw .lc-v.sm{font-size:22px;font-weight:400;margin-top:0;color:#fff}
+.lcw .lc-v.g{color:var(--green)}.lcw .lc-v.r{color:var(--red)}
+.lcw .lc-mut{color:#fff}
+.lcw>.lc-hero .lc-pct{font-size:12px!important;margin-top:2px}
+.lcw>.lc-bar{height:3px;margin:-8px 22px 14px;background:rgba(255,255,255,.18)}
+.lcw>.lc-bar i{background:#FF5A36}
+.lcw>.trade-body{background:var(--bg2);color:var(--text);border:1px solid rgba(17,15,21,.08);border-radius:12px;margin:0 18px 18px!important;box-shadow:0 2px 4px rgba(17,15,21,.05)}
+.lcw .trade-body .btn{border-radius:6px;font-family:inherit}
+@media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}.v2-light .leap-sum{grid-template-columns:1fr 1fr}}
+/* Called away (and the other wheel steps) at AA on every card gradient */
+.wc .wl-st{color:#fff;text-shadow:0 0 3px rgba(0,0,0,.3),0 0 1px rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
@@ -956,7 +1064,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   position:fixed;inset:0;z-index:9999;
   background:#18191c;
   display:none;align-items:center;justify-content:center;
-  font-family:'Inter',sans-serif;
+  font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
 ">
   <div style="width:100%;max-width:25rem;padding:2rem 1.5rem;">
     <!-- Logo -->
@@ -1079,7 +1187,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   position:fixed;inset:0;z-index:9998;
   background:#18191c;
   display:flex;align-items:center;justify-content:center;flex-direction:column;
-  font-family:'Inter',sans-serif;
+  font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
   transition:opacity .6s;
 ">
   <div style="position:relative;width:5rem;height:5rem;margin-bottom:1.5rem">
@@ -2641,7 +2749,7 @@ function render(){
   if(view==='log')c.innerHTML=renderActivityHead()+renderLog();
   if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
-  if(view==='options'){c.innerHTML=renderOptions();fetchOptionMarks(false);}
+  if(view==='options'){c.innerHTML=renderOptions();leapBrandPaint();fetchOptionMarks(false);}
   if(typeof selPaint==='function')selPaint();
 }
 
@@ -3029,7 +3137,7 @@ function leapAdjMoveHtml(cost,adj){
   const pct=(+adj-cost)/cost*100;
   if(Math.abs(pct)<0.05)return '';
   const down=pct<0;
-  return ` <span style="color:${down?'var(--green)':'var(--red)'};font-size:0.7rem;font-weight:600">${down?'▼':'▲'}${Math.abs(pct).toFixed(1)}%</span>`;
+  return ` <span style="color:${down?'var(--green)':'var(--red)'};font-size:0.7rem;font-weight:400">${down?'▼':'▲'}${Math.abs(pct).toFixed(1)}%</span>`;
 }
 // LEAP card header: stock price + today's move (regular session; out of hours it's the last close) + distance from strike. Pure.
 function leapSpotHtml(q,strike,open){
@@ -3076,7 +3184,7 @@ function renderLeapCard(l,spot,today){
     const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
-    return`<div class="leap-card lc" data-leap="${esc(l.id)}">
+    return`<div class="leap-card lc lcw" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
   <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts-wrap" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span>${(()=>{const shorts=(db.opts||[]).filter(x=>x.parentLeapId===l.id&&x.side==='short'&&x.status==='open'&&x.expiry);if(!shorts.length)return'';if(typeof queueEarnings==='function')queueEarnings(l.underlying);if(typeof queueDividend==='function')queueDividend(l.underlying);const exps=shorts.map(s=>s.expiry);return`<span class="rot-earn-slot" data-sym="${esc(l.underlying)}" data-exps="${esc(exps.join(','))}">${typeof earningsBadge==='function'?earningsBadge(l.underlying,exps):''}</span>`;})()}</span></div>
   ${l.markWhy==='none'?`<div class="lc-quiet" onclick="event.stopPropagation()">No fresh quote${l.mark!=null&&l.markAt?` · last price $${Number(l.mark).toFixed(2)} on ${_fdShort(String(l.markAt).slice(0,10))}`:''}. <button type="button" class="btn btn-ghost btn-sm" onclick="refreshLegMark('${esc(l.id)}')">Refresh price</button><button type="button" class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Enter mark manually</button></div>`:''}
     ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
@@ -3155,15 +3263,13 @@ function renderOptions(){
   const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
   const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample LEAPs shown <b>instead of</b> your real ones. Nothing here is saved. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
   return`${err}${demoH}
-  <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;flex-wrap:wrap">
-    <span style="font-size:0.8125rem;font-weight:400;color:var(--silver)">◇ LEAPs <span style="font-size:0.6875rem;color:var(--text3)">long-dated calls held outside the wheel</span></span>
-    <span class="toolbar-spacer" style="flex:1"></span>
+  <section class="v2-hero v2-light"><div class="v2-copy"><div><h1>LEAPs</h1><p>long-dated calls held outside the wheel</p></div><div class="v2-acts">
     ${_optMarkStatus?`<span style="font-size:0.625rem;color:var(--text3);max-width:11.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(_optMarkStatus)}">${esc(_optMarkStatus)}</span>`:''}
     <span class="leap-seg"><button class="${leapStatus==='open'?'on':''}" onclick="setLeapStatus('open')">Open</button><button class="${leapStatus!=='open'?'on':''}" onclick="setLeapStatus('closed')">Closed</button></span>
-    <button class="btn btn-primary" style="padding:0.3125rem 0.625rem;font-size:0.6875rem" onclick="openLeapAdd()">+ LEAP</button>
-  </div>
+    <button class="btn btn-primary" onclick="openLeapAdd()">+ LEAP</button>
+  </div></div>${sumH?`<div class="v2-strip">${sumH}</div>`:''}</section>
   ${selTipHtml()}
-  ${sumH}<div class="leap-grid">${cards}</div>${otherH}${healthH}
+  <div class="leap-grid">${cards}</div>${otherH}${healthH}
   <div style="margin-top:0.875rem;font-size:0.6875rem;color:var(--text3);display:flex;gap:0.875rem"><a href="#" style="color:var(--text3)" onclick="setOptDemo(${!optDemo});return false">${optDemo?'Hide demo positions':'Show demo positions'}</a><a href="#" style="color:var(--text3)" onclick="exportOptsCSV();return false">Export options CSV</a></div>`;
 }
 // ── + LEAP / edit: single long call ──
@@ -3942,7 +4048,7 @@ function renderPositions(){
   // Toolbar
   const sortLabels={manual:'Manual',dte:'Expiry',recent:'Recent',ticker:'A–Z',pnl:'P/L'};
   const sortOpts=Object.entries(sortLabels).map(([k,v])=>`<button class="sort-dropdown-item ${posSortBy===k?'active':''}" onclick="setPosSort('${k}');closeSortMenu()">${v}</button>`).join('');
-  const toolbar=`<div class="pos-toolbar">
+  const toolbar=`<section class="v2-hero v2-bar"><div class="v2-bg" aria-hidden="true"><i class="v2-tex"></i></div><div class="v2-copy"><h1>Wheel</h1><div class="pos-toolbar">
     <div style="position:relative;display:flex;align-items:center">
       <button class="rot-header-btn" onclick="toggleSortMenu(event)" title="Sort: ${sortLabels[posSortBy]||'Manual'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,128a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16h72A8,8,0,0,1,128,128ZM48,72H184a8,8,0,0,0,0-16H48a8,8,0,0,0,0,16Zm56,112H48a8,8,0,0,0,0,16h56a8,8,0,0,0,0-16Zm125.66-21.66a8,8,0,0,0-11.32,0L192,188.69V112a8,8,0,0,0-16,0v76.69l-26.34-26.35a8,8,0,0,0-11.32,11.32l40,40a8,8,0,0,0,11.32,0l40-40A8,8,0,0,0,229.66,162.34Z"/></svg></button>
       <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
@@ -3952,7 +4058,7 @@ function renderPositions(){
     <span class="toolbar-spacer"></span>
     ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
     ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
-  </div>${selTipHtml()}`;
+  </div></div></section>${selTipHtml()}`;
 
   // Render each wheel
   const cards=visibleWheels.map(w=>{
@@ -4567,6 +4673,21 @@ function wcKey(tk){return WcBrand.key(tk);}
 function wcBg(tk){return WcBrand.bgSync(tk);}
 function wcAccent(tk){return WcBrand.accent(tk);}
 function wcArtHtml(tk){return WcBrand.artHtml(tk);}
+// LEAP card headers (direction A): brand G1 behind the card, same marks as the wheel cards. AAPL graphite and MSFT blue are pinned.
+const LC_BG={AAPL:'radial-gradient(60% 120% at 92% 18%,rgba(255,255,255,.16) 0%,rgba(255,255,255,0) 70%),linear-gradient(104deg,#161313 0%,#221e1e 28%,#332c2e 56%,#3d3638 80%,#433b3d 100%)',
+  MSFT:'radial-gradient(60% 120% at 92% 18%,rgba(0,120,212,.28) 0%,rgba(0,120,212,0) 70%),linear-gradient(104deg,#001331 0%,#002953 28%,#003d88 56%,#004399 80%,#004599 100%)'};
+function lcBg(tk){const k=String(tk||'').trim().toUpperCase();return LC_BG[k]||wcBg(k);}
+function leapBrandPaint(){
+  try{
+    if(typeof WcBrand==='undefined'||typeof document==='undefined')return;
+    const tks=[...new Set([...document.querySelectorAll('.leap-card.lcw[data-ticker]')].map(e=>e.dataset.ticker))];
+    if(!tks.length)return;
+    WcBrand.loadOverrides().then(()=>WcBrand.prime(tks)).then(()=>document.querySelectorAll('.leap-card.lcw[data-ticker]').forEach(el=>{
+      const tk=el.dataset.ticker;el.style.setProperty('--wc-bg',lcBg(tk));
+      const a=el.querySelector(':scope>.wc-art');if(a){const w=document.createElement('div');w.innerHTML=wcArtHtml(tk);if(w.firstChild)a.replaceWith(w.firstChild);}
+    })).catch(e=>console.warn('leapBrandPaint failed',e));
+  }catch(e){console.warn('leapBrandPaint failed',e);}
+}
 function renderRotationWindow(wheel){
   const m=calcWheel(wheel);
   const exp=!collapsedWheels.has(wheel.id);
@@ -5620,7 +5741,7 @@ function renderHome(){
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
   return`<div class="home">
-  <div class="home-head"><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div>
+  <section class="v2-hero v2-home"><div class="v2-bg" aria-hidden="true"><i class="v2-tex"></i></div><div class="v2-copy home-head"><div><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div></div><div class="v2-strip">
   <div class="hk-grid">
     <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Premium kept minus buyback losses on wheel and PMCC calls closed in ${mName}. Realised only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
@@ -5635,6 +5756,7 @@ function renderHome(){
     <div class="hk"><div class="hk-l">Return this month ${ii(`This month's realised profit from sold options, as a % of ${rs.base==='account'?'the account size you set':'money at work (LEAP cost + shares/put collateral)'}.${rs.target?` Target ${rs.target}%.`:''} Change this with the cog on the Capital at work tile.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':(mr.pct<0?'neg':'')):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'at work'}${rs.target?` · target ${rs.target}%`:''}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
+  </div></section>
   <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length&&!_pend.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}${_pend.length?`<div class="ny-hd">Pending</div>${_pend.slice(0,8).map(i=>healthItemHtml(i,true)).join('')}`:''}</div>
   <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
   ${renderMonthlyRealised()}
