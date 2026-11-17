@@ -39,6 +39,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `dev` site-wide theme pass from the audit (sw v269; v270 lightens auth muted copy to #a3a6ad and sets placeholders to #5b5d62): Urbanist on all form controls and placeholders, Inter removed; white-on-orange fills (auth, /start, Activity pill, SmartScan/Manual/PMCC tabs) now `#b83a1a`; Activity header is the white 12px box; `--yellow` is `#8a5a12`; Start on app tokens with 6px buttons; auth/legal links light grey; themed `404.html`. Landing page items stay parked.
 
+- `dev` small fonts +20% (sw v271), at Marc's request: every font size at or below the wheel trade-row size (13.3px / 0.7rem) is ×1.2 in the real CSS and inline styles (rem/px), plus the Home chart SVG axis text, the legacy canvas chart labels, and the ⓘ next to text that stayed above the cut (`.wl-memo`, chart/panel titles). Nothing above 13.3px changed. Fit fixes: wheel trade grid minimum column gap 0.85rem → 0.5rem (no overflow at 1440); wheel stats strip is two columns at ≤480px so labels stay on one line; `.fld` and its inputs can shrink so modal forms don't overflow on phones. Start `.small` (12.8px on its 16px root) got the same +20%; landing untouched.
+
 ## New-visitor simulator
 
 There is no separate dev deploy URL in this repo. `npm run sim` serves `app/` on a local port (the same paths as the live site: `/`, `/start`, `/demo`, `/app/`) and walks a brand-new browser. `npm run sim -- --url https://optrack.app` points it at production.
