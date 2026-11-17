@@ -711,6 +711,43 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 @media(max-width:700px){.wl-facts{flex-wrap:wrap}.wl-facts>.wl-f{flex:1 1 40%}.rot-header .rot-label,.rot-header .rot-shares{display:none}}
 @media(max-width:600px){.wl-wi{max-width:none;margin-inline:0.5rem}}
 
+/* Compact What if? — sits in the gap under the wheel status line, sized to its content, not full width.
+   Scoped to .wl-body so the Home return-settings pop (.ret-pop.wl-wi) keeps its own layout. */
+.wl-body .wl-wi{
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  grid-template-areas:"in act x" "out out out";
+  align-items:end;
+  column-gap:0.5rem;
+  row-gap:0.35rem;
+  width:max-content;
+  min-width:32rem;
+  max-width:min(38rem,calc(100% - 0.5rem));
+  margin:0 auto;
+  padding:0.45rem 0.55rem 0.45rem 0.7rem;
+  box-sizing:border-box;
+  background:var(--bg2,#fff);
+}
+.wl-body .wl-wi[hidden]{display:none!important}
+.wl-body .wl-wi-in{grid-area:in;display:flex;gap:0.5rem;margin:0}
+.wl-body .wl-wi-in label{display:flex;flex-direction:column;font-size:0.55rem;font-weight:400;letter-spacing:0.03em;text-transform:uppercase;color:var(--text2)}
+.wl-body .wl-wi-in input{width:6.25rem;margin-top:0.15rem;padding:0.28rem 0.4rem;font-size:0.8rem;font-weight:400;font-variant-numeric:tabular-nums lining-nums}
+.wl-body .wl-wi-act{grid-area:act;display:flex;margin:0;align-self:end;padding-bottom:0.02rem}
+.wl-body .wl-wi-x{grid-area:x;position:static;align-self:end;padding:0 0.1rem 0.2rem;line-height:1;font-size:1.05rem;font-weight:400}
+.wl-body .wl-wi [data-wi="out"]{grid-area:out;display:flex;gap:0.5rem 1.25rem;justify-content:space-between;border-top:1px solid var(--border);padding-top:0.3rem}
+.wl-body .wl-wi-r{display:flex;align-items:baseline;gap:0.35rem;border-top:0;padding:0;white-space:nowrap}
+.wl-body .wl-wi-r span{font-weight:400}
+.wl-body .wl-wi-r .wl-wi-v{display:flex;flex-direction:column;align-items:flex-start;text-align:left;font-weight:400;font-variant-numeric:tabular-nums lining-nums}
+.wl-body .wl-wi-r .wl-wi-v small{display:block;margin:0.05rem 0 0}
+.wl-memo:has(+ .wl-wi:not([hidden])){margin-bottom:0.4rem}
+.wc .wl-body:has(.wl-wi:not([hidden])) .wl-facts{margin-top:0.5rem}
+@media(max-width:600px){
+  .wl-body .wl-wi{max-width:calc(100% - 1rem);width:auto;grid-template-columns:1fr auto;grid-template-areas:"in x" "act act" "out out"}
+  .wl-body .wl-wi-in{flex-wrap:wrap}
+  .wl-body .wl-wi-act{justify-content:flex-end}
+  .wl-body .wl-wi [data-wi="out"]{flex-wrap:wrap}
+}
+
 /* ── LEAP cards ── */
 .lc{padding:1rem 1.125rem;margin-bottom:0.75rem}
 .lc-h{display:flex;justify-content:space-between;align-items:center}.lc-lacts{display:flex;gap:0.25rem;margin-left:auto;padding-left:0.5rem}.lc-lacts .btn{padding:0.1875rem 0.5rem;font-size:0.6875rem}.lc-tk{font-weight:600;font-size:0.9375rem;margin-right:0.5rem}.lc-ct{color:var(--text2);font-size:0.65rem}
