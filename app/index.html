@@ -1055,6 +1055,10 @@ html:not([data-theme="dark"]) .tn-gear svg{fill:currentColor}
 @media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}.v2-light .leap-sum{grid-template-columns:1fr 1fr}}
 /* Called away (and the other wheel steps) at AA on every card gradient */
 .wc .wl-st{color:#fff}
+.wc .rot-earn{color:#fff;background:rgba(0,0,0,.16)}
+.wc .rot-shares{color:#fff}
+/* T1s carbon on every wheel card: in from the left, gone by 56%, above the brand gradient and logo, under the content */
+.rotation-window.wc::after{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;background-image:var(--v2-carbon);background-size:16px 16px;background-repeat:repeat;-webkit-mask-image:var(--v2-fade);mask-image:var(--v2-fade);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;opacity:.85}
 .wc .wl-sl{background:rgba(0,0,0,.16);border-radius:4px;padding:1px 6px;line-height:1.35}
 </style>
 </head>
