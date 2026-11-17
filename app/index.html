@@ -1054,7 +1054,8 @@ html:not([data-theme="dark"]) .tn-gear svg{fill:currentColor}
 .lcw .trade-body .btn{border-radius:6px;font-family:inherit}
 @media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}.v2-light .leap-sum{grid-template-columns:1fr 1fr}}
 /* Called away (and the other wheel steps) at AA on every card gradient */
-.wc .wl-st{color:#fff;text-shadow:0 0 3px rgba(0,0,0,.3),0 0 1px rgba(0,0,0,.25)}
+.wc .wl-st{color:#fff}
+.wc .wl-sl{background:rgba(0,0,0,.16);border-radius:4px;padding:1px 6px;line-height:1.35}
 </style>
 </head>
 <body>
@@ -4770,7 +4771,7 @@ function renderRotationWindow(wheel){
   const _rss=rotationShareStats(wheel,db.trades,_priceOf);
   const _stage=wheelStage(m.sharesHeld,openPos?openPos.action:null,m.trades.some(t=>t.action==='OUT'));
   const _stepNames=['Put','Assigned','Call','Called away'];
-  const _steps=`<div class="wl-steps">${_stepNames.map((n,i)=>`<div class="wl-st${i<_stage?' d':i===_stage?' n':''}"><b></b>${n}${i===_stage&&openPos?`<span class="wl-leg">${openPos.action==='CSP'?'Put':'Call'} $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d</span>`:''}</div>`).join('')}</div>`;
+  const _steps=`<div class="wl-steps">${_stepNames.map((n,i)=>`<div class="wl-st${i<_stage?' d':i===_stage?' n':''}"><b></b><span class="wl-sl">${n}</span>${i===_stage&&openPos?`<span class="wl-leg">${openPos.action==='CSP'?'Put':'Call'} $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d</span>`:''}</div>`).join('')}</div>`;
   const _fact=(l,v,c='')=>`<div class="wl-f"><span>${l}</span><b class="${c}">${v}</b></div>`;
   const _divs=m.trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0);
   const _cs=wheelCardSummary({sharesHeld:m.sharesHeld,breakeven:m.breakeven,openShares:_rss.openShares,openCost:_rss.openCost,openPos,premiumNet:m.premiumRealised,sharesRealised:_rss.realised,divs:_divs,closed:!isOpen});
