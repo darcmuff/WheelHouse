@@ -35,6 +35,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `dev` applies Michelle's OpTrack V2 design (sw v260–v264): Urbanist across the app, landing, start and legal; cool page `#f8f9fc`, ink `#110f15`, muted greys `#545a56`/`#5b5d62` (old `#8a908b` failed AA); white-text buttons on `#b83a1a` (logo stays `#FF5A36`); 12px cards, 6px buttons. Home, Wheel and LEAPs open with the same plain white header box (sw v264, Marc's pick): title, then Home's nine stats or the LEAPs totals under a hairline; Wheel holds the real toolbar. Gradient and carbon are only on wheel and LEAP cards. Open LEAP cards take the wheel-card direction-A look (brand G1 from the same brand pipeline, AAPL graphite and MSFT blue pinned in `LC_BG`, T1s carbon, the same angled mark scaled 0.78). Wheel-card step labels (Called away) are white on a faint 16% black chip for AA. Every wheel card also carries the T1s carbon (::after, opacity .85, gone by 56%); the earnings badge on wheel cards sits on the same faint chip and the share count, price and To Strike are white, so all card text clears 4.5:1 (sw v262).
 
+- `dev` drops the pre-market / after-hours price line (UI, `extquote` function, the `extended-hours` paid feature and its landing copy) and the wheel-card Price chart (chart code and the `candles` function), at Marc's request (sw v268).
+
 ## New-visitor simulator
 
 There is no separate dev deploy URL in this repo. `npm run sim` serves `app/` on a local port (the same paths as the live site: `/`, `/start`, `/demo`, `/app/`) and walks a brand-new browser. `npm run sim -- --url https://optrack.app` points it at production.

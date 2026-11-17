@@ -15,8 +15,3 @@ test('switching tabs mid-session still works', () => {
   assert.match(src, /function switchView\(v\)\{\s*(if\(v===.analytics.&&!canUse\(.analytics.\)\)\{openUpgrade\(.analytics.\);return;\}\s*)?view=v;/);
 });
 
-test('price chart starts collapsed; only opened by the user this session', () => {
-  assert.match(src, /<details class="wl-chart"[^>]*\$\{_pcOpen\[wheel\.id\]\?'open':''\}/);
-  assert.match(src, /const _candles=\{\},_candlesData=\{\},_pcRange=\{\},_pcOpen=\{\};/);
-  assert.ok(!/localStorage[^\n]*_pcOpen|_pcOpen[^\n]*localStorage/.test(src));
-});

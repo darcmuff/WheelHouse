@@ -14,20 +14,3 @@ test('every function called from an inline on*= handler is reachable from global
   const missing = [...names].filter(n => !exposed(n) && !new RegExp(`function ${n}\\(`).test(classic));
   assert.deepStrictEqual(missing, []);
 });
-test('price chart handlers are exposed and the toggle path loads without IntersectionObserver', () => {
-  for (const n of ['wlChartToggle', 'wlChartRange', 'drawWheelChart']) assert.ok(exposed(n), n);
-  assert.ok(!SRC.includes('IntersectionObserver(es=>'), 'no observer-only lazy load');
-  assert.ok(SRC.includes("document.getElementById('pc-'+wid)"), 'updates the live element by id');
-});
-const { extractFn } = require('./extract');
-const F = new Function(['isoDay', 'chartTrades'].map(extractFn).join('\n') + 'return {isoDay,chartTrades};')();
-test('real stored date shapes normalise to ISO days', () => {
-  assert.strictEqual(F.isoDay('2026-10-23'), '2026-10-23');
-  assert.strictEqual(F.isoDay('2026-10-23T09:00:00.000Z'), '2026-10-23');
-  assert.strictEqual(F.isoDay({ seconds: Date.UTC(2026, 9, 23, 12) / 1000, nanoseconds: 0 }), '2026-10-23');
-  assert.strictEqual(F.isoDay({ toDate: () => new Date(Date.UTC(2026, 9, 23, 12)) }), '2026-10-23');
-  assert.strictEqual(F.isoDay('23/10/26'), '2026-10-23');
-  assert.strictEqual(F.isoDay(''), null); assert.strictEqual(F.isoDay(null), null);
-  const t = F.chartTrades([{ action: 'CSP', entered: { seconds: Date.UTC(2026, 9, 23, 12) / 1000 }, expiry: '2026-11-13', strike: 130 }, { action: 'CSP', entered: null }]);
-  assert.strictEqual(t.length, 1); assert.strictEqual(t[0].entered, '2026-10-23');
-});

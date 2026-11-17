@@ -28,11 +28,6 @@
       var b=bs(s,o.k,T,IV[sym]||0.3,o.call),mid=Math.round(b.price*100)/100,spr=Math.max(0.01,Math.round(mid*0.02*100)/100);
       out.contracts[c]={src:'demo',bid:Math.max(0.01,mid-spr/2),ask:mid+spr/2,last:mid,iv:IV[sym],delta:b.delta,gamma:b.gamma,theta:null,vega:null};});
     return out;}
-  function candles(sym,from){var s=SPOT[sym];if(!s)return{candles:[]};var out=[],seed=0;for(var i=0;i<sym.length;i++)seed+=sym.charCodeAt(i)*31;
-    var rnd=function(){seed=(seed*9301+49297)%233280;return seed/233280;};var days=[];var d=new Date();d.setUTCHours(12);
-    for(var j=0;j<380;j++){if(d.getUTCDay()%6)days.unshift(d.toISOString().slice(0,10));d.setUTCDate(d.getUTCDate()-1);}
-    var p=s;var vals=[];for(var k=days.length-1;k>=0;k--){vals[k]=p;p=p/(1+(rnd()-0.49)*0.03);}
-    days.forEach(function(x,k){if(!from||x>=from)out.push({date:x,close:Math.round(vals[k]*100)/100});});return{symbol:sym,source:'demo',candles:out};}
   var J=function(o,st){return Promise.resolve(new Response(JSON.stringify(o),{status:st||200,headers:{'Content-Type':'application/json'}}));};
   var realFetch=window.fetch.bind(window);
   window.fetch=function(input,init){
@@ -44,8 +39,6 @@
         if(sym==='PEP'&&out.contracts){Object.keys(out.contracts).forEach(function(c){var o=parseOcc(c);if(!o||!o.call)return;var spot=SPOT.PEP,intr=Math.max(0,spot-o.k),mid=Math.round((intr+0.08)*100)/100;
           out.contracts[c]={src:'demo',bid:Math.max(0.01,mid-0.02),ask:mid+0.02,last:mid,iv:IV.PEP,delta:0.95,gamma:0.01,theta:null,vega:null};});}
         return J(out);}
-      if(fn==='candles')return J(candles(sym,u.searchParams.get('from')));
-      if(fn==='extquote')return J({});
       if(fn==='profile'){var svg='<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="#1f2937"/><text x="32" y="42" text-anchor="middle" font-size="28" font-family="sans-serif" fill="#fff">'+(sym.charAt(0)||'?')+'</text></svg>';return J({logo:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)});}
       if(fn==='earnings'||fn==='dividends'){
         var addN=function(n){var d=new Date();d.setUTCHours(12,0,0,0);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};

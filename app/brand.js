@@ -27,7 +27,6 @@ window.BRAND = {
       'unlimited',        // more than the free limits above
       'leaps-full',       // LEAP + PMCC tracking beyond the free limit, LEAP analytics
       'live-refresh',     // option marks refreshed automatically every minute
-      'extended-hours',   // pre-market / after-hours prices
       'robinhood-import', // Robinhood CSV import
       'analytics'         // More stats: monthly target, analytics, scoreboard
     ]
@@ -37,7 +36,6 @@ window.BRAND = {
     'unlimited': 'Unlimited tickers and LEAPs',
     'leaps-full': 'Full LEAP and PMCC tracking',
     'live-refresh': 'Live captured profit (marks refresh every minute)',
-    'extended-hours': 'Pre-market and after-hours prices',
     'robinhood-import': 'Robinhood CSV import',
     'analytics': 'More stats: monthly return against your own target, and analytics'
   },
