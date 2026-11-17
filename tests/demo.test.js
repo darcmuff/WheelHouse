@@ -24,7 +24,8 @@ test('seed data loads: wheels, roll chain, assignment, called away, LEAPs with o
   assert.strictEqual(d.opts.filter(l=>l.side==='long'&&l.status==='open').length,2);
   assert.strictEqual(d.opts.filter(l=>l.side==='short'&&l.status==='open').length,1);
   assert.ok(d.opts.every(l=>!l.demo&&!String(l.id).startsWith('demo-')),'demo legs save like real ones (in the demo store)');
-  const cash=d.trades.filter(t=>t.action==='IN').reduce((a,t)=>a+t.total,0);assert.ok(cash<30000,'modest');
+  assert.ok(d.wheels.some(w=>w.id==='dw-pep'&&w.ticker==='PEP')&&d.trades.some(t=>t.wheelId==='dw-pep'&&t.action==='STOC'&&!t.expiredWorthless));
+  const cash=d.trades.filter(t=>t.action==='IN').reduce((a,t)=>a+t.total,0);assert.ok(cash<50000,'modest');
   assert.ok(e.ls._m['optrack-demo:data-v1'],'saved under the demo prefix');
   assert.ok(!Object.keys(e.ls._m).some(k=>!k.startsWith('optrack-demo:')),'nothing outside the demo prefix');});
 test('changes persist in the demo store, and reset clears only demo keys',()=>{

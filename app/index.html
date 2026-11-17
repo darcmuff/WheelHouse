@@ -667,7 +667,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .hk-l{color:var(--text3);font-size:0.6875rem}.hk-v{font-size:1.375rem;font-weight:400;margin-top:0.25rem;letter-spacing:0}.hk.big .hk-v{font-size:2.125rem}
 .hk-s{color:var(--text2);font-size:0.65rem;margin-top:0.125rem}.hk-how{color:var(--text3);font-size:0.575rem;margin-top:0.5rem;line-height:1.4}
 .hk-wl{margin-top:0.375rem;display:flex;flex-direction:column;gap:0.125rem}.hk-wl>div{display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;white-space:nowrap}.hk-wl span{color:var(--text2);font-size:0.6875rem}.hk-wl b{font-size:1.0625rem;font-weight:600;letter-spacing:-0.01em}
-.wl-chart{margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;padding:0.5rem 0.75rem}.wl-chart summary{color:var(--text2);font-size:0.65rem;font-weight:600;cursor:pointer}.pc-top{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin:0.4rem 0}.pc-leg{font-size:0.6rem;color:var(--text2);display:flex;align-items:center;flex-wrap:wrap;gap:0.25rem 0.5rem}.pc-leg i{display:inline-block;width:0.55rem;height:0.55rem;border-radius:2px;margin-right:-0.25rem}.pc-rg{display:flex;gap:0.25rem}.pc-rg .on{background:var(--bg3);font-weight:600}.pc-svg{width:100%;height:auto;display:block}.pc-ax{font-size:10px;fill:var(--text3)}.pc-tag{font-size:10.5px;font-weight:600;fill:#fff}.pc-ml{font-size:9.5px;font-weight:600}.ii.pc-mk{cursor:pointer;outline:none;opacity:1}.pc-empty{padding:2rem;text-align:center;color:var(--text3);font-size:0.7rem}.rot-earn{font-size:0.6rem;font-weight:600;border:1px solid var(--border);border-radius:1rem;padding:0.1rem 0.5rem;color:var(--text2);white-space:nowrap}
+.wl-chart{margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;padding:0.5rem 0.75rem}.wl-chart summary{color:var(--text2);font-size:0.65rem;font-weight:600;cursor:pointer}.pc-top{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin:0.4rem 0}.pc-leg{font-size:0.6rem;color:var(--text2);display:flex;align-items:center;flex-wrap:wrap;gap:0.25rem 0.5rem}.pc-leg i{display:inline-block;width:0.55rem;height:0.55rem;border-radius:2px;margin-right:-0.25rem}.pc-rg{display:flex;gap:0.25rem}.pc-rg .on{background:var(--bg3);font-weight:600}.pc-svg{width:100%;height:auto;display:block}.pc-ax{font-size:10px;fill:var(--text3)}.pc-tag{font-size:10.5px;font-weight:600;fill:#fff}.pc-ml{font-size:9.5px;font-weight:600}.ii.pc-mk{cursor:pointer;outline:none;opacity:1}.pc-empty{padding:2rem;text-align:center;color:var(--text3);font-size:0.7rem}.rot-earn{font-size:0.6rem;font-weight:600;border:1px solid var(--border);border-radius:1rem;padding:0.1rem 0.5rem;color:var(--text2);white-space:nowrap}.row-tag{font-size:0.6rem;font-weight:400;border:1px solid var(--border);border-radius:1rem;padding:0.1rem 0.45rem;color:var(--text2);white-space:nowrap;font-variant-numeric:tabular-nums lining-nums}.row-tag-risk{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
 .pos{color:var(--green)}.neg{color:var(--red)}
 .home-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:0.75rem}
 .hcard{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
@@ -2956,7 +2956,7 @@ function renderPmccListRow(e,spot,today){
   }
   const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
   return`<div class="trow has-to-strike${e.action==='EXP'?' expired-trade':''}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}" data-act="${esc(e.action||'')}" data-strike="${e.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
-    <span class="action-cell"><span class="ab ab-${e.action}">${e.action}</span></span>
+    <span class="action-cell"><span class="ab ab-${e.action}">${e.action}</span>${typeof shortRowWarnTags==='function'&&e.open&&c&&e.action==='STO'?shortRowWarnTags(c.underlying,{isOpen:true,isCall:true,expiry:c.expiry||e.expiry,today,spot,strike:+c.strike||e.strike,mark:c.mark!=null&&c.mark!==''?+c.mark:null}):''}</span>
     <span>${fmtDateFull(e.entered)}</span>
     <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
     <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
@@ -3077,7 +3077,7 @@ function renderLeapCard(l,spot,today){
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
     return`<div class="leap-card lc" data-leap="${esc(l.id)}">
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span>${(()=>{const shorts=(db.opts||[]).filter(x=>x.parentLeapId===l.id&&x.side==='short'&&x.status==='open'&&x.expiry);if(!shorts.length)return'';if(typeof queueEarnings==='function')queueEarnings(l.underlying);if(typeof queueDividend==='function')queueDividend(l.underlying);const exps=shorts.map(s=>s.expiry);return`<span class="rot-earn-slot" data-sym="${esc(l.underlying)}" data-exps="${esc(exps.join(','))}">${typeof earningsBadge==='function'?earningsBadge(l.underlying,exps):''}</span>`;})()}<span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${extHtml(l.underlying,'margin-left:0.5rem')}</div>${badge}<span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></div>
   ${l.markWhy==='none'?`<div class="lc-quiet" onclick="event.stopPropagation()">No fresh quote${l.mark!=null&&l.markAt?` · last price $${Number(l.mark).toFixed(2)} on ${_fdShort(String(l.markAt).slice(0,10))}`:''}. <button type="button" class="btn btn-ghost btn-sm" onclick="refreshLegMark('${esc(l.id)}')">Refresh price</button><button type="button" class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Enter mark manually</button></div>`:''}
     ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
@@ -4474,20 +4474,88 @@ function drawWheelChart(wid){
 function wlChartToggle(el){const wid=el.dataset.wid;_pcOpen[wid]=el.open;if(el.open)drawWheelChart(wid);}
 function wlChartRange(btn){const el=btn.closest('.wl-chart');_pcRange[el.dataset.wid]=btn.dataset.r;drawWheelChart(el.dataset.wid);}
 window.wlChartToggle=wlChartToggle;window.wlChartRange=wlChartRange;window.drawWheelChart=drawWheelChart;
-// Earnings badge: next earnings date per ticker (cached per session; shown only if within 14 days on open wheels).
+// Earnings + ex-div flags. Next dates cached per session (_earn / _exdiv).
+// Header earnings badge stays within 14 days; the trade-row tag shows any known date on or before that option's expiry.
 const _earn={};
+const _exdiv={};
 function earningsDays(date,today){if(!date)return null;return Math.round((Date.parse(date+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5);}
-function earningsBadge(sym){
+function earningsBeforeExpiry(date,expiry,today){return !!(date&&expiry&&today&&date>=today&&date<=expiry);}
+function fmtDayMon(d){if(!d)return'';const[,m,day]=d.split('-');return`${parseInt(day,10)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m,10)-1]}`;}
+function earlyAssignmentFlag(o){
+  o=o||{};
+  const exDate=o.exDate,amount=o.amount,expiry=o.expiry,today=o.today,spot=o.spot,strike=o.strike,mark=o.mark;
+  if(!exDate||!expiry||!today)return null;
+  if(!(exDate>=today&&exDate<expiry))return null;
+  if(!(spot>0)||!(strike>0)||!(spot>strike))return null;
+  const amt=amount==null||amount===''||isNaN(+amount)?null:+amount;
+  const mk=mark==null||mark===''||isNaN(+mark)?null:+mark;
+  if(mk==null||amt==null||!(amt>0))return{kind:'exdiv',date:exDate,amount:amt};
+  const tv=Math.round((mk-(spot-strike))*100)/100;
+  if(tv<amt)return{kind:'risk',date:exDate,amount:amt,tv};
+  return{kind:'exdiv',date:exDate,amount:amt};
+}
+function earningsBadge(sym,openExpiries){
   const e=_earn[sym];if(!e||e.date===undefined)return'';
-  const n=earningsDays(e.date,new Date().toISOString().slice(0,10));
+  const today=new Date().toISOString().slice(0,10);
+  const n=earningsDays(e.date,today);
   if(n==null||n<0||n>14)return'';
-  return`<span class="rot-earn" title="Next earnings ${e.date}">● Earnings ${n===0?'today':n===1?'tomorrow':'in '+n+'d'}</span>`;
+  const before=Array.isArray(openExpiries)&&openExpiries.some(exp=>earningsBeforeExpiry(e.date,exp,today));
+  const when=n===0?'today':n===1?'tomorrow':'in '+n+'d';
+  return`<span class="rot-earn" title="Next earnings ${esc(e.date)}${before?' — falls before an open option expires':''}">● Earnings ${when}${before?' · before expiry':''}</span>`;
+}
+function shortRowWarnInner(sym,opts){
+  opts=opts||{};
+  const today=opts.today||new Date().toISOString().slice(0,10);
+  const expiry=opts.expiry||'';
+  if(!sym||!expiry)return'';
+  let html='';
+  const e=_earn[sym];
+  if(e&&e.date&&earningsBeforeExpiry(e.date,expiry,today)){
+    html+=`<span class="row-tag" title="Earnings fall before this option expires">Earnings ${fmtDayMon(e.date)}</span>`;
+  }
+  if(opts.isCall){
+    const d=_exdiv[sym];
+    if(d&&d.date!==undefined){
+      const f=earlyAssignmentFlag({exDate:d.date,amount:d.amount,expiry,today,spot:opts.spot,strike:opts.strike,mark:opts.mark});
+      if(f&&f.kind==='risk'){
+        const tv=Math.max(0,+f.tv||0);
+        html+=`<span class="row-tag row-tag-risk" title="${esc(`Ex-dividend ${fmtDayMon(f.date)}, dividend $${fmt2(f.amount)}. This call is in the money with only $${fmt2(tv)} of time value left, so it may be assigned early the day before.`)}">Early assignment risk</span>`;
+      }else if(f&&f.kind==='exdiv'){
+        html+=`<span class="row-tag" title="${esc('Ex-dividend '+fmtDayMon(f.date)+(f.amount!=null?`, dividend $${fmt2(f.amount)}`:''))}">Ex-div ${fmtDayMon(f.date)}</span>`;
+      }
+    }
+  }
+  return html;
+}
+function shortRowWarnTags(sym,opts){
+  opts=opts||{};
+  if(!opts.isOpen||!sym||!opts.expiry)return'';
+  queueEarnings(sym);
+  if(opts.isCall)queueDividend(sym);
+  const spot=opts.spot,strike=opts.strike,mark=opts.mark;
+  return`<span class="row-warn" data-sym="${esc(sym)}" data-expiry="${esc(opts.expiry)}" data-call="${opts.isCall?1:0}" data-spot="${spot==null||spot===''?'':+spot}" data-strike="${strike==null||strike===''?'':+strike}" data-mark="${mark==null||mark===''?'':+mark}">${shortRowWarnInner(sym,opts)}</span>`;
+}
+function refreshEarnWarn(){
+  document.querySelectorAll('.rot-earn-slot').forEach(x=>{
+    const exps=(x.dataset.exps||'').split(',').filter(Boolean);
+    x.innerHTML=earningsBadge(x.dataset.sym,exps);
+  });
+  document.querySelectorAll('.row-warn').forEach(x=>{
+    const mark=x.dataset.mark,spot=x.dataset.spot,strike=x.dataset.strike;
+    x.innerHTML=shortRowWarnInner(x.dataset.sym,{expiry:x.dataset.expiry,isCall:x.dataset.call==='1',spot:spot===''?null:+spot,strike:strike===''?null:+strike,mark:mark===''?null:+mark});
+  });
 }
 function queueEarnings(sym){
   if(!sym||_earn[sym])return;_earn[sym]={};
   fetch(`/.netlify/functions/earnings?symbol=${encodeURIComponent(sym)}`,{signal:AbortSignal.timeout(30000)}).then(r=>r.ok?r.json():null)
-    .then(j=>{_earn[sym]={date:j&&j.date||null};document.querySelectorAll(`.rot-earn-slot[data-sym="${CSS.escape(sym)}"]`).forEach(x=>x.innerHTML=earningsBadge(sym));})
+    .then(j=>{_earn[sym]={date:j&&j.date||null};refreshEarnWarn();})
     .catch(()=>{_earn[sym]={date:null};});
+}
+function queueDividend(sym){
+  if(!sym||_exdiv[sym])return;_exdiv[sym]={};
+  fetch(`/.netlify/functions/dividends?symbol=${encodeURIComponent(sym)}`,{signal:AbortSignal.timeout(30000)}).then(r=>r.ok?r.json():null)
+    .then(j=>{_exdiv[sym]={date:j&&j.date||null,amount:j&&j.amount!=null?j.amount:null};refreshEarnWarn();})
+    .catch(()=>{_exdiv[sym]={date:null,amount:null};});
 }
 // Wheel card look (design A, display only): per-company brand gradient behind the whole card, big angled logo bleeding off the right.
 // Logo marks are single-colour SVGs (Wikimedia Commons, trademarks of their owners). Tickers without a mark get big angled ticker letters.
@@ -4670,7 +4738,7 @@ function renderRotationWindow(wheel){
       <span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span>
       ${headerPriceHtml}
       <span class="rot-label">${_dateSpan}</span>
-      ${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}">${earningsBadge(wheel.ticker)}</span>`):''}
+      ${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}" data-exps="${esc((isOpen?openOptionLegs(m.trades):[]).filter(o=>o.expiry).map(o=>o.expiry).join(','))}">${earningsBadge(wheel.ticker,(isOpen?openOptionLegs(m.trades):[]).map(o=>o.expiry).filter(Boolean))}</span>`):''}
       <span class="rot-shares">${shares}</span>
       ${_pctHtml}
       <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span>
@@ -4846,7 +4914,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
   return`<div class="trow ${rowCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}" data-act="${esc(t.action||'')}" data-strike="${t.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
-    <span class="action-cell"><span class="ab ab-${t.action}">${t.action}</span>${expBadge}</span>
+    <span class="action-cell"><span class="ab ab-${t.action}">${t.action}</span>${expBadge}${typeof shortRowWarnTags==='function'&&opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?shortRowWarnTags(opts.list.ticker||t.ticker,{isOpen:true,isCall:t.action==='STOC',expiry:t.expiry,today:opts.list.today,spot:opts.list.spot,strike:t.strike,mark:t.currentPrice!=null&&t.currentPrice!==''?+t.currentPrice:(opts.list.marks&&opts.list.marks[wheelLegOcc(opts.list.ticker,t)])}):''}</span>
     <span>${fmtDateFull(t.entered)}</span>
     <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
     <span>${t.strike?fmtStrike(t.strike):'—'}</span>
