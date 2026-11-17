@@ -5751,7 +5751,7 @@ function renderHome(){
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
   return`<div class="home">
-  <section class="v2-hero v2-light v2-home"><div class="v2-copy home-head"><div><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div></div><div class="v2-strip">
+  <section class="v2-hero v2-light v2-home"><div class="v2-copy home-head"><div><h1>Overview</h1><p>Your options P&amp;L at a glance.</p></div></div><div class="v2-strip">
   <div class="hk-grid">
     <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Premium kept minus buyback losses on wheel and PMCC calls closed in ${mName}. Realised only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
