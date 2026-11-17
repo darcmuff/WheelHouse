@@ -973,37 +973,39 @@ html:not([data-theme="dark"]) .tn-gear svg{fill:currentColor}
 .v2-hero h1{font-size:28px;line-height:1.15;font-weight:600;letter-spacing:-0.01em;margin:0}
 .v2-hero .v2-copy p{font-size:15px;font-weight:400;color:var(--v2-mut-dark);margin:6px 0 0}
 .v2-strip{background:rgba(0,0,0,.32);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);padding:18px 22px 20px;border-radius:0 0 12px 12px}
-/* home: the nine stats on the strip */
+/* home: the nine stats in the white header box, LEAPs totals style */
 .home .v2-hero{margin-bottom:0}
 .v2-home .v2-strip{display:flex;flex-direction:column;gap:8px}
 .v2-home .hk-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .v2-home .hk,.v2-home .hk-grid .hk{background:transparent;border:0;box-shadow:none;border-radius:8px;height:auto;min-height:0;padding:8px 14px;overflow:visible}
-.v2-home .hk-l{font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--v2-mut-dark)}
-.v2-home .hk-v,.v2-home .hk.big .hk-v,.v2-home .hk-grid .hk.big .hk-v{font-size:26px;font-weight:400;line-height:1.2;margin-top:4px;color:#fff}
-.v2-home .hk-s{font-size:12.35px;color:var(--v2-mut-dark);margin-top:4px;line-height:1.4}
-.v2-home .ii,.v2-home .ii:hover{color:var(--v2-mut-dark)}
-.v2-home .pos,.v2-home .g{color:var(--v2-pos-dark)}.v2-home .neg,.v2-home .r{color:var(--v2-neg-dark)}.v2-home .y{color:#ffe1a6}
+.v2-home .hk-l{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text3)}
+.v2-home .hk-v,.v2-home .hk.big .hk-v,.v2-home .hk-grid .hk.big .hk-v{font-size:26px;font-weight:400;line-height:1.2;margin-top:4px;color:var(--text)}
+.v2-home .hk-s{font-size:12px;color:var(--text2);margin-top:2px;line-height:1.4}
+.v2-home .ii,.v2-home .ii:hover{color:var(--text3)}
+.v2-home .hk-v.pos,.v2-home .hk-v.g,.v2-home .hk-wl b.pos,.v2-home .hk-wl b.g{color:var(--green)}
+.v2-home .hk-v.neg,.v2-home .hk-v.r,.v2-home .hk-wl b.neg,.v2-home .hk-wl b.r{color:var(--red)}
+.v2-light .y,.v2-light .hk-v.y,.v2-light .leap-sc .v.y{color:#8a5a12}
+.v2-home .hk-grid .hk .hk-v.pos,.v2-home .hk-grid .hk .hk-v.g{color:var(--green)}.v2-home .hk-grid .hk .hk-v.neg,.v2-home .hk-grid .hk .hk-v.r{color:var(--red)}.v2-home .hk-grid .hk .hk-v.y{color:#8a5a12}
 .v2-home .hk-wl{flex-direction:row;justify-content:space-between;align-items:flex-start;margin-top:2px}
 .v2-home .hk-wl>div{flex-direction:column;align-items:flex-start;gap:2px}
 .v2-home .hk-wl>div:last-child{align-items:flex-end}
-.v2-home .hk-wl span{color:var(--v2-mut-dark);font-size:12px}
-.v2-home .hk-wl b{font-size:26px;line-height:1.2;color:#fff;letter-spacing:0}
-.v2-home .hk-cog{color:#fff}.v2-home .hk-cog svg{fill:#fff}
-.v2-home .hk-back{background:#fff;color:var(--text)}
+.v2-home .hk-wl span{color:var(--text2);font-size:12px}
+.v2-home .hk-wl b{font-size:26px;line-height:1.2;color:var(--text);letter-spacing:0}
+.v2-home .hk-back{background:var(--bg2);color:var(--text);box-shadow:var(--shadow);border:1px solid var(--border)}
 @media(max-width:900px){.v2-home .hk-grid{grid-template-columns:1fr 1fr}.v2-copy{padding:20px 20px 16px}.v2-strip{padding:12px 10px 14px}}
-/* wheel page: hero bar with the real toolbar */
+/* wheel page: white header with the real toolbar */
 .v2-bar{z-index:3}
 .v2-bar .v2-copy{align-items:center;padding:20px 32px}
 .v2-bar .pos-toolbar{display:flex;align-items:center;gap:10px;margin:0 0 0 auto;padding:0;flex-wrap:wrap;background:none;border:0}
 .v2-bar .pos-toolbar .toolbar-spacer{display:none}
-.v2-bar .rot-header-btn{width:32px;height:32px;border-radius:6px;border:1px solid rgba(255,255,255,.28);background:transparent;display:grid;place-items:center;padding:0}
+.v2-bar .rot-header-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border2);background:transparent;display:grid;place-items:center;padding:0}
 .v2-bar .rot-header-btn svg{width:16px;height:16px}
-.v2-bar .rot-header-btn svg:not([fill="none"]){fill:#fff}.v2-bar .rot-header-btn svg[stroke]{stroke:#fff}
-.v2-bar .rot-header-btn:hover{background:rgba(255,255,255,.12)}
+.v2-bar .rot-header-btn svg:not([fill="none"]){fill:var(--text2)}.v2-bar .rot-header-btn svg[stroke]{stroke:var(--text2)}
+.v2-bar .rot-header-btn:hover{background:var(--bg3)}
 .v2-bar .nw,.v2-bar .nw-pill{height:32px}.v2-bar .nw-pill{font-size:13px;line-height:32px;border-radius:6px}
 .v2-bar .nw-box input{color:var(--text)}
-.v2-bar .pos-toolbar label{color:var(--v2-mut-dark);font-size:13px;font-weight:400;display:inline-flex;align-items:center;gap:6px}
-.v2-bar .pos-toolbar label input{accent-color:#fff}
+.v2-bar .pos-toolbar label{color:var(--text2);font-size:13px;font-weight:400;display:inline-flex;align-items:center;gap:6px}
+.v2-bar .pos-toolbar label input{accent-color:var(--orange-safe)}
 .v2-bar .sort-dropdown{color:var(--text)}
 @media(max-width:700px){.v2-bar .v2-copy{padding:14px 16px}.v2-bar h1{font-size:22px}}
 /* LEAPs page: plain white header box, four totals under a hairline */
@@ -4054,7 +4056,7 @@ function renderPositions(){
   // Toolbar
   const sortLabels={manual:'Manual',dte:'Expiry',recent:'Recent',ticker:'A–Z',pnl:'P/L'};
   const sortOpts=Object.entries(sortLabels).map(([k,v])=>`<button class="sort-dropdown-item ${posSortBy===k?'active':''}" onclick="setPosSort('${k}');closeSortMenu()">${v}</button>`).join('');
-  const toolbar=`<section class="v2-hero v2-bar"><div class="v2-bg" aria-hidden="true"><i class="v2-tex"></i></div><div class="v2-copy"><h1>Wheel</h1><div class="pos-toolbar">
+  const toolbar=`<section class="v2-hero v2-light v2-bar"><div class="v2-copy"><h1>Wheel</h1><div class="pos-toolbar">
     <div style="position:relative;display:flex;align-items:center">
       <button class="rot-header-btn" onclick="toggleSortMenu(event)" title="Sort: ${sortLabels[posSortBy]||'Manual'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,128a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16h72A8,8,0,0,1,128,128ZM48,72H184a8,8,0,0,0,0-16H48a8,8,0,0,0,0,16Zm56,112H48a8,8,0,0,0,0,16h56a8,8,0,0,0,0-16Zm125.66-21.66a8,8,0,0,0-11.32,0L192,188.69V112a8,8,0,0,0-16,0v76.69l-26.34-26.35a8,8,0,0,0-11.32,11.32l40,40a8,8,0,0,0,11.32,0l40-40A8,8,0,0,0,229.66,162.34Z"/></svg></button>
       <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
@@ -5747,7 +5749,7 @@ function renderHome(){
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
   return`<div class="home">
-  <section class="v2-hero v2-home"><div class="v2-bg" aria-hidden="true"><i class="v2-tex"></i></div><div class="v2-copy home-head"><div><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div></div><div class="v2-strip">
+  <section class="v2-hero v2-light v2-home"><div class="v2-copy home-head"><div><h1>${mName}</h1><p>Your options P&amp;L at a glance.</p></div></div><div class="v2-strip">
   <div class="hk-grid">
     <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Premium kept minus buyback losses on wheel and PMCC calls closed in ${mName}. Realised only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
