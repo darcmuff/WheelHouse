@@ -26,7 +26,7 @@
 <script src="popular.js"></script>
 <script src="analytics.js" defer></script>
 <meta name="theme-color" content="#f6f5f1">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+
 <!-- Firebase loaded inside main module script -->
 <style>
 :root{
@@ -34,7 +34,7 @@
   --border:#e4e6eb; --border2:#d2d5dc;
   --orange:#FF5A36; --orange2:#e84a28; --orangeL:#ffe6df; --orangeD:rgba(255,90,54,0.08);
   --text:#110f15; --text2:#545a56; --text3:#5b5d62; --orange-safe:#b83a1a;
-  --green:#2f7d57; --red:#b5483d; --blue:#3f6c9a; --yellow:#a8701c; --silver:#3c423e;
+  --green:#2f7d57; --red:#b5483d; --blue:#3f6c9a; --yellow:#8a5a12; --silver:#3c423e;
   --shadow:0 2px 4px rgba(17,15,21,.05),0 8px 16px rgba(17,15,21,.06);
 }
 [data-theme="dark"]{
@@ -60,6 +60,7 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums lining-nums;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+button,input,select,textarea,::placeholder{font-family:inherit}
 html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 ::-webkit-scrollbar{width:0.375rem;height:0.375rem}
 ::-webkit-scrollbar-track{background:var(--bg2)}
@@ -350,7 +351,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 #new-wheel-btn[hidden],#new-wheel-box[hidden]{display:none !important}
 .nw-box{position:relative;display:block;height:1.75rem}
 #new-rot-ticker-top{display:block;background:#fff;color:#111;border:1px solid var(--border);outline:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#new-rot-ticker-top::placeholder{color:#8a908b;opacity:1;font-weight:500}
+#new-rot-ticker-top::placeholder{color:#5b5d62;opacity:1;font-weight:500}
 #new-rot-ticker-top:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,90,54,.35)}
 .nw-list{position:absolute;z-index:40;top:calc(100% + 0.25rem);left:0;width:16rem;max-height:14rem;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;box-shadow:var(--shadow)}
 .nw-item,.nw-note{display:flex;gap:0.5rem;align-items:baseline;width:100%;text-align:left;background:none;border:0;padding:0.4rem 0.55rem;font-size:0.6875rem;color:var(--text);cursor:pointer}
@@ -495,7 +496,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .a-stat-lbl{font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
 .a-stat-sub{font-size:0.625rem;color:var(--text3);margin-top:0.25rem}
 .a-chart-box{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:1.125rem 1.25rem;margin-bottom:0.75rem}
-.pc-head{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem}.pc-net{font-weight:600;font-size:1rem}.pc-sub{font-size:0.6875rem;color:var(--text3)}.pc-sep{width:1px;background:var(--border);margin:0 0.375rem}.pc-box{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:1rem 1.25rem}#health-panel[hidden]{display:none}.pc-hit{fill:transparent;cursor:crosshair}.pc-hit:hover{fill:var(--text);fill-opacity:0.04}.pc-tip{display:none;position:absolute;pointer-events:none;background:var(--bg);border:1px solid var(--border);border-radius:0.375rem;padding:0.375rem 0.625rem;font-size:0.6875rem;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:9rem;z-index:5}.pc-btns{margin-left:auto;display:flex;gap:0.25rem}.pc-r{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:0.375rem;padding:0.1875rem 0.5rem;font-size:0.6875rem;font-weight:600;cursor:pointer}.pc-r:hover{color:var(--text)}.pc-r.on{background:var(--text);color:var(--bg);border-color:var(--text)}.pc-fs{margin-left:0.375rem}.pc-full{position:fixed;inset:0;z-index:1000;margin:0!important;border-radius:0;background:var(--bg2);padding:1.5rem 2.5rem;overflow:auto}body.pc-lock{overflow:hidden}
+.pc-head{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem}.pc-net{font-weight:400;font-size:1rem}.pc-sub{font-size:0.6875rem;color:var(--text3)}.pc-sep{width:1px;background:var(--border);margin:0 0.375rem}.pc-box{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:1rem 1.25rem}#health-panel[hidden]{display:none}.pc-hit{fill:transparent;cursor:crosshair}.pc-hit:hover{fill:var(--text);fill-opacity:0.04}.pc-tip{display:none;position:absolute;pointer-events:none;background:var(--bg);border:1px solid var(--border);border-radius:0.375rem;padding:0.375rem 0.625rem;font-size:0.6875rem;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:9rem;z-index:5}.pc-btns{margin-left:auto;display:flex;gap:0.25rem}.pc-r{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:0.375rem;padding:0.1875rem 0.5rem;font-size:0.6875rem;font-weight:600;cursor:pointer}.pc-r:hover{color:var(--text)}.pc-r.on{background:var(--text);color:var(--bg);border-color:var(--text)}.pc-fs{margin-left:0.375rem}.pc-full{position:fixed;inset:0;z-index:1000;margin:0!important;border-radius:0;background:var(--bg2);padding:1.5rem 2.5rem;overflow:auto}body.pc-lock{overflow:hidden}
 .mpl-table .num{text-align:right}.mpl-table .mpl-sum td{font-weight:600;border-top:1px solid var(--border)}.mpl-note{font-size:0.6875rem;color:var(--text3);padding:0.625rem 0.75rem}
 .t3{color:var(--text3)}.t3-xs{color:var(--text3);font-size:0.625rem}.t3-s{color:var(--text3);font-size:0.6875rem}.t2-nw{color:var(--text2);white-space:nowrap}.fw5{font-weight:600}.fs-sm{font-size:0.75rem}.sq-20{width:1.25rem;height:1.25rem}.row-sb{display:flex;justify-content:space-between;align-items:center;padding:0.3125rem 0}.mini-lbl{font-size:0.5625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:0.1875rem;font-weight:600}
 @media (max-width:1100px){.d-panel-body{overflow-x:auto}.d-panel-body>.d-table-hdr,.d-panel-body>.d-table-row{min-width:43.75rem}}
@@ -810,16 +811,17 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .lc-acts{display:flex;flex-wrap:wrap;gap:0.375rem;margin-top:0.625rem}
 .trade-body>.lc-acts{margin:0.875rem 0 0.5rem 0.875rem}
 
-.act-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin:0.25rem 0 0.875rem}.act-head h1{font-size:1.375rem;font-weight:600}.act-head p{color:var(--text3);font-size:0.7rem}
+.act-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap}.act-head p{color:var(--text3);font-size:0.7rem}
 .act-btns{display:flex;flex-wrap:wrap;gap:0.375rem}
-.act-filter{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:0.75rem 1.25rem;margin:0 0 0.75rem}
+.act-filter{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:0.75rem 1.25rem}
+.act-hero .v2-strip.act-filter{padding:16px 32px 20px}
 .act-pills{display:flex;flex-wrap:wrap;gap:0.375rem}
 .act-pill{border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:999px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer}
-.act-pill.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.act-pill.on{background:var(--orange-safe);border-color:var(--orange-safe);color:#fff}
 .act-pnl{text-align:right}
 .act-figs{display:flex;justify-content:flex-end;gap:1.75rem}
 .act-k{display:block;font-size:0.7rem;color:var(--text3);font-weight:400}
-.act-net{font-size:1.25rem;font-weight:700;line-height:1.1}
+.act-net{font-size:1.25rem;font-weight:400;line-height:1.1}
 .act-net-sub,.act-split,.act-note{display:block;font-size:0.7rem;color:var(--text3)}
 .act-note{margin-top:0.3rem}
 
@@ -879,7 +881,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 /* ── Wheel card design A: brand gradient card (display only) ── */
 @font-face{font-family:'Urbanist';font-style:normal;font-weight:100 900;font-display:swap;src:url('urbanist-var.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-.rotation-window.wc{position:relative;isolation:isolate;background:#14161c;border:0!important;border-radius:12px;box-shadow:0 2px 4px rgba(17,15,21,.05),0 8px 24px rgba(17,15,21,.08);font-family:Urbanist,Inter,-apple-system,'Segoe UI',Roboto,sans-serif;color:#fff;margin-bottom:1rem}
+.rotation-window.wc{position:relative;isolation:isolate;background:#14161c;border:0!important;border-radius:12px;box-shadow:0 2px 4px rgba(17,15,21,.05),0 8px 24px rgba(17,15,21,.08);font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;color:#fff;margin-bottom:1rem}
 .rotation-window.wc:hover{border-color:transparent}
 .wc>*{position:relative;z-index:1}
 .wc>.wc-art{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:var(--wc-bg);border-radius:inherit}
@@ -1080,14 +1082,14 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     </div>
 
     <!-- Tab switcher -->
-    <div style="display:flex;background:var(--bg2);border-radius:0.5rem;padding:0.25rem;margin-bottom:1.5rem;">
+    <div style="display:flex;background:var(--bg2);border-radius:8px;padding:0.25rem;margin-bottom:1.5rem;">
       <button id="tab-signin" style="
-        flex:1;padding:0.5rem;border:none;border-radius:0.375rem;cursor:pointer;
+        flex:1;padding:0.5rem;border:none;border-radius:6px;cursor:pointer;
         font-size:0.8125rem;font-weight:600;transition:all 0.2s;
         background:var(--bg3);color:var(--text);
       ">Sign In</button>
       <button id="tab-signup" style="
-        flex:1;padding:0.5rem;border:none;border-radius:0.375rem;cursor:pointer;
+        flex:1;padding:0.5rem;border:none;border-radius:6px;cursor:pointer;
         font-size:0.8125rem;font-weight:600;transition:all 0.2s;
         background:transparent;color:var(--text3);
       ">Create Account</button>
@@ -1103,13 +1105,13 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     <!-- Email form -->
     <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1rem;">
       <input id="auth-email" type="email" placeholder="Email address" style="
-        background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;
+        background:var(--bg2);border:1px solid var(--border);border-radius:6px;
         padding:0.75rem 0.875rem;color:var(--text);font-size:0.875rem;outline:none;
         transition:border-color 0.2s;
       " onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border)'">
       <div class="pw-wrap">
       <input id="auth-password" type="password" placeholder="Password" style="
-        background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;
+        background:var(--bg2);border:1px solid var(--border);border-radius:6px;
         padding:0.75rem 2.5rem 0.75rem 0.875rem;color:var(--text);font-size:0.875rem;outline:none;
         transition:border-color 0.2s;
       " onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border)'">
@@ -1118,12 +1120,12 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     </div>
 
     <div id="auth-forgot-wrap" style="text-align:right;margin:-0.5rem 0 0.875rem;">
-      <a id="auth-forgot" href="#" style="color:#5eead4;font-size:0.75rem;text-decoration:none;">Forgot password?</a>
+      <a id="auth-forgot" href="#" style="color:#d4d6dc;font-size:0.75rem;text-decoration:none;">Forgot password?</a>
     </div>
 
     <button id="auth-submit-btn" style="
-      width:100%;padding:0.75rem;background:var(--orange);color:#fff;
-      border:none;border-radius:0.375rem;font-size:0.875rem;font-weight:600;
+      width:100%;padding:0.75rem;background:var(--orange-safe);color:#fff;
+      border:none;border-radius:6px;font-size:0.875rem;font-weight:600;
       cursor:pointer;margin-bottom:1rem;transition:opacity 0.2s;
     ">Sign In</button>
 
@@ -1137,7 +1139,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     <!-- Google -->
     <button id="auth-google-btn" style="
       width:100%;padding:0.75rem;background:var(--bg2);color:var(--text);
-      border:1px solid var(--border);border-radius:0.375rem;font-size:0.875rem;font-weight:600;
+      border:1px solid var(--border);border-radius:6px;font-size:0.875rem;font-weight:600;
       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.625rem;
       transition:border-color 0.2s;
     " onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -1146,7 +1148,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     </button>
 
     <div id="auth-legal" style="text-align:center;margin-top:1.25rem;color:#6b7280;font-size:0.6875rem;line-height:1.5;">
-      By continuing you agree to the <a href="legal.html#terms" target="_blank" rel="noopener" style="color:#5eead4">Terms</a> and <a href="legal.html#privacy" target="_blank" rel="noopener" style="color:#5eead4">Privacy policy</a>.<br>Not financial advice: <a href="legal.html#advice" target="_blank" rel="noopener" style="color:#5eead4">read why</a>.
+      By continuing you agree to the <a href="legal.html#terms" target="_blank" rel="noopener" style="color:#d4d6dc">Terms</a> and <a href="legal.html#privacy" target="_blank" rel="noopener" style="color:#d4d6dc">Privacy policy</a>.<br>Not financial advice: <a href="legal.html#advice" target="_blank" rel="noopener" style="color:#d4d6dc">read why</a>.
     </div>
   </div>
 </div>
@@ -1309,7 +1311,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     <input type="hidden" id="paste-wheelId">
     <!-- Tab switcher -->
     <div style="display:flex;gap:0;border:1px solid var(--border2);border-radius:0.4375rem;overflow:hidden;margin-bottom:0.875rem">
-      <button id="tab-smartscan" onclick="switchPasteTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✦ SmartScan</button>
+      <button id="tab-smartscan" onclick="switchPasteTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange-safe);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✦ SmartScan</button>
       <button id="tab-manual" onclick="switchPasteTab('manual')" style="flex:1;padding:0.4375rem;background:var(--bg3);color:var(--text2);border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✎ Manual Entry</button>
     </div>
     <!-- Step 1: Paste -->
@@ -1317,7 +1319,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
       <!-- SmartScan panel -->
       <div id="paste-panel-smartscan">
         <p style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.625rem">Paste any trade confirmation — Robinhood, Tastytrade, IBKR, Schwab, E*Trade, Fidelity, Webull, eToro, Trading 212 or any other broker. SmartScan figures it out.</p>
-        <textarea id="paste-raw" style="width:100%;height:11.25rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
+        <textarea id="paste-raw" style="width:100%;height:11.25rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:inherit;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
         <div id="paste-error" style="color:var(--red);font-size:0.75rem;margin-top:0.5rem;display:none"></div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="parsePaste()">SmartScan →</button></div>
       </div>
@@ -1367,12 +1369,12 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mLeapTitle">Add LEAP (long call)</span><span class="mx" onclick="closeModal('mLeap')">✕</span></div>
     <input type="hidden" id="lf-id">
     <div id="lf-tabs" style="display:flex;gap:0;border:1px solid var(--border2);border-radius:0.4375rem;overflow:hidden;margin-bottom:0.75rem">
-      <button id="lf-tab-smartscan" onclick="switchLeapTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✦ SmartScan</button>
+      <button id="lf-tab-smartscan" onclick="switchLeapTab('smartscan')" style="flex:1;padding:0.4375rem;background:var(--orange-safe);color:#fff;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✦ SmartScan</button>
       <button id="lf-tab-manual" onclick="switchLeapTab('manual')" style="flex:1;padding:0.4375rem;background:var(--bg3);color:var(--text2);border:none;cursor:pointer;font-size:0.75rem;font-weight:600;letter-spacing:.3px">✎ Manual Entry</button>
     </div>
     <div id="lf-panel-smartscan">
       <p style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.625rem">Paste the buy-to-open confirmation for your call — IBKR, Robinhood, Tastytrade, Schwab, Fidelity, Webull or a statement line. Or drop a PDF / CSV / text file on the box. Nothing is saved until you check the details and press Save.</p>
-      <textarea id="lf-paste" style="width:100%;height:9.375rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here… (or drop a PDF / CSV)"></textarea>
+      <textarea id="lf-paste" style="width:100%;height:9.375rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:inherit;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here… (or drop a PDF / CSV)"></textarea>
       <div id="lf-scan-msg" style="font-size:0.75rem;margin-top:0.5rem;display:none"></div>
       <div id="lf-pick" style="margin-top:0.5rem"></div>
       <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mLeap')">Cancel</button><button class="btn btn-primary" onclick="leapRunScan()">SmartScan →</button></div>
@@ -1437,7 +1439,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     </div>
     <div id="pcc-panel-smartscan">
       <p style="font-size:0.6875rem;color:var(--text3);margin-bottom:0.625rem">Paste any trade or roll confirmation — any broker, any layout. Nothing is saved until you check the details and press Save.</p>
-      <textarea id="pcc-paste" style="width:100%;height:8.75rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
+      <textarea id="pcc-paste" style="width:100%;height:8.75rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:0.6875rem;border-radius:0.4375rem;font-size:0.75rem;font-family:inherit;resize:vertical;line-height:1.6" placeholder="Paste trade confirmation here…"></textarea>
       <div id="pcc-scan-msg" style="font-size:0.75rem;margin-top:0.5rem;display:none"></div>
       <div id="pcc-pick" style="margin-top:0.5rem"></div>
       <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPmcc')">Cancel</button><button class="btn btn-primary" id="pcc-scan-btn" onclick="pmccRunScan()">SmartScan →</button></div>
@@ -1469,7 +1471,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
   <div class="mbox" style="width:40rem;padding:0.875rem">
     <div class="mtitle" style="margin-bottom:0.5rem;font-size:0.9375rem"><span id="mOptTitle">Add option position</span><span class="mx" onclick="closeModal('mOpt')">✕</span></div>
     <details style="margin-bottom:0.5rem"><summary style="font-size:0.75rem;color:var(--text3);cursor:pointer">✦ Paste a fill / confirmation (SmartScan)</summary>
-      <textarea id="of-paste" rows="3" style="width:100%;margin-top:0.375rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.5rem;border-radius:0.4375rem;font-size:0.75rem;font-family:monospace" placeholder="e.g. 11/05/2025 Buy to Open TSLA 11/14/2025 450.00 C 1 15.00 1,501.05"></textarea>
+      <textarea id="of-paste" rows="3" style="width:100%;margin-top:0.375rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.5rem;border-radius:0.4375rem;font-size:0.75rem;font-family:inherit" placeholder="e.g. 11/05/2025 Buy to Open TSLA 11/14/2025 450.00 C 1 15.00 1,501.05"></textarea>
       <button class="btn btn-ghost" style="padding:0.25rem 0.625rem;font-size:0.6875rem;margin-top:0.25rem" onclick="optParsePaste()">Fill from text</button></details>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.5rem">
       <div class="fld"><label>Underlying</label><input id="of-und" type="text" placeholder="AAPL" style="text-transform:uppercase"></div>
@@ -1508,7 +1510,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     <p class="hint">Drop a trade-log CSV or PDF statement from any broker (Robinhood, Tastytrade, IBKR, Schwab, Fidelity, E*Trade, Webull…) or your CoveredWheel export. Check the preview, then tap Import.</p>
     <div id="import-drop" class="imp-drop"><div style="font-size:1.375rem">⬇</div><div><b>Drop CSV or PDF here</b> or tap to choose a file</div><div id="import-fname" style="color:var(--text3);font-size:0.75rem;margin-top:0.25rem"></div></div>
     <input type="file" id="import-file" accept=".csv,.pdf,text/csv,text/plain,application/pdf" style="display:none">
-    <textarea id="import-csv" style="width:100%;height:6.875rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.625rem;border-radius:0.4375rem;font-size:0.8125rem;font-family:monospace;resize:vertical" placeholder="…or paste CSV here"></textarea>
+    <textarea id="import-csv" style="width:100%;height:6.875rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.625rem;border-radius:0.4375rem;font-size:0.8125rem;font-family:inherit;resize:vertical" placeholder="…or paste CSV here"></textarea>
     <div id="import-preview"></div>
     <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" id="import-go" disabled onclick="doImport()">Import</button></div>
   </div>
@@ -3137,14 +3139,14 @@ function leapSpotHtml(q,strike,open){
   const tag=open?'':' <span style="color:var(--text3);font-weight:400">close</span>';
   const d=strike>0?(q.price-strike)/strike*100:null;
   const vs=d!=null?` <span style="color:var(--text3);font-weight:400">· ${Math.abs(d).toFixed(1)}% ${d>=0?'above':'below'} strike</span>`:'';
-  return `<span class="lc-spot" style="margin-left:0.75rem;font-size:0.7rem;font-weight:600">$${q.price.toFixed(2)}${mv}${tag}${vs}</span>`;
+  return `<span class="lc-spot" style="margin-left:0.75rem;font-size:0.7rem;font-weight:400">$${q.price.toFixed(2)}${mv}${tag}${vs}</span>`;
 }
 // LEAP option's own move today. Prefer the quote's previous close (Cboe prev_day_close); else the first mark seen today, kept locally.
 function leapDayOpen(k,mark){try{const d=new Date().toISOString().slice(0,10),key='optrack-optopen';let m=JSON.parse(localStorage.getItem(key)||'{}');if(m.d!==d)m={d};if(m[k]==null&&mark>0){m[k]=mark;localStorage.setItem(key,JSON.stringify(m));}return m[k]??null;}catch(e){return null;}}
 function leapOptHtml(mark,prevClose,dayOpen){
   if(!(mark>0))return '';const base=prevClose>0?+prevClose:dayOpen>0?+dayOpen:null;
   let mv='';if(base){const ch=mark-base,pct=ch/base*100,up=ch>=0;mv=` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}% (${up?'+':'-'}$${Math.abs(ch).toFixed(2)})</span> <span style="color:var(--text3);font-weight:400">today</span>`;}
-  return `<span class="lc-opt" style="margin-left:0.75rem;font-size:0.7rem;font-weight:600"><span style="color:var(--text3);font-weight:400">Option</span> $${(+mark).toFixed(2)}${mv}</span>`;
+  return `<span class="lc-opt" style="margin-left:0.75rem;font-size:0.7rem;font-weight:400"><span style="color:var(--text3);font-weight:400">Option</span> $${(+mark).toFixed(2)}${mv}</span>`;
 }
 function leapLogoHtml(sym,open){const u=logos[String(sym||'').toUpperCase()];return u?`<img src="${u}" class="rot-logo lc-logo ${open?'':'cn'}" alt="${esc(sym)}" style="vertical-align:middle;margin-right:0.375rem" onerror="this.style.display='none'">`:'';}
 function renderLeapCard(l,spot,today){
@@ -3310,8 +3312,8 @@ function switchLeapTab(tab){
   document.getElementById('lf-panel-smartscan').style.display=ss?'block':'none';
   document.getElementById('lf-panel-manual').style.display=ss?'none':'block';
   const a=document.getElementById('lf-tab-smartscan'),b=document.getElementById('lf-tab-manual');
-  a.style.background=ss?'var(--orange)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';
-  b.style.background=ss?'var(--bg3)':'var(--orange)';b.style.color=ss?'var(--text2)':'#fff';
+  a.style.background=ss?'var(--orange-safe)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';
+  b.style.background=ss?'var(--bg3)':'var(--orange-safe)';b.style.color=ss?'var(--text2)':'#fff';
 }
 let _leapScan=null;
 function leapRunScan(){
@@ -3391,7 +3393,7 @@ function pmccTab(tab){
   const ss=tab==='smartscan';
   document.getElementById('pcc-panel-smartscan').style.display=ss?'block':'none';document.getElementById('pcc-panel-manual').style.display=ss?'none':'block';
   const a=document.getElementById('pcc-tab-smartscan'),b=document.getElementById('pcc-tab-manual');
-  a.style.background=ss?'var(--orange)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';b.style.background=ss?'var(--bg3)':'var(--orange)';b.style.color=ss?'var(--text2)':'#fff';
+  a.style.background=ss?'var(--orange-safe)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';b.style.background=ss?'var(--bg3)':'var(--orange-safe)';b.style.color=ss?'var(--text2)':'#fff';
 }
 // SmartScan on the LEAP card: a sold call (sell to open) or a bought-back call (buy to close). Reuses leapScan, which reads every layout and labels side/effect.
 // action: 'sto' | 'btc'. A bought call with no open/close marker is taken as a buy back (flagged); an explicit buy to open is refused.
@@ -3409,7 +3411,7 @@ function pmccScan(text,B,today){
 const PMCC_SIDE={sto:'Sell to open',btc:'Buy to close'};
 function pmccSide(a){
   document.getElementById('pcc-side').value=a;
-  const on=(id,x)=>{const b=document.getElementById(id);b.style.background=x?'var(--orange)':'var(--bg3)';b.style.color=x?'#fff':'var(--text2)';};
+  const on=(id,x)=>{const b=document.getElementById(id);b.style.background=x?'var(--orange-safe)':'var(--bg3)';b.style.color=x?'#fff':'var(--text2)';};
   on('pcc-side-sto',a==='sto');on('pcc-side-btc',a==='btc');
   document.getElementById('pcc-price-lbl').textContent=a==='btc'?'Buyback price / share':'Premium / share';
   document.getElementById('pcc-date-lbl').textContent=a==='btc'?'Date bought':'Date sold';
@@ -4885,8 +4887,9 @@ function renderTradeRow(t,wheelTrades,opts){
 
 // ── LOG ──
 function renderActivityHead(){
-  return`<div class="act-head"><div><h1>Activity</h1><p>Every trade, plus getting trades in and out.</p></div>
-    <div class="act-btns"><button class="btn btn-ghost" onclick="openImport()">Import CSV / PDF</button>
+  // Opens the white header box; renderLog closes it after the filter pills and totals strip.
+  return`<section class="v2-hero v2-light act-hero"><div class="v2-copy act-head"><div><h1>Activity</h1><p>Every trade, plus getting trades in and out.</p></div>
+    <div class="act-btns v2-acts"><button class="btn btn-ghost" onclick="openImport()">Import CSV / PDF</button>
     <button class="btn btn-ghost" onclick="exportCSV()">Export trades CSV</button>
     <button class="btn btn-ghost" onclick="exportOptsCSV()">Export LEAPs CSV</button></div></div>`;
 }
@@ -5034,7 +5037,7 @@ function renderLog(){
   const costNote=held.atCost.length?` ${held.atCost.join(', ')} priced at what you paid.`:'';
   const pnlHtml=`<div class="act-pnl"><div class="act-figs"><div><span class="act-k">Net cash flow</span><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span></div><div><span class="act-k">Total return</span><span class="act-net ${totalRet<0?'r':'g'}">${money(totalRet)}</span></div></div><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}<span class="act-note">Net cash flow counts shares bought as cash out. Total return adds what those shares are worth today.${costNote}</span></div>`;
   return`
-  <div class="act-filter">${`<div class="act-pills">${pills}</div>`}${pnlHtml}</div>
+  <div class="v2-strip act-filter">${`<div class="act-pills">${pills}</div>`}${pnlHtml}</div></section>
   <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0">
     <span style="font-size:0.8125rem;font-weight:400;color:var(--silver)">Trade Log</span>
     <button class="rot-header-btn" onclick="switchView('positions')" title="Close" style="margin-left:0.25rem"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:1rem;height:1rem"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
@@ -7271,9 +7274,9 @@ function switchPasteTab(tab){
   const isSmartScan=tab==='smartscan';
   document.getElementById('paste-panel-smartscan').style.display=isSmartScan?'block':'none';
   document.getElementById('paste-panel-manual').style.display=isSmartScan?'none':'block';
-  document.getElementById('tab-smartscan').style.background=isSmartScan?'var(--orange)':'var(--bg3)';
+  document.getElementById('tab-smartscan').style.background=isSmartScan?'var(--orange-safe)':'var(--bg3)';
   document.getElementById('tab-smartscan').style.color=isSmartScan?'#fff':'var(--text2)';
-  document.getElementById('tab-manual').style.background=isSmartScan?'var(--bg3)':'var(--orange)';
+  document.getElementById('tab-manual').style.background=isSmartScan?'var(--bg3)':'var(--orange-safe)';
   document.getElementById('tab-manual').style.color=isSmartScan?'var(--text2)':'#fff';
   if(!isSmartScan){
     const wheelId=document.getElementById('paste-wheelId').value;
