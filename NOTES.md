@@ -37,7 +37,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `dev` drops the pre-market / after-hours price line (UI, `extquote` function, the `extended-hours` paid feature and its landing copy) and the wheel-card Price chart (chart code and the `candles` function), at Marc's request (sw v268).
 
-- `dev` site-wide theme pass from the audit (sw v269): Urbanist on all form controls and placeholders, Inter removed; white-on-orange fills (auth, /start, Activity pill, SmartScan/Manual/PMCC tabs) now `#b83a1a`; Activity header is the white 12px box; `--yellow` is `#8a5a12`; Start on app tokens with 6px buttons; auth/legal links light grey; themed `404.html`. Landing page items stay parked.
+- `dev` site-wide theme pass from the audit (sw v269; v270 lightens auth muted copy to #a3a6ad and sets placeholders to #5b5d62): Urbanist on all form controls and placeholders, Inter removed; white-on-orange fills (auth, /start, Activity pill, SmartScan/Manual/PMCC tabs) now `#b83a1a`; Activity header is the white 12px box; `--yellow` is `#8a5a12`; Start on app tokens with 6px buttons; auth/legal links light grey; themed `404.html`. Landing page items stay parked.
 
 ## New-visitor simulator
 

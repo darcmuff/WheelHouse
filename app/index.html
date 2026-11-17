@@ -61,6 +61,8 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums lining-nums;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 button,input,select,textarea,::placeholder{font-family:inherit}
+::placeholder{color:#5b5d62;opacity:1}
+[data-theme="dark"] ::placeholder{color:var(--text3)}
 html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 ::-webkit-scrollbar{width:0.375rem;height:0.375rem}
 ::-webkit-scrollbar-track{background:var(--bg2)}
@@ -1078,7 +1080,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     <div style="text-align:center;margin-bottom:2rem;">
       <img src="logo-mark.svg" alt="" width="56" height="56" style="margin-bottom:0.75rem">
       <div class="wm" data-brand="name" style="color:#f3f4f6;font-size:1.375rem;">OpTrack</div>
-      <div data-brand="tagline" style="color:var(--text3);font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
+      <div data-brand="tagline" style="color:#a3a6ad;font-size:0.8125rem;margin-top:0.25rem;">Options Wheel Tracker</div>
     </div>
 
     <!-- Tab switcher -->
@@ -1132,7 +1134,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
     <!-- Divider -->
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
       <div style="flex:1;height:1px;background:var(--border);"></div>
-      <span style="color:var(--text3);font-size:0.75rem;">or</span>
+      <span style="color:#a3a6ad;font-size:0.75rem;">or</span>
       <div style="flex:1;height:1px;background:var(--border);"></div>
     </div>
 
@@ -1147,7 +1149,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
       Continue with Google
     </button>
 
-    <div id="auth-legal" style="text-align:center;margin-top:1.25rem;color:#6b7280;font-size:0.6875rem;line-height:1.5;">
+    <div id="auth-legal" style="text-align:center;margin-top:1.25rem;color:#a3a6ad;font-size:0.6875rem;line-height:1.5;">
       By continuing you agree to the <a href="legal.html#terms" target="_blank" rel="noopener" style="color:#d4d6dc">Terms</a> and <a href="legal.html#privacy" target="_blank" rel="noopener" style="color:#d4d6dc">Privacy policy</a>.<br>Not financial advice: <a href="legal.html#advice" target="_blank" rel="noopener" style="color:#d4d6dc">read why</a>.
     </div>
   </div>
