@@ -1080,6 +1080,21 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 /* T1s carbon on every wheel card: in from the left, gone by 56%, above the brand gradient and logo, under the content */
 .rotation-window.wc::after{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;background-image:var(--v2-carbon);background-size:16px 16px;background-repeat:repeat;-webkit-mask-image:var(--v2-fade);mask-image:var(--v2-fade);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;opacity:.85}
 .wc .wl-sl{background:rgba(0,0,0,.16);border-radius:4px;padding:1px 6px;line-height:1.35}
+
+/* Box-like controls share the Import/Export 6px radius */
+.btn,#mSettings .btn,#demo-banner button,#demo-banner .db-go,
+#topnav .nav-item,#tabbar .nav-item,.tn-gear,.pw-eye,.sb-toggle,
+.act-pill,.leap-seg,.nw-pill,.search-inp,.pos-toolbar select,.pos-toolbar .btn-min-all,
+.sort-dropdown,.wh-pick-btn,.pc-r,
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]):not([type=image]),
+select,textarea,
+.fld input,.fld select,.fld textarea,.mbox textarea,.mbox input[type=text],
+.wl-wi-in input,.ret-pop select,.cp-edit input,
+.row-tag,.hy-tag,.lc-lbl,.ab,.leap-badge,.pmcc-tag,.rot-badge,
+.rot-dte-badge,.rot-earn,.rot-ticker,.rot-mini .mini-ticker,.rot-mini .mini-dte,.rot-mini .mini-badge,
+.d-kpi-badge,.d-panel-count,.d-phase,.wc .wl-sl{
+  border-radius:6px!important;
+}
 </style>
 </head>
 <body>
