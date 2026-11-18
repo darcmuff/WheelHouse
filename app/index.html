@@ -1123,6 +1123,11 @@ select,textarea,
 .leap-card.lcw .lc-tex {
   border-radius: 0;
 }
+.lcw .leap-badge.cl{
+  background:rgba(255,255,255,.16);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.45);
+}
 </style>
 </head>
 <body>
@@ -3230,26 +3235,10 @@ function leapOptHtml(mark,prevClose,dayOpen){
 function leapLogoHtml(sym,open){const u=logos[String(sym||'').toUpperCase()];return u?`<img src="${u}" class="rot-logo lc-logo ${open?'':'cn'}" alt="${esc(sym)}" style="vertical-align:middle;margin-right:0.375rem" onerror="this.style.display='none'">`:'';}
 function renderLeapCard(l,spot,today){
   const S=leapStats(l,spot,today),open=l.status==='open';
-  const plH=S.pl==null?'<span style="color:var(--text3)">no mark</span>':`<span class="${S.pl>=0?'g':'r'}">${S.pl>=0?'+':''}${fmtMoney(S.pl).replace(/\.\d\d$/,'')}${S.cost>0?` <small>(${S.pl>=0?'+':''}${(S.pl/S.cost*100).toFixed(1)}%)</small>`:''}</span>`;
   const rev=open&&l.reviewDate?(l.reviewDate<=today?`Review date ${_fdShort(l.reviewDate)} reached`:`Review ${_fdShort(l.reviewDate)}`):'';
   const note=rev?`◷ ${rev}`:'';
   const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:'';
   const gid=l.groupId||l.id;
-  const btns=`${open?`<button class="btn btn-ghost" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button class="btn btn-ghost" title="Edit" onclick="openLeapEdit('${esc(l.id)}')">•••</button>`;
-  let row;
-  if(open){
-    const inW=S.mark>0&&S.intr!=null?Math.round(Math.min(1,S.intr/S.mark)*100):0;
-    row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Value</div><div class="val">${S.value!=null?fmtMoney(S.value).replace(/\.\d\d$/,''):'—'}</div></div><div><div class="rmb-lbl">P&amp;L</div><div class="pl">${plH}</div></div></div>
-    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>${S.expired?'Expired':S.left!=null?`<b>${S.left}</b> days left`:'—'}</span></div>
-      <div class="leap-bar"><i style="width:${S.prog!=null?(S.prog*100).toFixed(0):0}%"></i></div>
-      ${S.tv!=null?`<div class="leap-split">${inW>0?`<div class="in" style="width:${Math.max(inW,12)}%">Intrinsic $${S.intr.toFixed(2)}</div>`:''}<div class="tv">Time $${S.tv.toFixed(2)}</div></div>`:''}</div>
-    <div class="rmb-col"><div class="rmb-lbl">Breakeven</div><div class="rmb-val">$${S.be.toFixed(2)}</div><div class="rmb-sub">${S.beDist!=null?`${S.beDist>=0?'+':''}${S.beDist.toFixed(1)}% vs $${(+S.spot).toFixed(0)}`:'no spot'}</div></div>
-    <div class="rmb-col"><div class="rmb-lbl">Share equiv.</div><div class="rmb-val">${S.dsh!=null?Math.round(S.dsh)+' sh':'—'}</div><div class="rmb-sub">${S.dsh!=null&&S.q?`Δ ${(S.dsh/100/S.q).toFixed(2)}`:'no greeks'}</div></div>
-    <div class="rmb-col"><div class="rmb-lbl">Theta / day</div><div class="rmb-val ${S.thd<0?'r':''}">${S.thd!=null?fmtMoney(S.thd).replace(/\.\d\d$/,''):'—'}</div><div class="rmb-sub">time decay</div></div>`;
-  }else{
-    row=`<div class="rmb-col leap-c1"><div><div class="rmb-lbl">Paid → closed</div><div class="val" style="font-size:1rem">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div><div><div class="rmb-lbl">Realised</div><div class="pl">${plH}</div></div></div>
-    <div class="rmb-col leap-c2"><div class="leap-barl"><span>Opened ${_fdShort(l.entryDate)}</span><span>Closed ${_fdShort(l.closeDate)}</span></div></div><div class="rmb-col"></div><div class="rmb-col"></div><div class="rmb-col"></div>`;
-  }
   if(open){
     const P=pmccStats(l,db.opts||[],today),pb=leapPayback(P.cost,P.net);
     const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
@@ -3268,9 +3257,20 @@ function renderLeapCard(l,spot,today){
   ${renderPmcc(l,today,spot,true)}
 `:''}</div>`;
   }
-  return`<div class="leap-card ${!open?'cn':''}" data-leap="${esc(l.id)}">
-  <div class="leap-ch"><span class="rot-ticker${open?'':' cn'}">${esc(l.underlying)}</span><span class="leap-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} Call · ${_fdShort(l.expiry)}</span>${badge}${note?`<span class="leap-note">${esc(note)}</span>`:''}<span class="leap-btns">${btns}</span></div>
-  <div class="leap-row">${row}</div>${renderPmcc(l,today,spot)}</div>`;
+  const P=pmccStats(l,db.opts||[],today),pb=leapPayback(P.cost,P.net);
+  const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
+  const leapExp=!collapsedLeaps.has(l.id);
+  const rq=S.pl!=null&&S.cost>0?Math.round(S.pl/S.cost*10000)/100:null;
+  return`<div class="leap-card lc lcw" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${l.closeDate?` · ${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}`:''}</span></div>${badge}<span class="lc-lacts-wrap" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></span></div>
+  ${leapExp?`${note?`<div class="lc-note">${note}</div>`:''}
+  <div class="lc-hero"><div><div class="lc-k">Paid → closed</div><div class="lc-v">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div>
+    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
+    <div><div class="lc-k">Realised ${ii('The LEAP\'s gain or loss when it closed or expired, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'—':(S.pl>=0?'+':'')+m0(S.pl)}</div>${rq==null?'':`<div class="lc-pct ${colorN(rq)}" style="font-size:0.825rem;font-weight:400">${rq>=0?'+':''}${rq.toFixed(2)}%</div>`}</div>
+    <div><div class="lc-k">Opened</div><div class="lc-v sm">${_fdShort(l.entryDate)}</div></div></div>
+  <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
+  ${renderPmcc(l,today,spot)}
+`:''}</div>`;
 }
 // LEAPs tab tiles: sums that make sense across many LEAPs. Calls/adj match each card's "Cost after calls".
 function leapTileTotals(openL,legs,spots,today){

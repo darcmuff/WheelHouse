@@ -125,7 +125,7 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
   check('under 270 days → no warning border/note; review date shown', !/leap-card lc warn|leap-card warn/.test(hw) && !/Under 9 months left/.test(hw) && /Review 1 Nov 99/.test(hw), hw.slice(0, 200));
   R.setDb([LC({ id: 'c', status: 'closed', closePrice: 45, closeDate: '2026-09-01' })]); R.setStatus('closed');
   const hc = R.render();
-  check('closed toggle shows closed LEAP with realised P&L', /data-leap="c"/.test(hc) && /Realised/.test(hc) && !/leap-sum/.test(hc));
+  check('closed toggle shows closed LEAP with realised P&L', /data-leap="c"/.test(hc) && /Realised/.test(hc) && /Paid → closed/.test(hc) && /leap-card lc lcw/.test(hc) && !/Value now/.test(hc) && !/What if\?/.test(hc) && !/leap-sum/.test(hc));
   R.setStatus('open');
   check('split: mixed group with a long call goes to Other', R.split([L({ id: 'x', groupId: 'g', type: 'C', side: 'long' }), L({ id: 'y', groupId: 'g', type: 'C', side: 'short' })]).leaps.length === 0);
   const f = R.form({ und: ' tsla ', strike: '400', expiry: '2028-01-21', qty: '2', price: '78', date: '2026-10-01', fees: '1.3', review: '', notes: 'x', mark: '', newId: 'n1' }, null);
