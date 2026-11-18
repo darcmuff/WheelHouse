@@ -4649,8 +4649,10 @@ function renderRotationWindow(wheel){
   const _fCall=_cap!=null?_fact('Profit if called',(_cap>=0?'+':'')+fmtMoney(_cap).replace(/\.00$/,''),colorN(_cap)):'';
   const _fPrem=_fact('Realised premium',fmtMoney(m.premiumRealised).replace(/\.00$/,''),colorN(m.premiumRealised)); // realised only; was gross 'Premium collected' incl. open sells
   const _fDays=_cr?_fact('Days in cycle',String(_cr.days)):'';
+  // Part-covered shares: held minus shares under open covered calls (skipped if any call has no share count)
+  const _idle=(()=>{if(_stage!==2||!isOpen||!(m.sharesHeld>0))return 0;const calls=openOptionLegs(m.trades).filter(o=>o.action==='STOC');if(!calls.length||calls.some(o=>!(o._rem>0)&&!Number(o.shares)))return 0;const cov=calls.reduce((a,o)=>a+(o._rem>0?o._rem:Number(o.shares)),0);return Math.max(0,m.sharesHeld-cov);})();
   const wheelCardBody=`<div class="wl-body">
-    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')}</span>${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}" data-exps="${esc((isOpen?openOptionLegs(m.trades):[]).filter(o=>o.expiry).map(o=>o.expiry).join(','))}">${earningsBadge(wheel.ticker,(isOpen?openOptionLegs(m.trades):[]).map(o=>o.expiry).filter(Boolean))}</span>`):''}</div>
+    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')+(_idle>0?` · ${_idle} shares idle`:'')}</span>${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}" data-exps="${esc((isOpen?openOptionLegs(m.trades):[]).filter(o=>o.expiry).map(o=>o.expiry).join(','))}">${earningsBadge(wheel.ticker,(isOpen?openOptionLegs(m.trades):[]).map(o=>o.expiry).filter(Boolean))}</span>`):''}</div>
     ${_steps}${_memo}
     <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
   </div>`;
