@@ -4010,7 +4010,7 @@ async function fetchOptionMarks(force, onlyId){
       });
     }catch(e){failU.push(u);ls.forEach(l=>{const cur=(db.opts||[]).find(x=>x.id===l.id);if(cur)noteFail(cur);});console.warn('Option marks:',u,e.message);}
   }
-  _optMarkStatus=failU.length&&!ok?'Live marks unavailable — using the last saved price':`Marks: ${ok} updated (delayed)${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
+  _optMarkStatus=failU.length&&!ok?'Using the last saved price':`Marks: ${ok} updated${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
   if(changed||view==='options')render();
 }
 async function refreshLegMark(id){await fetchOptionMarks(true,id);}
