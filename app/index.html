@@ -721,9 +721,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 @media(max-width:700px){.wl-facts{flex-wrap:wrap}.wl-facts>.wl-f{flex:1 1 40%}.rot-header .rot-label,.rot-header .rot-shares{display:none}}
 @media(max-width:600px){.wl-wi{max-width:none;margin-inline:0.5rem}}
 
-/* Compact What if? — sits in the gap under the wheel status line, sized to its content, not full width.
-   Scoped to .wl-body so the Home return-settings pop (.ret-pop.wl-wi) keeps its own layout. */
-.wl-body .wl-wi{
+/* Compact What if? — sits in the gap under the wheel status line (and under the LEAP hero), sized to its content, not full width.
+   Scoped to .wl-body / .lcw so the Home return-settings pop (.ret-pop.wl-wi) keeps its own layout. */
+.wl-body .wl-wi,.lcw .wl-wi{
   display:grid;
   grid-template-columns:1fr auto auto;
   grid-template-areas:"in act x" "out out out";
@@ -738,25 +738,31 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   box-sizing:border-box;
   background:var(--bg2,#fff);
 }
-.wl-body .wl-wi[hidden]{display:none!important}
-.wl-body .wl-wi-in{grid-area:in;display:flex;gap:0.5rem;margin:0}
-.wl-body .wl-wi-in label{display:flex;flex-direction:column;font-size:0.66rem;font-weight:400;letter-spacing:0.03em;text-transform:uppercase;color:var(--text2)}
-.wl-body .wl-wi-in input{width:6.25rem;margin-top:0.15rem;padding:0.28rem 0.4rem;font-size:0.8rem;font-weight:400;font-variant-numeric:tabular-nums lining-nums}
-.wl-body .wl-wi-act{grid-area:act;display:flex;margin:0;align-self:end;padding-bottom:0.02rem}
-.wl-body .wl-wi-x{grid-area:x;position:static;align-self:end;padding:0 0.1rem 0.2rem;line-height:1;font-size:1.05rem;font-weight:400}
-.wl-body .wl-wi [data-wi="out"]{grid-area:out;display:flex;gap:0.5rem 1.25rem;justify-content:space-between;border-top:1px solid var(--border);padding-top:0.3rem}
-.wl-body .wl-wi-r{display:flex;align-items:baseline;gap:0.35rem;border-top:0;padding:0;white-space:nowrap}
-.wl-body .wl-wi-r span{font-weight:400}
-.wl-body .wl-wi-r .wl-wi-v{display:flex;flex-direction:column;align-items:flex-start;text-align:left;font-weight:400;font-variant-numeric:tabular-nums lining-nums}
-.wl-body .wl-wi-r .wl-wi-v small{display:block;margin:0.05rem 0 0}
+.wl-body .wl-wi[hidden],.lcw .wl-wi[hidden]{display:none!important}
+.wl-body .wl-wi-in,.lcw .wl-wi-in{grid-area:in;display:flex;gap:0.5rem;margin:0}
+.wl-body .wl-wi-in label,.lcw .wl-wi-in label{display:flex;flex-direction:column;font-size:0.66rem;font-weight:400;letter-spacing:0.03em;text-transform:uppercase;color:var(--text2)}
+.wl-body .wl-wi-in input,.lcw .wl-wi-in input{width:6.25rem;margin-top:0.15rem;padding:0.28rem 0.4rem;font-size:0.8rem;font-weight:400;font-variant-numeric:tabular-nums lining-nums}
+.wl-body .wl-wi-act,.lcw .wl-wi-act{grid-area:act;display:flex;margin:0;align-self:end;padding-bottom:0.02rem}
+.wl-body .wl-wi-x,.lcw .wl-wi-x{grid-area:x;position:static;align-self:end;padding:0 0.1rem 0.2rem;line-height:1;font-size:1.05rem;font-weight:400}
+.wl-body .wl-wi [data-wi="out"],.lcw .wl-wi [data-wi="out"]{grid-area:out;display:flex;gap:0.5rem 1.25rem;justify-content:space-between;border-top:1px solid var(--border);padding-top:0.3rem}
+.wl-body .wl-wi-r,.lcw .wl-wi-r{display:flex;align-items:baseline;gap:0.35rem;border-top:0;padding:0;white-space:nowrap}
+.wl-body .wl-wi-r span,.lcw .wl-wi-r span{font-weight:400}
+.wl-body .wl-wi-r .wl-wi-v,.lcw .wl-wi-r .wl-wi-v{display:flex;flex-direction:column;align-items:flex-start;text-align:left;font-weight:400;font-variant-numeric:tabular-nums lining-nums}
+.wl-body .wl-wi-r .wl-wi-v small,.lcw .wl-wi-r .wl-wi-v small{display:block;margin:0.05rem 0 0}
 .wl-memo:has(+ .wl-wi:not([hidden])){margin-bottom:0.4rem}
 .wc .wl-body:has(.wl-wi:not([hidden])) .wl-facts{margin-top:0.5rem}
 @media(max-width:600px){
-  .wl-body .wl-wi{max-width:calc(100% - 1rem);width:auto;grid-template-columns:1fr auto;grid-template-areas:"in x" "act act" "out out"}
-  .wl-body .wl-wi-in{flex-wrap:wrap}
-  .wl-body .wl-wi-act{justify-content:flex-end}
-  .wl-body .wl-wi [data-wi="out"]{flex-wrap:wrap}
+  .wl-body .wl-wi,.lcw .wl-wi{max-width:calc(100% - 1rem);width:auto;grid-template-columns:1fr auto;grid-template-areas:"in x" "act act" "out out"}
+  .wl-body .wl-wi-in,.lcw .wl-wi-in{flex-wrap:wrap}
+  .wl-body .wl-wi-act,.lcw .wl-wi-act{justify-content:flex-end}
+  .wl-body .wl-wi [data-wi="out"],.lcw .wl-wi [data-wi="out"]{flex-wrap:wrap}
 }
+
+/* LEAP What if? — white link on the gradient; the panel itself keeps normal colours. */
+.lcw>.wl-memo{margin:0 22px 10px;padding:0;font-size:0.78rem;color:#fff;text-align:center}
+.lcw .wl-wi-btn{color:#fff;text-underline-offset:3px;font-family:inherit}
+.lcw .wl-wi{margin:0 auto 14px;color:var(--text2);font-family:inherit}
+@media(max-width:700px){.lcw>.wl-memo{margin-inline:12px}.lcw .wl-wi{margin-bottom:12px}}
 
 /* ── LEAP cards ── */
 .lc{padding:1rem 1.125rem;margin-bottom:0.75rem}
@@ -1049,7 +1055,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .lcw>*:not(.wc-art):not(.lc-tex){position:relative;z-index:1}
 .lcw .wc-lgw{--s:.78;top:-20px;right:calc(12% - 70px)}
 .lcw .wc-tk{font-size:8rem}
-.lcw>.lc-h,.lcw>.lc-quiet,.lcw>.lc-note,.lcw>.lc-hero,.lcw>.lc-bar{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#b6f5d4;--red:#ffd4ce;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--border:rgba(255,255,255,.28);color:#fff}
+.lcw>.lc-h,.lcw>.lc-quiet,.lcw>.lc-note,.lcw>.lc-hero,.lcw>.lc-bar,.lcw>.wl-memo{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#b6f5d4;--red:#ffd4ce;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--border:rgba(255,255,255,.28);color:#fff}
 .lcw>.lc-h{padding:16px 22px 8px}
 .lcw>.lc-h:last-child,.lcw>.lc-quiet:last-child{padding-bottom:16px}
 .lcw .lc-tk{font-size:18px;font-weight:600;color:#fff}
@@ -2143,6 +2149,17 @@ function wlWhatIfCalc(id){
   const k=parseFloat(p.querySelector('[data-wi=k]')?.value)||0;
   const pr=parseFloat(p.querySelector('[data-wi=p]')?.value)||0;
   if(_wiOpen[id])_wiOpen[id]={k:p.querySelector('[data-wi=k]')?.value||'',p:p.querySelector('[data-wi=p]')?.value||''};
+  if(p.dataset.kind==='leap'){
+    const blank='<div class="wl-wi-r"><span>New net cost</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>If called away</span><span class="wl-wi-v">—</span></div>';
+    if(!(k>0&&pr>0)){out.innerHTML=blank;return;}
+    const qty=parseFloat(p.dataset.qty)||0,cost=parseFloat(p.dataset.cost)||0,net=parseFloat(p.dataset.net)||0,leapK=parseFloat(p.dataset.strike)||0;
+    const r2=n=>Math.round(n*100)/100;
+    const newNet=r2(cost-net-pr*100*qty),perSh=qty?r2(newNet/(100*qty)):0,be=r2(leapK+perSh),cap=r2((k-leapK)*100*qty-newNet);
+    const note=k<be?'<small>Below breakeven</small>':'';
+    const capHtml=`<span class="wl-wi-v ${cap>=0?'g':'r'}">${cap>=0?'+':'-'}${fmtMoney(Math.abs(cap))}${note}</span>`;
+    out.innerHTML=`<div class="wl-wi-r"><span>New net cost</span><span class="wl-wi-v">${fmtMoney(newNet)}<small>${fmtMoney(perSh)} / sh</small></span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">$${fmt2(be)}</span></div><div class="wl-wi-r"><span>If called away</span>${capHtml}</div>`;
+    return;
+  }
   const be=parseFloat(p.dataset.be)||0;
   const sh=parseFloat(p.dataset.shares)||0;
   const osh=parseFloat(p.dataset.oshares)||0;
@@ -2162,6 +2179,13 @@ function wlWhatIfLog(id){
   const p=document.getElementById('wi-'+id);if(!p)return;
   const k=p.querySelector('[data-wi=k]')?.value||'';
   const pr=p.querySelector('[data-wi=p]')?.value||'';
+  if(p.dataset.kind==='leap'){
+    openPmccSell(id);pmccTab('manual');
+    document.getElementById('pcc-strike').value=k;
+    document.getElementById('pcc-price').value=pr;
+    const qty=parseFloat(p.dataset.qty)||0;if(qty>0)document.getElementById('pcc-qty').value=String(qty);
+    return;
+  }
   const sh=parseFloat(p.dataset.shares)||0;
   const contracts=Math.floor(sh/100);
   openAddTrade(id);
@@ -2774,7 +2798,7 @@ function render(){
   if(view==='log')c.innerHTML=renderActivityHead()+renderLog();
   if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
-  if(view==='options'){c.innerHTML=renderOptions();leapBrandPaint();fetchOptionMarks(false);}
+  if(view==='options'){const _wf=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.wl-wi')?[document.activeElement.closest('.wl-wi').id,document.activeElement.dataset.wi]:null;c.innerHTML=renderOptions();wlWhatIfRestore(_wf);leapBrandPaint();fetchOptionMarks(false);}
   if(typeof selPaint==='function')selPaint();
 }
 
@@ -3218,6 +3242,7 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.825rem;font-weight:600">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
+  <div class="wl-memo" onclick="event.stopPropagation()"><button type="button" class="wl-wi-btn" onclick="event.stopPropagation();wlWhatIf('${esc(l.id)}')">What if?</button></div><div class="wl-wi" id="wi-${esc(l.id)}" hidden onclick="event.stopPropagation()" data-kind="leap" data-cost="${P.cost}" data-net="${P.net}" data-strike="${+l.strike||0}" data-qty="${S.q}"><button type="button" class="wl-wi-x" aria-label="Close" onclick="event.stopPropagation();wlWhatIfClose('${esc(l.id)}')">×</button><div class="wl-wi-in"><label>Strike<input data-wi="k" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 260" oninput="wlWhatIfCalc('${esc(l.id)}')"></label><label>Premium / share<input data-wi="p" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.00" oninput="wlWhatIfCalc('${esc(l.id)}')"></label></div><div data-wi="out"><div class="wl-wi-r"><span>New net cost</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>If called away</span><span class="wl-wi-v">—</span></div></div><div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();wlWhatIfLog('${esc(l.id)}')">Log this trade</button></div></div>
   ${renderPmcc(l,today,spot,true)}
 `:''}</div>`;
   }
