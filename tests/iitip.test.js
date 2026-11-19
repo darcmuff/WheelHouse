@@ -33,9 +33,9 @@ test('every Home tile has a tip', () => {
   assert.ok(tiles.length >= 9, 'found ' + tiles.length);
   tiles.forEach((m, i) => assert.ok(/\$\{ii\(/.test(m[1]), 'tile ' + i + ' has no tip'));
   // Return this month uses nested backticks, so the old /ii\(`([^`]*)`/ regex missed it.
-  // Its wording is longer than the old 120-character cap (up to ~173 with a target).
-  assert.ok(h.includes("This month's realised profit from sold options"));
-  assert.ok(h.includes('Change this with the cog on the Capital at work tile'));
+  assert.ok(h.includes("This month's options P&L as a % of"));
+  assert.ok(h.includes('your account size') && h.includes('money at work'));
+  assert.ok(h.includes('Target ${rs.target}%.') && h.includes('Change this with the cog.'));
   assert.ok(h.includes('Open put collateral, open shares and open LEAP cost'));
 });
 test('moving the mouse off a flipped tile flips it back', () => {
