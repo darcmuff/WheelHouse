@@ -2665,6 +2665,11 @@ let _pollHandle=null; // quote-poll interval — cleared on sign-out so it never
 function _loadLogoCache(){try{const o=JSON.parse(localStorage.getItem('wh-logos')||'{}');return o&&typeof o==='object'?o:{};}catch(e){return{};}}
 function _saveLogoCache(){try{const o={};for(const k in logos)if(logos[k])o[k]=logos[k];localStorage.setItem('wh-logos',JSON.stringify(o));}catch(e){}}
 let logos=_loadLogoCache();  // ticker → logo URL
+// Crisp square faces for TSLA/SPCX (Logo.dev icon, same mark the wheel badge shows in real data):
+// black-circle SpaceX X, Tesla T on red. Prefer these over profile/demo letter stubs and over the wide wordmark used as card art.
+const FACE_LOGOS={TSLA:'brand/logos/TSLA.png',SPCX:'brand/logos/SPCX.png'};
+function logoUrlFor(sym){const k=String(sym||'').toUpperCase();if(FACE_LOGOS[k])return FACE_LOGOS[k];return logos[k]||null;}
+Object.keys(FACE_LOGOS).forEach(k=>{logos[k]=FACE_LOGOS[k];});
 
 // Logos for every ticker we show — open or closed wheels, open or closed LEAPs. Quotes stay open-only.
 function logoSyms(){
@@ -2687,6 +2692,7 @@ async function fetchSymbol(sym){
 
 async function fetchLogo(sym){
   sym=String(sym||'').toUpperCase();
+  if(FACE_LOGOS[sym]){logos[sym]=FACE_LOGOS[sym];return;}
   if(!sym||sym.startsWith('^')||logos[sym]!==undefined)return;
   try{
     const url=`/.netlify/functions/profile?symbol=${encodeURIComponent(sym)}`;
@@ -4183,7 +4189,7 @@ function renderPositions(){
 }
 
 function rotNumHtml(wheel,isOpen){
-  const logoUrl=logos[String(wheel.ticker||'').toUpperCase()];
+  const logoUrl=logoUrlFor(wheel.ticker);
   if(logoUrl)return`<img src="${logoUrl}" class="rot-logo ${isOpen?'':'cn'}" alt="${esc(wheel.ticker)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rot-num ${isOpen?'':'cn'}" style="display:none">${wheel.sortOrder||'?'}</div>`;
   return`<div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>`;
 }
@@ -6072,7 +6078,7 @@ function wheelFace(w){
   const span=wheelRunSpan(w);
   return span?name+' · '+span:name;
 }
-function wheelLogoHtml(ticker){const u=logos[String(ticker||'').toUpperCase()];return u?`<img src="${esc(u)}" class="rot-logo" alt="" onerror="this.style.display='none'">`:'';}
+function wheelLogoHtml(ticker){const u=logoUrlFor(ticker);return u?`<img src="${esc(u)}" class="rot-logo" alt="" onerror="this.style.display='none'">`:'';}
 function wheelPickItems(wheels){
   return [{id:'new',ticker:'',text:'+ New wheel'}].concat((wheels||[]).map(w=>({id:w.id,ticker:w.ticker,text:wheelFace(w)})));
 }
