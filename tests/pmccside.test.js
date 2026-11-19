@@ -42,8 +42,8 @@ check('RH app "Sell … Position effect Open" → sto', act(rhS) === 'sto', act(
 check('"Bought to close" one-liner → btc', act('Bought to close 2 SPCX 245c 11/20/2026 @ 1.10 on 10/19/2026') === 'btc');
 check('"Sold to open" one-liner → sto', act('sold to open 2 SPCX 245c 11/20/2026 @ 6.40 on 10/09/2026') === 'sto');
 check('IBKR BUY Code: C → btc', act('Trade Date: 2026-10-19\nSymbol: SPCX 20NOV26 245 C\nAction: BUY  Quantity: 2  Price: 1.10  Comm/Fee: -1.30  Code: C') === 'btc');
-check('bought call with no open/close marker → treated as buy to open (refused, not guessed)', /\+ LEAP/.test(act('Buy SPCX $170 Call Nov 13\nIndividual · 30m\n3 contracts at $1.67')));
-check('explicit buy to open still refused', /\+ LEAP/.test(act('Buy to open SPCX 06/16/2028 150 C 2 @ 72.00 on 06/01/2026')));
+check('bought call with no open/close marker → treated as buy to open (refused, not guessed)', /New LEAP/.test(act('Buy SPCX $170 Call Nov 13\nIndividual · 30m\n3 contracts at $1.67')));
+check('explicit buy to open still refused', /New LEAP/.test(act('Buy to open SPCX 06/16/2028 150 C 2 @ 72.00 on 06/01/2026')));
 const bt = S.scanAt(btc, '2026-10-23').calls[0];
 check('btc fill fields', bt.strike === 245 && bt.expiry === '2026-11-20' && bt.qty === 2 && bt.price === 1.1 && bt.date === '2026-10-19' && Math.abs(bt.fees - 1.3) < 0.01, bt);
 

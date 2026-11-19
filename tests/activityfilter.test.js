@@ -10,7 +10,11 @@ const F=load([
   {kind:'fn',name:'actPnl'},
   {kind:'fn',name:'shareRealisations'},
   {kind:'fn',name:'wheelCloseSlices'},
-  {kind:'fn',name:'actHeldValue'}
+  {kind:'fn',name:'openOptionLegs'},
+  {kind:'fn',name:'actHeldValue'},
+  {kind:'fn',name:'actMoneyPlain'},
+  {kind:'fn',name:'actAndList'},
+  {kind:'fn',name:'actReturnNote'}
 ]);
 const put={id:'p',action:'CSP',strike:15,expiry:'2026-11-20',entered:'2026-10-01',shares:100,total:100,fees:1};
 const buy={id:'b',action:'BTC',strike:15,expiry:'2026-11-20',entered:'2026-10-20',shares:100,total:40,fees:1};
@@ -53,4 +57,59 @@ test('total return adds share value once and a priced open LEAP, and does not re
   const only=F.actHeldValue(cspOnly, ()=>80, []);
   assert.strictEqual(only.shares, 0);
   assert.strictEqual(F.actPnl(cspOnly).net+only.shares, 100);
+});
+
+test('a live mark on an open short, any source, comes off total return',()=>{
+  const rows=F.actAnnotate([
+    put,
+    {id:'L:o',opt:true,legId:'L',side:'long',type:'C',action:'BTO',total:2001,fees:1},
+    {id:'S:o',opt:true,legId:'S',side:'short',type:'C',action:'STO',total:200,fees:0.65}
+  ]);
+  const legs=[
+    {id:'L',status:'open',side:'long',type:'C',qty:1,mark:26,underlying:'GX'},
+    {id:'S',status:'open',side:'short',type:'C',qty:1,mark:1.13,markSrc:'cboe',underlying:'GX'}
+  ];
+  const held=F.actHeldValue(rows,()=>null,legs);
+  assert.strictEqual(held.leaps,2600);
+  assert.strictEqual(held.closeCost,113);
+  assert.strictEqual(held.unpriced.length,0);
+  const cash=F.actPnl(rows).net;
+  assert.strictEqual(Math.round((cash+held.shares+held.leaps-held.closeCost)*100)/100, cash+2600-113);
+});
+
+test('wheel shorts use a live mark, else the typed currentPrice, and skip a short with no price',()=>{
+  const openPut={id:'p2',ticker:'SOFI',action:'CSP',strike:15,expiry:'2027-01-15',entered:'2026-11-01',shares:100,total:34,fees:0.5};
+  const openCall={id:'c2',ticker:'AMD',action:'STOC',strike:165,expiry:'2027-01-15',entered:'2026-11-01',shares:100,total:80,fees:0.5,currentPrice:1.2};
+  const bare={id:'k2',ticker:'KO',action:'CSP',strike:68,expiry:'2027-01-15',entered:'2026-11-01',shares:100,total:80,fees:0.5};
+  const stale={id:'old',ticker:'SOFI',action:'CSP',strike:14,expiry:'2026-01-15',entered:'2025-12-01',shares:100,total:20,fees:0.5,currentPrice:2};
+  const rows=F.actAnnotate([openPut,openCall,bare,stale]);
+  const held=F.actHeldValue(rows,()=>null,[],t=>t.id==='p2'?0.4:null);
+  assert.strictEqual(held.closeCost,40+120); // 0.40×100 live + 1.20×100 typed
+  assert.deepStrictEqual(held.shortParts.map(p=>({ticker:p.ticker,type:p.type,value:p.value})).sort((a,b)=>a.ticker.localeCompare(b.ticker)),[
+    {ticker:'AMD',type:'C',value:120},
+    {ticker:'SOFI',type:'P',value:40}
+  ]);
+  assert.deepStrictEqual(held.unpriced,[{ticker:'KO',type:'P'}]);
+});
+
+test('the return note names held shares, open LEAPs and short buy-backs in plain words',()=>{
+  assert.strictEqual(F.actReturnNote({shareParts:[],leapParts:[],shortParts:[],unpriced:[]}),
+    'Nothing open, so total return equals net cash flow.');
+  assert.strictEqual(F.actReturnNote({
+    leapParts:[{ticker:'SPCX',value:15300}],
+    shortParts:[{ticker:'SPCX',type:'C',value:339}],
+    shareParts:[],unpriced:[]
+  }),'Total return adds your SPCX LEAP at $15,300 and takes off $339 to buy back your open SPCX call.');
+  assert.strictEqual(F.actReturnNote({
+    shareParts:[{ticker:'PEP',value:14520},{ticker:'AMD',value:15840}],
+    leapParts:[],shortParts:[],unpriced:[]
+  }),'Total return adds your AMD shares at $15,840 and your PEP shares at $14,520.');
+  assert.strictEqual(F.actReturnNote({
+    shareParts:[],leapParts:[{ticker:'SPCX',value:15300}],shortParts:[],
+    unpriced:[{ticker:'SOFI',type:'P'}]
+  }),'Total return adds your SPCX LEAP at $15,300. Open SOFI puts have no buy-back price yet.');
+  assert.strictEqual(F.actReturnNote({
+    shareParts:[],leapParts:[],shortParts:[],
+    unpriced:[{ticker:'SOFI',type:'P'},{ticker:'AMD',type:'C'}]
+  }),'Open AMD calls and SOFI puts have no buy-back price yet, so total return equals net cash flow.');
 });
