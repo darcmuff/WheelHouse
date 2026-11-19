@@ -566,11 +566,6 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .btn:disabled{opacity:.45;cursor:default}
 .hint{font-size:0.875rem;color:var(--text3);margin-bottom:0.9375rem;line-height:1.7}
 /* ── LEAPs view (long calls) ── */
-.leap-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-bottom:0.75rem}
-.leap-sc{background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.6875rem 0.8125rem}
-.leap-sc .v.y{color:var(--yellow)}
-.leap-sc .l{font-size:0.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
-.leap-sc .v{font-size:1.25rem;font-weight:720;margin-top:0.1875rem;white-space:nowrap}.leap-sc .s{font-size:0.825rem;color:var(--text3);margin-top:2px}
 .leap-grid{display:flex;flex-direction:column;gap:0.625rem}
 .leap-card{background:var(--bg2);border:1px solid var(--border);border-left:0.25rem solid var(--orange);border-radius:0.5rem;overflow:hidden;transition:border-color .2s}
 .leap-card:hover{border-color:var(--border2)}.leap-card.cn{border-left-color:var(--border2)}
@@ -619,7 +614,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .leap-other summary{font-size:0.75rem;color:var(--text3);cursor:pointer}
 .leap-empty{grid-column:1/-1;text-align:center;color:var(--text3);padding:2.5rem 0.625rem;font-size:0.8125rem;background:var(--bg2);border:1px dashed var(--border2);border-radius:0.5625rem}
 @media(max-width:1100px){.leap-row{grid-template-columns:1fr 1fr 1fr}.leap-row .leap-c1,.leap-row .leap-c2{grid-column:1/-1;border-right:none;border-bottom:1px solid var(--border)}.leap-ch{flex-wrap:wrap}.leap-note{order:9;flex-basis:100%}}
-@media(max-width:640px){.leap-sum{grid-template-columns:1fr 1fr}.leap-sc .v{font-size:1.0625rem}.leap-grid{grid-template-columns:1fr}.leap-hero .val{font-size:1.1875rem}}
+@media(max-width:640px){.leap-grid{grid-template-columns:1fr}.leap-hero .val{font-size:1.1875rem}}
 
 /* ═══ Direction A · Calm minimal ═══ */
 body{background:var(--bg);color:var(--text);line-height:1.45}
@@ -991,7 +986,7 @@ html:not([data-theme="dark"]) body{background:var(--bg)}
 .btn-primary{background:var(--orange-safe);border-color:var(--orange-safe);color:#fff}
 .btn-primary:hover{background:#a3321a;border-color:#a3321a}
 .d-panel,.d-kpi,.leap-card,.a-chart-box,.a-stat,.chart-card,.rot-card,.astat,.hcard,.hk{border-radius:12px}
-.hk-wl b,.leap-sc .v,.lc-pct,.mpl-table td.num{font-weight:480!important}
+.hk-wl b,.lc-pct,.mpl-table td.num{font-weight:480!important}
 #content{box-sizing:border-box;max-width:1280px;padding-left:28px!important;padding-right:28px!important}
 #topnav{padding-left:max(1.5rem,calc((100% - 1280px)/2));padding-right:max(1.5rem,calc((100% - 1280px)/2))}
 html:not([data-theme="dark"]) #topnav{border-bottom-color:transparent}
@@ -1020,7 +1015,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .v2-home .ii,.v2-home .ii:hover{color:var(--text3)}
 .v2-home .hk-v.pos,.v2-home .hk-v.g,.v2-home .hk-wl b.pos,.v2-home .hk-wl b.g{color:var(--green)}
 .v2-home .hk-v.neg,.v2-home .hk-v.r,.v2-home .hk-wl b.neg,.v2-home .hk-wl b.r{color:var(--red)}
-.v2-light .y,.v2-light .hk-v.y,.v2-light .leap-sc .v.y{color:#8a5a12}
+.v2-light .y,.v2-light .hk-v.y{color:#8a5a12}
 .v2-home .hk-grid .hk .hk-v.pos,.v2-home .hk-grid .hk .hk-v.g{color:var(--green)}.v2-home .hk-grid .hk .hk-v.neg,.v2-home .hk-grid .hk .hk-v.r{color:var(--red)}.v2-home .hk-grid .hk .hk-v.y{color:#8a5a12}
 .v2-home .hk-wl{flex-direction:row;justify-content:flex-start;align-items:flex-start;margin-top:2px}
 .v2-home .hk-wl>div{flex:1;min-width:0;flex-direction:column;align-items:flex-start;gap:2px}
@@ -1048,20 +1043,12 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .v2-light{background:var(--bg2);color:var(--text)}
 .v2-light .v2-copy p{color:var(--text2)}
 .v2-light .v2-strip{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;border-top:1px solid var(--border);padding:16px 22px 20px}
-.v2-light .v2-strip.leap-sum-wrap{border-top:0;border-radius:12px}
 .v2-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;font-size:14.4px;color:var(--text2)}
 .v2-acts>span[title]{font-size:14.4px!important;color:var(--text2)!important;max-width:none!important}
 .v2-acts .leap-seg{border-radius:6px;border-color:rgba(17,15,21,.10)}
 .v2-acts .leap-seg button{height:32px;padding:0 14px;font-size:15.6px;font-weight:720;color:var(--text2);font-family:inherit}
 .v2-acts .leap-seg button.on{background:rgba(17,15,21,.06);color:var(--text)}
 .v2-acts .btn-primary{height:32px;padding:0 14px;font-size:15.6px}
-.v2-light .leap-sum{margin:0;gap:8px}
-.v2-light .leap-sc{background:transparent;border:0;border-radius:0;padding:8px 14px}
-.v2-light .leap-sc .l{font-size:14.4px;font-weight:720;letter-spacing:.04em;color:var(--text3)}
-.v2-light .leap-sc .v{font-size:26px;line-height:1.2;margin-top:4px}
-.v2-light .leap-sc .lc-pct{font-size:15.6px!important;margin-top:2px}
-.v2-light .leap-sc .s{font-size:14.4px;color:var(--text2);margin-top:2px}
-.v2-light .leap-sc .v[style]{font-size:18px!important;line-height:1.3}
 /* LEAP card header: wheel-card direction A (brand G1, T1s carbon, angled logo nudged left like v251, 32% strip) */
 .leap-card.lcw{position:relative;isolation:isolate;background:#14161c;border:0!important;border-radius:12px;padding:0;overflow:hidden;color:#fff;box-shadow:0 2px 4px rgba(17,15,21,.05),0 8px 24px rgba(17,15,21,.08);margin-bottom:0}
 .lcw>.wc-art{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:var(--wc-bg);border-radius:inherit}
@@ -1094,7 +1081,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .lcw>.lc-bar i{background:#FF5A36}
 .lcw>.trade-body{background:var(--bg2);color:var(--text);border:1px solid rgba(17,15,21,.08);border-radius:12px;margin:0 18px 18px!important;box-shadow:0 2px 4px rgba(17,15,21,.05)}
 .lcw .trade-body .btn{border-radius:6px;font-family:inherit}
-@media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 14px 6px;flex-wrap:wrap;gap:0.4rem 0.5rem}.lcw>.wl-top{padding:0 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}.v2-light .leap-sum{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 14px 6px;flex-wrap:wrap;gap:0.4rem 0.5rem}.lcw>.wl-top{padding:0 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}}
 /* Called away (and the other wheel steps) at AA on every card gradient */
 .wc .wl-st{color:#fff}
 .wc .rot-earn{color:#fff;background:rgba(0,0,0,.16)}
@@ -1118,14 +1105,8 @@ select,textarea,
 .d-kpi-badge,.d-panel-count,.d-phase,.wc .wl-sl{
   border-radius:6px!important;
 }
-/* Thin #FF5A36 outlines: home overview tiles, LEAP page header stats, square LEAP cards */
+/* Thin #FF5A36 outlines: home overview tiles, square LEAP cards */
 .v2-hero.v2-home .hk-grid > .hk {
-  border: 1px solid #FF5A36;
-  border-radius: 8px;
-  box-sizing: border-box;
-  padding: 7px 13px; /* was 8px 14px */
-}
-.v2-light .leap-sum > .leap-sc {
   border: 1px solid #FF5A36;
   border-radius: 8px;
   box-sizing: border-box;
@@ -3339,37 +3320,6 @@ function renderLeapCard(l,spot,today){
   ${renderPmcc(l,today,spot)}
 `:''}</div>`;
 }
-// LEAPs tab tiles: sums that make sense across many LEAPs. Calls/adj match each card's "Cost after calls".
-function leapTileTotals(openL,legs,spots,today){
-  let cost=0,value=0,pcost=0,priced=0,noPrice=0,calls=0;
-  (openL||[]).filter(l=>!l.demo).forEach(l=>{const S=leapStats(l,(spots||{})[l.underlying],today),P=pmccStats(l,legs,today);
-    cost+=S.cost;if(S.value==null)noPrice++;else{value+=S.value;pcost+=S.cost;priced++;}calls+=P.net;});
-  const r=n=>Math.round(n*100)/100;
-  // Value now vs what those same priced LEAPs cost: % and colour (g above cost, r below, '' level/unknown).
-  const pc=r(pcost),vv=r(value),pct=priced&&pc>0?Math.round((vv-pc)/pc*10000)/100:null;
-  return{n:priced+noPrice,cost:r(cost),value:vv,pricedCost:pc,valuePct:pct,valueCls:pct==null||vv===pc?'':vv>pc?'g':'r',priced,noPrice,calls:r(calls),adj:r(cost-calls)};
-}
-// Pure: realised short-call premium across all LEAPs (closed/expired calls only), all time and this month.
-function leapCallsBanked(leaps,legs,today){
-  const seen=new Set();let all=0,month=0;const ym=(today||'').slice(0,7);
-  (leaps||[]).filter(l=>!l.demo).forEach(L=>pmccShortsFor(L,legs).forEach(c=>{if(seen.has(c.id)||c.status==='open')return;seen.add(c.id);
-    const r=OPTS.legPnL(c).realized||0;all+=r;if(String(c.closeDate||c.expiry||'').slice(0,7)===ym)month+=r;}));
-  const rd=n=>Math.round(n*100)/100;return{all:rd(all),month:rd(month)};
-}
-// Pure: the single most urgent LEAP item. Expired LEAP first, then whichever is soonest:
-// an open short call's expiry, a LEAP under 90 days left, or a review date reached.
-function leapNextAct(openL,legs,today){
-  const c=[],k=v=>'$'+String(+v).replace(/\.0+$/,'');
-  (openL||[]).filter(l=>!l.demo).forEach(l=>{
-    const left=OPTS.dte(l.expiry,today),name=`${l.underlying} ${k(l.strike)}C`;
-    if(left!=null&&left<0){c.push({rank:-1,id:l.id,text:`${name} LEAP has expired: close it`,cls:'r'});return;}
-    if(left!=null&&left<90)c.push({rank:left,id:l.id,text:`${name} LEAP: ${left} day${left===1?'':'s'} left`,cls:left<30?'r':'y'});
-    if(l.reviewDate&&l.reviewDate<=today)c.push({rank:0,id:l.id,text:`${name} LEAP: review date reached`,cls:'y'});
-    pmccShortsFor(l,legs).filter(x=>x.status==='open').forEach(x=>{const d=OPTS.dte(x.expiry,today);if(d==null)return;
-      c.push({rank:d,id:l.id,text:`${x.underlying} ${k(x.strike)}C ${d<0?'expired: close it':d===0?'expires today':`expires in ${d} day${d===1?'':'s'}`}`,cls:d<=3?'r':d<=14?'y':''});});
-  });
-  c.sort((a,b)=>a.rank-b.rank);return c[0]||null;
-}
 function goToLeap(id){collapsedLeaps.delete(id);const L=(db.opts||[]).find(x=>x.id===id);if(L&&L.status!=='open')showClosedLeaps=true;if(hiddenLeaps.has(id)&&!showHiddenLeaps)showHiddenLeaps=true;switchView('options');setTimeout(()=>{const e=document.querySelector(`[data-leap="${CSS.escape(id)}"]`);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 function renderOptions(){
   const legs=db.opts||[];
@@ -3394,21 +3344,6 @@ function renderOptions(){
     if(leapSortBy==='dte')return(a.expiry||'').localeCompare(b.expiry||'');
     return leaps.indexOf(a)-leaps.indexOf(b);
   });
-  // summary (open LEAPs) — totals that add up across many LEAPs on different stocks
-  const T=leapTileTotals(openL,legs,spots,today);
-  const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
-  const sc=(l,v,sub,cls='',pctH='')=>`<div class="leap-sc"><div class="l">${l}</div><div class="v ${cls}">${v}</div>${pctH}<div class="s">${sub}</div></div>`;
-  const vPct=T.valuePct==null?'':`<div class="lc-pct ${T.valueCls||'m'}" style="font-size:0.825rem;font-weight:720">${T.valuePct>0?'+':T.valuePct<0?'−':''}${Math.abs(T.valuePct).toFixed(2)}%</div>`;
-  const nL=`across ${T.n} LEAP${T.n!==1?'s':''}`;
-  const CB=leapCallsBanked(leaps,legs,today),NX=leapNextAct(openL,legs,today);
-  const pl=T.priced?Math.round((T.value-T.pricedCost)*100)/100:null;
-  const sg=n=>(n>0?'+':n<0?'−':'')+m0(Math.abs(n));
-  const nxH=`<div class="leap-sc"${NX?` style="cursor:pointer" onclick="goToLeap('${esc(NX.id)}')"`:''}><div class="l">Next to act ${ii('The most urgent thing on your LEAPs: an expired LEAP, the nearest call expiry, a LEAP under 90 days or a review date.')}</div><div class="v ${NX?NX.cls:''}" style="font-size:0.9375rem;white-space:normal">${NX?esc(NX.text):'Nothing due'}</div><div class="s">${NX?'Click to open the LEAP':'No calls or LEAPs need you'}</div></div>`;
-  const sumH=T.n?`<div class="leap-sum">
-    ${sc(`Total value ${ii('Open LEAPs at today\'s prices, and the % up or down on what they cost. Expired or unpriced LEAPs left out.')}`,T.priced?m0(T.value):'—',T.noPrice?`${T.noPrice} without a price`:nL,T.valueCls,vPct)}
-    ${sc(`Unrealised P&amp;L ${ii('Value now minus what you paid, on the LEAPs themselves. Calls sold against them not included.')}`,pl==null?'—':sg(pl),T.noPrice?`${T.noPrice} without a price`:nL,T.valueCls,vPct)}
-    ${sc(`Calls banked ${ii('Premium kept on calls sold against your LEAPs, closed or expired only, after buy backs and fees.')}`,sg(CB.all),`This month ${sg(CB.month)}`,CB.all>0?'g':CB.all<0?'r':'')}
-    ${nxH}</div>`:'';
   const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${showClosedLeaps?'No LEAPs yet. Add one with <b>New LEAP</b>, or import a broker file with buy-to-open call fills.':'No open LEAPs. Add one with <b>New LEAP</b>, or import a broker file with buy-to-open call fills.'}</div>`;
   // non-long-call legs never vanish silently
   const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
@@ -3431,7 +3366,6 @@ function renderOptions(){
     ${closedLeaps.length?`<label><input type="checkbox" ${showClosedLeaps?'checked':''} onchange="toggleShowClosedLeaps(this.checked)"> Show closed (${closedLeaps.length})</label>`:''}
     ${hiddenLeapList.length?`<label><input type="checkbox" ${showHiddenLeaps?'checked':''} onchange="toggleShowHiddenLeaps(this.checked)"> Show hidden (${hiddenLeapList.length})</label>`:''}
   </div></div></section>
-  ${sumH?`<section class="v2-hero v2-light"><div class="v2-strip leap-sum-wrap">${sumH}</div></section>`:''}
   ${selTipHtml()}
   <div class="leap-grid">${cards}</div>${otherH}${healthH}
   <div style="margin-top:0.875rem;font-size:0.825rem;color:var(--text3);display:flex;gap:0.875rem"><a href="#" style="color:var(--text3)" onclick="setOptDemo(${!optDemo});return false">${optDemo?'Hide demo positions':'Show demo positions'}</a><a href="#" style="color:var(--text3)" onclick="exportOptsCSV();return false">Export options CSV</a></div>`;
