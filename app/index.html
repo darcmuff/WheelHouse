@@ -1088,6 +1088,9 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .wc .rot-shares{color:#fff}
 .wc>.rot-header{--silver:#fff}
 /* T1s carbon on every wheel card: in from the left, gone by 56%, above the brand gradient and logo, under the content */
+/* Fade A: longer carbon mask on wheel + LEAP cards only. Root --v2-fade stays at 56% so the home header is unchanged. */
+.rotation-window.wc,
+.leap-card.lcw{--v2-fade:linear-gradient(90deg,#000 0%,#000 18%,rgba(0,0,0,.45) 50%,transparent 82%);}
 .rotation-window.wc::after{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;background-image:var(--v2-carbon);background-size:16px 16px;background-repeat:repeat;-webkit-mask-image:var(--v2-fade);mask-image:var(--v2-fade);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;opacity:.85}
 .wc .wl-sl{background:rgba(0,0,0,.16);border-radius:4px;padding:1px 6px;line-height:1.35}
 
