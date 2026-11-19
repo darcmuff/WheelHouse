@@ -5059,43 +5059,101 @@ function actPnl(rows){
 }
 // Market value to add to the cash total. Shares: FIFO lots still held, from the rows shown, priced with priceOf(ticker).
 // No price → value them at what was paid. Open long LEAP calls: today's mark × 100 × qty when the leg already has one.
-// Read-only. Premiums stay inside the cash total and are not added again.
-function actHeldValue(rows,priceOf,legs){
+// Open shorts (wheel CSP/STOC still live, and short option legs including PMCC): live/last-close mark from shortMarkOf, else the typed currentPrice.
+// A short with no price is left out and listed on unpriced. Read-only. Premiums stay inside the cash total and are not added again.
+function actHeldValue(rows,priceOf,legs,shortMarkOf){
   const sr=shareRealisations(rows||[]),tickerOf={};
   (rows||[]).forEach(t=>{if(t.wheelId)tickerOf[t.wheelId]=t.ticker||'';});
-  let shares=0;const atCost=[];
+  let shares=0;const atCost=[],shareBy={};
   Object.entries(sr.open).forEach(([k,o])=>{
     if(!(o.shares>0))return;
     const ticker=k.indexOf('tk:')===0?k.slice(3):(tickerOf[k]||'');
     const px=priceOf?priceOf(ticker):null;
-    if(px>0)shares+=px*o.shares;
-    else{shares+=o.cost;if(ticker)atCost.push(ticker);}
+    const v=px>0?px*o.shares:o.cost;
+    if(!(px>0)&&ticker)atCost.push(ticker);
+    shares+=v;
+    if(!ticker)return;
+    const p=shareBy[ticker]||(shareBy[ticker]={ticker,shares:0,value:0});
+    p.shares+=o.shares;p.value+=v;
   });
-  let leaps=0,leapPlain=0;const seen=new Set();
+  let leaps=0,leapPlain=0;const seen=new Set(),leapBy={};
   (rows||[]).forEach(t=>{
     if(!t.opt||t.side!=='long'||t.type!=='C'||!t.legId||seen.has(t.legId))return;
     seen.add(t.legId);
     const leg=(legs||[]).find(l=>l.id===t.legId);
     if(!leg||leg.status!=='open'||leg.side!=='long'||leg.type!=='C')return;
     const mark=leg.mark!=null&&leg.mark!==''?+leg.mark:null;
-    if(mark>0)leaps+=mark*100*(+leg.qty||0);
-    else leapPlain++;
+    if(!(mark>0)){leapPlain++;return;}
+    const v=mark*100*(+leg.qty||0);
+    leaps+=v;
+    const ticker=String(leg.underlying||t.ticker||'').toUpperCase();
+    if(!ticker)return;
+    const p=leapBy[ticker]||(leapBy[ticker]={ticker,value:0});
+    p.value+=v;
   });
-  let closeCost=0;
+  let closeCost=0;const shortBy={},unpriced=[];
   const wheelRows=(rows||[]).filter(t=>!t.opt);
-  const slices=wheelCloseSlices(wheelRows);
-  wheelRows.forEach(t=>{
-    if((t.action!=='CSP'&&t.action!=='STOC')||t.currentPrice==null||t.currentPrice==='')return;
-    const left=slices.rem[t.id];
-    if(!(left>0))return;
-    closeCost+=(+t.currentPrice)*left;
+  const today=new Date().toISOString().slice(0,10);
+  const openW=typeof openOptionLegs==='function'?openOptionLegs(wheelRows)
+    :(typeof walkLegPairs==='function'?walkLegPairs(wheelRows).open.filter(o=>!o.expiredWorthless&&o.expiry&&o.expiry>=today&&(o._rem>0||!Number(o.shares))):[]);
+  const priced=v=>v!=null&&v!==''&&!isNaN(+v)&&+v>=0;
+  const addShort=(ticker,type,v)=>{const k=ticker+'|'+type;const p=shortBy[k]||(shortBy[k]={ticker,type,value:0});p.value+=v;};
+  openW.forEach(t=>{
+    const left=t._rem>0?t._rem:(+t.shares||0);if(!(left>0))return;
+    const live=shortMarkOf?shortMarkOf(t):null;
+    const px=priced(live)?+live:priced(t.currentPrice)?+t.currentPrice:null;
+    const ticker=String(t.ticker||'').toUpperCase(),type=t.action==='CSP'?'P':'C';
+    if(px==null){unpriced.push({ticker,type});return;}
+    const v=px*left;closeCost+=v;if(ticker)addShort(ticker,type,v);
   });
   (legs||[]).forEach(l=>{
-    if(!l||l.status!=='open'||l.side!=='short'||l.markSrc!=='manual'||l.mark==null||l.mark==='')return;
-    closeCost+=(+l.mark)*100*(+l.qty||0);
+    if(!l||l.status!=='open'||l.side!=='short')return;
+    const px=priced(l.mark)?+l.mark:null;
+    const ticker=String(l.underlying||'').toUpperCase(),type=l.type==='P'?'P':'C';
+    if(px==null){unpriced.push({ticker,type});return;}
+    const v=px*100*(+l.qty||0);closeCost+=v;if(ticker)addShort(ticker,type,v);
   });
   const r=x=>Math.round(x*100)/100;
-  return {shares:r(shares),leaps:r(leaps),closeCost:r(closeCost),atCost,leapPlain};
+  const rnd=arr=>arr.map(p=>{const o={ticker:p.ticker,value:r(p.value)};if(p.shares!=null)o.shares=r(p.shares);if(p.type)o.type=p.type;return o;});
+  const seenU=new Set(),unpricedParts=[];
+  unpriced.forEach(u=>{const k=(u.ticker||'')+'|'+(u.type||'');if(!u.ticker||seenU.has(k))return;seenU.add(k);unpricedParts.push({ticker:u.ticker,type:u.type});});
+  return {shares:r(shares),leaps:r(leaps),closeCost:r(closeCost),atCost,leapPlain,shareParts:rnd(Object.values(shareBy)),leapParts:rnd(Object.values(leapBy)),shortParts:rnd(Object.values(shortBy)),unpriced:unpricedParts};
+}
+function actMoneyPlain(n){
+  const x=Math.round((+n||0)*100)/100,neg=x<0,abs=Math.abs(x);
+  const[w,f]=abs.toFixed(2).split('.');
+  return(neg?'-':'')+'$'+w.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(f==='00'?'':'.'+f);
+}
+function actAndList(parts){
+  parts=(parts||[]).filter(Boolean);
+  if(parts.length<=1)return parts[0]||'';
+  if(parts.length===2)return parts[0]+' and '+parts[1];
+  return parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1];
+}
+// Plain line naming what Total return adds (held shares, open LEAPs) and takes off (open short buy-backs).
+function actReturnNote(held){
+  held=held||{};
+  const added=[];
+  (held.shareParts||[]).slice().sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker))).forEach(p=>{
+    added.push('your '+p.ticker+' shares at '+actMoneyPlain(p.value));
+  });
+  (held.leapParts||[]).slice().sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker))).forEach(p=>{
+    added.push('your '+p.ticker+' LEAP at '+actMoneyPlain(p.value));
+  });
+  const taken=(held.shortParts||[]).slice().sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker))||String(a.type||'').localeCompare(String(b.type||''))).map(p=>{
+    return actMoneyPlain(p.value)+' to buy back your open '+p.ticker+' '+(p.type==='P'?'put':'call');
+  });
+  const uq=[],seen=new Set();
+  (held.unpriced||[]).slice().sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker))||String(a.type||'').localeCompare(String(b.type||''))).forEach(u=>{
+    const k=(u.ticker||'')+'|'+(u.type||'');if(!u.ticker||seen.has(k))return;seen.add(k);
+    uq.push(u.ticker+' '+(u.type==='P'?'puts':'calls'));
+  });
+  const uNote=uq.length?'Open '+actAndList(uq)+' have no buy-back price yet.':'';
+  if(!added.length&&!taken.length)return uNote?uNote.replace(/\.$/,'')+', so total return equals net cash flow.':'Nothing open, so total return equals net cash flow.';
+  const bits=[];
+  if(added.length)bits.push('adds '+actAndList(added));
+  if(taken.length)bits.push('takes off '+actAndList(taken));
+  return 'Total return '+actAndList(bits)+'.'+(uNote?' '+uNote:'');
 }
 function setLogKind(k){
   if(k==='all')logKinds.clear();
@@ -5139,7 +5197,12 @@ function renderLog(){
   }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:3.125rem">No trades</td></tr>';
   const pnl=actPnl(trades);
   const priceOf=tk=>{const q=typeof quotes!=='undefined'&&quotes[tk];if(q&&q.price>0)return q.price;const w=(db.wheels||[]).find(x=>String(x.ticker||'').toUpperCase()===String(tk||'').toUpperCase()&&x.lastPrice!=null);return w?+w.lastPrice:null;};
-  const held=actHeldValue(trades,priceOf,db.opts||[]);
+  const shortMarkOf=t=>{
+    const occ=typeof wheelLegOcc==='function'?wheelLegOcc(t.ticker,t):'';
+    const m=occ&&typeof _wheelMarks!=='undefined'&&Object.prototype.hasOwnProperty.call(_wheelMarks,occ)?_wheelMarks[occ]:null;
+    return m!=null&&m!==''?+m:null;
+  };
+  const held=actHeldValue(trades,priceOf,db.opts||[],shortMarkOf);
   const totalRet=Math.round((pnl.net+held.shares+held.leaps-(held.closeCost||0))*100)/100;
   const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));
   const kindsShown=ACT_KINDS.filter(([k])=>haveOther||k!=='other');
@@ -5148,8 +5211,7 @@ function renderLog(){
     return `<button type="button" class="act-pill${on?' on':''}" onclick="setLogKind('${k}')">${lbl}</button>`;
   }).join('');
   const split=ACT_KINDS.filter(([k])=>pnl.n[k]).map(([k,lbl])=>`${lbl} ${money(pnl.by[k])}`);
-  const costNote=held.atCost.length?` ${held.atCost.join(', ')} priced at what you paid.`:'';
-  const pnlHtml=`<div class="act-pnl"><div class="act-figs"><div><span class="act-k">Net cash flow</span><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span></div><div><span class="act-k">Total return</span><span class="act-net ${totalRet<0?'r':'g'}">${money(totalRet)}</span></div></div><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}<span class="act-note">Net cash flow counts shares bought as cash out. Total return adds what those shares are worth today.${costNote}</span></div>`;
+  const pnlHtml=`<div class="act-pnl"><div class="act-figs"><div><span class="act-k">Net cash flow</span><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span></div><div><span class="act-k">Total return</span><span class="act-net ${totalRet<0?'r':'g'}">${money(totalRet)}</span></div></div><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}<span class="act-note">${esc(actReturnNote(held))}</span></div>`;
   return`
   <div class="v2-strip act-filter">${pnlHtml}<div class="act-tools"><div class="act-pills">${pills}</div><div class="act-search"><input class="search-inp" type="search" placeholder="Search…" value="${esc(logQ)}" oninput="setLogQ(this.value)"><span class="t3-s">${trades.length}</span></div></div></div></section>
   <div class="log-wrap">
