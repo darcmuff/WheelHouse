@@ -1,2 +1,3 @@
 node_modules/
 tools/onboard-sim/out/
+scripts/brand/data/build-state.json

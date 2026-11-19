@@ -1,9 +1,9 @@
 // WheelHouse service worker. Bump CACHE on every release.
-const CACHE='optrack-v221';
+const CACHE='optrack-v285';
 // Caches from earlier app names, deleted on update. Only the service-worker cache: your data and settings are untouched.
 const LEGACY = ['wheelhouse-'];
 const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
-const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './demo.js', './popular.js', './analytics.js', './sw-update.js', './legal.html', './nunito-900.woff2', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg', './logo-horizontal.svg'];
+const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './wc-brand.js', './demo.js', './popular.js', './analytics.js', './sw-update.js', './legal.html', './nunito-900.woff2', './urbanist-var.woff2', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg', './logo-horizontal.svg', './brand/index.json', './brand/overrides.json', './brand/top250-options.json'];
 
 self.addEventListener('message', e => {
   var d = e.data || {};
@@ -43,6 +43,14 @@ self.addEventListener('fetch', e => {
       if (res && res.ok && shell) { const c = res.clone(); caches.open(CACHE).then(x => x.put(SHELL, c)); }
       return res;
     }).catch(() => shell ? caches.match(SHELL) : caches.match(req, { ignoreSearch: true }).then(r => r || caches.match(SHELL))));
+    return;
+  }
+  // Brand data (overrides, index, shards) changes between deploys without a SW bump: network first, cache only for offline.
+  if (url.pathname.startsWith('/brand/') && url.pathname.endsWith('.json')) {
+    e.respondWith(fetch(req).then(res => {
+      if (res && res.ok && res.type === 'basic') { const c = res.clone(); caches.open(CACHE).then(x => x.put(req, c)); }
+      return res;
+    }).catch(() => caches.match(req, { ignoreSearch: true })));
     return;
   }
   // Cache first for same-origin static assets.

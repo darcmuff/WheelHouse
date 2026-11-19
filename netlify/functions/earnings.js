@@ -1,5 +1,5 @@
 // Next earnings date for a symbol. Finnhub first (if FINNHUB_KEY is set), else Nasdaq's public earnings calendar
-// scanned day by day (parallel batches) up to ~90 days ahead. Read-only proxy; returns {date:null} when none found.
+// scanned day by day (parallel batches) up to ~90 days ahead, kept cheaper than Finnhub 120-day window. Read-only proxy; returns {date:null} when none found.
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
 const DAYS = 90, BATCH = 10;
 const resp = (code, body, maxAge) => ({ statusCode: code, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': maxAge ? `public, max-age=3600, s-maxage=${maxAge}` : 'no-store' }, body: JSON.stringify(body) });

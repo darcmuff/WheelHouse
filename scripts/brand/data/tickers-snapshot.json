@@ -1,0 +1,1807 @@
+{
+ "generatedAt": "2026-11-14T23:18:03.106Z",
+ "universe": "top250-options",
+ "listPath": "app/brand/top250-options.json",
+ "sources": [
+  {
+   "name": "Macroption — Most Active Stocks by Options Volume 2026",
+   "url": "https://www.macroption.com/stock-options-volume/",
+   "field": "avg_daily_volume"
+  },
+  {
+   "name": "ElixStocks — Options volume by day (OCC)",
+   "url": "https://elixstocks.com/options",
+   "field": "contracts_traded",
+   "tradingDay": "Nov 11, 2026"
+  }
+ ],
+ "metric": "YTD 2026 average daily options contract volume (all expirations), CBOE-family exchanges — Macroption table; cross-checked against ElixStocks OCC daily snapshot.",
+ "approximation": true,
+ "counts": {
+  "unique": 254,
+  "etf": 0,
+  "top250": 254
+ },
+ "symbols": [
+  "AA",
+  "AAL",
+  "AAOI",
+  "AAPL",
+  "ACHR",
+  "ADBE",
+  "AFRM",
+  "AG",
+  "AGNC",
+  "AI",
+  "ALAB",
+  "AMAT",
+  "AMC",
+  "AMD",
+  "AMZN",
+  "ANET",
+  "APLD",
+  "APP",
+  "ARM",
+  "ASML",
+  "ASST",
+  "ASTS",
+  "AVGO",
+  "AXTI",
+  "B",
+  "BA",
+  "BABA",
+  "BAC",
+  "BB",
+  "BBAI",
+  "BE",
+  "BIDU",
+  "BMNR",
+  "BMY",
+  "BRK-B",
+  "BSX",
+  "BTDR",
+  "BTG",
+  "BULL",
+  "BYND",
+  "C",
+  "CAT",
+  "CCJ",
+  "CCL",
+  "CDE",
+  "CELH",
+  "CIFR",
+  "CLF",
+  "CLOV",
+  "CLSK",
+  "CMCSA",
+  "CMG",
+  "COHR",
+  "COIN",
+  "COP",
+  "CORZ",
+  "COST",
+  "CPNG",
+  "CRCL",
+  "CRDO",
+  "CRM",
+  "CRML",
+  "CRWD",
+  "CRWV",
+  "CSCO",
+  "CVE",
+  "CVNA",
+  "CVS",
+  "CVX",
+  "DAL",
+  "DDOG",
+  "DELL",
+  "DIS",
+  "DJT",
+  "DKNG",
+  "DOW",
+  "DVN",
+  "ENPH",
+  "EOSE",
+  "ET",
+  "F",
+  "FCX",
+  "FIG",
+  "FISV",
+  "FRMI",
+  "FSLR",
+  "FSLY",
+  "GE",
+  "GEV",
+  "GLW",
+  "GLXY",
+  "GM",
+  "GME",
+  "GOOG",
+  "GOOGL",
+  "GRAB",
+  "GS",
+  "HD",
+  "HIMS",
+  "HL",
+  "HOOD",
+  "HPE",
+  "HPQ",
+  "HTZ",
+  "HUT",
+  "IBM",
+  "IBRX",
+  "INTC",
+  "INTU",
+  "IONQ",
+  "IREN",
+  "JBLU",
+  "JD",
+  "JNJ",
+  "JOBY",
+  "JPM",
+  "KEEL",
+  "KHC",
+  "KO",
+  "LAC",
+  "LAES",
+  "LCID",
+  "LITE",
+  "LLY",
+  "LRCX",
+  "LULU",
+  "LUMN",
+  "LUNR",
+  "LUV",
+  "LYFT",
+  "MARA",
+  "MCD",
+  "META",
+  "MO",
+  "MOS",
+  "MP",
+  "MPAC",
+  "MRK",
+  "MRNA",
+  "MRVL",
+  "MS",
+  "MSFT",
+  "MSTR",
+  "MU",
+  "NBIS",
+  "NCLH",
+  "NEM",
+  "NET",
+  "NFLX",
+  "NIO",
+  "NKE",
+  "NOK",
+  "NOW",
+  "NU",
+  "NVDA",
+  "NVO",
+  "NVTS",
+  "OKLO",
+  "ON",
+  "ONDS",
+  "OPEN",
+  "ORCL",
+  "OSCR",
+  "OWL",
+  "OXY",
+  "PAAS",
+  "PAFO",
+  "PANW",
+  "PATH",
+  "PBR",
+  "PCG",
+  "PDD",
+  "PEP",
+  "PFE",
+  "PG",
+  "PINS",
+  "PL",
+  "PLTR",
+  "PLUG",
+  "POET",
+  "PSKY",
+  "PTON",
+  "PURR",
+  "PYPL",
+  "QBTS",
+  "QCOM",
+  "QQQ",
+  "QS",
+  "QUBT",
+  "QXO",
+  "RBLX",
+  "RCAT",
+  "RDDT",
+  "RDW",
+  "RGTI",
+  "RIG",
+  "RIOT",
+  "RIVN",
+  "RKLB",
+  "RKT",
+  "RR",
+  "RUN",
+  "SATS",
+  "SBET",
+  "SBUX",
+  "SCHW",
+  "SHOP",
+  "SKHY",
+  "SLB",
+  "SLS",
+  "SMCI",
+  "SMR",
+  "SNAP",
+  "SNDK",
+  "SNOW",
+  "SOFI",
+  "SOUN",
+  "SPCE",
+  "SPCX",
+  "SPY",
+  "STX",
+  "T",
+  "TE",
+  "TEM",
+  "TGT",
+  "TSLA",
+  "TSM",
+  "TTD",
+  "U",
+  "UAL",
+  "UAMY",
+  "UBER",
+  "UNH",
+  "UPS",
+  "UPST",
+  "USAR",
+  "UUUU",
+  "V",
+  "VALE",
+  "VG",
+  "VRT",
+  "VST",
+  "VZ",
+  "WBD",
+  "WDC",
+  "WEN",
+  "WFC",
+  "WMT",
+  "WULF",
+  "XOM",
+  "XPEV",
+  "XYZ",
+  "ZETA",
+  "ZS"
+ ],
+ "meta": {
+  "NVDA": {
+   "symbol": "NVDA",
+   "name": "NVIDIA Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "TSLA": {
+   "symbol": "TSLA",
+   "name": "Tesla Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AAPL": {
+   "symbol": "AAPL",
+   "name": "Apple Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AMZN": {
+   "symbol": "AMZN",
+   "name": "Amazon.com Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MSFT": {
+   "symbol": "MSFT",
+   "name": "Microsoft Corporation",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "INTC": {
+   "symbol": "INTC",
+   "name": "Intel Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MU": {
+   "symbol": "MU",
+   "name": "Micron Technology Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PLTR": {
+   "symbol": "PLTR",
+   "name": "Palantir Technologies Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "META": {
+   "symbol": "META",
+   "name": "Meta Platforms Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MSTR": {
+   "symbol": "MSTR",
+   "name": "Strategy Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AMD": {
+   "symbol": "AMD",
+   "name": "Advanced Micro Devices Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NFLX": {
+   "symbol": "NFLX",
+   "name": "Netflix Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GOOGL": {
+   "symbol": "GOOGL",
+   "name": "Alphabet Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SMCI": {
+   "symbol": "SMCI",
+   "name": "Super Micro Computer Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SOFI": {
+   "symbol": "SOFI",
+   "name": "SoFi Technologies Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MARA": {
+   "symbol": "MARA",
+   "name": "MARA Holdings Inc (formerly Marathon Digital Holdings Inc)",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "IREN": {
+   "symbol": "IREN",
+   "name": "Iris Energy Ltd",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SPCX": {
+   "symbol": "SPCX",
+   "name": "Space Exploration Technologies Corp - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ORCL": {
+   "symbol": "ORCL",
+   "name": "Oracle Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AVGO": {
+   "symbol": "AVGO",
+   "name": "Broadcom Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "HOOD": {
+   "symbol": "HOOD",
+   "name": "Robinhood Markets Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NOK": {
+   "symbol": "NOK",
+   "name": "Nokia Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "COIN": {
+   "symbol": "COIN",
+   "name": "Coinbase Global Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GOOG": {
+   "symbol": "GOOG",
+   "name": "Alphabet Inc - Class C",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NBIS": {
+   "symbol": "NBIS",
+   "name": "Nebius Group N.V. - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CRWV": {
+   "symbol": "CRWV",
+   "name": "CoreWeave Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ONDS": {
+   "symbol": "ONDS",
+   "name": "Ondas Holdings Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "TSM": {
+   "symbol": "TSM",
+   "name": "Taiwan Semiconductor Manufacturing",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BMNR": {
+   "symbol": "BMNR",
+   "name": "BitMine Immersion Technologies Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BABA": {
+   "symbol": "BABA",
+   "name": "Alibaba Group Holding Ltd",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SNDK": {
+   "symbol": "SNDK",
+   "name": "Sandisk Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MRVL": {
+   "symbol": "MRVL",
+   "name": "Marvell Technology Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GME": {
+   "symbol": "GME",
+   "name": "Gamestop Corporation - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ASTS": {
+   "symbol": "ASTS",
+   "name": "AST SpaceMobile Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "HIMS": {
+   "symbol": "HIMS",
+   "name": "Hims &amp; Hers Health Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "WULF": {
+   "symbol": "WULF",
+   "name": "TeraWulf Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NOW": {
+   "symbol": "NOW",
+   "name": "ServiceNow Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BAC": {
+   "symbol": "BAC",
+   "name": "Bank Of America Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RKLB": {
+   "symbol": "RKLB",
+   "name": "Rocket Lab USA Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "OPEN": {
+   "symbol": "OPEN",
+   "name": "Opendoor Technologies Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RIVN": {
+   "symbol": "RIVN",
+   "name": "Rivian Automotive Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MRNA": {
+   "symbol": "MRNA",
+   "name": "Moderna Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "WMT": {
+   "symbol": "WMT",
+   "name": "Walmart Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NKE": {
+   "symbol": "NKE",
+   "name": "Nike Inc - Class B",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "F": {
+   "symbol": "F",
+   "name": "Ford Motor Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CRCL": {
+   "symbol": "CRCL",
+   "name": "Circle Internet Group Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AI": {
+   "symbol": "AI",
+   "name": "C3.ai Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PFE": {
+   "symbol": "PFE",
+   "name": "Pfizer Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AAL": {
+   "symbol": "AAL",
+   "name": "American Airlines Group Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PYPL": {
+   "symbol": "PYPL",
+   "name": "PayPal Holdings Inc</pre>",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BE": {
+   "symbol": "BE",
+   "name": "Bloom Energy Corp - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CIFR": {
+   "symbol": "CIFR",
+   "name": "Cipher Mining Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "APLD": {
+   "symbol": "APLD",
+   "name": "Applied Digital Corporation",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SNAP": {
+   "symbol": "SNAP",
+   "name": "Snap Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NIO": {
+   "symbol": "NIO",
+   "name": "NIO Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "UNH": {
+   "symbol": "UNH",
+   "name": "Unitedhealth Group Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NU": {
+   "symbol": "NU",
+   "name": "Nu Holdings Ltd Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "QCOM": {
+   "symbol": "QCOM",
+   "name": "Qualcomm Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CORZ": {
+   "symbol": "CORZ",
+   "name": "Core Scientific Inc - New",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "XOM": {
+   "symbol": "XOM",
+   "name": "Exxon Mobil Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RIOT": {
+   "symbol": "RIOT",
+   "name": "Riot Platforms Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "POET": {
+   "symbol": "POET",
+   "name": "POET Technologies Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "UBER": {
+   "symbol": "UBER",
+   "name": "Uber Technologies Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CRM": {
+   "symbol": "CRM",
+   "name": "Salesforce Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RGTI": {
+   "symbol": "RGTI",
+   "name": "Rigetti Computing Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "IONQ": {
+   "symbol": "IONQ",
+   "name": "IonQ Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AMC": {
+   "symbol": "AMC",
+   "name": "AMC Entertainment Holdings Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CVNA": {
+   "symbol": "CVNA",
+   "name": "Carvana Co. - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BA": {
+   "symbol": "BA",
+   "name": "Boeing Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "EOSE": {
+   "symbol": "EOSE",
+   "name": "Eos Energy Enterprises Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SMR": {
+   "symbol": "SMR",
+   "name": "NuScale Power Corporation - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "T": {
+   "symbol": "T",
+   "name": "AT&amp;T Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NVO": {
+   "symbol": "NVO",
+   "name": "Novo Nordisk",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CLSK": {
+   "symbol": "CLSK",
+   "name": "Cleanspark Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CSCO": {
+   "symbol": "CSCO",
+   "name": "Cisco Systems Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ARM": {
+   "symbol": "ARM",
+   "name": "Arm Holdings plc.",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BYND": {
+   "symbol": "BYND",
+   "name": "Beyond Meat Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SOUN": {
+   "symbol": "SOUN",
+   "name": "SoundHound AI Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BULL": {
+   "symbol": "BULL",
+   "name": "Webull Corporation",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "JPM": {
+   "symbol": "JPM",
+   "name": "JPMorgan Chase &amp; Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "VZ": {
+   "symbol": "VZ",
+   "name": "Verizon Communications Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "OXY": {
+   "symbol": "OXY",
+   "name": "Occidental Petroleum Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "OKLO": {
+   "symbol": "OKLO",
+   "name": "Oklo Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "DELL": {
+   "symbol": "DELL",
+   "name": "Dell Technologies Inc - Class C",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "FCX": {
+   "symbol": "FCX",
+   "name": "Freeport-McMoRan Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "C": {
+   "symbol": "C",
+   "name": "Citigroup Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "IBM": {
+   "symbol": "IBM",
+   "name": "International Business Machines Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NVTS": {
+   "symbol": "NVTS",
+   "name": "Navitas Semiconductor Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ADBE": {
+   "symbol": "ADBE",
+   "name": "Adobe Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "QBTS": {
+   "symbol": "QBTS",
+   "name": "D-Wave Quantum Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PCG": {
+   "symbol": "PCG",
+   "name": "PG&amp;E Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "TTD": {
+   "symbol": "TTD",
+   "name": "Trade Desk Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BTDR": {
+   "symbol": "BTDR",
+   "name": "Bitdeer Technologies Holding Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RKT": {
+   "symbol": "RKT",
+   "name": "Rocket Companies Inc Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "WBD": {
+   "symbol": "WBD",
+   "name": "Warner Bros. Discovery Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CRWD": {
+   "symbol": "CRWD",
+   "name": "Crowdstrike Holdings Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AG": {
+   "symbol": "AG",
+   "name": "First Majestic Silver Corporation",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "KO": {
+   "symbol": "KO",
+   "name": "Coca-Cola Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CLF": {
+   "symbol": "CLF",
+   "name": "Cleveland-Cliffs Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PLUG": {
+   "symbol": "PLUG",
+   "name": "Plug Power Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PATH": {
+   "symbol": "PATH",
+   "name": "UiPath Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BBAI": {
+   "symbol": "BBAI",
+   "name": "BigBear.ai Holdings Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "WFC": {
+   "symbol": "WFC",
+   "name": "Wells Fargo &amp; Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GLW": {
+   "symbol": "GLW",
+   "name": "Corning Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CVX": {
+   "symbol": "CVX",
+   "name": "Chevron Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PDD": {
+   "symbol": "PDD",
+   "name": "PDD Holdings Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CCL": {
+   "symbol": "CCL",
+   "name": "Carnival Corporation Ltd (Paired Stock)",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BB": {
+   "symbol": "BB",
+   "name": "BlackBerry Ltd",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "XYZ": {
+   "symbol": "XYZ",
+   "name": "Block Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AAOI": {
+   "symbol": "AAOI",
+   "name": "Applied Optoelectronics Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "USAR": {
+   "symbol": "USAR",
+   "name": "USA Rare Earth Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "OWL": {
+   "symbol": "OWL",
+   "name": "Blue Owl Capital Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SHOP": {
+   "symbol": "SHOP",
+   "name": "Shopify Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ASST": {
+   "symbol": "ASST",
+   "name": "Asset Entities Inc - Class B",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "HTZ": {
+   "symbol": "HTZ",
+   "name": "Hertz Global Holdings Inc (New)",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ACHR": {
+   "symbol": "ACHR",
+   "name": "Archer Aviation Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "FIG": {
+   "symbol": "FIG",
+   "name": "Figma Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SPCE": {
+   "symbol": "SPCE",
+   "name": "Virgin Galactic Holdings Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "WDC": {
+   "symbol": "WDC",
+   "name": "Western Digital Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RDDT": {
+   "symbol": "RDDT",
+   "name": "Reddit Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LRCX": {
+   "symbol": "LRCX",
+   "name": "Lam Research Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "APP": {
+   "symbol": "APP",
+   "name": "Applovin Corp - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SNOW": {
+   "symbol": "SNOW",
+   "name": "Snowflake Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CMG": {
+   "symbol": "CMG",
+   "name": "Chipotle Mexican Grill",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "FRMI": {
+   "symbol": "FRMI",
+   "name": "Fermi Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PANW": {
+   "symbol": "PANW",
+   "name": "Palo Alto Networks Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RDW": {
+   "symbol": "RDW",
+   "name": "Redwire Corporation",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "U": {
+   "symbol": "U",
+   "name": "Unity Software Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BSX": {
+   "symbol": "BSX",
+   "name": "Boston Scientific Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "HL": {
+   "symbol": "HL",
+   "name": "Hecla Mining Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "QS": {
+   "symbol": "QS",
+   "name": "QuantumScape Corp - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "COST": {
+   "symbol": "COST",
+   "name": "Costco Wholesale Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AMAT": {
+   "symbol": "AMAT",
+   "name": "Applied Materials Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "DIS": {
+   "symbol": "DIS",
+   "name": "Walt Disney Co (The)",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "JD": {
+   "symbol": "JD",
+   "name": "JD.com Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "HPE": {
+   "symbol": "HPE",
+   "name": "Hewlett Packard Enterprise Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "KEEL": {
+   "symbol": "KEEL",
+   "name": "Keel Infrastructure Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LLY": {
+   "symbol": "LLY",
+   "name": "Lilly(Eli) &amp; Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LCID": {
+   "symbol": "LCID",
+   "name": "Lucid Group Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RIG": {
+   "symbol": "RIG",
+   "name": "Transocean Ltd",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "TE": {
+   "symbol": "TE",
+   "name": "T1 Energy Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "DKNG": {
+   "symbol": "DKNG",
+   "name": "DraftKings Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BRK-B": {
+   "symbol": "BRK-B",
+   "name": "BRK.B",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CDE": {
+   "symbol": "CDE",
+   "name": "Coeur Mining Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GS": {
+   "symbol": "GS",
+   "name": "Goldman Sachs Group Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RBLX": {
+   "symbol": "RBLX",
+   "name": "Roblox Corporation - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ET": {
+   "symbol": "ET",
+   "name": "Energy Transfer LP",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PBR": {
+   "symbol": "PBR",
+   "name": "Petroleo Brasileiro S.A. Petrobras",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "VG": {
+   "symbol": "VG",
+   "name": "Venture Global Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "QUBT": {
+   "symbol": "QUBT",
+   "name": "Quantum Computing Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CMCSA": {
+   "symbol": "CMCSA",
+   "name": "Comcast Corp - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SKHY": {
+   "symbol": "SKHY",
+   "name": "SK Hynix Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LUNR": {
+   "symbol": "LUNR",
+   "name": "Intuitive Machines Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "DAL": {
+   "symbol": "DAL",
+   "name": "Delta Air Lines Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "WEN": {
+   "symbol": "WEN",
+   "name": "Wendy`s Co - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "DVN": {
+   "symbol": "DVN",
+   "name": "Devon Energy Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "JOBY": {
+   "symbol": "JOBY",
+   "name": "Joby Aviation Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "B": {
+   "symbol": "B",
+   "name": "Barrick Gold Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "VRT": {
+   "symbol": "VRT",
+   "name": "Vertiv Holdings Co - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ALAB": {
+   "symbol": "ALAB",
+   "name": "Astera Labs Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MRK": {
+   "symbol": "MRK",
+   "name": "Merck &amp; Co Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SLS": {
+   "symbol": "SLS",
+   "name": "SELLAS Life Sciences Group Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "V": {
+   "symbol": "V",
+   "name": "Visa Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LYFT": {
+   "symbol": "LYFT",
+   "name": "Lyft Inc Cls A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GRAB": {
+   "symbol": "GRAB",
+   "name": "Grab Holdings Ltd - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CPNG": {
+   "symbol": "CPNG",
+   "name": "Coupang Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LULU": {
+   "symbol": "LULU",
+   "name": "Lululemon Athletica Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "TGT": {
+   "symbol": "TGT",
+   "name": "Target Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ZETA": {
+   "symbol": "ZETA",
+   "name": "Zeta Global Holdings Corp - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "VST": {
+   "symbol": "VST",
+   "name": "Vistra Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ANET": {
+   "symbol": "ANET",
+   "name": "Arista Networks Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "HPQ": {
+   "symbol": "HPQ",
+   "name": "HP Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GLXY": {
+   "symbol": "GLXY",
+   "name": "Galaxy Digital",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CELH": {
+   "symbol": "CELH",
+   "name": "Celsius Holdings Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AGNC": {
+   "symbol": "AGNC",
+   "name": "AGNC Investment Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "JBLU": {
+   "symbol": "JBLU",
+   "name": "Jetblue Airways Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MP": {
+   "symbol": "MP",
+   "name": "MP Materials Corporation",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NCLH": {
+   "symbol": "NCLH",
+   "name": "Norwegian Cruise Line Holdings Ltd",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LITE": {
+   "symbol": "LITE",
+   "name": "Lumentum Holdings Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CRML": {
+   "symbol": "CRML",
+   "name": "Critical Metals Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ENPH": {
+   "symbol": "ENPH",
+   "name": "Enphase Energy Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "UUUU": {
+   "symbol": "UUUU",
+   "name": "Energy Fuels Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BMY": {
+   "symbol": "BMY",
+   "name": "Bristol-Myers Squibb Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "JNJ": {
+   "symbol": "JNJ",
+   "name": "Johnson &amp; Johnson",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CAT": {
+   "symbol": "CAT",
+   "name": "Caterpillar Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "XPEV": {
+   "symbol": "XPEV",
+   "name": "XPeng Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CLOV": {
+   "symbol": "CLOV",
+   "name": "Clover Health Investments Corp - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SBET": {
+   "symbol": "SBET",
+   "name": "SharpLink Gaming Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BIDU": {
+   "symbol": "BIDU",
+   "name": "Baidu Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "IBRX": {
+   "symbol": "IBRX",
+   "name": "ImmunityBio Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SBUX": {
+   "symbol": "SBUX",
+   "name": "Starbucks Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RCAT": {
+   "symbol": "RCAT",
+   "name": "Red Cat Holdings Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "DOW": {
+   "symbol": "DOW",
+   "name": "Dow Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "UAL": {
+   "symbol": "UAL",
+   "name": "United Airlines Holdings Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "OSCR": {
+   "symbol": "OSCR",
+   "name": "Oscar Health Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "UPS": {
+   "symbol": "UPS",
+   "name": "United Parcel Service Inc - Class B",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "DJT": {
+   "symbol": "DJT",
+   "name": "Trump Media &amp; Technology Group Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "VALE": {
+   "symbol": "VALE",
+   "name": "Vale S.A.",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "TEM": {
+   "symbol": "TEM",
+   "name": "Tempus AI Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "KHC": {
+   "symbol": "KHC",
+   "name": "Kraft Heinz Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SLB": {
+   "symbol": "SLB",
+   "name": "SLB",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "DDOG": {
+   "symbol": "DDOG",
+   "name": "Datadog Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SCHW": {
+   "symbol": "SCHW",
+   "name": "Charles Schwab Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NEM": {
+   "symbol": "NEM",
+   "name": "Newmont Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PAAS": {
+   "symbol": "PAAS",
+   "name": "Pan American Silver Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PL": {
+   "symbol": "PL",
+   "name": "Planet Labs PBC - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AXTI": {
+   "symbol": "AXTI",
+   "name": "AXT Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PTON": {
+   "symbol": "PTON",
+   "name": "Peloton Interactive Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "HD": {
+   "symbol": "HD",
+   "name": "Home Depot Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ASML": {
+   "symbol": "ASML",
+   "name": "ASML Holding NV",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ZS": {
+   "symbol": "ZS",
+   "name": "Zscaler Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "UPST": {
+   "symbol": "UPST",
+   "name": "Upstart Holdings Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "BTG": {
+   "symbol": "BTG",
+   "name": "B2gold Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "UAMY": {
+   "symbol": "UAMY",
+   "name": "United States Antimony Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PG": {
+   "symbol": "PG",
+   "name": "Procter &amp; Gamble Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MCD": {
+   "symbol": "MCD",
+   "name": "McDonald`s Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PEP": {
+   "symbol": "PEP",
+   "name": "PepsiCo Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "QXO": {
+   "symbol": "QXO",
+   "name": "QXO Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "FISV": {
+   "symbol": "FISV",
+   "name": "Fiserv Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MO": {
+   "symbol": "MO",
+   "name": "Altria Group Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CVE": {
+   "symbol": "CVE",
+   "name": "Cenovus Energy Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "HUT": {
+   "symbol": "HUT",
+   "name": "Hut 8 Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GE": {
+   "symbol": "GE",
+   "name": "General Electric Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PINS": {
+   "symbol": "PINS",
+   "name": "Pinterest Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AA": {
+   "symbol": "AA",
+   "name": "Alcoa Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PSKY": {
+   "symbol": "PSKY",
+   "name": "Paramount Skydance Corp - Class B",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CRDO": {
+   "symbol": "CRDO",
+   "name": "Credo Technology Group Holding Ltd",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "INTU": {
+   "symbol": "INTU",
+   "name": "Intuit Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GEV": {
+   "symbol": "GEV",
+   "name": "GE Vernova LLC",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SATS": {
+   "symbol": "SATS",
+   "name": "SATS",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "STX": {
+   "symbol": "STX",
+   "name": "Seagate Technology Holdings Plc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "COP": {
+   "symbol": "COP",
+   "name": "Conoco Phillips",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CCJ": {
+   "symbol": "CCJ",
+   "name": "Cameco Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "PURR": {
+   "symbol": "PURR",
+   "name": "Hyperliquid Strategies Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "ON": {
+   "symbol": "ON",
+   "name": "ON Semiconductor Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "NET": {
+   "symbol": "NET",
+   "name": "Cloudflare Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "FSLR": {
+   "symbol": "FSLR",
+   "name": "First Solar Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "GM": {
+   "symbol": "GM",
+   "name": "General Motors Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "AFRM": {
+   "symbol": "AFRM",
+   "name": "Affirm Holdings Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "CVS": {
+   "symbol": "CVS",
+   "name": "CVS Health Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RUN": {
+   "symbol": "RUN",
+   "name": "Sunrun Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "RR": {
+   "symbol": "RR",
+   "name": "Richtech Robotics Inc - Class B",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "COHR": {
+   "symbol": "COHR",
+   "name": "Coherent Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MS": {
+   "symbol": "MS",
+   "name": "Morgan Stanley",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LAC": {
+   "symbol": "LAC",
+   "name": "Lithium Americas Corp (NewCo)",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LUMN": {
+   "symbol": "LUMN",
+   "name": "Lumen Technologies Inc",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LUV": {
+   "symbol": "LUV",
+   "name": "Southwest Airlines Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "MOS": {
+   "symbol": "MOS",
+   "name": "Mosaic Company",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "FSLY": {
+   "symbol": "FSLY",
+   "name": "Fastly Inc - Class A",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "LAES": {
+   "symbol": "LAES",
+   "name": "SEALSQ Corp",
+   "exchange": "TOP250",
+   "etf": false
+  },
+  "SPY": {
+   "symbol": "SPY",
+   "name": "SPY",
+   "exchange": "EXTRA",
+   "etf": false
+  },
+  "QQQ": {
+   "symbol": "QQQ",
+   "name": "QQQ",
+   "exchange": "EXTRA",
+   "etf": false
+  },
+  "PAFO": {
+   "symbol": "PAFO",
+   "name": "PAFO",
+   "exchange": "EXTRA",
+   "etf": false
+  },
+  "MPAC": {
+   "symbol": "MPAC",
+   "name": "MPAC",
+   "exchange": "EXTRA",
+   "etf": false
+  }
+ }
+}

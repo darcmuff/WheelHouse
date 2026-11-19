@@ -4,5 +4,6 @@
 /        /landing.html   200!
 /start   /start.html     200
 /demo    /index.html     200
+/brand/:ticker.png  /.netlify/functions/brand-mark?ticker=:ticker  200
 /app     /index.html     200
 /app/*   /index.html     200

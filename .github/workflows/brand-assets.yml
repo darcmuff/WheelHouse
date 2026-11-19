@@ -1,0 +1,53 @@
+name: Brand assets (dev)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - scripts/brand/seed.trigger
+  schedule:
+    # Weekly cron only runs when this workflow file exists on the repo default branch (main).
+    - cron: '0 6 * * 1'
+
+jobs:
+  brand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install
+        run: npm ci
+      - name: Refresh top-250 list
+        run: node scripts/brand/fetch-top250-options.js
+      - name: Seed top-250 logos (credit-capped)
+        id: build
+        env:
+          LOGO_DEV_SECRET_KEY: ${{ secrets.LOGO_DEV_SECRET_KEY }}
+        run: |
+          if [ -z "$LOGO_DEV_SECRET_KEY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            node scripts/brand/build.js
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          node scripts/brand/build.js --seed --min-credits=24
+      - name: Commit to dev
+        if: steps.build.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/brand/index.json app/brand/shards app/brand/overrides.json
+          git add app/brand/*.png 2>/dev/null || true
+          git add scripts/brand/data scripts/brand/top250-options.json
+          if git diff --staged --quiet; then echo "No brand changes"; exit 0; fi
+          git commit -m "chore(brand): top-250 Logo.dev seed [skip ci]"
+          git push origin dev
