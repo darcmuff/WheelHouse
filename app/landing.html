@@ -14,50 +14,65 @@
 </script>
 <title>OpTrack: Options Wheel Tracker</title>
 <meta name="description" content="An honest option wheel tracker for the wheel and LEAPs. No broker link: type trades in, paste a confirmation or import a CSV. Realised P&amp;L only.">
-<meta name="theme-color" content="#FAF9F6"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f8f9fc"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.json">
 <meta property="og:title" content="OpTrack: Options Wheel Tracker"><meta property="og:image" content="optrack-share.png">
 <script src="brand.js"></script>
 <script src="analytics.js" defer></script>
 <script>function otCount(p){try{if(window.otTrack)window.otTrack(p);}catch(e){}}</script>
 <style>
 @font-face{font-family:'Urbanist';font-style:normal;font-weight:100 900;font-display:swap;src:url('urbanist-var.woff2') format('woff2')}
-:root{--bg:#FAF9F6;--card:#FFFFFF;--text:#111111;--text2:#3d3d40;--text3:#6b6b70;--line:#E4E1DA;--green:#FF5A36;--green2:rgba(255,90,54,.10);--profit:#1A9E5A;--loss:#D93A3A}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 Urbanist,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-a{color:var(--green)}.wrap{max-width:72rem;margin:0 auto;padding:0 2rem}
+:root{--bg:#f8f9fc;--card:#fff;--text:#110f15;--text2:#545a56;--text3:#5b5d62;--line:#e4e6eb;--green:#b83a1a;--green2:rgba(255,90,54,.10);--profit:#2f7d57;--loss:#c0392b;
+ --shadow:0 2px 4px rgba(17,15,21,.05),0 8px 16px rgba(17,15,21,.06);--fade:linear-gradient(90deg,#000 0%,#000 18%,rgba(0,0,0,.45) 50%,transparent 82%);
+ --v2-g1:radial-gradient(60% 120% at 92% 18%,rgba(255,90,54,.32) 0%,rgba(255,90,54,0) 70%),linear-gradient(104deg,#111111 0%,#1c0a0c 18%,#3a120e 42%,#6a1c10 70%,#a1290d 100%);
+--v2-carbon:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48ZyBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4xMCkiPjxyZWN0IHg9IjguMDAiIHk9IjAuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iMC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMDAiIHk9IjQuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iNC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMDAiIHk9IjguMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSI4LjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iNC4wMCIgeT0iMTIuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjwvZz48ZyBmaWxsPSJyZ2JhKDAsMCwwLC4xNCkiPjxyZWN0IHg9IjAuMDAiIHk9IjAuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSIwLjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iNC4wMCIgeT0iNC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjguMDAiIHk9IjQuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjAwIiB5PSI4LjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iMTIuMDAiIHk9IjguMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIwLjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjEyLjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjwvZz48ZyBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4xNikiPjxyZWN0IHg9IjAuMzUiIHk9IjAuMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjQuMzUiIHk9IjAuMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjguMDAiIHk9IjAuMzUiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjAuNyIvPjxyZWN0IHg9IjEyLjAwIiB5PSIwLjM1IiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSIwLjciLz48cmVjdCB4PSIwLjAwIiB5PSI0LjM1IiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSIwLjciLz48cmVjdCB4PSI0LjM1IiB5PSI0LjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjM1IiB5PSI0LjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iNC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iMC4wMCIgeT0iOC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iNC4wMCIgeT0iOC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iOC4zNSIgeT0iOC4wMCIgd2lkdGg9IjAuNyIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iMTIuMzUiIHk9IjguMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMzUiIHk9IjEyLjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSIxMi4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iOC4wMCIgeT0iMTIuMzUiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjAuNyIvPjxyZWN0IHg9IjEyLjM1IiB5PSIxMi4wMCIgd2lkdGg9IjAuNyIgaGVpZ2h0PSI0LjAwIi8+PC9nPjwvc3ZnPg==")}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 Urbanist,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-weight:480}
+a{color:var(--green)}.wrap{max-width:80.5rem;margin:0 auto;padding:0 2rem}
 @font-face{font-family:'Nunito';font-style:normal;font-weight:900;font-display:swap;src:url('nunito-900.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 .wm{font-family:Nunito,sans-serif;font-weight:900;font-size:1.75rem;letter-spacing:normal;line-height:1;display:inline-block;color:var(--text);transform:skewX(-9deg);transform-origin:center bottom}
-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0}.logo{display:flex;align-items:center;gap:.5rem}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.btn{display:inline-block;padding:.8rem 1.4rem;border-radius:6px;text-decoration:none;font-weight:600;font-size:1rem}.btn.p{background:var(--green);color:#FFFFFF}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
-.hero{padding:1.75rem 0 1.5rem}.hero-copy{max-width:46rem}.hero h1{font-size:2.75rem;line-height:1.1;margin:0 0 .5rem;letter-spacing:-.03em}.hero .tagline{margin:0 0 1rem;font-size:1.35rem;font-weight:700;font-style:italic;letter-spacing:-.02em;color:var(--text);line-height:1.3}.hero-copy p{color:var(--text2);font-size:1.2rem;margin:0}
+header{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 0}.logo{display:flex;align-items:center;gap:.5rem}.logo img{height:2.5rem;width:auto;display:block}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.btn{display:inline-block;padding:.8rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:720;font-size:1rem}.btn.p{background:#b83a1a;color:#fff}.btn.g{border:1px solid var(--line);color:var(--text);background:var(--card)}
+.hero{display:grid;gap:1.25rem;background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:2.25rem 2.5rem;margin-top:.25rem}.hero-copy{max-width:46rem}.hero h1{font-size:2.75rem;line-height:1.1;margin:0 0 1rem;letter-spacing:-.025em;font-weight:840}.hero .tagline{margin:0 0 1rem;font-size:1.35rem;font-weight:840;font-style:italic;letter-spacing:-.02em;color:var(--text);line-height:1.3}.hero-copy p{color:var(--text2);font-size:1.2rem;margin:0;font-weight:480}
 .cta{display:flex;gap:.75rem;flex-wrap:wrap;margin:1.25rem 0 .5rem}.small{font-size:.85rem;color:var(--text3)}
-#ways-in{flex-direction:column;align-items:stretch;margin:1.25rem 0 0;max-width:20rem}#ways-in .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;text-align:center;min-height:4.35rem;border:1px solid transparent}#ways-in .btn.g{border-color:var(--line)}#ways-note{margin:.7rem 0 0;max-width:20rem}
-@media(min-width:1280px){.hero{display:grid;grid-template-columns:minmax(0,1fr) 17.5rem;column-gap:3rem;align-items:center}#ways-in,#ways-note{max-width:none;margin:0}#ways-note{margin-top:.75rem}}
-.btn small{display:block;font-weight:500;font-size:.75rem;line-height:1.2;margin-top:.1rem}.btn.p small{color:#fff}.btn.g small{color:var(--text3)}
-h2{font-size:1.6rem;margin:4rem 0 1.25rem;letter-spacing:-.01em}
-.usp{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
-.u{background:var(--card);border:1px solid var(--line);border-radius:1rem;padding:1.5rem;display:flex;flex-direction:column}
-.u .k{font-size:.75rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em}
-.u h3{font-size:1.35rem;line-height:1.25;margin:.4rem 0 .6rem;letter-spacing:-.01em}.u p{color:var(--text2);margin:0 0 1.25rem;font-size:.975rem}
+#ways-in{flex-direction:column;align-items:stretch;margin:1.5rem 0 0;max-width:20rem}#ways-in .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;text-align:center;min-height:4.35rem;border:1px solid transparent}#ways-in .btn.g{border-color:var(--line)}#ways-note{margin:.75rem 0 0;max-width:20rem}
+@media(min-width:1280px){.hero{grid-template-columns:minmax(0,1fr) 36rem;column-gap:2.5rem;align-items:center}.hero-copy{max-width:none}.hero-copy #ways-in{flex-direction:row;max-width:none;margin:1.5rem 0 0}.hero-copy #ways-in .btn{width:auto;min-width:10.5rem;min-height:3.9rem}.hero-copy #ways-note{max-width:none;margin:.75rem 0 0}}
+.btn small{display:block;font-weight:600;font-size:.75rem;line-height:1.2;margin-top:.1rem}.btn.p small{color:#fff}.btn.g small{color:var(--text3)}
+h2{font-size:1.6rem;margin:4rem 0 1.25rem;letter-spacing:-.01em;font-weight:840}
+.usp{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-top:1.25rem}
+.u{background:var(--card);border:0;border-radius:12px;padding:1.5rem;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.u .k{font-size:.75rem;font-weight:840;color:#b83a1a;text-transform:uppercase;letter-spacing:.08em}
+.u h3{font-size:1.35rem;line-height:1.25;margin:.4rem 0 .6rem;letter-spacing:-.01em;font-weight:840}.u p{color:var(--text2);margin:0 0 1.25rem;font-size:.975rem}
+.u.v2a .k{color:#fff;opacity:.88}.u.v2a h3{color:#fff}.u.v2a>p{color:rgba(255,255,255,.88)}
 .mock{margin-top:auto;background:var(--bg);border:1px solid var(--line);border-radius:.75rem;padding:1rem;font-size:.85rem}
+.u.v2a .mock{background:#fff;border:0;border-radius:10px;color:var(--text)}.u.v2a .mock .lbl{color:var(--text3)}
 .mock .lbl{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
 .ways div{display:flex;align-items:center;gap:.6rem;padding:.45rem 0;border-bottom:1px solid var(--line)}.ways div:last-child{border:0}
-.ways i{font-style:normal;width:1.6rem;height:1.6rem;border-radius:6px;background:var(--green2);color:var(--green);display:grid;place-items:center;font-weight:700;font-size:.8rem}
+.ways i{font-style:normal;width:1.6rem;height:1.6rem;border-radius:6px;background:var(--green2);color:var(--green);display:grid;place-items:center;font-weight:840;font-size:.8rem}
 .no{color:var(--text3);text-decoration:line-through}
-.pl .row{display:flex;justify-content:space-between;padding:.35rem 0}.pl .big{font-size:1.5rem;font-weight:700;color:var(--profit)}.pl .x{color:var(--text3)}.pl .neg{color:var(--loss)}
+.pl .row{display:flex;justify-content:space-between;padding:.35rem 0}.pl .big{font-size:1.5rem;font-weight:840;color:var(--profit)}.pl .x{color:var(--text3)}.pl .neg{color:var(--loss)}
 .paste{background:#fff;border:1px dashed #cfcac0;border-radius:6px;padding:.6rem .7rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.75rem;color:var(--text2);line-height:1.5}
 .arrow{text-align:center;color:var(--text3);margin:.35rem 0}
-.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}.fields span{background:#fff;border:1px solid var(--line);border-radius:6px;padding:.3rem .45rem;font-size:.75rem}.fields b{display:block;font-size:.6rem;color:var(--text3);font-weight:600;text-transform:uppercase}
-.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem}.f{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1.1rem 1.2rem}.f b{display:block;margin-bottom:.3rem}.f span{color:var(--text2);font-size:.9rem}
-.shot{width:100%;height:auto;border-radius:.75rem;border:1px solid var(--line);background:#fff;display:block}figure{margin:1.25rem 0 0}figcaption{font-size:.85rem;color:var(--text3);margin-top:.4rem}
+.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}.fields span{background:#fff;border:1px solid var(--line);border-radius:6px;padding:.3rem .45rem;font-size:.75rem}.fields b{display:block;font-size:.6rem;color:var(--text3);font-weight:720;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem}.f{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.2rem;box-shadow:var(--shadow)}.f b{display:block;margin-bottom:.3rem;font-weight:840}.f span{color:var(--text2);font-size:.9rem}
+.shot{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#fff;display:block}figure{margin:1.25rem 0 0}figcaption{font-size:.85rem;color:var(--text3);margin-top:.4rem}
 .plans{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start}
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:.75rem;overflow:hidden;font-size:.925rem}th,td{padding:.625rem .75rem;border-bottom:1px solid var(--line);text-align:left}th:not(:first-child),td:not(:first-child){text-align:center;width:7rem}tr:last-child td{border-bottom:0}.y{color:var(--green);font-weight:700}.n{color:var(--text3)}
-.price{background:var(--card);border:1px solid var(--line);border-radius:.75rem;padding:1.5rem}.price .amt{font-size:2rem;font-weight:700}.price .amt span{font-size:1rem;color:var(--text3);font-weight:400}
-.bot{margin:3.5rem 0 0;background:var(--card);border:1px solid var(--line);border-radius:1rem;padding:1.35rem 1.5rem;scroll-margin-top:1.25rem}
-.bot .k{font-size:.75rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em}
-.bot h2{font-size:1.45rem;line-height:1.25;margin:.35rem 0 .5rem;letter-spacing:-.01em}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.925rem;box-shadow:var(--shadow)}th,td{padding:.625rem .75rem;border-bottom:1px solid var(--line);text-align:left}th:not(:first-child),td:not(:first-child){text-align:center;width:7rem}tr:last-child td{border-bottom:0}th,b,strong{font-weight:840}.y{color:#b83a1a;font-weight:840}.n{color:var(--text3)}
+.price{background:var(--card);border:0;border-radius:12px;padding:1.5rem;box-shadow:var(--shadow)}.price .amt{font-size:2rem;font-weight:840}.price .amt span{font-size:1rem;color:var(--text3);font-weight:480}.price.v2a .small{color:rgba(255,255,255,.88)}.price.v2a .amt,.price.v2a .amt span{color:#fff}.price.v2a .amt span{opacity:.88}.price.v2a .btn.g{background:#fff}
+.bot{margin:3.5rem 0 0;background:var(--card);border:1px solid #FF5A36;border-radius:12px;padding:1.35rem 1.5rem;scroll-margin-top:1.25rem;box-shadow:none}
+.bot .k{font-size:.75rem;font-weight:840;color:#b83a1a;text-transform:uppercase;letter-spacing:.08em}
+.bot h2{font-size:1.45rem;line-height:1.25;margin:.35rem 0 .5rem;letter-spacing:-.01em;font-weight:840}
 .bot p{margin:0;color:var(--text2);max-width:46rem}
-.nfa{background:#FFF8E6;border:1px solid #F0D58A;border-radius:.75rem;padding:1rem 1.25rem;font-size:.95rem;color:#5c4a12;margin-top:4rem}
-footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}
+.nfa{background:#FFF8E6;border:1px solid #F0D58A;border-radius:12px;padding:1rem 1.25rem;font-size:.95rem;color:#5c4a12;margin-top:4rem}.nfa a{color:#7a2a12}
+footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}footer a{color:#b83a1a}
+.v2a{position:relative;isolation:isolate;overflow:hidden;color:#fff}
+.v2a>.v2-art{position:absolute;inset:0;z-index:0;background:var(--v2-g1);pointer-events:none;border-radius:inherit;overflow:hidden}
+.v2a>.v2-art .t{position:absolute;inset:0;background-image:var(--v2-carbon);background-size:16px 16px;-webkit-mask-image:var(--fade);mask-image:var(--fade);-webkit-mask-size:100% 100%;mask-size:100% 100%;mask-repeat:no-repeat;opacity:.85}
+.v2a>.v2-art .lg{position:absolute;width:330px;height:330px;right:calc(12% - 70px);top:-40px;transform:rotate(-15deg);-webkit-mask-image:linear-gradient(100deg,transparent 0%,#000 45%);mask-image:linear-gradient(100deg,transparent 0%,#000 45%)}
+.v2a>.v2-art .lg i{position:absolute;inset:0;background:#fff;opacity:.16;-webkit-mask:url('/logo-mark.svg') center/contain no-repeat;mask:url('/logo-mark.svg') center/contain no-repeat}
+.v2a>*:not(.v2-art){position:relative;z-index:1}
+.v2show{display:grid;gap:.75rem;margin:0}
+.v2show img{display:block;width:100%;height:auto;border-radius:12px;box-shadow:0 2px 4px rgba(17,15,21,.05),0 8px 24px rgba(17,15,21,.08)}
+@media(max-width:900px){.usp,.plans{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}.hero{padding:1.5rem 1.25rem}.wrap{padding:0 1.25rem}.hero h1{font-size:2rem}}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -67,29 +82,27 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
   <section class="hero">
     <div class="hero-copy">
       <h1>An option wheel tracker that tells you the truth.</h1>
-      <p class="tagline">There’s no such thing as a roll, grow up!</p>
       <p>Track the wheel and LEAPs without linking your broker. <span data-brand="name">OpTrack</span> only counts money you've actually banked, so the numbers you see are the numbers you made.</p>
-    </div>
-    <div class="hero-actions">
       <div class="cta" id="ways-in"><a class="btn p" href="/app/?signup=1" id="start-free" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/demo" id="try-demo" onclick="otCount('/demo')">Try the demo<small>No sign-up</small></a><a class="btn g" href="/app/?signup=1&checkout=monthly" id="go-pro" onclick="otCount('/go-pro')">Go Pro<small>Paid plan</small></a></div>
       <div class="small" id="ways-note">Start free creates an account. No card. The demo needs no sign-up. Nothing to download: it runs in your web browser.</div>
     </div>
+    <div class="v2show"><img alt="" src="img/hero-wheel.webp"><img alt="" src="img/hero-leap.webp"></div>
   </section>
 
   <section class="usp">
-    <div class="u" id="usp-broker"><div class="k">No broker link</div><h3>You never hand over your brokerage login.</h3>
+    <div class="u v2a" id="usp-broker"><div class="v2-art" aria-hidden="true"><i class="t"></i><div class="lg"><i></i></div></div><div class="k">No broker link</div><h3>You never hand over your brokerage login.</h3>
       <p>Nothing connects to your broker. Type trades in, paste a confirmation, or import a Robinhood CSV. Your data stays yours: export it or delete it any time.</p>
       <div class="mock ways"><div class="lbl">Ways to add a trade</div>
         <div><i>✎</i>Manual entry</div><div><i>⎘</i>SmartScan: paste a confirmation</div><div><i>⇪</i>Robinhood CSV import</div><div class="no"><i>✕</i>Broker login</div></div></div>
 
-    <div class="u" id="usp-honest"><div class="k">Annoyingly honest P&amp;L</div><h3>Only banked money counts.</h3>
+    <div class="u v2a" id="usp-honest"><div class="v2-art" aria-hidden="true"><i class="t"></i><div class="lg"><i></i></div></div><div class="k">Annoyingly honest P&amp;L</div><h3>Only banked money counts.</h3>
       <p>Realised only, with fees taken off. Premium on trades that are still open never flatters your return or your win rate.</p>
       <div class="mock pl"><div class="lbl">Example (made-up numbers)</div>
         <div class="row"><span>Banked this month</span><span class="big">+$412</span></div>
         <div class="row"><span>Fees</span><span class="neg">−$7.80 included</span></div>
         <div class="row x"><span>Open premium, not counted yet</span><span>$260</span></div></div></div>
 
-    <div class="u" id="usp-smartscan"><div class="k">SmartScan</div><h3>Paste a confirmation, it fills the trade in.</h3>
+    <div class="u v2a" id="usp-smartscan"><div class="v2-art" aria-hidden="true"><i class="t"></i><div class="lg"><i></i></div></div><div class="k">SmartScan</div><h3>Paste a confirmation, it fills the trade in.</h3>
       <p>Sells and buy-backs, with the strike, expiry, price and fees picked out for you. Check it and save. Link trades yourself if you want.</p>
       <div class="mock"><div class="lbl">Example</div>
         <div class="paste">Sold to open 2 XYZ 11/21 $45 Put @ 1.10<br>Fees $0.06</div>
@@ -110,7 +123,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
     <div class="f"><b>Live buy-back price</b><span>The cost to close each open option, refreshed every minute and adjusted for how the stock has moved, so you can see how much premium you've captured.</span></div>
     <div class="f"><b>Monthly return, your way</b><span>This month's banked return against the money you've got working or your account size, with your own target or none.</span></div>
   </div>
-  <figure><img class="shot" src="img/select-net.png" width="1120" height="180" loading="lazy" alt="Selected trades with a bar showing the net credit, collected, paid, fees, and the split by ticker and contract"><figcaption>Select any trades and the bar shows the real net. Demo data, from the <a href="/demo" onclick="otCount('/demo')">demo</a>.</figcaption></figure>
+  <figure><img class="shot" src="img/select-net.png" width="1120" height="350" loading="lazy" alt="Selected trades with a bar showing the net credit, collected, paid, fees, and the split by ticker and contract"><figcaption>Select any trades and the bar shows the real net. Demo data, from the <a href="/demo" onclick="otCount('/demo')">demo</a>.</figcaption></figure>
 
   <h2>Free and Pro</h2>
   <div class="plans">
@@ -118,7 +131,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
       <tr><td>Manual entry and SmartScan</td><td class="y">✓</td><td class="y">✓</td></tr>
       <tr><td>Wheel tracking</td><td>Up to 2 tickers</td><td class="y">Unlimited</td></tr>
     </tbody></table>
-    <div class="price"><div class="small">Pro</div><div class="amt" id="pro-amt">£9 <span>/ month</span></div><p class="small" id="price-line">Pro is £9 a month or £79 a year. Cancel any time.</p>
+    <div class="price v2a"><div class="v2-art" aria-hidden="true"><i class="t"></i><div class="lg"><i></i></div></div><div class="small">Pro</div><div class="amt" id="pro-amt">£9 <span>/ month</span></div><p class="small" id="price-line">Pro is £9 a month or £79 a year. Cancel any time.</p>
       <div class="cta" style="margin:1rem 0 0"><a class="btn p" href="/app/?signup=1" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/start">See plans</a></div></div>
   </div>
 
