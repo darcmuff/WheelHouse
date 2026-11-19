@@ -349,7 +349,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .nw{position:relative;display:inline-grid;vertical-align:middle;width:6.75rem;height:1.75rem;flex:0 0 auto}
 .nw-pill,.nw-box{grid-area:1/1}
 .nw-pill{box-sizing:border-box;width:6.75rem;height:1.75rem;margin:0;border-radius:0.375rem;padding:0 0.625rem;font-size:0.825rem;font-weight:720;line-height:1.75rem}
-#new-wheel-btn{justify-content:center;border:1px solid transparent}
+#new-wheel-btn,#new-leap-btn{justify-content:center;border:1px solid transparent}
 #new-wheel-btn[hidden],#new-wheel-box[hidden]{display:none !important}
 .nw-box{position:relative;display:block;height:1.75rem}
 #new-rot-ticker-top{display:block;background:#fff;color:#111;border:1px solid var(--border);outline:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1035,6 +1035,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .v2-light{background:var(--bg2);color:var(--text)}
 .v2-light .v2-copy p{color:var(--text2)}
 .v2-light .v2-strip{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;border-top:1px solid var(--border);padding:16px 22px 20px}
+.v2-light .v2-strip.leap-sum-wrap{border-top:0;border-radius:12px}
 .v2-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;font-size:14.4px;color:var(--text2)}
 .v2-acts>span[title]{font-size:14.4px!important;color:var(--text2)!important;max-width:none!important}
 .v2-acts .leap-seg{border-radius:6px;border-color:rgba(17,15,21,.10)}
@@ -1308,7 +1309,7 @@ select,textarea,
     <div class="mtitle"><span id="mWheelTitle">New Wheel</span><span class="mx" onclick="closeModal('mWheel')">✕</span></div>
     <div class="fg">
       <div class="fld"><label>Ticker</label><input id="wf-ticker" type="text" placeholder="SOFI" style="text-transform:uppercase"></div>
-      <div class="fld wf-edit-only"><label>Label</label><input id="wf-label" type="text" placeholder="Wheel 1 — Sep 2025"></div>
+      <div class="fld wf-edit-only"><label>Label</label><input id="wf-label" type="text" placeholder="Sep 2025"></div>
       <div class="fld wf-edit-only"><label>Status</label><select id="wf-status"><option value="open">Open</option><option value="closed">Closed</option></select></div>
       <div class="fld wf-edit-only"><label>Current Price ($)</label><input id="wf-price" type="number" step="0.01"></div>
       <div class="fld s2 wf-edit-only"><label>Notes</label><textarea id="wf-notes" rows="2"></textarea></div>
@@ -2761,6 +2762,7 @@ let collapsedLeaps=new Set(JSON.parse(localStorage.getItem('wh-collapsedLeaps')|
 let minimised=new Set(JSON.parse(localStorage.getItem('wh-minimised')||'[]'));
 let hidden=new Set(JSON.parse(localStorage.getItem('wh-hidden')||'[]'));
 let showClosed=localStorage.getItem('wh-showClosed')==='true';
+let showClosedLeaps=localStorage.getItem('wh-showClosedLeaps')==='true'||localStorage.getItem('wh-leapStatus')==='closed';
 let showHidden=localStorage.getItem('wh-showHidden')==='true';
 let posSortBy=localStorage.getItem('wh-posSortBy')||'ticker';
 let logSort={col:'entered',dir:'desc'};
@@ -2813,6 +2815,7 @@ function _saveUIState(){
   localStorage.setItem('wh-minimised',JSON.stringify([...minimised]));
   localStorage.setItem('wh-hidden',JSON.stringify([...hidden]));
   localStorage.setItem('wh-showClosed',showClosed);
+  localStorage.setItem('wh-showClosedLeaps',showClosedLeaps);
   localStorage.setItem('wh-showHidden',showHidden);
   localStorage.setItem('wh-posSortBy',posSortBy);
 }
@@ -2899,7 +2902,7 @@ function renderOptionsLegacy(){ // multi-leg table view — kept in code, no lon
   const money=n=>n==null?'—':`<span class="${n>=0?'g':'r'}">${fmtMoney(n)}</span>`;
   const card=(lbl,val,sub='')=>`<div class="dcard"><div style="font-size:0.825rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${lbl}</div><div style="font-size:1.25rem;font-weight:720;margin-top:0.25rem">${val}</div>${sub?`<div style="font-size:0.825rem;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>`;
   const chip=(k,v,lbl)=>`<button class="btn ${f[k]===v?'btn-primary':'btn-ghost'}" style="padding:0.25rem 0.5625rem;font-size:0.825rem" onclick="setOptFilter('${k}','${v}')">${lbl}</button>`;
-  const wname=id=>{const w=db.wheels.find(w=>w.id===id);return w?`${esc(w.ticker)} · ${esc(w.label||'')}`:'(missing wheel)';};
+  const wname=id=>{const w=db.wheels.find(w=>w.id===id);return w?`${esc(w.ticker)} · ${esc(wheelLabelDisplay(w.label,w))}`:'(missing wheel)';};
   const rows=groups.map(g=>{
     const open=g.legs.filter(l=>l.status==='open');
     let th=0,thOk=false;open.forEach(l=>{const gk=OPTS.legGreeks(l,spots[l.underlying],today);if(gk){th+=gk.theta;thOk=true;}});
@@ -2956,8 +2959,8 @@ function exportOptsCSV(){
   a.href=URL.createObjectURL(blob);a.download=`wheelhouse-options-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 // ── LEAPs view: one card per long call; everything else listed under "Other options" ──
-let leapStatus=localStorage.getItem('wh-leapStatus')||'open';
-function setLeapStatus(v){leapStatus=v;localStorage.setItem('wh-leapStatus',v);render();}
+function toggleShowClosedLeaps(val){showClosedLeaps=!!val;render();}
+function setLeapStatus(v){toggleShowClosedLeaps(v&&v!=='open');}
 // A group is a LEAP card only if every leg in it is a long call; mixed/short groups go to "Other options".
 function splitLeapLegs(legs){
   const byG={};(legs||[]).forEach(l=>(byG[l.groupId||l.id]=byG[l.groupId||l.id]||[]).push(l));
@@ -3304,14 +3307,18 @@ function leapNextAct(openL,legs,today){
   });
   c.sort((a,b)=>a.rank-b.rank);return c[0]||null;
 }
-function goToLeap(id){collapsedLeaps.delete(id);if(leapStatus!=='open')leapStatus='open';switchView('options');setTimeout(()=>{const e=document.querySelector(`[data-leap="${CSS.escape(id)}"]`);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},50);}
+function goToLeap(id){collapsedLeaps.delete(id);const L=(db.opts||[]).find(x=>x.id===id);if(L&&L.status!=='open')showClosedLeaps=true;switchView('options');setTimeout(()=>{const e=document.querySelector(`[data-leap="${CSS.escape(id)}"]`);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 function renderOptions(){
   const legs=db.opts||[];
   const today=new Date().toISOString().slice(0,10),spots=_optSpots();
   const{leaps,other}=splitLeapLegs(legs);
   const openL=leaps.filter(l=>l.status==='open');
-  const shown=(leapStatus==='open'?openL:leaps.filter(l=>l.status!=='open'))
-    .sort((a,b)=>leapStatus==='open'?(a.expiry||'').localeCompare(b.expiry||''):(b.closeDate||'').localeCompare(a.closeDate||''));
+  const closedLeaps=leaps.filter(l=>l.status!=='open');
+  const shown=(showClosedLeaps?leaps.slice():openL.slice()).sort((a,b)=>{
+    const ao=a.status==='open',bo=b.status==='open';
+    if(ao!==bo)return ao?-1:1;
+    return ao?(a.expiry||'').localeCompare(b.expiry||''):(b.closeDate||'').localeCompare(a.closeDate||'');
+  });
   // summary (open LEAPs) — totals that add up across many LEAPs on different stocks
   const T=leapTileTotals(openL,legs,spots,today);
   const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
@@ -3327,7 +3334,7 @@ function renderOptions(){
     ${sc(`Unrealised P&amp;L ${ii('Value now minus what you paid, on the LEAPs themselves. Calls sold against them not included.')}`,pl==null?'—':sg(pl),T.noPrice?`${T.noPrice} without a price`:nL,T.valueCls,vPct)}
     ${sc(`Calls banked ${ii('Premium kept on calls sold against your LEAPs, closed or expired only, after buy backs and fees.')}`,sg(CB.all),`This month ${sg(CB.month)}`,CB.all>0?'g':CB.all<0?'r':'')}
     ${nxH}</div>`:'';
-  const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${leapStatus==='open'?'No open LEAPs. Add one with <b>+ LEAP</b>, or import a broker file with buy-to-open call fills.':'No closed LEAPs yet.'}</div>`;
+  const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${showClosedLeaps?'No LEAPs yet. Add one with <b>New LEAP</b>, or import a broker file with buy-to-open call fills.':'No open LEAPs. Add one with <b>New LEAP</b>, or import a broker file with buy-to-open call fills.'}</div>`;
   // non-long-call legs never vanish silently
   const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
   const otherH=og.length?`<details class="leap-other"><summary>Other options (${og.length}) — spreads, puts and short legs, kept as recorded</summary>${og.map(g=>`<div style="display:flex;gap:0.625rem;align-items:center;border-top:1px solid var(--border);padding:0.375rem 0;margin-top:0.375rem"><div style="flex:1;min-width:0;overflow-x:auto"><div style="font-size:0.825rem;color:var(--text3)">${esc(g.strategy)} · ${esc(g.status)}</div>${g.legs.map(_legLine).join('')}</div><button class="btn btn-ghost btn-icon" onclick="openOptEdit('${esc(g.id)}')">•••</button></div>`).join('')}</details>`:'';
@@ -3336,11 +3343,11 @@ function renderOptions(){
   const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
   const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample LEAPs shown <b>instead of</b> your real ones. Nothing here is saved. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
   return`${err}${demoH}
-  <section class="v2-hero v2-light"><div class="v2-copy"><div><h1>LEAPs</h1><p>long-dated calls held outside the wheel</p></div><div class="v2-acts">
-    ${_optMarkStatus?`<span style="font-size:0.75rem;color:var(--text3);max-width:11.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(_optMarkStatus)}">${esc(_optMarkStatus)}</span>`:''}
-    <span class="leap-seg"><button class="${leapStatus==='open'?'on':''}" onclick="setLeapStatus('open')">Open</button><button class="${leapStatus!=='open'?'on':''}" onclick="setLeapStatus('closed')">Closed</button></span>
-    <button class="btn btn-primary" onclick="openLeapAdd()">+ LEAP</button>
-  </div></div>${sumH?`<div class="v2-strip">${sumH}</div>`:''}</section>
+  <section class="v2-hero v2-light v2-bar"><div class="v2-copy"><h1>LEAPs</h1><div class="pos-toolbar">
+    <div class="nw"><button type="button" class="btn btn-primary btn-sm nw-pill" id="new-leap-btn" onclick="openLeapAdd()">New LEAP</button></div>
+    ${closedLeaps.length?`<label><input type="checkbox" ${showClosedLeaps?'checked':''} onchange="toggleShowClosedLeaps(this.checked)"> Show closed (${closedLeaps.length})</label>`:''}
+  </div></div></section>
+  ${sumH?`<section class="v2-hero v2-light"><div class="v2-strip leap-sum-wrap">${sumH}</div></section>`:''}
   ${selTipHtml()}
   <div class="leap-grid">${cards}</div>${otherH}${healthH}
   <div style="margin-top:0.875rem;font-size:0.825rem;color:var(--text3);display:flex;gap:0.875rem"><a href="#" style="color:var(--text3)" onclick="setOptDemo(${!optDemo});return false">${optDemo?'Hide demo positions':'Show demo positions'}</a><a href="#" style="color:var(--text3)" onclick="exportOptsCSV();return false">Export options CSV</a></div>`;
@@ -3486,7 +3493,7 @@ function pmccScan(text,B,today){
   if(calls.length)return{calls,error:''};
   if(!all.length)return{calls:[],error:r.error};
   const c=all[0];
-  const error=all.length>1?`No sold or bought-back calls found — ${all.length} other trades (buys to open, puts or sells to close) were skipped.`:c.type!=='C'?'This is a put — only calls can be traded against a LEAP.':c.effect==='close'?`This is a sale of a bought $${c.strike!=null?fmt2(c.strike).replace(/\.00$/,''):''} call (sell to close) — that closes a LEAP. Paste the whole roll, or use Close / Roll at the top right of the LEAP card.`:'This is a bought call (buy to open) — add it with + LEAP instead.';
+  const error=all.length>1?`No sold or bought-back calls found — ${all.length} other trades (buys to open, puts or sells to close) were skipped.`:c.type!=='C'?'This is a put — only calls can be traded against a LEAP.':c.effect==='close'?`This is a sale of a bought $${c.strike!=null?fmt2(c.strike).replace(/\.00$/,''):''} call (sell to close) — that closes a LEAP. Paste the whole roll, or use Close / Roll at the top right of the LEAP card.`:'This is a bought call (buy to open) — add it with New LEAP instead.';
   return{calls:[],error};
 }
 const PMCC_SIDE={sto:'Sell to open',btc:'Buy to close'};
@@ -3777,7 +3784,7 @@ function leapScan(text,B,today){
   const effOf0=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
   const verdict=c=>{
     if(c.type!=='C')return'This is a put, not a call — LEAPs here are bought calls only.';
-    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close or Roll at the top right of the LEAP card instead.':'This is a sold call (sell to open) — use Add trade at the top of that LEAP\'s trade table, not + LEAP.';
+    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close or Roll at the top right of the LEAP card instead.':'This is a sold call (sell to open) — use Add trade at the top of that LEAP\'s trade table, not New LEAP.';
     if(c.effect==='close')return'This is a buy-to-close (closing a short call) — not a new LEAP.';
     if(!c.side)return'Couldn\'t tell whether this was bought or sold.';
     return'';};
@@ -3850,7 +3857,7 @@ function _optLegRow(l={}){
     <input class="ol-price" type="number" step="0.0001" placeholder="Price/sh" value="${l.entryPrice??''}">
     <button class="btn btn-ghost btn-icon" onclick="this.parentNode.remove()" title="Remove leg">✕</button></div>`;
 }
-function _optWheelOptions(sel){return`<option value="">— not attached —</option>`+db.wheels.map(w=>`<option value="${w.id}"${w.id===sel?' selected':''}>${esc(w.ticker)} · ${esc(w.label||'')}${w.status!=='open'?' (closed)':''}</option>`).join('');}
+function _optWheelOptions(sel){return`<option value="">— not attached —</option>`+db.wheels.map(w=>`<option value="${w.id}"${w.id===sel?' selected':''}>${esc(w.ticker)} · ${esc(wheelLabelDisplay(w.label,w))}${w.status!=='open'?' (closed)':''}</option>`).join('');}
 function openOptAdd(){
   document.getElementById('mOptTitle').textContent='Add option position';
   document.getElementById('of-group').value='';
@@ -4198,6 +4205,14 @@ function fmtMonYear(d){
   const[y,m]=d.split('-');
   const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return`${mn[parseInt(m,10)-1]} ${y}`;
+}
+function wheelLabelDisplay(label,wheel){
+  const raw=String(label==null?'':label).trim();
+  let s=raw.replace(/^(Rotation|Wheel)\s+\d+(?:\s*[—–\-]+\s*)?/i,'').trim();
+  s=s.replace(/^[A-Z][A-Z0-9.\-]{0,9}\s*[—–\-]+\s*(Rotation|Wheel)\s+\d+\s*$/i,'').trim();
+  if(s)return s;
+  const d=wheel?fmtMonYear(String(wheel.createdAt||'').slice(0,10)):'';
+  return(d&&d!=='—')?d:(raw||'—');
 }
 
 
@@ -5093,7 +5108,7 @@ function renderLog(){
     return`<tr>
       <td style="font-weight:720" class="${wh?.status==='open'?'o':'m'}">${esc(t.ticker)}</td>
       <td><span class="ab ab-${t.action}">${t.action}</span></td>
-      <td style="font-size:0.75rem;color:var(--text3)">${esc(wh?.label||'—')}</td>
+      <td style="font-size:0.75rem;color:var(--text3)">${esc(wh?wheelLabelDisplay(wh.label,wh):'—')}</td>
       <td>${fmtDateFull(t.entered)}</td>
       <td>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</td>
       <td>${t.strike?'$'+fmt2(t.strike):'—'}</td>
@@ -5565,7 +5580,7 @@ function renderStatsOverview(){
     <span><span class="ab ab-${t.action}" style="font-size:0.675rem;padding:2px 0.3125rem">${t.action}</span></span>
     <span class="t2-nw">${t.strike?'$'+fmt2(t.strike):'—'}</span>
     <span class="t2-nw">${t.expiry?fmtDateFull(t.expiry):'—'}</span>
-    <span style="color:var(--text3);font-size:0.825rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w?.label||'—'}</span>
+    <span style="color:var(--text3);font-size:0.825rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w?wheelLabelDisplay(w.label,w):'—'}</span>
     <span class="${isCredit(t.action)?'g':'r'}" style="text-align:right;font-weight:720;white-space:nowrap">${fmtMoney(t.total)}</span>
   </div>`;}).join('')||`<div style="padding:1.5rem 1rem;text-align:center;color:var(--text3);font-size:0.75rem">No trades yet</div>`;
 
@@ -5910,10 +5925,8 @@ function quickAddRotation(symbol){
   const ticker=nwTicker(symbol!=null&&symbol!==''?symbol:(inp&&inp.value)||'');
   if(!ticker){if(inp)inp.focus();return;}
   if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
-  const existing=db.wheels.filter(w=>w.ticker===ticker).length;
   const now=new Date();
-  const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
-  const label=`Wheel ${existing+1} — ${mon} ${now.getFullYear()}`;
+  const label=fmtMonYear(now.toISOString().slice(0,10));
   const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
   const wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:now.toISOString().slice(0,10),sortOrder:mo+1};
   db.wheels.push(wheel);
@@ -5960,7 +5973,7 @@ function openEditWheel(id){
   document.getElementById('wf-status').value=w.status;
   document.getElementById('wf-price').value=w.lastPrice||'';
   document.getElementById('wf-notes').value=w.notes||'';
-  document.getElementById('mWheelTitle').textContent='Edit: '+(w.label||w.ticker);
+  document.getElementById('mWheelTitle').textContent='Edit: '+(wheelLabelDisplay(w.label,w)||w.ticker);
   // Show all fields for editing
   document.querySelectorAll('.wf-edit-only').forEach(el=>el.style.display='');
   openModal('mWheel');
@@ -5977,12 +5990,8 @@ function saveWheel(){
   if(id){wheel=db.wheels.find(x=>x.id===id);if(data.status==='open'&&wheel.status!=='open'&&!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}Object.assign(wheel,data);}
   else{
     if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
-    // Auto-generate label: "Wheel N" based on existing wheels for this ticker
-    const existing=db.wheels.filter(w=>w.ticker===ticker).length;
     if(!data.label){
-      const now=new Date();
-      const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
-      data.label=`Wheel ${existing+1} — ${mon} ${now.getFullYear()}`;
+      data.label=fmtMonYear(new Date().toISOString().slice(0,10));
     }
     data.status='open';
     const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
@@ -6241,7 +6250,7 @@ function openUpdatePrice(id){
   const w=db.wheels.find(x=>x.id===id);if(!w)return;
   document.getElementById('pf-wheelId').value=id;
   document.getElementById('pf-price').value=w.lastPrice||'';
-  document.getElementById('mPriceTitle').textContent='Update Price: '+(w.label||w.ticker);
+  document.getElementById('mPriceTitle').textContent='Update Price: '+(wheelLabelDisplay(w.label,w)||w.ticker);
   openModal('mPrice');setTimeout(()=>document.getElementById('pf-price').focus(),100);
 }
 function savePrice(){
@@ -7225,7 +7234,7 @@ function renderAnalytics(){
     const cr=cycleReturn(w,m,rotationShareStats(w,db.trades,_priceOf),rotDiv);
     return`<tr>
       <td style="color:var(--orange)">${w.sortOrder||'?'}</td>
-      <td>${(w.label||w.ticker).replace(/^(Rotation|Wheel)\s+\d+\s*[—–\-]+\s*/i,'')}</td>
+      <td>${esc(wheelLabelDisplay(w.label,w)==='—'?(w.ticker||''):wheelLabelDisplay(w.label,w))}</td>
       <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:0.625rem;font-size:0.675rem">${w.status==='open'?'● Open':'Closed'}</span></td>
       <td>${m.trades.length}</td>
       <td class="g">${fmtMoney(m.premiumCredits)}</td>
@@ -7330,7 +7339,7 @@ function exportCSV(){
     return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
   });
   const hdr=['Ticker','Action','Wheel','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment'];
-  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?.label||'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
+  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?wheelLabelDisplay(w.label,w):'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
   const csv=[hdr.join(','),...rows].join('\n');
   const suffix=q?`-${q}`:'';
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`wheelhouse${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
@@ -7938,7 +7947,7 @@ async function onboardSubmit(){
   const userId=_confirmedUid;
   if(!userId){console.error('Onboard: no confirmed UID — should not happen');return;}
   const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
-  const newWheel={id:wheelId,ticker:ticker,label:ticker+' — Wheel 1',status:'open',sortOrder:1,createdAt:new Date().toISOString()};
+  const newWheel={id:wheelId,ticker:ticker,label:fmtMonYear(new Date().toISOString().slice(0,10)),status:'open',sortOrder:1,createdAt:new Date().toISOString()};
   try{
     await setDoc(doc(_fsDb,'users',userId,'wheels',wheelId),newWheel);
     db.wheels.push(newWheel);
@@ -8372,7 +8381,7 @@ window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;
 window.openOptAdd = openOptAdd;
 window.openPmccSell=openPmccSell;window.openLeapRoll=openLeapRoll;window.pmccManualTab=pmccManualTab;window.pmccSide=pmccSide;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.savePmcc=savePmcc;window.pmccSaveRoll=pmccSaveRoll;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;window.pmccDeleteShort=pmccDeleteShort;window.openPmccLegEdit=openPmccLegEdit;window.savePmccLeg=savePmccLeg;
-window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
+window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.toggleShowClosedLeaps = toggleShowClosedLeaps;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
 window.openOptEdit = openOptEdit;
 window.optAddLeg = optAddLeg;
 window.optParsePaste = optParsePaste;

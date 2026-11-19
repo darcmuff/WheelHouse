@@ -119,7 +119,7 @@ Action: SELL  Quantity: 2  Price: 6.40  Proceeds: 1280.00  Comm/Fee: -1.30  Code
 want('IBKR statement line (negative qty = sold)', `SPCX 20NOV26 245 C  2026-10-09, 10:31:02  -2  6.40  1,280.00  -1.30  -1,278.70  O`, { ticker: 'SPCX', strike: 245, qty: 2, price: 6.4, date: '2026-10-09' });
 want('garbled one-liner "sold 2 spcx 245c 11/20/26 @6.40"', `sold to open 2 SPCX 245c 11/20/2026 @ 6.40 on 10/09/2026`, { ticker: 'SPCX', strike: 245, expiry: '2026-11-20', qty: 2, price: 6.4 });
 const rj = (name, text, re) => { const r = S.scan(text); check(name, r.calls.length === 0 && re.test(r.error), r.error); };
-rj('bought call refused → points to + LEAP', `Buy to open SPCX 06/16/2028 150 C 2 @ 72.00 on 06/01/2026`, /\+ LEAP/);
+rj('bought call refused → points to + LEAP', `Buy to open SPCX 06/16/2028 150 C 2 @ 72.00 on 06/01/2026`, /New LEAP/);
 const bb = S.scan(`Buy to close SPCX 11/20/2026 245 C 2 @ 1.10 on 10/19/2026`);
 check('buy-to-close now accepted as btc', bb.calls.length === 1 && bb.calls[0].action === 'btc', bb);
 rj('put refused', `Sell to open SPCX 11/20/2026 180 P 1 @ 3.00 on 10/09/2026`, /put/i);
