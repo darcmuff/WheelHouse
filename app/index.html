@@ -908,7 +908,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .wc-lgw i{position:absolute;inset:0;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 .wc-tk{position:absolute;right:calc(-0.04em + 12%);top:-0.18em;font:700 12rem/1 Urbanist,sans-serif;letter-spacing:-0.02em;color:#fff;opacity:.13;transform:rotate(-14deg);transform-origin:100% 0;white-space:nowrap;-webkit-mask-image:linear-gradient(100deg,transparent 0%,#000 45%);mask-image:linear-gradient(100deg,transparent 0%,#000 45%)}
 /* white-on-gradient zones (the trade panel, open chart and What if? keep the normal colours) */
-.wc>.rot-header,.wc .wl-top,.wc .wl-steps,.wc .wl-memo,.wc .wl-facts{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#9af0c4;--red:#ffc2b8;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--orangeL:rgba(255,255,255,.22);--border:rgba(255,255,255,.28);color:#fff}
+.wc>.rot-header,.wc.rot-mini-bar>.lc-h,.wc .wl-top,.wc .wl-steps,.wc .wl-memo,.wc .wl-facts{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#9af0c4;--red:#ffc2b8;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--orangeL:rgba(255,255,255,.22);--border:rgba(255,255,255,.28);color:#fff}
 .wc>.rot-header{padding:1.125rem 1.375rem 0.25rem!important}
 .wc .rot-ticker{font-size:1.125rem!important;font-weight:720!important;letter-spacing:.01em}
 .wc .rot-logo,.wc .rot-num{box-shadow:0 0 0 1.5px rgba(255,255,255,.55);background-color:#fff}
@@ -916,8 +916,21 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .wc .rot-badge{background:rgba(255,255,255,.95)!important;color:#a8300f!important;font-family:inherit}
 .wc .rot-badge.closed{color:#7a1f18!important}
 .wc .lc-lacts .btn,.wc .trade-body .btn{font-family:inherit;border-radius:6px}
-.wc>.rot-header .lc-lacts .btn{background:#fff;border-color:#fff;color:#110f15;font-weight:720}
-.wc>.rot-header .lc-lacts .btn:hover{background:#f1f1f3}
+.wc>.rot-header .lc-lacts .btn,.wc.rot-mini-bar>.lc-h .lc-lacts .btn{background:#fff;border-color:#fff;color:#110f15;font-weight:720}
+.wc>.rot-header .lc-lacts .btn:hover,.wc.rot-mini-bar>.lc-h .lc-lacts .btn:hover{background:#f1f1f3}
+/* Slim collapsed wheel bar — same art header as a collapsed LEAP */
+.wc.rot-mini-bar{margin-bottom:0.625rem}
+.wc.rot-mini-bar>.lc-h{padding:16px 22px;gap:0.5rem}
+.wc.rot-mini-bar>.lc-h .rot-mini-main{display:flex;align-items:center;flex-wrap:wrap;min-width:0;flex:1 1 auto}
+.wc.rot-mini-bar>.lc-h .rot-logo,.wc.rot-mini-bar>.lc-h .rot-num{margin-right:0.375rem;vertical-align:middle}
+.wc.rot-mini-bar .rot-ticker{margin-right:0.5rem}
+.wc.rot-mini-bar .lc-ct{font-size:14px;color:var(--text2);margin-right:0.25rem}
+.wc.rot-mini-bar .rot-badge{margin-left:0.25rem}
+@media(max-width:700px){
+  .wc.rot-mini-bar>.lc-h{padding:14px 14px;align-items:flex-start;flex-wrap:wrap;gap:0.4rem 0.5rem}
+  .wc.rot-mini-bar>.lc-h .rot-mini-main{flex:1 1 12rem}
+  .wc.rot-mini-bar .lc-lacts-wrap{margin-left:auto}
+}
 .wc .rot-header-btn svg{fill:#fff}
 .wc .wl-body{padding:0.25rem 1.375rem 1rem}
 .wc .wl-stage{font-size:0.75rem}
@@ -4201,35 +4214,33 @@ function renderRotationMini(wheel){
   const rawP=liveQ?liveQ.price:(wheel.lastPrice||null);
   const chg=liveQ?liveQ.change:null;
   const chgPct=liveQ?liveQ.pct:null;
-  const chgSign=chg!=null&&chg>=0?'+':'';
   const chgColor=chg!=null?(chg>=0?'var(--green)':'var(--red)'):'var(--text3)';
   const openPos=buildOpenPosition(m.trades);
-  const _dteColor='var(--silver)';
   const isHidden=hidden.has(wheel.id);
-
-  // Grid cells — always 10 cells: logo, ticker, price, change, pnl, leg, dte, spacer, badge, hide
-  const cPrice=rawP!=null?`$${rawP.toFixed(2)}`:'—';
-  const cChg=chg!=null?`<span style="color:${chgColor}">${chgSign}${chgPct.toFixed(2)}%</span>`:'<span class="t3">—</span>';
-  const cLeg=openPos
-    ?`<span style="color:${openPos.action==='CSP'?'var(--green)':'var(--blue)'}">${openPos.action} $${fmt2(openPos.strike)}</span>`
-    :'<span class="t3">No leg</span>';
-  const cDte=openPos
-    ?`<span class="mini-dte" style="color:${_dteColor};border-color:${_dteColor}">${openPos.expiry?fmtDateShort(openPos.expiry):''} (${openPos.dte}d)</span>`
-    :'<span style="color:var(--text3);font-size:0.675rem">—</span>';
-
-  return`<div class="rot-mini ${isOpen?'rot-open':'rot-closed'}" style="${isOpen?`border-left-color:${wcAccent(wheel.ticker)};`:''}${isHidden?'opacity:.5':''}">
-    <div class="rot-mini-inner" onclick="toggleMinimise('${wheel.id}')">
-      ${rotNumHtml(wheel,isOpen)}
-      <span class="mini-ticker ${isOpen?'':'cn'}">${wheel.ticker||'—'}</span>
-      <span class="mini-price">${cPrice}</span>
-      <span class="mini-chg">${cChg}</span>
-      <span class="mini-pnl ${colorN(m.realisedPnL)}">${fmtMoney(m.realisedPnL)}</span>
-      <span class="mini-leg">${cLeg}</span>
-      <span>${cDte}</span>
-      <span></span>
-      <span class="mini-badge ${isOpen?'open':'closed'}">${isOpen?'Live':'Closed'}</span>
-      <button class="mini-hide" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide wheel">✕</button>
-    </div>
+  const dated=m.trades.filter(t=>!t.expiredWorthless).map(t=>t.entered).sort();
+  const lastDate=dated.length?dated[dated.length-1]:String(wheel.createdAt||'').slice(0,10);
+  let detail;
+  if(!isOpen){
+    detail='Closed'+(lastDate?` · ${fmtMonYear(lastDate)}`:'');
+  }else if(openPos){
+    const kind=openPos.action==='CSP'?'Put':'Call';
+    const k=openPos.strike!=null?` · $${fmt2(openPos.strike).replace(/\.00$/,'')} ${kind.toLowerCase()}`:'';
+    const dte=openPos.dte!=null?` · ${openPos.dte}d`:'';
+    detail=`${kind} open${k}${dte}`;
+  }else if(m.sharesHeld>0){
+    detail=`Holding ${m.sharesHeld} shares · no call yet`;
+  }else if(m.trades.some(t=>t.action==='OUT')){
+    detail='Called away';
+  }else{
+    detail='Waiting for a put';
+  }
+  const priceH=rawP!=null
+    ?`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${rawP.toFixed(2)}${chg!=null?` <span style="color:${chgColor}">${chg>=0?'▲':'▼'}${Math.abs(chgPct).toFixed(2)}%</span> <span style="color:var(--text3);font-weight:480">today</span>`:''}</span>`
+    :'';
+  const pnlH=`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span class="${colorN(m.realisedPnL)}">${fmtMoney(m.realisedPnL)}</span> <span style="color:var(--text3);font-weight:480">realised</span></span>`;
+  return`<div class="rotation-window wc rot-mini-bar ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" data-ticker="${esc(wheel.ticker||'')}" style="--wc-bg:${wcBg(wheel.ticker)};${isHidden?'opacity:.5':''}">
+    ${wcArtHtml(wheel.ticker)}
+    <div class="lc-h" style="cursor:pointer" onclick="toggleMinimise('${wheel.id}')"><div class="rot-mini-main"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">▸</span>${rotNumHtml(wheel,isOpen)}<span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span><span class="lc-ct">${esc(detail)}</span>${priceH}${pnlH}</div><span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span><span class="lc-lacts-wrap" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span></span></div>
   </div>`;
 }
 
