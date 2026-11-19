@@ -830,9 +830,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 
 .act-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap}.act-head p{color:var(--text3);font-size:0.84rem}
 .act-btns{display:flex;flex-wrap:wrap;gap:0.375rem}
-.act-filter{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:0.75rem 1.25rem}
-.act-hero .v2-strip.act-filter{padding:16px 32px 20px}
-.act-pills{display:flex;flex-wrap:wrap;gap:0.375rem}
+.act-filter{display:flex;flex-direction:column;align-items:stretch;gap:1.25rem}
+.act-hero .v2-strip.act-filter{padding:16px 32px 14px}
+.act-tools{display:flex;align-items:center;justify-content:space-between;gap:0.75rem 1rem}.act-pills{display:flex;flex-wrap:wrap;gap:0.375rem;min-width:0}.act-search{display:flex;align-items:center;gap:0.5rem;margin-left:auto;flex-shrink:0}.act-search .search-inp{width:8.75rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:0.3rem 0.625rem;font-size:0.825rem;color:var(--text);font-family:inherit}
 .act-pill{border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:999px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:720;cursor:pointer}
 .act-pill.on{background:var(--orange-safe);border-color:var(--orange-safe);color:#fff}
 .act-pnl{text-align:right;margin-left:auto}
@@ -841,6 +841,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .act-net{font-size:1.25rem;font-weight:480;line-height:1.1}
 .act-net-sub,.act-split,.act-note{display:block;font-size:0.84rem;color:var(--text3)}
 .act-note{margin-top:0.3rem}
+@media(max-width:700px){.act-hero .v2-strip.act-filter{padding:14px 16px 12px}.act-pnl{text-align:left;margin-left:0}.act-figs{justify-content:flex-start}.act-tools{flex-direction:column;align-items:stretch;gap:0.75rem}.act-search{margin-left:0;width:100%}.act-search .search-inp{width:auto;flex:1;min-width:0}}
 
 /* ── Wheel detail (A) ── */
 .trade-body{border-top:1px solid var(--bg3);margin:0 1.125rem 0.75rem;border:1px solid var(--border);border-radius:0.75rem;overflow:hidden}
@@ -5119,16 +5120,7 @@ function renderLog(){
   const costNote=held.atCost.length?` ${held.atCost.join(', ')} priced at what you paid.`:'';
   const pnlHtml=`<div class="act-pnl"><div class="act-figs"><div><span class="act-k">Net cash flow</span><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span></div><div><span class="act-k">Total return</span><span class="act-net ${totalRet<0?'r':'g'}">${money(totalRet)}</span></div></div><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}<span class="act-note">Net cash flow counts shares bought as cash out. Total return adds what those shares are worth today.${costNote}</span></div>`;
   return`
-  <div class="v2-strip act-filter">${`<div class="act-pills">${pills}</div>`}${pnlHtml}</div></section>
-  <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0">
-    <span style="font-size:0.8125rem;font-weight:480;color:var(--silver)">Trade Log</span>
-    <button class="rot-header-btn" onclick="switchView('positions')" title="Close" style="margin-left:0.25rem"><svg viewBox="0 0 256 256" fill="var(--text3)" style="width:1rem;height:1rem"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
-    <span class="toolbar-spacer"></span>
-    <input class="search-inp" type="search" placeholder="Search…" value="${esc(logQ)}" oninput="setLogQ(this.value)" style="width:8.75rem;background:var(--bg3);border:1px solid var(--border);border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.825rem;color:var(--text)">
-    <span class="t3-s">${trades.length}</span>
-    <button class="btn btn-ghost" onclick="openImport()" style="display:flex;align-items:center;gap:0.375rem;padding:0.3125rem 0.625rem;font-size:0.825rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:0.875rem;height:0.875rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-61.66a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69V120a8,8,0,0,1,16,0v44.69l10.34-10.35A8,8,0,0,1,157.66,154.34Z"/></svg>Import</button>
-    <button class="btn btn-ghost" onclick="exportCSV()" style="display:flex;align-items:center;gap:0.375rem;padding:0.3125rem 0.625rem;font-size:0.825rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:0.875rem;height:0.875rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0,0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z"/></svg>Export</button>
-  </div>
+  <div class="v2-strip act-filter">${pnlHtml}<div class="act-tools"><div class="act-pills">${pills}</div><div class="act-search"><input class="search-inp" type="search" placeholder="Search…" value="${esc(logQ)}" oninput="setLogQ(this.value)"><span class="t3-s">${trades.length}</span></div></div></div></section>
   <div class="log-wrap">
     <table class="lt">
       <thead><tr>
