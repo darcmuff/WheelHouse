@@ -65,10 +65,14 @@ test('return settings: saved choice wins, bad input is cleaned', () => {
 });
 test('Home: Capital at work card shows the same figure Return this month divides by (wheel + shares + open LEAP cost)', () => {
   const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
-  const card = H.slice(H.indexOf('<div class="hk"><div class="hk-l">Capital at work'), H.indexOf('<div class="hk"><div class="hk-l">Win rate'));
-  assert.ok(card.includes('<div class="hk-v">${fmtMoney(caw.total)'), 'card value is caw.total');
-  assert.ok(card.includes('Wheel ${fmtMoney(caw.wheel)') && card.includes('LEAPs ${fmtMoney(caw.leaps)'), 'split shown');
-  assert.ok(H.includes('returnBase(rs,caw.total)'), 'return divides by caw.total');
+  const start = H.indexOf('function renderHome');
+  const home = H.slice(start, H.indexOf('\n}\n', start));
+  // With no account size the headline is caw.total. With an account size the tile is
+  // retitled Account size, the headline is that amount, and caw.total moves to the subtitle.
+  assert.ok(home.includes("caw.pct!=null?'Account size':'Capital at work'"), 'title switches when an account size is set');
+  assert.ok(home.includes('fmtMoney(caw.total)'), 'capital at work still shown');
+  assert.ok(home.includes('Wheel ${fmtMoney(caw.wheel)') && home.includes('LEAPs ${fmtMoney(caw.leaps)'), 'split shown');
+  assert.ok(H.includes('returnBase(rs,caw.total)'), 'return divides by caw.total (or the account size when chosen)');
   const c = L.capitalAtWork(10000, 20000, [{ status: 'open', side: 'long', entryPrice: 50, qty: 1 }], null);
   assert.strictEqual(c.total, c.wheel + c.leaps);
 });

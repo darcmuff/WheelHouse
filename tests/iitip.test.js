@@ -27,11 +27,16 @@ test('Home tile ⓘ flips the tile in place (no popup), tile size fixed', () => 
   assert.ok(SRC.includes("t.classList.add('hk-flipped')"));
   assert.ok(SRC.includes("!b.closest('.hk')"), 'no hover popup on tile icons');
 });
-test('every Home tile tip is short enough to fit in the tile', () => {
+test('every Home tile has a tip', () => {
   const a = SRC.indexOf('function renderHome'), h = SRC.slice(a, SRC.indexOf('\n}\n', a));
-  const tips = [...h.matchAll(/hk-l">[^$]*\$\{ii\(`([^`]*)`\)/g)].map(m => m[1].replace(/\$\{mName\}/g, 'September').replace(/&amp;/g, '&'));
-  assert.ok(tips.length >= 8, 'found ' + tips.length);
-  tips.forEach(t => assert.ok(t.length <= 120, t.length + ': ' + t));
+  const tiles = [...h.matchAll(/<div class="hk-l">([\s\S]*?)<\/div>/g)];
+  assert.ok(tiles.length >= 9, 'found ' + tiles.length);
+  tiles.forEach((m, i) => assert.ok(/\$\{ii\(/.test(m[1]), 'tile ' + i + ' has no tip'));
+  // Return this month uses nested backticks, so the old /ii\(`([^`]*)`/ regex missed it.
+  // Its wording is longer than the old 120-character cap (up to ~173 with a target).
+  assert.ok(h.includes("This month's realised profit from sold options"));
+  assert.ok(h.includes('Change this with the cog on the Capital at work tile'));
+  assert.ok(h.includes('Open put collateral, open shares and open LEAP cost'));
 });
 test('moving the mouse off a flipped tile flips it back', () => {
   assert.ok(/addEventListener\('mouseout',e=>\{const t=e\.target\.closest&&e\.target\.closest\('\.hk\.hk-flipped'\);if\(t&&!\(e\.relatedTarget&&t\.contains\(e\.relatedTarget\)\)\)unflip\(\);\}\)/.test(SRC));
