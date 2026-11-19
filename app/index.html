@@ -1069,7 +1069,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .lcw>*:not(.wc-art):not(.lc-tex){position:relative;z-index:1}
 .lcw .wc-lgw{--s:.78;top:-20px;right:calc(12% - 70px)}
 .lcw .wc-tk{font-size:8rem}
-.lcw>.lc-h,.lcw>.lc-quiet,.lcw>.lc-note,.lcw>.lc-hero,.lcw>.lc-bar,.lcw>.wl-memo{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#b6f5d4;--red:#ffd4ce;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--border:rgba(255,255,255,.28);color:#fff}
+.lcw>.lc-h,.lcw>.lc-quiet,.lcw>.lc-note,.lcw>.lc-hero,.lcw>.lc-bar,.lcw>.wl-memo,.lcw>.wl-top{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#b6f5d4;--red:#ffd4ce;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--border:rgba(255,255,255,.28);color:#fff}
 .lcw>.lc-h{padding:16px 22px 8px}
 .lcw>.lc-h:last-child,.lcw>.lc-quiet:last-child{padding-bottom:16px}
 .lcw .lc-tk{font-size:18px;font-weight:720;color:#fff}
@@ -1094,7 +1094,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .lcw>.lc-bar i{background:#FF5A36}
 .lcw>.trade-body{background:var(--bg2);color:var(--text);border:1px solid rgba(17,15,21,.08);border-radius:12px;margin:0 18px 18px!important;box-shadow:0 2px 4px rgba(17,15,21,.05)}
 .lcw .trade-body .btn{border-radius:6px;font-family:inherit}
-@media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}.v2-light .leap-sum{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 14px 6px;flex-wrap:wrap;gap:0.4rem 0.5rem}.lcw>.wl-top{padding:0 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}.v2-light .leap-sum{grid-template-columns:1fr 1fr}}
 /* Called away (and the other wheel steps) at AA on every card gradient */
 .wc .wl-st{color:#fff}
 .wc .rot-earn{color:#fff;background:rgba(0,0,0,.16)}
@@ -1145,9 +1145,15 @@ select,textarea,
   background:rgba(255,255,255,.16);
   color:#fff;
   border:1px solid rgba(255,255,255,.45);
-  margin-left:12px;
   flex-shrink:0;
 }
+.lcw .rot-badge{background:rgba(255,255,255,.95)!important;color:#a8300f!important;font-family:inherit}
+.lcw .rot-header-btn svg:not([fill="none"]){fill:#fff}
+.lcw .rot-header-btn svg[stroke]{stroke:#fff}
+.lcw>.lc-h .lc-h-right{display:flex;align-items:center;gap:0.5rem;margin-left:auto;padding-left:12px;flex-shrink:0}
+.lcw>.lc-h .lc-h-right .lc-lacts{margin-left:0;padding-left:0}
+.lcw>.wl-top{padding:0 22px 8px;justify-content:flex-end}
+.lcw .rot-earn{color:#fff;background:rgba(0,0,0,.16)}
 </style>
 </head>
 <body>
@@ -2785,9 +2791,11 @@ let collapsedWheels=new Set(JSON.parse(localStorage.getItem('wh-collapsedWheels'
 let collapsedLeaps=new Set(JSON.parse(localStorage.getItem('wh-collapsedLeaps')||'[]')); // LEAP cards default to expanded; only an explicit ▾ tap collapses
 let minimised=new Set(JSON.parse(localStorage.getItem('wh-minimised')||'[]'));
 let hidden=new Set(JSON.parse(localStorage.getItem('wh-hidden')||'[]'));
+let hiddenLeaps=new Set(JSON.parse(localStorage.getItem('wh-hiddenLeaps')||'[]'));
 let showClosed=localStorage.getItem('wh-showClosed')==='true';
 let showClosedLeaps=localStorage.getItem('wh-showClosedLeaps')==='true'||localStorage.getItem('wh-leapStatus')==='closed';
 let showHidden=localStorage.getItem('wh-showHidden')==='true';
+let showHiddenLeaps=localStorage.getItem('wh-showHiddenLeaps')==='true';
 let posSortBy=localStorage.getItem('wh-posSortBy')||'ticker';
 let leapSortBy=localStorage.getItem('wh-leapSortBy')||'dte';
 let logSort={col:'entered',dir:'desc'};
@@ -2839,9 +2847,11 @@ function _saveUIState(){
   localStorage.setItem('wh-collapsedLeaps',JSON.stringify([...collapsedLeaps]));
   localStorage.setItem('wh-minimised',JSON.stringify([...minimised]));
   localStorage.setItem('wh-hidden',JSON.stringify([...hidden]));
+  localStorage.setItem('wh-hiddenLeaps',JSON.stringify([...hiddenLeaps]));
   localStorage.setItem('wh-showClosed',showClosed);
   localStorage.setItem('wh-showClosedLeaps',showClosedLeaps);
   localStorage.setItem('wh-showHidden',showHidden);
+  localStorage.setItem('wh-showHiddenLeaps',showHiddenLeaps);
   localStorage.setItem('wh-posSortBy',posSortBy);
   localStorage.setItem('wh-leapSortBy',leapSortBy);
 }
@@ -3271,19 +3281,38 @@ function leapOptHtml(mark,prevClose,dayOpen){
   return `<span class="lc-opt" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span style="color:var(--text3);font-weight:480">Option</span> $${(+mark).toFixed(2)}${mv}</span>`;
 }
 function leapLogoHtml(sym,open){return rotNumHtml({ticker:sym,sortOrder:String(sym||'?').charAt(0)||'?'},open);}
+function leapHeaderRightHtml(l,open,leapExp,gid){
+  const badge=open?`<span class="rot-badge open">● Live</span>`:`<span class="leap-badge cl">${esc(l.status)}</span>`;
+  const acts=open
+    ?`<span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span>`
+    :`<span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span>`;
+  const minBtn=leapExp
+    ?`<button class="rot-header-btn" onclick="event.stopPropagation();toggleLeapExpand('${esc(l.id)}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>`
+    :`<button class="rot-header-btn" onclick="event.stopPropagation();toggleLeapExpand('${esc(l.id)}')" title="Expand"><svg class="sq-20" viewBox="0 0 256 256" fill="none" stroke="var(--orange)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M104,104 48,48M48,88V48H88M152,104 208,48M168,48H208V88M104,152 48,208M48,168V208H88M152,152 208,208M168,208H208V168"/></svg></button>`;
+  const hideBtn=`<button class="rot-header-btn" onclick="event.stopPropagation();toggleHideLeap('${esc(l.id)}')" title="Hide"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>`;
+  return`<span class="lc-h-right">${badge}${acts}${minBtn}${hideBtn}</span>`;
+}
+function leapEarnHtml(l){
+  const shorts=(db.opts||[]).filter(x=>x.parentLeapId===l.id&&x.side==='short'&&x.status==='open'&&x.expiry);
+  if(!shorts.length)return'';
+  if(typeof queueEarnings==='function')queueEarnings(l.underlying);
+  if(typeof queueDividend==='function')queueDividend(l.underlying);
+  const exps=shorts.map(s=>s.expiry);
+  return`<span class="rot-earn-slot" data-sym="${esc(l.underlying)}" data-exps="${esc(exps.join(','))}">${typeof earningsBadge==='function'?earningsBadge(l.underlying,exps):''}</span>`;
+}
 function renderLeapCard(l,spot,today){
   const S=leapStats(l,spot,today),open=l.status==='open';
   const rev=open&&l.reviewDate?(l.reviewDate<=today?`Review date ${_fdShort(l.reviewDate)} reached`:`Review ${_fdShort(l.reviewDate)}`):'';
   const note=rev?`◷ ${rev}`:'';
-  const badge=!open?`<span class="leap-badge cl">${esc(l.status)}</span>`:'';
   const gid=l.groupId||l.id;
   if(open){
     const P=pmccStats(l,db.opts||[],today),pb=leapPayback(P.cost,P.net);
     const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
     const nEv=pmccTradeEvents(l,db.opts||[]).length;
     const leapExp=!collapsedLeaps.has(l.id);
-    return`<div class="leap-card lc lcw" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}</div>${badge}<span class="lc-lacts-wrap" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span>${(()=>{const shorts=(db.opts||[]).filter(x=>x.parentLeapId===l.id&&x.side==='short'&&x.status==='open'&&x.expiry);if(!shorts.length)return'';if(typeof queueEarnings==='function')queueEarnings(l.underlying);if(typeof queueDividend==='function')queueDividend(l.underlying);const exps=shorts.map(s=>s.expiry);return`<span class="rot-earn-slot" data-sym="${esc(l.underlying)}" data-exps="${esc(exps.join(','))}">${typeof earningsBadge==='function'?earningsBadge(l.underlying,exps):''}</span>`;})()}</span></div>
+    const earnH=leapExp?leapEarnHtml(l):'';
+    return`<div class="leap-card lc lcw" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>${earnH?`<div class="wl-top">${earnH}</div>`:''}
   ${l.markWhy==='none'?`<div class="lc-quiet" onclick="event.stopPropagation()">No fresh quote${l.mark!=null&&l.markAt?` · last price $${Number(l.mark).toFixed(2)} on ${_fdShort(String(l.markAt).slice(0,10))}`:''}. <button type="button" class="btn btn-ghost btn-sm" onclick="refreshLegMark('${esc(l.id)}')">Refresh price</button><button type="button" class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Enter mark manually</button></div>`:''}
     ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
@@ -3299,8 +3328,8 @@ function renderLeapCard(l,spot,today){
   const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
   const leapExp=!collapsedLeaps.has(l.id);
   const rq=S.pl!=null&&S.cost>0?Math.round(S.pl/S.cost*10000)/100:null;
-  return`<div class="leap-card lc lcw" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${l.closeDate?` · ${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}`:''}</span></div>${badge}<span class="lc-lacts-wrap" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></span></div>
+  return`<div class="leap-card lc lcw" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${l.closeDate?` · ${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}`:''}</span></div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>
   ${leapExp?`${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Paid → closed</div><div class="lc-v">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
@@ -3341,14 +3370,15 @@ function leapNextAct(openL,legs,today){
   });
   c.sort((a,b)=>a.rank-b.rank);return c[0]||null;
 }
-function goToLeap(id){collapsedLeaps.delete(id);const L=(db.opts||[]).find(x=>x.id===id);if(L&&L.status!=='open')showClosedLeaps=true;switchView('options');setTimeout(()=>{const e=document.querySelector(`[data-leap="${CSS.escape(id)}"]`);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},50);}
+function goToLeap(id){collapsedLeaps.delete(id);const L=(db.opts||[]).find(x=>x.id===id);if(L&&L.status!=='open')showClosedLeaps=true;if(hiddenLeaps.has(id)&&!showHiddenLeaps)showHiddenLeaps=true;switchView('options');setTimeout(()=>{const e=document.querySelector(`[data-leap="${CSS.escape(id)}"]`);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 function renderOptions(){
   const legs=db.opts||[];
   const today=new Date().toISOString().slice(0,10),spots=_optSpots();
   const{leaps,other}=splitLeapLegs(legs);
   const openL=leaps.filter(l=>l.status==='open');
   const closedLeaps=leaps.filter(l=>l.status!=='open');
-  const shown=(showClosedLeaps?leaps.slice():openL.slice());
+  const hiddenLeapList=leaps.filter(l=>hiddenLeaps.has(l.id));
+  const shown=(showClosedLeaps?leaps.slice():openL.slice()).filter(l=>!hiddenLeaps.has(l.id)||showHiddenLeaps);
   const leapPnl=l=>{
     const q=l.qty||1,cost=(+l.entryPrice||0)*100*q+(+l.fees||0);
     if(l.status==='open'){
@@ -3399,6 +3429,7 @@ function renderOptions(){
     <button class="rot-header-btn" onclick="toggleLeapMinAll()" title="${leapAnyCollapsed?'Expand all':'Minimise all'}">${leapAnyCollapsed?`<svg class="sq-20" viewBox="0 0 256 256" fill="none" stroke="var(--orange)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M104,104 48,48M48,88V48H88M152,104 208,48M168,48H208V88M104,152 48,208M48,168V208H88M152,152 208,208M168,208H208V168"/></svg>`:`<svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg>`}</button>
     <div class="nw"><button type="button" class="btn btn-primary btn-sm nw-pill" id="new-leap-btn" onclick="openLeapAdd()">New LEAP</button></div>
     ${closedLeaps.length?`<label><input type="checkbox" ${showClosedLeaps?'checked':''} onchange="toggleShowClosedLeaps(this.checked)"> Show closed (${closedLeaps.length})</label>`:''}
+    ${hiddenLeapList.length?`<label><input type="checkbox" ${showHiddenLeaps?'checked':''} onchange="toggleShowHiddenLeaps(this.checked)"> Show hidden (${hiddenLeapList.length})</label>`:''}
   </div></div></section>
   ${sumH?`<section class="v2-hero v2-light"><div class="v2-strip leap-sum-wrap">${sumH}</div></section>`:''}
   ${selTipHtml()}
@@ -5872,6 +5903,8 @@ function renderDashChart(){
 // ════════════════════════════════════════════════════════
 function toggleExpand(id){collapsedWheels.has(id)?collapsedWheels.delete(id):collapsedWheels.add(id);_saveUIState();render();}
 function toggleLeapExpand(id){collapsedLeaps.has(id)?collapsedLeaps.delete(id):collapsedLeaps.add(id);_saveUIState();render();}
+function toggleHideLeap(id){hiddenLeaps.has(id)?hiddenLeaps.delete(id):hiddenLeaps.add(id);render();}
+function toggleShowHiddenLeaps(val){showHiddenLeaps=!!val;render();}
 function toggleMinimise(id){
   if(minimised.has(id)){minimised.delete(id);}
   else{minimised.add(id);expanded.delete(id);}
@@ -8432,7 +8465,7 @@ window.exportOptsCSV = exportOptsCSV;
 window.setOptFilter = setOptFilter;
 window.openOptAdd = openOptAdd;
 window.openPmccSell=openPmccSell;window.openLeapRoll=openLeapRoll;window.pmccManualTab=pmccManualTab;window.pmccSide=pmccSide;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.savePmcc=savePmcc;window.pmccSaveRoll=pmccSaveRoll;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;window.pmccDeleteShort=pmccDeleteShort;window.openPmccLegEdit=openPmccLegEdit;window.savePmccLeg=savePmccLeg;
-window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.toggleShowClosedLeaps = toggleShowClosedLeaps;window.setLeapSort = setLeapSort;window.toggleLeapMinAll = toggleLeapMinAll;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
+window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.toggleShowClosedLeaps = toggleShowClosedLeaps;window.toggleHideLeap = toggleHideLeap;window.toggleShowHiddenLeaps = toggleShowHiddenLeaps;window.setLeapSort = setLeapSort;window.toggleLeapMinAll = toggleLeapMinAll;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
 window.openOptEdit = openOptEdit;
 window.optAddLeg = optAddLeg;
 window.optParsePaste = optParsePaste;
