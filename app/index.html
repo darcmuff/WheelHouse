@@ -1108,21 +1108,18 @@ select,textarea,
 .d-kpi-badge,.d-panel-count,.d-phase,.wc .wl-sl{
   border-radius:6px!important;
 }
-/* Thin #FF5A36 outlines: home overview tiles, expanded LEAP cards */
+/* Thin #FF5A36 outlines: home overview tiles */
 .v2-hero.v2-home .hk-grid > .hk {
   border: 1px solid #FF5A36;
   border-radius: 8px;
   box-sizing: border-box;
   padding: 7px 13px; /* was 8px 14px */
 }
-.leap-card.lcw:not(.lc-mini-bar) {
-  border: 1px solid #FF5A36 !important;
+/* LEAP cards match wheel cards: no orange outline, expanded or collapsed. */
+.leap-card.lcw {
+  border: 0 !important;
   border-radius: 12px;
   box-sizing: border-box;
-}
-/* Collapsed art-bar LEAPs match collapsed wheels: no orange outline. */
-.leap-card.lcw.lc-mini-bar {
-  border: 0 !important;
 }
 .leap-card.lcw .wc-art,
 .leap-card.lcw .v2-tex,
