@@ -76,20 +76,22 @@ check('form validation: strike required', /strike/.test(S.pmccFormLeg({ strike: 
 S.setOpts(legs);
 const h = S.renderPmcc(leap, today);
 check('trade list: short calls only (STO/BTC/EXP, no LEAP BTO), Edit on every row', /pmcc-trades/.test(h) && !/ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && (h.match(/class="trow /g)||[]).length===(h.match(/openPmccLegEdit\(/g)||[]).length && /To strike/.test(h) && /Captured/.test(h));
-check('bought-back and expired Captured show on the STO and on the BTC or EXP row', (()=>{
+check('bought-back Captured sits only on the BTC row; the STO is a dash; expiry stays on the STO, not the EXP row', (()=>{
   const rows=h.split('class="trow').slice(1);
   const text=s=>s.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  const hasPl=s=>/-?\d+%/.test(s);
   const btc=rows.find(r=>/ab-BTC/.test(r));
   const exp=rows.find(r=>/ab-EXP/.test(r));
   const sto=rows.filter(r=>/ab-STO/.test(r));
-  const closedSto=sto.find(r=>/at \$1\.15/.test(r));
+  const closedStoHasPl=sto.some(r=>/at \$1\.15/.test(r));
   const expSto=sto.find(r=>/at \$0\.00/.test(r));
   const openSto=sto.find(r=>/at \$3\.05/.test(r));
   return /77%/.test(text(btc))&&/at \$1\.15/.test(btc)&&/\+\$787\.40/.test(text(btc))
-    && closedSto && /77%/.test(text(closedSto)) && /\+\$787\.40/.test(text(closedSto))
+    && !closedStoHasPl
     && expSto && /100%/.test(text(expSto))
-    && exp && /100%/.test(text(exp)) && /at \$0\.00/.test(exp)
-    && openSto;
+    && exp && !hasPl(exp)
+    && openSto
+    && [btc, ...sto.filter(r=>/at \$1\.15/.test(r))].filter(hasPl).length===1;
 })(), h.replace(/<[^>]+>/g,' ').slice(0,500));
 check('LEAP with no short calls shows "No short calls yet." row', (()=>{const h=S.renderPmcc({ ...leap, id: 'none' }, today);return /pmcc-trades/.test(h)&&/No short calls yet\./.test(h)&&!/BTO/.test(h);})());
 check('legacy roll fields render as plain rows', !/chain-row|roll-badge|chain-tint|roll-trade|roll-slot/.test(h));

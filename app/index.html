@@ -3208,9 +3208,9 @@ function renderPmccListRow(e,spot,today){
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
       if(d&&net!=null)ppd=ppdCellHtml(net/d,d);
-      const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}
+      if(c.status!=='closed'){const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}}
     }
-  }else if((e.action==='BTC'||e.action==='EXP'||e.action==='ASN')&&c&&c.status!=='open'){
+  }else if(e.action==='BTC'&&c&&c.status==='closed'){
     const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}
   }
   const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
@@ -5005,6 +5005,7 @@ function wheelListCells(t,L){
   if(rest){const d=dd(t.expiry||t.entered,t.entered);if(d&&rest.net!=null)r.ppd=ppdCellHtml(rest.net/d,d);const cell=closedCapturedHtml(rest);r.cap=cell.html;r.capColor=cell.color;return r;}
   const o=L.outcomes[t.id];if(!o)return r;
   const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
+  if((slices.consumed[t.id]||0)>0)return r;
   const cell=closedCapturedHtml(o);r.cap=cell.html;r.capColor=cell.color;
   return r;
 }

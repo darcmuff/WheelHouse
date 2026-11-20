@@ -42,15 +42,16 @@ test('OCC symbol and shared cells match LEAP formatting', () => {
   assert.strictEqual(F.capturedCellHtml(20, 10, true).color, 'var(--text2)');
   assert.ok(F.ppdCellHtml(10, 4).startsWith('$10.00'));
 });
-test('bought-back Captured is drawn on the BTC row and the CSP row', () => {
+test('bought-back Captured sits only on the BTC row; the CSP row keeps PPD and a dash', () => {
   const T = [tr('c2', 'CSP', '2026-11-09', '2026-11-23', 130, 2.51, 400, 1001.84, { fees: 2.16 }), tr('b2', 'BTC', '2026-11-11', '2026-11-23', 130, 2.10, 400, 842.16, { fees: 2.16 })];
   const L = { trades: T, outcomes: F.wheelSellOutcomes(T), openIds: new Set(), spot: 0, today: '2026-11-11', marks: {} };
   const csp = F.wheelListCells(T[0], L), btc = F.wheelListCells(T[1], L);
-  assert.ok(csp.cap.includes('16%') && csp.cap.includes('at $2.10') && csp.cap.includes('+$159.68'), csp.cap);
-  assert.strictEqual(csp.capColor, 'var(--green)');
+  assert.strictEqual(csp.cap, '—');
   assert.ok(csp.ppd.includes('$79.84') && csp.ppd.includes('(2d)'), csp.ppd);
   assert.ok(btc.cap.includes('16%') && btc.cap.includes('at $2.10') && btc.cap.includes('+$159.68'), btc.cap);
+  assert.strictEqual(btc.capColor, 'var(--green)');
   assert.strictEqual(btc.ppd, '—');
+  assert.strictEqual([csp.cap, btc.cap].filter(x => x !== '—').length, 1);
 });
 test('partial buy-back: each BTC keeps its own contracts, the rest expires on the sale', () => {
   const T = [tr('c', 'CSP', '2026-10-01', '2026-10-17', 50, 1, 500, 500),
