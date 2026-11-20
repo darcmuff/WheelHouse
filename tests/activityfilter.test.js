@@ -92,24 +92,12 @@ test('wheel shorts use a live mark, else the typed currentPrice, and skip a shor
   assert.deepStrictEqual(held.unpriced,[{ticker:'KO',type:'P'}]);
 });
 
-test('the return note names held shares, open LEAPs and short buy-backs in plain words',()=>{
+test('the return note is one general line, never naming the user\'s own positions',()=>{
   assert.strictEqual(F.actReturnNote({shareParts:[],leapParts:[],shortParts:[],unpriced:[]}),
     'Nothing open, so total return equals net cash flow.');
-  assert.strictEqual(F.actReturnNote({
-    leapParts:[{ticker:'SPCX',value:15300}],
-    shortParts:[{ticker:'SPCX',type:'C',value:339}],
-    shareParts:[],unpriced:[]
-  }),'Total return adds your SPCX LEAP at $15,300 and takes off $339 to buy back your open SPCX call.');
-  assert.strictEqual(F.actReturnNote({
-    shareParts:[{ticker:'PEP',value:14520},{ticker:'AMD',value:15840}],
-    leapParts:[],shortParts:[],unpriced:[]
-  }),'Total return adds your AMD shares at $15,840 and your PEP shares at $14,520.');
-  assert.strictEqual(F.actReturnNote({
-    shareParts:[],leapParts:[{ticker:'SPCX',value:15300}],shortParts:[],
-    unpriced:[{ticker:'SOFI',type:'P'}]
-  }),'Total return adds your SPCX LEAP at $15,300. Open SOFI puts have no buy-back price yet.');
-  assert.strictEqual(F.actReturnNote({
-    shareParts:[],leapParts:[],shortParts:[],
-    unpriced:[{ticker:'SOFI',type:'P'},{ticker:'AMD',type:'C'}]
-  }),'Open AMD calls and SOFI puts have no buy-back price yet, so total return equals net cash flow.');
+  const G="Total return adds shares and LEAPs you still hold at today's value, and takes off what it would cost to buy back options you've sold.";
+  assert.strictEqual(F.actReturnNote({leapParts:[{ticker:'SPCX',value:15300}],shortParts:[{ticker:'SPCX',type:'C',value:339}],shareParts:[],unpriced:[]}),G);
+  assert.strictEqual(F.actReturnNote({shareParts:[{ticker:'PEP',value:14520}],leapParts:[],shortParts:[],unpriced:[]}),G);
+  assert.strictEqual(F.actReturnNote({shareParts:[],leapParts:[],shortParts:[],unpriced:[{ticker:'SOFI',type:'P'}]}),G);
+  assert.ok(!/SPCX|PEP|SOFI|\$/.test(G));
 });

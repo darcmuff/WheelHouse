@@ -5182,27 +5182,9 @@ function actAndList(parts){
 // Plain line naming what Total return adds (held shares, open LEAPs) and takes off (open short buy-backs).
 function actReturnNote(held){
   held=held||{};
-  const added=[];
-  (held.shareParts||[]).slice().sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker))).forEach(p=>{
-    added.push('your '+p.ticker+' shares at '+actMoneyPlain(p.value));
-  });
-  (held.leapParts||[]).slice().sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker))).forEach(p=>{
-    added.push('your '+p.ticker+' LEAP at '+actMoneyPlain(p.value));
-  });
-  const taken=(held.shortParts||[]).slice().sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker))||String(a.type||'').localeCompare(String(b.type||''))).map(p=>{
-    return actMoneyPlain(p.value)+' to buy back your open '+p.ticker+' '+(p.type==='P'?'put':'call');
-  });
-  const uq=[],seen=new Set();
-  (held.unpriced||[]).slice().sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker))||String(a.type||'').localeCompare(String(b.type||''))).forEach(u=>{
-    const k=(u.ticker||'')+'|'+(u.type||'');if(!u.ticker||seen.has(k))return;seen.add(k);
-    uq.push(u.ticker+' '+(u.type==='P'?'puts':'calls'));
-  });
-  const uNote=uq.length?'Open '+actAndList(uq)+' have no buy-back price yet.':'';
-  if(!added.length&&!taken.length)return uNote?uNote.replace(/\.$/,'')+', so total return equals net cash flow.':'Nothing open, so total return equals net cash flow.';
-  const bits=[];
-  if(added.length)bits.push('adds '+actAndList(added));
-  if(taken.length)bits.push('takes off '+actAndList(taken));
-  return 'Total return '+actAndList(bits)+'.'+(uNote?' '+uNote:'');
+  const open=(held.shareParts||[]).length+(held.leapParts||[]).length+(held.shortParts||[]).length+(held.unpriced||[]).length;
+  if(!open)return 'Nothing open, so total return equals net cash flow.';
+  return "Total return adds shares and LEAPs you still hold at today's value, and takes off what it would cost to buy back options you've sold.";
 }
 function setLogKind(k){
   if(k==='all')logKinds.clear();
