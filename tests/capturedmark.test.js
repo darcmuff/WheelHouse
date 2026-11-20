@@ -30,3 +30,11 @@ test('card Profit uses the same words when the quote was rejected',()=>{
   assert.ok(src.includes('wl-cur"><span>Profit</span><b class="m">no quote</b>'));
   assert.ok(src.includes("c.markWhy==='none'"));
 });
+test('LEAP short rows say no quote when the mark was rejected, even if a last price is still saved',()=>{
+  const src=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+  const i=src.indexOf('function renderPmccListRow');
+  const bit=src.slice(i, i+1800);
+  const why=bit.indexOf("c.markWhy==='none'");
+  const use=bit.indexOf('if(mark!=null&&sold>0)');
+  assert.ok(why>=0&&use>=0&&why<use, bit.slice(bit.indexOf('if(e.open)'), use+20));
+});

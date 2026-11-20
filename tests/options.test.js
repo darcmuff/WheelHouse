@@ -160,24 +160,55 @@ check('health: clean leg → no issues', O.health([L({ id: 'ok' })], [], TODAY).
     wrong.contracts.SPCX261113P00130000 && wrong.contracts.SPCX261113P00130000.bid === 2.16
     && Object.keys(wrong.contracts).length === 1 && !wrong.contracts.F261113P00010000, wrong);
 }
-// ── marks fallback order: Cboe → Finnhub → none (manual + BS) ──
+// ── optchain proxy: contract picking from a Nasdaq-shaped payload ──
+{
+  const { pickNasdaq } = require('../netlify/functions/optchain.js');
+  const raw = { data: { lastTrade: 'LAST TRADE: $129.20 (AS OF NOV 20, 2026 12:00 PM ET)', table: { rows: [
+    { expirygroup: 'November 27, 2026', expiryDate: null, drillDownURL: null },
+    { expiryDate: 'Nov 27', strike: '133.00', c_Bid: '0.80', c_Ask: '0.90', p_Bid: '6.50', p_Ask: '6.75', p_Last: '6.60',
+      drillDownURL: '/market-activity/stocks/spcx/option-chain/call-put-options/spcx--261127c00133000' },
+    { expiryDate: 'Nov 27', strike: '150.00', c_Bid: '--', c_Ask: '--', p_Bid: '20.45', p_Ask: '21.40',
+      drillDownURL: '/market-activity/stocks/spcx/option-chain/call-put-options/spcx--261127c00150000' }
+  ] } } };
+  const r = pickNasdaq(raw, ['SPCX261127P00133000', 'SPCX261127C00150000', 'SPCX261127C00999000']);
+  check('optchain pickNasdaq: put from the call-form URL, spot, skip empty bid/ask and unrequested',
+    r.spot === 129.2 && r.contracts.SPCX261127P00133000 && r.contracts.SPCX261127P00133000.bid === 6.5
+    && r.contracts.SPCX261127P00133000.src === 'nasdaq' && !r.contracts.SPCX261127C00150000
+    && !r.contracts.SPCX261127C00999000 && Object.keys(r.contracts).length === 1, r);
+}
+
+// ── marks fallback order: Cboe → Nasdaq → Finnhub → none (manual + BS) ──
 const _mk = async () => {
   const { getMarks } = require('../netlify/functions/optchain.js');
   const A = 'AAPL261120C00200000', B = 'AAPL261120P00180000';
   const cboe = { timestamp: '2026-10-21 12:00:00', data: { current_price: 201, options: [{ option: A, bid: 5, ask: 5.2, iv: 0.3, delta: 0.5, theta: -0.1 }] } };
+  const nd = { data: { lastTrade: 'LAST TRADE: $201.00', table: { rows: [
+    { drillDownURL: '/market-activity/stocks/aapl/option-chain/call-put-options/aapl--261120c00180000',
+      p_Bid: '1.9', p_Ask: '2.0', c_Bid: '--', c_Ask: '--' },
+    { drillDownURL: '/market-activity/stocks/aapl/option-chain/call-put-options/aapl--261120c00200000',
+      c_Bid: '5.1', c_Ask: '5.3', p_Bid: '--', p_Ask: '--' }
+  ] } } };
   const fh = { data: [{ expirationDate: '2026-11-20', options: { CALL: [{ contractName: A, bid: 9, ask: 9 }], PUT: [{ contractName: B, bid: 2, ask: 2.2, impliedVolatility: 31.5, delta: -0.3, theta: -0.05 }] } }] };
   const calls = [];
-  const fake = map => async url => { calls.push(url.includes('cboe') ? 'cboe' : 'finnhub'); const v = map(url); if (v instanceof Error) throw v; return v == null ? { ok: false, status: 401, json: async () => ({}) } : { ok: true, json: async () => v }; };
-  let r = await getMarks('AAPL', [A, B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : fh), finnhubKey: 'k' });
-  check('marks: Cboe first, Finnhub fills the gap', r.contracts[A].src === 'cboe' && r.contracts[A].bid === 5 && r.contracts[B].src === 'finnhub' && Math.abs(r.contracts[B].iv - 0.315) < 1e-9 && calls.join() === 'cboe,finnhub', { r, calls });
+  const reqs = [];
+  const kind = url => url.includes('cboe') ? 'cboe' : url.includes('nasdaq') ? 'nasdaq' : url.includes('finnhub') ? 'finnhub' : 'other';
+  const fake = map => async (url, opts) => { calls.push(kind(url)); reqs.push({ url, opts }); const v = map(url); if (v instanceof Error) throw v; return v == null ? { ok: false, status: 401, json: async () => ({}) } : { ok: true, json: async () => v }; };
+  const none = { data: { table: { rows: [] } } };
+  let r = await getMarks('AAPL', [A, B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : u.includes('nasdaq') ? none : fh), finnhubKey: 'k' });
+  check('marks: Cboe first, Finnhub fills the gap', r.contracts[A].src === 'cboe' && r.contracts[A].bid === 5 && r.contracts[B].src === 'finnhub' && Math.abs(r.contracts[B].iv - 0.315) < 1e-9 && calls.join() === 'cboe,nasdaq,finnhub', { r, calls });
+  check('marks: Cboe is fetched from cdn-api with a www.cboe.com Referer',
+    reqs[0] && /cdn-api\.cboe\.com\/api\/global\/delayed_quotes\/options\/AAPL\.json/.test(reqs[0].url)
+    && reqs[0].opts && reqs[0].opts.headers && reqs[0].opts.headers.Referer === 'https://www.cboe.com/', reqs[0]);
   calls.length = 0; r = await getMarks('AAPL', [A], { fetchImpl: fake(u => u.includes('cboe') ? cboe : fh), finnhubKey: 'k' });
-  check('marks: Finnhub skipped when Cboe covers all', calls.join() === 'cboe' && r.sources.join() === 'cboe');
+  check('marks: Nasdaq and Finnhub skipped when Cboe covers all', calls.join() === 'cboe' && r.sources.join() === 'cboe');
+  calls.length = 0; r = await getMarks('AAPL', [A, B], { fetchImpl: fake(u => u.includes('cboe') ? new Error('net') : u.includes('nasdaq') ? nd : null), finnhubKey: 'k' });
+  check('marks: Cboe down, Nasdaq fills the gap', r.contracts[B].src === 'nasdaq' && r.contracts[B].bid === 1.9 && r.contracts[A].src === 'nasdaq' && r.sources.join() === 'nasdaq' && calls.join() === 'cboe,nasdaq', { r, calls });
   calls.length = 0; r = await getMarks('AAPL', [A, B], { fetchImpl: fake(u => u.includes('cboe') ? new Error('net') : null), finnhubKey: 'bad' });
-  check('marks: Cboe down + Finnhub 401 → empty, no throw (manual/BS fallback)', Object.keys(r.contracts).length === 0 && r.sources.length === 0 && calls.join() === 'cboe,finnhub', r);
-  calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : { error: "You don't have access to this resource." }), finnhubKey: 'k' });
+  check('marks: Cboe down + Nasdaq/Finnhub 401 → empty, no throw (manual/BS fallback)', Object.keys(r.contracts).length === 0 && r.sources.length === 0 && calls.join() === 'cboe,nasdaq,finnhub', { r, calls });
+  calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : u.includes('nasdaq') ? none : { error: "You don't have access to this resource." }), finnhubKey: 'k' });
   check('marks: Finnhub {error} payload ignored', !r.contracts[B]);
-  calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : fh) });
-  check('marks: no key → Finnhub not called', calls.join() === 'cboe' && !r.contracts[B]);
+  calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : u.includes('nasdaq') ? none : fh) });
+  check('marks: no key → Finnhub not called', calls.join() === 'cboe,nasdaq' && !r.contracts[B], { calls, r });
   const gl = O.legGreeks(L({ mark: 4, markSrc: 'manual' }), 200, TODAY);
   check('fallback: manual mark → local Black-Scholes greeks', gl && gl.src === 'bs');
 };

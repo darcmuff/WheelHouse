@@ -29,8 +29,12 @@ test('an absurd spread is not a quote',()=>assert.strictEqual(S.steadyMark({bid:
 test('a spot gap over 12% is not forced into a number',()=>{
   assert.strictEqual(S.steadyMark(put135,140,110,null,{...P,regular:true}),null);
 });
-test('a greek with the wrong sign is not applied to this contract',()=>{
-  assert.strictEqual(S.steadyMark({bid:2.16,ask:2.2,delta:0.74,gamma:0.02},137,141.03,null,{strike:130,type:'P',regular:true}),null);
+test('a greek with the wrong sign is not applied — the delayed mid is kept',()=>{
+  // 2.9% spot move, put quote with a call-like delta: do not adjust, but still show the mid.
+  assert.deepStrictEqual(S.steadyMark({bid:2.16,ask:2.2,delta:0.74,gamma:0.02},137,141.03,null,{strike:130,type:'P',regular:true}),{mark:2.18,why:'mid'});
+});
+test('missing delta in regular hours still accepts a two-sided mid',()=>{
+  assert.deepStrictEqual(S.steadyMark({bid:2.16,ask:2.2},137,141.03,null,{strike:130,type:'P',regular:true}),{mark:2.18,why:'mid'});
 });
 test('tiny wiggles do not move the shown price; real moves do',()=>{
   assert.deepStrictEqual(S.steadyMark({bid:4.6,ask:4.72},0,0,4.65,P),{mark:4.65,why:'held-small'});
