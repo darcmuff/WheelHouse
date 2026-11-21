@@ -76,6 +76,17 @@ check('form validation: strike required', /strike/.test(S.pmccFormLeg({ strike: 
 S.setOpts(legs);
 const h = S.renderPmcc(leap, today);
 check('trade list: short calls only (STO/BTC/EXP, no LEAP BTO), Edit on every row', /pmcc-trades/.test(h) && !/ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && (h.match(/class="trow /g)||[]).length===(h.match(/openPmccLegEdit\(/g)||[]).length && /To strike/.test(h) && /Captured/.test(h));
+check('LEAP What if? has new net cost and breakeven, not If called away', (()=>{
+  const src=require('fs').readFileSync(require('path').join(__dirname,'../app/index.html'),'utf8');
+  const i=src.indexOf("data-kind=\"leap\"");
+  const j=src.indexOf('function wlWhatIfCalc');
+  const calc=src.slice(j, src.indexOf('function wlWhatIfLog', j));
+  const leapCalc=calc.slice(calc.indexOf("kind==='leap'"), calc.indexOf('const be=parseFloat(p.dataset.be)'));
+  const leapTpl=src.slice(i, i+1800);
+  return /New net cost/.test(leapTpl) && /Breakeven/.test(leapTpl) && !/If called away/.test(leapTpl)
+    && /New net cost/.test(leapCalc) && /Breakeven/.test(leapCalc) && !/If called away/.test(leapCalc)
+    && /If called away/.test(calc);
+})());
 check('bought-back Captured sits only on the BTC row; the STO is a dash; expiry stays on the STO, not the EXP row', (()=>{
   const rows=h.split('class="trow').slice(1);
   const text=s=>s.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');

@@ -10,7 +10,7 @@ const T = (action, entered, total, o = {}) => ({ wheelId: 'w', ticker: 'TSLA', a
 const mo = (rows, ym) => rows.find(r => r.ym === ym) || { premium: 0, total: 0 };
 
 test('open CSP sold in October is excluded from October and shows in Unrealised', () => {
-  const tr = [T('CSP', '2026-10-05', 300, { expiry: '2026-11-20' })];
+  const tr = [T('CSP', '2026-10-05', 300, { expiry: '2026-12-18' })];
   const rows = S.calcMonthlyRealised(tr, [], TODAY);
   assert.strictEqual(mo(rows, '2026-10').premium, 0);
   assert.strictEqual(S.homeFigures(rows, TODAY).month.total, 0);
