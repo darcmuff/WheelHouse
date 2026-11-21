@@ -1774,6 +1774,7 @@ const _googleProvider = APP_DEMO ? null : new GoogleAuthProvider();
 
 // Scoped UID — only set after onAuthStateChanged confirms a valid user
 let _confirmedUid = null;
+let _freshSignup=false;
 
 // ════════════════════════════════════════════════════════
 // DATA
@@ -1831,21 +1832,19 @@ function loadDB(){
 // One server snapshot, then the listener stays open. getDocsFromServer is itself a
 // listen that is cancelled as soon as the rows arrive, and that cancel is what makes
 // the browser log Listen/channel 404 and 400. Held until releaseFirestore().
-function listenServer(q){
+function listenServer(q,ms){
   return new Promise((resolve,reject)=>{
     let settled=false;
+    const done=(fn,arg)=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);fn(arg);};
     const unsub=onSnapshot(q,{includeMetadataChanges:true},snap=>{
       if(snap.metadata.fromCache)return;
-      if(settled)return;
-      settled=true;
-      resolve(snap);
+      done(resolve,snap);
     },err=>{
-      if(settled)return;
-      settled=true;
       try{unsub();}catch(e){}
-      reject(err);
+      done(reject,err);
     });
     _fsUnsubs.push(unsub);
+    const timer=setTimeout(()=>done(reject,new Error('Timed out waiting for your data')),ms||15000);
   });
 }
 function fsUnsubAll(){
@@ -1867,17 +1866,19 @@ async function loadDBFromFirestore(userId){
   // No try/catch here — a failed load must throw so the caller can halt boot.
   // Swallowing it made a network blip look like an empty account (onboarding shown).
   // A cache-only snapshot is ignored: a dead connection must not look like a new account.
-  const wheelsSnap=await listenServer(collection(_fsDb,'users',userId,'wheels'));
-  const tradesSnap=await listenServer(collection(_fsDb,'users',userId,'trades'));
+  const [wheelsSnap,tradesSnap,oRes]=await Promise.all([
+    listenServer(collection(_fsDb,'users',userId,'wheels')),
+    listenServer(collection(_fsDb,'users',userId,'trades')),
+    listenServer(collection(_fsDb,'users',userId,'optlegs')).then(sn=>({ok:true,sn})).catch(e=>({ok:false,e}))
+  ]);
   db.wheels=wheelsSnap.docs.map(d=>d.data());
   db.trades=tradesSnap.docs.map(d=>d.data());
   // Options legs live in their own collection; a failure here (e.g. rules not yet updated) must not block the wheel app
-  try{const oSnap=await listenServer(collection(_fsDb,'users',userId,'optlegs'));const real=oSnap.docs.map(d=>d.data());if(optDemo){_realOpts=real;db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}else db.opts=real;}
-  catch(e){console.warn('Options legs load failed (check Firestore rules for optlegs):',e.message);db.opts=[];_optsLoadError=e.message;if(optDemo){_realOpts=[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}}
+  if(oRes.ok){const real=oRes.sn.docs.map(d=>d.data());if(optDemo){_realOpts=real;db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}else db.opts=real;}
+  else{console.warn('Options legs load failed (check Firestore rules for optlegs):',oRes.e&&oRes.e.message);db.opts=[];_optsLoadError=(oRes.e&&oRes.e.message)||'';if(optDemo){_realOpts=[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}}
   render();
-  // Show onboarding only after a confirmed-successful load with genuinely no wheels
-  const ob=document.getElementById('onboard-overlay');
-  if(ob)ob.style.display=needsOnboarding(db,localStorage.getItem('wh-onboardSkipped')==='1')?'flex':'none';
+  // After a confirmed-successful load, show onboarding only when the account is genuinely empty
+  showOnboardingIfNeeded();
 }
 
 // Firestore helpers
@@ -1889,11 +1890,16 @@ function _currentUid(){return _confirmedUid;}
 function _stripUndefined(o){
   return Object.fromEntries(Object.entries(o).filter(([,v])=>v!==undefined));
 }
-function _saveWheel(wheel){
+function _saveWheel(wheel,attempt){
   if(APP_DEMO){OT_DEMO.save(db);return;}
   const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),_stripUndefined(wheel))
-    .catch(e=>console.error('Wheel save failed:',e));
+    .catch(e=>{
+      console.error('Wheel save failed:',e);
+      const n=attempt||0;
+      if(n<3)setTimeout(()=>_saveWheel(wheel,n+1),800*(n+1));
+      else alert('Could not save — please check your connection and try again.');
+    });
 }
 function _saveTrade(trade){
   if(APP_DEMO){OT_DEMO.save(db);return;}
@@ -2732,6 +2738,25 @@ function logoSyms(){
   const o=(db.opts||[]).map(l=>l&&l.underlying).filter(Boolean);
   return[...new Set([...w,...o].map(s=>String(s).toUpperCase()))];
 }
+const _pricePending={};
+function markPricePending(sym,on){sym=String(sym||'').toUpperCase();if(!sym)return;if(on)_pricePending[sym]=true;else delete _pricePending[sym];}
+function isPricePending(sym){return!!_pricePending[String(sym||'').toUpperCase()];}
+function pricePendingHtml(sym,cls){
+  if(!isPricePending(sym))return '';
+  return `<span class="${cls||'rot-header-price'}" style="color:var(--text3);font-size:0.8125rem;font-weight:480">Getting price…</span>`;
+}
+function startPriceFill(ticker,wheel){
+  ticker=String(ticker||'').toUpperCase();
+  if(!ticker)return;
+  markPricePending(ticker,true);
+  render();
+  fetchSymbol(ticker).then(()=>{
+    if(quotes[ticker]&&wheel)wheel.lastPrice=quotes[ticker].price;
+    markPricePending(ticker,false);
+    render();
+  }).catch(()=>{markPricePending(ticker,false);render();});
+  fetchLogo(ticker).then(()=>render()).catch(()=>{});
+}
 
 async function fetchSymbol(sym){
   // Finnhub doesn't support index symbols like ^VIX — skip them
@@ -3298,8 +3323,8 @@ function leapAdjMoveHtml(cost,adj){
   return ` <span style="color:${down?'var(--green)':'var(--red)'};font-size:0.84rem;font-weight:480">${down?'▼':'▲'}${Math.abs(pct).toFixed(1)}%</span>`;
 }
 // LEAP card header: stock price + today's move (regular session; out of hours it's the last close) + distance from strike. Pure.
-function leapSpotHtml(q,strike,open){
-  if(!q||!(q.price>0))return '';
+function leapSpotHtml(q,strike,open,sym){
+  if(!q||!(q.price>0))return typeof pricePendingHtml==='function'?pricePendingHtml(sym,'lc-spot'):'';
   const pct=q.pct!=null&&q.state!=='DELAYED'?q.pct:null,up=pct!=null&&pct>=0;
   const mv=pct!=null?` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}%</span>`:'';
   const tag=open?'':' <span style="color:var(--text3);font-weight:480">close</span>';
@@ -3353,7 +3378,7 @@ function renderLeapCard(l,spot,today){
     const leapExp=!collapsedLeaps.has(l.id);
     const earnH=leapExp?leapEarnHtml(l):'';
     return`<div class="leap-card lc lcw${leapExp?'':' lc-mini-bar'}" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession())}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${!leapExp?leapMiniRealisedHtml(true,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>${earnH?`<div class="wl-top">${earnH}</div>`:''}
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession(),l.underlying)}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${!leapExp?leapMiniRealisedHtml(true,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>${earnH?`<div class="wl-top">${earnH}</div>`:''}
     ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
@@ -4262,7 +4287,7 @@ function renderRotationMini(wheel){
   }
   const priceH=rawP!=null
     ?`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${rawP.toFixed(2)}${chg!=null?` <span style="color:${chgColor}">${chg>=0?'▲':'▼'}${Math.abs(chgPct).toFixed(2)}%</span> <span style="color:var(--text3);font-weight:480">today</span>`:''}</span>`
-    :'';
+    :pricePendingHtml(wheel.ticker,'lc-spot');
   const pnlH=`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span class="${colorN(m.realisedPnL)}">${fmtMoney(m.realisedPnL)}</span> <span style="color:var(--text3);font-weight:480">realised</span></span>`;
   return`<div class="rotation-window wc rot-mini-bar ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" data-ticker="${esc(wheel.ticker||'')}" style="--wc-bg:${wcBg(wheel.ticker)};${isHidden?'opacity:.5':''}">
     ${wcArtHtml(wheel.ticker)}
@@ -4719,7 +4744,7 @@ function renderRotationWindow(wheel){
         <span style="color:var(--silver);font-size:0.8125rem;font-weight:480">$${rawP.toFixed(2)}</span>
         ${chg!=null?`<span style="color:${chgColor};font-size:0.825rem;font-weight:480">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
       </span>`
-    :'';
+    :pricePendingHtml(wheel.ticker);
   const shares=(m.sharesHeld>0?m.sharesHeld:0)+' shares';
   const _wTrades=m.trades.filter(t=>!t.expiredWorthless);
   const _entered=_wTrades.map(t=>t.entered).sort();
@@ -6053,12 +6078,7 @@ function quickAddRotation(symbol){
   db.wheels.push(wheel);
   _saveWheel(wheel);
   closeNewWheel();
-  render();
-  // Fetch price and logo in background
-  fetchSymbol(ticker).then(()=>{
-    if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;render();}
-  }).catch(()=>{});
-  fetchLogo(ticker).then(()=>render()).catch(()=>{});
+  startPriceFill(ticker,wheel);
 }
 function openNewPos(){
   if(!wheelCapOk(null,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
@@ -8017,16 +8037,29 @@ async function authSubmit(){
   const mode=document.getElementById('auth-submit-btn').dataset.mode||'signin';
   const btn=document.getElementById('auth-submit-btn');
   if(!email||!pass){showAuthError('Please enter your email and password.');return;}
+  const fresh=mode==='signup';
+  if(fresh)_freshSignup=true;
   btn.textContent='Please wait…';btn.disabled=true;
+  const authEl=document.getElementById('auth-overlay');
+  if(authEl)authEl.style.display='none';
+  showLoadingOverlay(fresh?'Creating your account…':'Signing in…');
   try{
-        if(mode==='signup'){
+    if(fresh){
       await createUserWithEmailAndPassword(_auth,email,pass);
+      if(_auth.currentUser)_confirmedUid=_auth.currentUser.uid;
       if(typeof otTrack==='function')otTrack('/signup-complete');
+      // Show the first-ticker step as soon as Auth succeeds; Firestore and quotes continue in the background.
+      showOnboardingIfNeeded();
+      hideLoadingOverlay(true);
+      resetAuthButton();
     } else {
       await signInWithEmailAndPassword(_auth,email,pass);
     }
   } catch(e){
-    btn.textContent=mode==='signup'?'Create Account':'Sign In';btn.disabled=false;
+    _freshSignup=false;
+    hideLoadingOverlay(true);
+    if(authEl)authEl.style.display='flex';
+    btn.textContent=fresh?'Create Account':'Sign In';btn.disabled=false;
     const msgs={'auth/email-already-in-use':'An account with this email already exists. Try Sign In.','auth/invalid-email':'That email address does not look right.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-credential':'Incorrect email or password.','auth/network-request-failed':'Could not reach the sign-in service. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Please try again later.'};
     showAuthError(msgs[e.code]||e.message);
   }
@@ -8051,12 +8084,47 @@ async function authGoogle(){
   try{
     const cred=await signInWithPopup(_auth,_googleProvider);
     const info=getAdditionalUserInfo(cred);
-    if(info&&info.isNewUser&&typeof otTrack==='function')otTrack('/signup-complete');
+    if(info&&info.isNewUser){_freshSignup=true;if(typeof otTrack==='function')otTrack('/signup-complete');}
   }catch(e){
     if(e.code==='auth/popup-closed-by-user')return;
     const msgs={'auth/popup-blocked':'Your browser blocked the Google window. Allow pop-ups for this site and try again.','auth/unauthorized-domain':'Google sign-in is not available from this address.','auth/network-request-failed':'Could not reach the sign-in service. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Please try again later.'};
     showAuthError(msgs[e.code]||e.message);
   }
+}
+
+function isFreshSignup(user){
+  if(_freshSignup)return true;
+  try{
+    const c=Date.parse(user&&user.metadata&&user.metadata.creationTime);
+    const l=Date.parse(user&&user.metadata&&user.metadata.lastSignInTime);
+    return Number.isFinite(c)&&Math.abs((l||c)-c)<60000&&(Date.now()-c)<180000;
+  }catch(e){return false;}
+}
+function showOnboardingIfNeeded(){
+  const ob=document.getElementById('onboard-overlay');
+  if(ob)ob.style.display=needsOnboarding(db,localStorage.getItem('wh-onboardSkipped')==='1')?'flex':'none';
+}
+function hideLoadingOverlay(immediate){
+  const el=document.getElementById('loading-overlay');
+  if(!el)return;
+  if(immediate){el.style.display='none';el.classList.remove('fade-out');return;}
+  el.classList.add('fade-out');
+  setTimeout(()=>{el.style.display='none';el.classList.remove('fade-out');},300);
+}
+function showLoadingOverlay(msg){
+  const el=document.getElementById('loading-overlay');
+  const bar=document.getElementById('loading-bar');
+  const text=document.getElementById('loading-text');
+  if(text&&msg)text.textContent=msg;
+  if(bar)bar.style.width='20%';
+  if(el){el.classList.remove('fade-out');el.style.display='flex';}
+}
+
+function startLiveQuotes(){
+  clearInterval(_pollHandle);
+  _pollHandle=setInterval(fetchAllQuotes,60000);
+  fetchAllQuotes();
+  fetchOptionMarks(false);
 }
 
 function needsOnboarding(d,skipped){return !skipped&&!(d.wheels&&d.wheels.length)&&!(d.trades&&d.trades.length)&&!(((typeof _realOpts!=='undefined'&&_realOpts)||d.opts||[]).length);}
@@ -8067,17 +8135,14 @@ async function onboardSubmit(){
   // UID is guaranteed here — onboarding only shows after onAuthStateChanged confirms a valid user
   const userId=_confirmedUid;
   if(!userId){console.error('Onboard: no confirmed UID — should not happen');return;}
+  const btn=document.getElementById('onboard-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Starting…';}
   const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
   const newWheel={id:wheelId,ticker:ticker,label:fmtMonYear(new Date().toISOString().slice(0,10)),status:'open',sortOrder:1,createdAt:new Date().toISOString()};
-  try{
-    await setDoc(doc(_fsDb,'users',userId,'wheels',wheelId),newWheel);
-    db.wheels.push(newWheel);
-    document.getElementById('onboard-overlay').style.display='none';
-    render();
-  }catch(e){
-    console.error('Onboard save failed:',e);
-    alert('Could not save — please check your connection and try again.');
-  }
+  db.wheels.push(newWheel);
+  document.getElementById('onboard-overlay').style.display='none';
+  startPriceFill(ticker,newWheel);
+  _saveWheel(newWheel);
 }
 
 function showSignOutButton(user){
@@ -8363,101 +8428,65 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
     try{sessionStorage.removeItem('ot-signup');}catch(e){}
     _confirmedUid = user.uid;
     ensureFirestore();
-
-    // Swap auth overlay for loading overlay. The submit button must not stay on "Please wait…".
+    showSignOutButton(user);
     document.getElementById('auth-overlay').style.display = 'none';
     resetAuthButton();
-    const loadingEl = document.getElementById('loading-overlay');
-    const loadingBar = document.getElementById('loading-bar');
-    const loadingText = document.getElementById('loading-text');
-    loadingEl.style.display = 'flex';
-    loadingBar.style.width = '10%';
-    loadingText.textContent = 'Signing in...';
-    showSignOutButton(user);
 
-    // FORCED MIGRATION — inline, no external function dependency
-    const localData = localStorage.getItem('wheel_tracker_v7');
-    if (localData) {
-      loadingText.textContent = 'Migrating data...';
+    const fresh=isFreshSignup(user);
+    _freshSignup=false;
+
+    const migrateLegacy=async()=>{
+      const localData=localStorage.getItem('wheel_tracker_v7');
+      if(!localData)return;
+      const loadingText=document.getElementById('loading-text');
+      if(loadingText)loadingText.textContent='Migrating data...';
       console.log('Forcing migration...');
-      try {
-        const oldDb = JSON.parse(localData);
-        for (const w of (oldDb.wheels || [])) {
-          if (w && w.id) await setDoc(doc(_fsDb, 'users', user.uid, 'wheels', w.id), w);
-        }
-        for (const t of (oldDb.trades || [])) {
-          if (t && t.id) await setDoc(doc(_fsDb, 'users', user.uid, 'trades', t.id), t);
-        }
+      try{
+        const oldDb=JSON.parse(localData);
+        for(const w of (oldDb.wheels||[])){if(w&&w.id)await setDoc(doc(_fsDb,'users',user.uid,'wheels',w.id),w);}
+        for(const t of (oldDb.trades||[])){if(t&&t.id)await setDoc(doc(_fsDb,'users',user.uid,'trades',t.id),t);}
         localStorage.removeItem('wheel_tracker_v7');
         console.log('Migration successful. localStorage cleared.');
-      } catch(err) {
-        console.error('Migration failed:', err);
-      }
+      }catch(err){console.error('Migration failed:',err);}
+    };
+
+    const loadAccount=()=>Promise.all([
+      loadDBFromFirestore(user.uid),
+      loadHealthDismiss(user.uid),
+      loadReturnSettings(user.uid)
+    ]).then(()=>{window._db=db;});
+
+    // New sign-up: show the first-ticker step as soon as Auth succeeds. Prefs and quotes fill in behind it.
+    if(fresh){
+      showOnboardingIfNeeded();
+      hideLoadingOverlay(true);
+      loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
+      migrateLegacy().then(loadAccount).then(()=>{startLiveQuotes();}).catch(e=>{
+        console.error('Load failed:',e);
+      });
+      return;
     }
 
-    // Load from Firestore — halt boot on failure rather than booting empty
-    loadingBar.style.width = '30%';
-    loadingText.textContent = 'Loading wheels...';
-    try {
+    const loadingEl=document.getElementById('loading-overlay');
+    const loadingBar=document.getElementById('loading-bar');
+    const loadingText=document.getElementById('loading-text');
+    showLoadingOverlay('Loading your account…');
+    if(loadingBar)loadingBar.style.width='30%';
+
+    try{
       loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
-      await loadDBFromFirestore(user.uid);
-      await loadHealthDismiss(user.uid);
-      await loadReturnSettings(user.uid);
-    } catch (e) {
+      await migrateLegacy();
+      await loadAccount();
+    }catch(e){
       console.error('Load failed:', e);
-      loadingText.innerHTML = 'Could not load your data — check your connection. '
-        + '<button onclick="location.reload()" style="margin-left:0.5rem;padding:0.25rem 0.625rem;border-radius:0.375rem;border:1px solid var(--border,#444);background:transparent;color:inherit;cursor:pointer">Retry</button>';
+      if(loadingText)loadingText.innerHTML='Could not load your data — check your connection. '
+        +'<button onclick="location.reload()" style="margin-left:0.5rem;padding:0.25rem 0.625rem;border-radius:0.375rem;border:1px solid var(--border,#444);background:transparent;color:inherit;cursor:pointer">Retry</button>';
       return; // do NOT proceed to quotes/render/onboarding with an empty db
     }
-    window._db=db;
     render();
-
-    // Logos first (every ticker we show, open or closed) so cards paint with logos ASAP; quotes stay open-only
-    loadingBar.style.width = '50%';
-    const wheelSyms = db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
-    const optSyms = (db.opts||[]).filter(l=>l.status==='open').map(l=>l.underlying).filter(Boolean);
-    const allSyms = [...new Set([...wheelSyms, ...optSyms].map(s=>String(s).toUpperCase()))];
-    const totalSteps = allSyms.length;
-    let completed = 0;
-
-    const logoPromises = logoSyms().map(sym => fetchLogo(sym));
-    // Re-render as soon as logos land — do not wait for the quote loop
-    Promise.allSettled(logoPromises).then(() => { if (Object.values(logos).some(Boolean)) render(); });
-
-    // Fetch quotes sequentially with progress
-    for (const sym of allSyms) {
-      loadingText.textContent = `Fetching ${sym}...`;
-      try { await fetchSymbol(sym); } catch(e) { console.warn('Quote:', sym, e.message); }
-      completed++;
-      const pct = 50 + Math.round((completed / Math.max(totalSteps, 1)) * 45);
-      loadingBar.style.width = pct + '%';
-      if (allSyms.length > 1) await new Promise(r => setTimeout(r, 200));
-    }
-
-    await Promise.allSettled(logoPromises);
-    loadingBar.style.width = '100%';
-    loadingText.textContent = 'Ready';
-
-    // Update prices and render fully
-    const nOk = Object.keys(quotes).length;
-    if (nOk > 0) {
-      db.wheels.forEach(w => {
-        if (w.status === 'open' && quotes[w.ticker] && w.lastPrice !== quotes[w.ticker].price) {
-          w.lastPrice = quotes[w.ticker].price; // in memory only
-        }
-      });
-    }
-    render();
-
-    // Fade out loading overlay
-    await new Promise(r => setTimeout(r, 300));
-    loadingEl.classList.add('fade-out');
-    setTimeout(() => { loadingEl.style.display = 'none'; loadingEl.classList.remove('fade-out'); }, 600);
-
-    // Start polling — clear any existing handle first so re-logins never stack intervals
-    clearInterval(_pollHandle);
-    _pollHandle = setInterval(fetchAllQuotes, 60000);
-    fetchOptionMarks(false);
+    hideLoadingOverlay();
+    // Prices and logos fill in behind the cards — do not block first paint
+    startLiveQuotes();
   } else {
     _confirmedUid = null;_ent=null;_entErr=false;syncProBadge();
     clearInterval(_pollHandle);
