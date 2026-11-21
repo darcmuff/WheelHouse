@@ -12,7 +12,7 @@ test('badge is on for plan pro and founders, off for free, demo, and no entitlem
   assert.strictEqual(proBadgeOn(null),false);
 });
 test('wordmark is larger and the badge sits at the end of the name, hidden until synced',()=>{
-  assert.match(SRC,/\.tn-brand\{[^}]*font-size:1\.5rem/);
+  assert.match(SRC,/\.tn-brand\{[^}]*font-size:1\.75rem/);
   assert.match(SRC,/\.tn-word\{display:flex;flex-direction:column;align-items:flex-end\}/);
   assert.match(SRC,/\.tn-pro\{[^}]*color:var\(--orange\)/);
   assert.ok(SRC.includes('<span class="tn-word"><span class="wm" data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span>'));
