@@ -33,13 +33,13 @@ test('chart dropdown is All / Wheel P&L / PMCC calls / Shares & LEAPs P&L and is
   assert.ok(load.includes("return 'all'"));
   assert.ok(extractFn('setPnlMeasure').includes("localStorage.setItem('optrack-pnl-measure'"));
 });
-test('Wheel and PMCC calls series are a split of the same realisedDaily inputs, and nets sum to All', () => {
+test('Wheel and PMCC calls split the options series; All = options + shares/LEAPs series', () => {
   const { extractFn, extractConst } = require('./extract');
   const S = new Function(
     extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
     extractConst('PNL_RANGES') + extractConst('PNL_DEFAULT_GRAN') + extractConst('_iso') +
-    ['walkLegPairs','realisedPremium','realisedDaily','_bucketKey','pnlBuckets','pnlDailyForMeasure'].map(extractFn).join('\n') +
-    '\nreturn {realisedDaily,pnlBuckets,pnlDailyForMeasure};'
+    ['walkLegPairs','realisedPremium','shareRealisations','realisedDaily','_bucketKey','earliestTradeDate','pnlBuckets','sharesLeapsDaily','mergePnlDaily','pnlDailyForMeasure'].map(extractFn).join('\n') +
+    '\nreturn {realisedDaily,sharesLeapsDaily,mergePnlDaily,earliestTradeDate,pnlBuckets,pnlDailyForMeasure};'
   )();
   const today = '2026-11-22';
   const trades = [
@@ -58,14 +58,19 @@ test('Wheel and PMCC calls series are a split of the same realisedDaily inputs, 
   assert.strictEqual(sum(wheel, 'loss') + sum(leaps, 'loss'), sum(all, 'loss'));
   const BA = S.pnlBuckets(all, 'All', null, today), BW = S.pnlBuckets(wheel, 'All', null, today), BL = S.pnlBuckets(leaps, 'All', null, today);
   assert.strictEqual(Math.round((BW.net + BL.net) * 100) / 100, BA.net);
-  assert.deepStrictEqual(S.pnlDailyForMeasure('all', trades, legs, today), S.realisedDaily(trades, legs, today));
+  assert.deepStrictEqual(S.pnlDailyForMeasure('all', trades, legs, today), S.mergePnlDaily(S.realisedDaily(trades, legs, today), S.sharesLeapsDaily(trades, legs, today)));
+  // All range starts at the earliest trade date, not the first realised event
+  assert.strictEqual(S.earliestTradeDate(trades, legs), '2026-09-01');
+  const BF = S.pnlBuckets(all, 'All', null, today, '2025-03-04');
+  assert.strictEqual(BF.buckets[0].key.slice(0, 7), '2025-03');
+  assert.strictEqual(BF.buckets[BF.buckets.length - 1].key.slice(0, 7), '2026-11');
 });
 test('Shares & LEAPs chart All-range net matches the Home table All-time figure', () => {
   const { extractFn, extractConst } = require('./extract');
   const S = new Function(
     extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
     extractConst('PNL_RANGES') + extractConst('PNL_DEFAULT_GRAN') + extractConst('_iso') +
-    ['walkLegPairs','realisedPremium','shareRealisations','optsMonthly','monthlyExtraSources','calcMonthlyRealised','realisedDaily','_bucketKey','pnlBuckets','sharesLeapsDaily','pnlDailyForMeasure'].map(extractFn).join('\n') +
+    ['walkLegPairs','realisedPremium','shareRealisations','optsMonthly','monthlyExtraSources','calcMonthlyRealised','realisedDaily','_bucketKey','pnlBuckets','sharesLeapsDaily','mergePnlDaily','pnlDailyForMeasure'].map(extractFn).join('\n') +
     '\nreturn {shareRealisations,monthlyExtraSources,calcMonthlyRealised,pnlBuckets,sharesLeapsDaily,pnlDailyForMeasure,realisedDaily};'
   )();
   const today = '2026-11-22';
@@ -84,6 +89,10 @@ test('Shares & LEAPs chart All-range net matches the Home table All-time figure'
   const chart = S.pnlBuckets(S.pnlDailyForMeasure('shares', trades, legs, today), 'All', null, today);
   assert.strictEqual(chart.net, tableNet);
   // short PMCC calls must not land in this series (they belong to PMCC calls / All)
-  const allOpt = S.pnlDailyForMeasure('all', trades, legs, today);
-  assert.notDeepStrictEqual(S.pnlDailyForMeasure('shares', trades, legs, today), allOpt);
+  const opts = S.realisedDaily(trades, legs, today);
+  assert.notDeepStrictEqual(S.pnlDailyForMeasure('shares', trades, legs, today), opts);
+  // All measure includes every trade type: options + shares/divs/LEAPs nets add up
+  const net = rows => Math.round(rows.reduce((a, r) => a + r.amount, 0) * 100) / 100;
+  const allNet = net(S.pnlDailyForMeasure('all', trades, legs, today));
+  assert.strictEqual(allNet, Math.round((net(opts) + net(S.pnlDailyForMeasure('shares', trades, legs, today))) * 100) / 100);
 });

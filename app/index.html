@@ -7779,10 +7779,20 @@ function _bucketKey(date,gran){
   if(gran==='Week'){const t=new Date(date+'T12:00:00');const dow=(t.getUTCDay()+6)%7;return _iso(t.getTime()-dow*864e5);} // Monday
   return date;
 }
+// Earliest entered/entry date in the book (range window only; no P&L math).
+function earliestTradeDate(trades,legs){
+  let d='';
+  const consider=x=>{const s=String(x||'').slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(s)&&(!d||s<d))d=s;};
+  (trades||[]).forEach(t=>consider(t.entered));
+  (legs||[]).forEach(l=>consider(l.entryDate));
+  return d||null;
+}
 // Buckets for a range and granularity: every bucket from range start to today (empty ones too), {key,gain,loss,net}.
-function pnlBuckets(daily,range,gran,today){
+// All: fromDate (earliest trade date) or the first day in daily, whichever is earlier, through today.
+function pnlBuckets(daily,range,gran,today,fromDate){
   const r=PNL_RANGES.find(x=>x[0]===range)||PNL_RANGES[5];gran=gran||PNL_DEFAULT_GRAN[r[0]];
-  const start=r[1]?_iso(new Date(today+'T12:00:00')-r[1]*864e5+864e5):(daily[0]?daily[0].date:today);
+  const dataStart=daily&&daily[0]?daily[0].date:today;
+  const start=r[1]?_iso(new Date(today+'T12:00:00')-r[1]*864e5+864e5):([fromDate,dataStart].filter(Boolean).sort()[0]||today);
   const map={};let k=_bucketKey(start,gran);const endK=_bucketKey(today,gran);
   for(let n=0;k<=endK&&n<2000;n++){map[k]={key:k,gain:0,loss:0};const t=new Date(k+'T12:00:00');
     k=gran==='Month'?_iso(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,1,12)):_iso(t.getTime()+(gran==='Week'?7:1)*864e5);}
@@ -7804,17 +7814,26 @@ function sharesLeapsDaily(trades,legs,today){
   (legs||[]).forEach(l=>{if(l.status==='open'||l.side==='short')return;const p=OPTS.legPnL(l),dt=l.closeDate||l.expiry;add(dt,p.realized);});
   return Object.values(d).sort((x,y)=>x.date.localeCompare(y.date)).map(o=>({date:o.date,gain:Math.round(o.gain*100)/100,loss:Math.round(o.loss*100)/100,amount:Math.round((o.gain-o.loss)*100)/100}));
 }
+// Chart-only: join two existing daily series by date. No new P&L math.
+function mergePnlDaily(a,b){
+  const d={};
+  const add=e=>{if(!e||!e.date)return;const o=d[e.date]||(d[e.date]={date:e.date,gain:0,loss:0});o.gain+=e.gain||0;o.loss+=e.loss||0;};
+  (a||[]).forEach(add);(b||[]).forEach(add);
+  return Object.values(d).sort((x,y)=>x.date.localeCompare(y.date)).map(o=>({date:o.date,gain:Math.round(o.gain*100)/100,loss:Math.round(o.loss*100)/100,amount:Math.round((o.gain-o.loss)*100)/100}));
+}
 // Chart-only: feed existing realisedDaily / sharesLeapsDaily. No new P&L math.
+// All measure = every trade type: options plus shares, dividends and closed LEAPs.
 function pnlDailyForMeasure(measure,trades,legs,today){
   if(measure==='wheel')return realisedDaily(trades,[],today);
   if(measure==='pmcc'||measure==='leaps')return realisedDaily([],legs||[],today);
   if(measure==='shares')return sharesLeapsDaily(trades,legs||[],today);
-  return realisedDaily(trades,legs||[],today);
+  return mergePnlDaily(realisedDaily(trades,legs||[],today),sharesLeapsDaily(trades,legs||[],today));
 }
 function pnlCurveHtml(){
   const today=new Date().toISOString().slice(0,10);
   const _m=pnlMeasure||'all';
-  const B=pnlBuckets(pnlDailyForMeasure(_m,db.trades,db.opts||[],today),pnlRange,null,today); // granularity follows the range
+  const _from=typeof earliestTradeDate==='function'?earliestTradeDate(db.trades,db.opts||[]):null;
+  const B=pnlBuckets(pnlDailyForMeasure(_m,db.trades,db.opts||[],today),pnlRange,null,today,_from); // granularity follows the range
   const el=typeof document!=='undefined'&&document.getElementById('pnl-curve');
   const W=pnlFull?Math.max(600,window.innerWidth-96):Math.max(600,(el&&el.clientWidth?el.clientWidth-40:1100)),H=pnlFull?Math.max(320,window.innerHeight-170):380;
   const PL=60,PR=14,PT=14,PB=30,cw=W-PL-PR,ch=H-PT-PB,n=Math.max(1,B.buckets.length);
@@ -7833,8 +7852,8 @@ function pnlCurveHtml(){
     if(i%every===0)bars+=`<text x="${cx.toFixed(1)}" y="${H-10}" text-anchor="middle" fill="var(--text3)" font-size="12">${lab(b.key)}</text>`;});
   const col=B.net<0?'var(--red)':'var(--green)';
   const btn=(k,on,fn)=>`<button type="button" class="pc-r${on?' on':''}" onclick="${fn}('${k}')">${k}</button>`;
-  const _isSh=_m==='shares';
-  const _tips={all:'Options only, realised, matching the Monthly P&L table: wheel puts and calls plus PMCC short calls, on the day they closed, expired or were assigned. Green = premium collected, red = buyback costs. Share sales, dividends and closed LEAPs are in Shares & LEAPs P&L. Open options are not included. Hover a bar for that period.',
+  const _isSh=_m==='shares'||_m==='all';
+  const _tips={all:'Everything realised: wheel puts and calls, PMCC short calls, share sales, dividends and closed LEAPs, on the day they closed, expired or were assigned. Green = gains (including premium collected), red = losses (including buyback costs). Open options are not included. Hover a bar for that period.',
     wheel:'The wheel share of that same Options P&L: realised premium and buybacks on wheel puts and calls only. PMCC short calls are in PMCC calls. Open options are not included.',
     pmcc:'The PMCC short-call share of that same Options P&L: realised premium and buybacks on PMCC short calls. Closed long LEAPs stay in Shares & LEAPs P&L. Open options are not included.',
     shares:'The same realised figures as the Shares & LEAPs P&L table: each share sale (called away or sold) matched first in, first out against what those shares cost, dividends, and each long LEAP when it is sold or expires. Green = gains, red = losses. Booked on the day it closed.'};
