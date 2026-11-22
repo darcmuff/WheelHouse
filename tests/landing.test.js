@@ -21,21 +21,14 @@ test('landing, app and start all link /manifest.json and register the service wo
     assert.ok(src.includes('rel="manifest" href="/manifest.json"'), name+' manifest');
     assert.ok(src.includes('src="sw-update.js"')||src.includes("src='sw-update.js'"), name+' sw');
   }
-  assert.ok(start.includes('src="pwa-install.js"')&&L.includes('src="pwa-install.js"'));
-  const pwa=fs.readFileSync(path.join(A,'pwa-install.js'),'utf8');
-  assert.ok(pwa.includes('beforeinstallprompt')&&!pwa.includes('preventDefault()'));
-  assert.ok(app.includes('beforeinstallprompt')&&!/beforeinstallprompt[^;]*preventDefault/.test(app));
-  assert.ok(app.includes('id="tn-install"')&&app.includes('tnBtn.hidden=!canInstall'));
-  assert.ok(fs.readFileSync(path.join(A,'sw.js'),'utf8').includes('./pwa-install.js'));
-});
-test('landing and start headers keep Install app and Sign in on one line',()=>{
-  const start=fs.readFileSync(path.join(A,'start.html'),'utf8');
-  for (const [name,src] of [['landing',L],['start',start]]){
-    assert.ok(/\.install-app\s*,\s*\.hdr-right \.btn\{[^}]*white-space:nowrap/.test(src)||src.includes('.install-app,.hdr-right .btn{white-space:nowrap}'),name+' nowrap');
-    assert.ok(src.includes('flex-wrap:nowrap'),name+' header nowrap');
+  assert.ok(!start.includes('pwa-install')&&!L.includes('pwa-install')&&!app.includes('pwa-install.js'));
+  assert.ok(!fs.existsSync(path.join(A,'pwa-install.js')),'pwa-install.js removed');
+  for (const [name,src] of [['landing',L],['start',start],['app',app]]){
+    assert.ok(!/preventDefault\s*\(/.test(src)||!src.includes('beforeinstallprompt')||!/beforeinstallprompt[\s\S]{0,80}preventDefault/.test(src), name+' no preventDefault on beforeinstallprompt');
+    assert.ok(!src.includes('Install app')&&!src.includes('Add to Home Screen')&&!src.includes('id="tn-install"')&&!src.includes('id="pwa-foot"')&&!src.includes('id="settings-install"')&&!src.includes('promptPwaInstall')&&!src.includes('data-pwa-install'), name+' no written install UI');
   }
+  assert.ok(!/beforeinstallprompt[^;]*preventDefault/.test(app));
 });
-
 test('landing leads with the USPs, top three first, then the rest, plans, not financial advice, CTAs, no hype',()=>{
   const i=id=>L.indexOf('id="'+id+'"');assert.ok(i('usp-broker')>0&&i('usp-broker')<i('usp-honest')&&i('usp-honest')<i('usp-smartscan')&&i('usp-smartscan')<i('plans'),'USP order');
   ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Pick any trades. See the real net.','PMCC','every minute','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','Try the demo','href="/start"','id="plans"','id="start-free"','id="try-demo"','id="signin-top"','id="go-pro"','href="/app/?signup=1"','signup=1&checkout=monthly'].forEach(s=>assert.ok(L.includes(s),s));

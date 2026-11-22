@@ -646,11 +646,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 #topnav .nav-item,#tabbar .nav-item{border:0;padding:0.4375rem 0.875rem;border-radius:0.625rem;color:var(--text2);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:0.375rem;background:none}
 #topnav .nav-item.active{background:var(--bg2);color:var(--text);font-weight:720;box-shadow:var(--shadow)}
 .tn-right{margin-left:auto;display:flex;align-items:center;gap:0.5rem}
-#tn-install{display:none}
 .tn-gear{background:none;border:0;color:var(--text2);cursor:pointer;padding:0.375rem;border-radius:0.5rem;display:flex}.tn-gear:hover{background:var(--bg3)}
 #tabbar{display:none}
 @media(max-width:700px){
-  #tn-install:not([hidden]){display:inline;background:none;border:0;padding:0 0.15rem;color:var(--text3);font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:0.75rem;font-weight:480;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   .tn-tabs{display:none}#topnav{padding:0.3125rem 0.875rem;gap:0.75rem}
   #content{padding:0.875rem 0.75rem 5.5rem!important}
   #tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:var(--bg2);border-top:1px solid var(--border);justify-content:space-around;padding:0.375rem 0 calc(0.625rem + env(safe-area-inset-bottom))}
@@ -1194,24 +1192,6 @@ select,textarea,
 .tr-card{display:none}
 .db-short{display:none}
 .live-phone{display:none}
-#pwa-foot{display:none}
-#settings-install.pwa-install-item{
-  font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
-  border-radius:6px;
-  text-align:left;
-  font-size:0.8125rem;
-}
-#settings-ios-install{
-  margin:0;
-  padding:0.4rem 0.875rem;
-  font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
-  font-size:0.75rem;
-  font-weight:480;
-  color:var(--text2);
-  border-radius:6px;
-  line-height:1.35;
-}
-
 /* Phone chrome: tab bar, ⋯ menu, form controls */
 @media(max-width:700px){
   #tabbar a.nav-item[data-view="log"]{display:none}
@@ -1673,31 +1653,6 @@ select,textarea,
     border-radius:6px;
     background-position:right 8px center;
   }
-
-  /* Install app: in-flow at the bottom of Home, small grey text, no overlay */
-  #pwa-foot{display:none}
-  #pwa-foot.pwa-visible{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    position:static;
-    margin:1rem 0 0.25rem;
-    padding:0.15rem 8px 0.35rem;
-  }
-  #pwa-foot .pwa-install-link,#pwa-foot .pwa-ios-tip{
-    font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
-    font-size:0.75rem;
-    font-weight:480;
-    color:var(--text3);
-    background:none;
-    border:0;
-    border-radius:6px;
-    padding:0.15rem 0.35rem;
-    cursor:pointer;
-    text-decoration:none;
-  }
-  #pwa-foot .pwa-install-link{text-decoration:underline;text-underline-offset:2px}
-  #pwa-foot .pwa-ios-tip{cursor:default;text-decoration:none;text-align:center}
 }
 
 @media(max-width:480px){
@@ -1905,7 +1860,6 @@ select,textarea,
     <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg" alt=""><span class="tn-word"><span class="wm" data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span></div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheels</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
     <div class="tn-right">
-      <button type="button" id="tn-install" class="pwa-install-link" hidden onclick="promptPwaInstall()">Install app</button>
       <button class="tn-gear" onclick="openSettings()" title="Settings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button>
     </div>
   </header>
@@ -2225,8 +2179,6 @@ select,textarea,
       </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full settings-log" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
-      <button type="button" id="settings-install" class="btn btn-ghost btn-full pwa-install-item" hidden onclick="promptPwaInstall()">Install app</button>
-      <p id="settings-ios-install" class="pwa-ios-tip" hidden>Install: tap Share, then Add to Home Screen</p>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button id="settings-export" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem" onclick="exportMyData()">⇩ Export my data</button>
       <a id="settings-legal" href="legal.html" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;text-decoration:none;color:var(--text2)">Privacy, terms &amp; disclaimer</a>
@@ -3532,7 +3484,6 @@ function render(){
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
   if(view==='options'){const _wf=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.wl-wi')?[document.activeElement.closest('.wl-wi').id,document.activeElement.dataset.wi]:null;c.innerHTML=renderOptions();wlWhatIfRestore(_wf);leapBrandPaint();fetchOptionMarks(false);}
   if(typeof selPaint==='function')selPaint();
-  if(typeof syncPwaInstallUi==='function')syncPwaInstallUi();
 }
 
 // ════════════════════════════════════════════════════════
@@ -5669,51 +5620,6 @@ function wheelListCells(t,L){
   return r;
 }
 function isPhoneLayout(){return typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(max-width:700px)').matches;}
-let _pwaDeferredPrompt=null;
-function isPwaStandalone(){
-  return (window.matchMedia&&(window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches||window.matchMedia('(display-mode: minimal-ui)').matches))||!!(navigator&&navigator.standalone);
-}
-function isIosSafari(){
-  const ua=navigator.userAgent||'';
-  const iOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  const webkit=/\bWebKit\b/.test(ua);
-  const other=/\b(CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|YaBrowser|GSA)\b/.test(ua);
-  return !!(iOS&&webkit&&!other);
-}
-function syncPwaInstallUi(){
-  const standalone=isPwaStandalone();
-  const canInstall=!standalone&&!!_pwaDeferredPrompt;
-  const showIos=!standalone&&!canInstall&&isIosSafari();
-  const settingsBtn=document.getElementById('settings-install');
-  const settingsTip=document.getElementById('settings-ios-install');
-  const foot=document.getElementById('pwa-foot');
-  const footBtn=document.getElementById('pwa-foot-install');
-  const footTip=document.getElementById('pwa-foot-ios');
-  const tnBtn=document.getElementById('tn-install');
-  if(settingsBtn)settingsBtn.hidden=!canInstall;
-  if(settingsTip)settingsTip.hidden=!showIos;
-  if(footBtn)footBtn.hidden=!canInstall;
-  if(footTip)footTip.hidden=!showIos;
-  if(tnBtn)tnBtn.hidden=!canInstall;
-  if(foot){
-    const show=canInstall||showIos;
-    foot.classList.toggle('pwa-visible', show);
-  }
-}
-async function promptPwaInstall(){
-  if(!_pwaDeferredPrompt)return;
-  const ev=_pwaDeferredPrompt;
-  try{await ev.prompt();}catch(e){}
-  _pwaDeferredPrompt=null;
-  syncPwaInstallUi();
-}
-window.addEventListener('beforeinstallprompt',e=>{_pwaDeferredPrompt=e;syncPwaInstallUi();});
-window.addEventListener('appinstalled',()=>{_pwaDeferredPrompt=null;syncPwaInstallUi();});
-try{
-  const mq=window.matchMedia&&window.matchMedia('(display-mode: standalone)');
-  if(mq&&mq.addEventListener)mq.addEventListener('change',syncPwaInstallUi);
-  else if(mq&&mq.addListener)mq.addListener(syncPwaInstallUi);
-}catch(e){}
 function quoteLiveBadge(sym,open){
   // Presentation only: hide the Live pill when a non-delayed quote is present; show a status when not live.
   if(!open)return`<span class="rot-badge closed">Closed</span>`;
@@ -6530,7 +6436,6 @@ function renderHome(){
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
     <div class="tk-row tk-hd"><span>Ticker</span><span>${today.slice(0,4)}</span><span>All time</span></div>
     ${tpl.map(t=>`<div class="tk-row"><span class="tk-sym">${esc(t.ticker)}</span><span class="tk-year ${cls(t.year)}" data-lbl="${esc(today.slice(0,4))}">${sgn(t.year)}</span><span class="tk-all ${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}</div>`:''}
-  <div id="pwa-foot"><button type="button" class="pwa-install-link" id="pwa-foot-install" hidden>Install app</button><span class="pwa-ios-tip" id="pwa-foot-ios" hidden>Install: tap Share, then Add to Home Screen</span></div>
 </div>`;
 }
 
@@ -7958,7 +7863,7 @@ function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=documen
 function goToHealth(){switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;window.pnlTipShow=pnlTipShow;window.pnlTipHide=pnlTipHide;window.pnlTipHtml=pnlTipHtml;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
-window.addEventListener('resize',()=>{_pnlRedraw();if(view==='log'&&isPhoneLayout())switchView('dash');if(typeof syncPwaInstallUi==='function')syncPwaInstallUi();});
+window.addEventListener('resize',()=>{_pnlRedraw();if(view==='log'&&isPhoneLayout())switchView('dash');});
 
 function renderAnalytics(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();
@@ -8969,7 +8874,6 @@ function showSignOutButton(user){
 }
 
 function openSettings(){
-  if(typeof syncPwaInstallUi==='function')syncPwaInstallUi();
   openModal('mSettings');
   // Sync toggle states
   const toggle=document.getElementById('theme-toggle');
@@ -9336,11 +9240,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (onboardBtn) onboardBtn.addEventListener('click', onboardSubmit);
   const tickerField = document.getElementById('onboard-ticker');
   if (tickerField) tickerField.addEventListener('keydown', e => { if(e.key==='Enter') onboardSubmit(); });
-  syncPwaInstallUi();
 });
 
 window.togglePw = togglePw;
-window.promptPwaInstall = promptPwaInstall;
 window.authTab = authTab;
 window.authSubmit = authSubmit;
 window.authGoogle = authGoogle;
