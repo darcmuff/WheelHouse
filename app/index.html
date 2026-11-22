@@ -498,7 +498,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .a-stat-lbl{font-size:0.675rem;font-weight:720;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
 .a-stat-sub{font-size:0.75rem;color:var(--text3);margin-top:0.25rem}
 .a-chart-box{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:1.125rem 1.25rem;margin-bottom:0.75rem}
-.pc-head{display:flex;align-items:center;flex-wrap:wrap;gap:0.5rem 0.75rem;margin-bottom:0.5rem}.pc-net{font-weight:480;font-size:1rem}.pc-sub{font-size:0.825rem;color:var(--text3)}.pc-sep{width:1px;background:var(--border);margin:0 0.375rem}.pc-box{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:1rem 1.25rem}#health-panel[hidden]{display:none}.pc-hit{fill:transparent;cursor:crosshair}.pc-hit:hover{fill:var(--text);fill-opacity:0.04}.pc-tip{display:none;position:absolute;pointer-events:none;background:var(--bg);border:1px solid var(--border);border-radius:0.375rem;padding:0.375rem 0.625rem;font-size:0.825rem;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:9rem;z-index:5}.pc-btns{margin-left:auto;display:flex;gap:0.25rem}.pc-r{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:0.375rem;padding:0.1875rem 0.5rem;font-size:0.825rem;font-weight:720;cursor:pointer}.pc-r:hover{color:var(--text)}.pc-r.on{background:var(--text);color:var(--bg);border-color:var(--text)}.pc-fs{margin-left:0.375rem}.pc-full{position:fixed;inset:0;z-index:1000;margin:0!important;border-radius:0;background:var(--bg2);padding:1.5rem 2.5rem;overflow:auto}body.pc-lock{overflow:hidden}
+.pc-head{display:flex;align-items:center;flex-wrap:wrap;gap:0.5rem 0.75rem;margin-bottom:0.5rem}.pc-net{font-weight:480;font-size:1rem}.pc-sub{font-size:0.825rem;color:var(--text3)}.pc-sep{width:1px;background:var(--border);margin:0 0.375rem}.pc-box{background:var(--bg2);border:1px solid var(--border);border-radius:0.5rem;padding:1rem 1.25rem}#health-panel[hidden]{display:none}.pc-hit{fill:transparent;cursor:crosshair}.pc-hit:hover{fill:var(--text);fill-opacity:0.04}.pc-tip{position:absolute;left:0;top:0;pointer-events:none;background:var(--bg);border:1px solid var(--border);border-radius:0.375rem;padding:0.375rem 0.625rem;font-size:0.825rem;line-height:1.45;font-variant-numeric:tabular-nums;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:7.5rem;z-index:5;opacity:0;visibility:hidden;transform:translate3d(0,0,0);transition:opacity .12s ease;white-space:nowrap}.pc-tip.on{opacity:1;visibility:visible}.pc-btns{margin-left:auto;display:flex;gap:0.25rem}.pc-r{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:0.375rem;padding:0.1875rem 0.5rem;font-size:0.825rem;font-weight:720;cursor:pointer}.pc-r:hover{color:var(--text)}.pc-r.on{background:var(--text);color:var(--bg);border-color:var(--text)}.pc-fs{margin-left:0.375rem}.pc-full{position:fixed;inset:0;z-index:1000;margin:0!important;border-radius:0;background:var(--bg2);padding:1.5rem 2.5rem;overflow:auto}body.pc-lock{overflow:hidden}
 .mpl-table .num{text-align:right}.mpl-table .mpl-sum td{font-weight:720;border-top:1px solid var(--border)}.mpl-note{font-size:0.825rem;color:var(--text3);padding:0.625rem 0.75rem}
 .t3{color:var(--text3)}.t3-xs{color:var(--text3);font-size:0.75rem}.t3-s{color:var(--text3);font-size:0.825rem}.t2-nw{color:var(--text2);white-space:nowrap}.fw5{font-weight:720}.fs-sm{font-size:0.75rem}.sq-20{width:1.25rem;height:1.25rem}.row-sb{display:flex;justify-content:space-between;align-items:center;padding:0.3125rem 0}.mini-lbl{font-size:0.675rem;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:0.1875rem;font-weight:720}
 @media (max-width:1100px){.d-panel-body{overflow-x:auto}.d-panel-body>.d-table-hdr,.d-panel-body>.d-table-row{min-width:43.75rem}}
@@ -7848,7 +7848,7 @@ function pnlCurveHtml(){
   let bars='';B.buckets.forEach((b,i)=>{const cx=PL+slot*i+slot/2;
     if(b.gain)bars+=`<rect x="${(cx-bw-1).toFixed(1)}" y="${Y(b.gain).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.gain)).toFixed(1)}" rx="2" fill="var(--green)" fill-opacity="0.85"/>`;
     if(b.loss)bars+=`<rect x="${(cx+1).toFixed(1)}" y="${Y(b.loss).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.loss)).toFixed(1)}" rx="2" fill="var(--red)" fill-opacity="0.85"/>`;
-    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-l="${tipLab(b.key)}" data-g="${b.gain}" data-s="${b.loss}" data-n="${b.net}" onmousemove="pnlTip(event,this)" onmouseleave="pnlTip(null)"></rect>`;
+    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-l="${tipLab(b.key)}" data-g="${b.gain}" data-s="${b.loss}" data-n="${b.net}" data-bl="${(cx-bw-1).toFixed(1)}" data-br="${(cx+1+bw).toFixed(1)}"></rect>`;
     if(i%every===0)bars+=`<text x="${cx.toFixed(1)}" y="${H-10}" text-anchor="middle" fill="var(--text3)" font-size="12">${lab(b.key)}</text>`;});
   const col=B.net<0?'var(--red)':'var(--green)';
   const btn=(k,on,fn)=>`<button type="button" class="pc-r${on?' on':''}" onclick="${fn}('${k}')">${k}</button>`;
@@ -7865,16 +7865,86 @@ function pnlCurveHtml(){
     <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg>${_pcEmpty?'<div class="pc-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:0.8125rem;pointer-events:none">Your realised P&amp;L shows here once a trade closes, expires or is assigned.</div>':''}<div class="pc-tip" id="pc-tip"></div></div>
     <div class="a-chart-legend">${_leg}</div>`;
 }
-function pnlTip(e,el){const t=document.getElementById('pc-tip');if(!t)return;if(!e){t.style.display='none';return;}
-  const box=t.parentElement.getBoundingClientRect();
-  const gLab=pnlMeasure==='shares'?'Gains':'Premium collected',lLab=pnlMeasure==='shares'?'Losses':'Loss';
-  t.innerHTML=`<b>${el.dataset.l}</b><div>${gLab} <span class="g">${fmtMoney(+el.dataset.g)}</span></div><div>${lLab} <span class="r">${fmtMoney(-el.dataset.s)}</span></div><div>Net <span class="${+el.dataset.n<0?'r':'g'}">${fmtMoney(+el.dataset.n)}</span></div>`;
-  t.style.display='block';const x=e.clientX-box.left+14;t.style.left=Math.min(x,box.width-170)+'px';t.style.top=Math.max(0,e.clientY-box.top-70)+'px';}
+// Chart tooltip only: selected measure's figures, no P&L math.
+function pnlTipHtml(measure,label,gain,loss,net){
+  const inc=fmtMoney(gain),out=fmtMoney(-loss),nc=net<0?'r':'g',netLine=`<div>Net <span class="${nc}">${fmtMoney(net)}</span></div>`;
+  if(measure==='all')return`<b>${label}</b><div>In <span class="g">${inc}</span></div><div>Out <span class="r">${out}</span></div>${netLine}`;
+  if(measure==='shares')return`<b>${label}</b><div>Gains <span class="g">${inc}</span></div><div>Losses <span class="r">${out}</span></div>${netLine}`;
+  return`<b>${label}</b><div>Premium collected <span class="g">${inc}</span></div><div>Loss <span class="r">${out}</span></div>${netLine}`;
+}
+let _pnlTipEl=null,_pnlTipHideT=0,_pnlTipPt=null,_pnlTipTouchAt=0;
+function _pnlHitEl(n){while(n&&n!==document){if(n.classList&&n.classList.contains('pc-hit'))return n;n=n.parentNode;}return null;}
+function pnlTipHide(){clearTimeout(_pnlTipHideT);_pnlTipEl=null;const t=document.getElementById('pc-tip');if(t)t.classList.remove('on');}
+function pnlTipShow(el){
+  const t=document.getElementById('pc-tip');if(!t||!el)return;
+  clearTimeout(_pnlTipHideT);
+  const html=pnlTipHtml(pnlMeasure||'all',el.dataset.l,+el.dataset.g,+el.dataset.s,+el.dataset.n);
+  if(t._html!==html){t.innerHTML=html;t._html=html;}
+  _pnlTipEl=el;
+  const host=t.parentElement,svg=host&&host.querySelector('svg');if(!host||!svg)return;
+  const box=host.getBoundingClientRect(),svgBox=svg.getBoundingClientRect();
+  const vb=svg.viewBox&&svg.viewBox.baseVal,W=(vb&&vb.width)||svgBox.width,H=(vb&&vb.height)||svgBox.height;
+  const sx=svgBox.width/W,sy=svgBox.height/H,pad=6,gap=10,ox=svgBox.left-box.left,oy=svgBox.top-box.top;
+  const br=(+el.dataset.br)*sx+ox,bl=(+el.dataset.bl)*sx+ox;
+  const plotTop=14*sy+oy;
+  const tw=t.offsetWidth,th=t.offsetHeight;
+  const bars=[...svg.querySelectorAll('rect:not(.pc-hit)')].map(r=>{
+    const x=+r.getAttribute('x'),y=+r.getAttribute('y'),w=+r.getAttribute('width'),h=+r.getAttribute('height');
+    return{l:x*sx+ox,t:y*sy+oy,r:(x+w)*sx+ox,b:(y+h)*sy+oy};
+  }).filter(b=>b.r>b.l+0.5&&b.b>b.t+0.5);
+  const inCard=(x,y)=>x>=pad&&y>=pad&&x+tw<=box.width-pad&&y+th<=box.height-pad;
+  const clear=(x,y)=>inCard(x,y)&&!bars.some(b=>!(x+tw<=b.l-4||x>=b.r+4||y+th<=b.t-4||y>=b.b+4));
+  let x=br+gap,y=plotTop+4,preferRight=x+tw+pad<=box.width;
+  if(!preferRight)x=bl-tw-gap;
+  if(!clear(x,y)){
+    let best=null,bestD=1e9;
+    const maxX=box.width-tw-pad,maxY=box.height-th-pad;
+    for(let yy=pad;yy<=maxY;yy+=6){
+      for(let xx=pad;xx<=maxX;xx+=6){
+        if(!clear(xx,yy))continue;
+        const d=(xx-(preferRight?br+gap:bl-tw-gap))**2+(yy-(plotTop+4))**2;
+        if(d<bestD){bestD=d;best={x:xx,y:yy};}
+      }
+    }
+    if(best){x=best.x;y=best.y;}
+    else{x=Math.max(pad,Math.min(x,maxX));y=Math.max(pad,Math.min(y,maxY));}
+  }
+  t.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+  t.classList.add('on');
+}
+function pnlTip(e,el){if(!e||!el){pnlTipHide();return;}pnlTipShow(el);}
+(function bindPnlTip(){
+  if(typeof document==='undefined'||document._pnlTipBound)return;document._pnlTipBound=true;
+  const isMouse=e=>!e.pointerType||e.pointerType==='mouse'||e.pointerType==='pen';
+  const recentTouch=()=>Date.now()-_pnlTipTouchAt<800;
+  document.addEventListener('pointerover',e=>{
+    if(!isMouse(e)||recentTouch())return;
+    const hit=_pnlHitEl(e.target);if(hit)pnlTipShow(hit);
+  },true);
+  document.addEventListener('pointerout',e=>{
+    if(!isMouse(e)||recentTouch())return;
+    const hit=_pnlHitEl(e.target);if(!hit)return;
+    if(_pnlHitEl(e.relatedTarget))return;
+    clearTimeout(_pnlTipHideT);_pnlTipHideT=setTimeout(()=>{if(_pnlTipEl===hit)pnlTipHide();},80);
+  },true);
+  document.addEventListener('pointerdown',e=>{
+    const hit=_pnlHitEl(e.target);
+    if(isMouse(e)){if(!hit)pnlTipHide();return;}
+    if(hit)_pnlTipPt={x:e.clientX,y:e.clientY,hit};else pnlTipHide();
+  },true);
+  document.addEventListener('pointerup',e=>{
+    if(isMouse(e)||!_pnlTipPt)return;
+    const p=_pnlTipPt;_pnlTipPt=null;_pnlTipTouchAt=Date.now();
+    const hit=_pnlHitEl(e.target);if(!hit||hit!==p.hit)return;
+    if(Math.hypot(e.clientX-p.x,e.clientY-p.y)>10)return;
+    if(_pnlTipEl===hit)pnlTipHide();else pnlTipShow(hit);
+  },true);
+})();
 function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.innerHTML=pnlCurveHtml();}
 function setPnlRange(k){pnlRange=k;_pnlRedraw();}
 function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=document.getElementById('pnl-curve');if(el)el.classList.toggle('pc-full',pnlFull);document.body.classList.toggle('pc-lock',pnlFull);_pnlRedraw();}
 function goToHealth(){switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
-window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;
+window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;window.pnlTipShow=pnlTipShow;window.pnlTipHide=pnlTipHide;window.pnlTipHtml=pnlTipHtml;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
 window.addEventListener('resize',()=>{_pnlRedraw();if(view==='log'&&isPhoneLayout())switchView('dash');if(typeof syncPwaInstallUi==='function')syncPwaInstallUi();});
 

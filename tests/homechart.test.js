@@ -96,3 +96,29 @@ test('Shares & LEAPs chart All-range net matches the Home table All-time figure'
   const allNet = net(S.pnlDailyForMeasure('all', trades, legs, today));
   assert.strictEqual(allNet, Math.round((net(opts) + net(S.pnlDailyForMeasure('shares', trades, legs, today))) * 100) / 100);
 });
+
+test('P&L chart tip is one persistent element, pointer-events none, transform-positioned', () => {
+  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const css = H.match(/\.pc-tip\{[^}]+/)[0];
+  assert.ok(css.includes('pointer-events:none') && css.includes('transform:translate3d') && css.includes('transition:opacity'));
+  assert.ok(!css.includes('display:none'));
+  assert.ok(H.includes('id="pc-tip"') && !H.includes('onmousemove="pnlTip'));
+  assert.ok(extractFn('pnlTipShow').includes('translate3d') && extractFn('pnlTipShow').includes('el.dataset.br'));
+  assert.ok(extractFn('bindPnlTip').includes('pointerup') && extractFn('bindPnlTip').includes('pointerover'));
+});
+test('P&L chart tip shows only the selected measure: All is In and Out', () => {
+  const { extractFn } = require('./extract');
+  const S = new Function(
+    extractFn('fmtMoney') + extractFn('pnlTipHtml') +
+    '\nreturn {pnlTipHtml,fmtMoney};'
+  )();
+  const all = S.pnlTipHtml('all', 'October 2026', 1600, 400, 1200);
+  assert.ok(all.includes('October 2026') && all.includes('In ') && all.includes('Out ') && all.includes('Net '));
+  assert.ok(!all.includes('Premium collected') && !all.includes('Gains') && !all.includes('Wheel') && !all.includes('PMCC') && !all.includes('LEAP') && !all.includes('Shares') && !all.includes('dividend'));
+  const wheel = S.pnlTipHtml('wheel', 'October 2026', 200, 50, 150);
+  assert.ok(wheel.includes('Premium collected') && wheel.includes('Loss ') && !wheel.includes('In ') && !wheel.includes('Gains') && !wheel.includes('PMCC'));
+  const pmcc = S.pnlTipHtml('pmcc', 'October 2026', 100, 20, 80);
+  assert.ok(pmcc.includes('Premium collected') && pmcc.includes('Loss ') && !pmcc.includes('In ') && !pmcc.includes('LEAP') && !pmcc.includes('Shares'));
+  const shares = S.pnlTipHtml('shares', 'October 2026', 500, 1200, -700);
+  assert.ok(shares.includes('Gains') && shares.includes('Losses') && !shares.includes('In ') && !shares.includes('Premium collected') && !shares.includes('Wheel'));
+});
