@@ -1117,12 +1117,17 @@ select,textarea,
 .d-kpi-badge,.d-panel-count,.d-phase,.wc .wl-sl{
   border-radius:6px!important;
 }
-/* Thin #FF5A36 outlines: home overview tiles */
+/* Home overview tiles: grey outlines, orange only on Needs you when it has items */
 .v2-hero.v2-home .hk-grid > .hk {
-  border: 1px solid #FF5A36;
+  border: 1px solid var(--border);
   border-radius: 8px;
   box-sizing: border-box;
   padding: 7px 13px; /* was 8px 14px */
+  box-shadow: 0 1px 2px rgba(17,15,21,.05);
+}
+.v2-hero.v2-home .hk-grid > .hk.hk-need {
+  border-color: #FF5A36;
+  box-shadow: none;
 }
 .hk-nx{cursor:pointer}
 .hk-nx:hover{background:rgba(255,90,54,.07)}
@@ -5863,7 +5868,7 @@ function renderHome(){
     <div class="hk${nx?' hk-nx':''}"${nx?` role="button" tabindex="0" aria-label="Go to next expiry, ${esc(nx.ticker+' '+nx.what)}" data-kind="${esc(nx.kind||'')}" data-id="${esc(nx.id||'')}" data-wid="${esc(nx.wheelId||'')}" data-pid="${esc(nx.parentLeapId||'')}" onclick="goToNextExpiry(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToNextExpiry(this)}"`:''}><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="hk-grid hk-row2">
-    <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p){p.hidden=!p.hidden;_nyOpen=!p.hidden}"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':_pend.length?'':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):_pend.length?_pend.length+' pending':'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':'')+(_pend.length?` · ${_pend.length} pending`:''):_pend.length?'dismissed, not fixed yet':'nothing to do'}</div></div>
+    <div class="hk${(health.length||_pend.length)?' hk-need':''}" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p){p.hidden=!p.hidden;_nyOpen=!p.hidden}"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':_pend.length?'':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):_pend.length?_pend.length+' pending':'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':'')+(_pend.length?` · ${_pend.length} pending`:''):_pend.length?'dismissed, not fixed yet':'nothing to do'}</div></div>
     <div class="hk"><div class="hk-l">Return this month ${ii(`This month's options P&L as a % of ${rs.base==='account'?'your account size':'money at work'}.${rs.target?` Target ${rs.target}%.`:''} Change this with the cog.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':(mr.pct<0?'neg':'')):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'at work'}${rs.target?` · target ${rs.target}%`:''}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
