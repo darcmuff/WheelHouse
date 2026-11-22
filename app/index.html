@@ -1117,17 +1117,36 @@ select,textarea,
 .d-kpi-badge,.d-panel-count,.d-phase,.wc .wl-sl{
   border-radius:6px!important;
 }
-/* Home overview tiles: grey outlines, orange only on Needs you when it has items */
+/* Home overview tiles: slightly darker grey outlines; orange on Needs you, and on clickable tiles while hovered or pressed */
 .v2-hero.v2-home .hk-grid > .hk {
-  border: 1px solid var(--border);
+  border: 1px solid #cfd3da;
   border-radius: 8px;
   box-sizing: border-box;
   padding: 7px 13px; /* was 8px 14px */
   box-shadow: 0 1px 2px rgba(17,15,21,.05);
+  transition: border-color .15s ease;
+}
+[data-theme="dark"] .v2-hero.v2-home .hk-grid > .hk {
+  border-color: #4a4e56;
 }
 .v2-hero.v2-home .hk-grid > .hk.hk-need {
   border-color: #FF5A36;
   box-shadow: none;
+}
+@media (hover:hover) {
+  .v2-hero.v2-home .hk-grid > .hk.hk-nx:hover,
+  .v2-hero.v2-home .hk-grid > .hk[role="button"]:hover,
+  .v2-hero.v2-home .hk-grid > .hk[onclick]:hover,
+  .v2-hero.v2-home .hk-grid > .hk.hk-nx:focus-visible,
+  .v2-hero.v2-home .hk-grid > .hk[role="button"]:focus-visible,
+  .v2-hero.v2-home .hk-grid > .hk[onclick]:focus-visible {
+    border-color: #FF5A36;
+  }
+}
+.v2-hero.v2-home .hk-grid > .hk.hk-nx:active,
+.v2-hero.v2-home .hk-grid > .hk[role="button"]:active,
+.v2-hero.v2-home .hk-grid > .hk[onclick]:active {
+  border-color: #FF5A36;
 }
 .hk-nx{cursor:pointer}
 .hk-nx:hover{background:rgba(255,90,54,.07)}
