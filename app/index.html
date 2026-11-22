@@ -1187,6 +1187,7 @@ select,textarea,
 
 /* Phone layout helpers: hidden on desktop so >700px stays unchanged. */
 .card-more{display:none}
+.wl-leg-ts{display:none}
 .card-acts-inline{display:contents}
 .tr-card{display:none}
 .db-short{display:none}
@@ -1646,6 +1647,15 @@ select,textarea,
   #mTrade .fld:has(#tf-ppd){display:none!important}
   .lcw>.lc-hero .lc-pct{display:none}
 
+  /* Declutter the phone wheel card (display only; desktop unchanged) */
+  .wc>.rot-header .rot-to-strike{display:none!important}
+  .wc .wl-stage-open{display:none!important}
+  .wc .wl-top:has(.wl-stage-open){display:none}
+  .wc .wl-be small{display:none}
+  .wc .wl-cur small{display:none}
+  .wl-leg-ts{display:inline}
+  .tr-card .tr-fees,.tr-card .tr-ppd{display:none!important}
+
   /* Live badge stays on desktop; phone uses .live-phone (quote status) */
   .live-desk{display:none}
   .live-phone{display:inline}
@@ -1662,35 +1672,30 @@ select,textarea,
     background-position:right 8px center;
   }
 
-  /* Phone install footer (hidden unless JS adds .pwa-visible) */
+  /* Install app: in-flow at the bottom of Home, small grey text, no overlay */
   #pwa-foot{display:none}
   #pwa-foot.pwa-visible{
     display:flex;
     align-items:center;
     justify-content:center;
-    position:fixed;
-    left:0;right:0;
-    bottom:calc(5.25rem + env(safe-area-inset-bottom,0px));
-    z-index:59;
-    padding:0.2rem 8px;
-    pointer-events:none;
+    position:static;
+    margin:1rem 0 0.25rem;
+    padding:0.15rem 8px 0.35rem;
   }
   #pwa-foot .pwa-install-link,#pwa-foot .pwa-ios-tip{
-    pointer-events:auto;
     font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
     font-size:0.75rem;
     font-weight:480;
-    color:var(--text2);
+    color:var(--text3);
     background:none;
     border:0;
     border-radius:6px;
-    padding:0.2rem 0.45rem;
+    padding:0.15rem 0.35rem;
     cursor:pointer;
-    text-decoration:underline;
-    text-underline-offset:2px;
+    text-decoration:none;
   }
+  #pwa-foot .pwa-install-link{text-decoration:underline;text-underline-offset:2px}
   #pwa-foot .pwa-ios-tip{cursor:default;text-decoration:none;text-align:center}
-  body.pwa-install-on #content{padding-bottom:calc(5.5rem + 2.25rem)!important}
 }
 
 @media(max-width:480px){
@@ -1902,8 +1907,6 @@ select,textarea,
     </div>
   </header>
   <nav id="tabbar"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheels</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
-  <div id="pwa-foot"><button type="button" class="pwa-install-link" id="pwa-foot-install" hidden>Install app</button><span class="pwa-ios-tip" id="pwa-foot-ios" hidden>Install: tap Share, then Add to Home Screen</span></div>
-
   <!-- CONTENT -->
   <div id="content"></div>
 
@@ -3519,6 +3522,7 @@ function render(){
   if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1></div>`+renderStatsOverview()+renderAnalytics();
   if(view==='options'){const _wf=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.wl-wi')?[document.activeElement.closest('.wl-wi').id,document.activeElement.dataset.wi]:null;c.innerHTML=renderOptions();wlWhatIfRestore(_wf);leapBrandPaint();fetchOptionMarks(false);}
   if(typeof selPaint==='function')selPaint();
+  if(typeof syncPwaInstallUi==='function')syncPwaInstallUi();
 }
 
 // ════════════════════════════════════════════════════════
@@ -5359,7 +5363,7 @@ function renderRotationWindow(wheel){
   const _strike=openLegForDTE?.strike;
   const _pctToStrike=rawP!=null&&_strike?((_strike-rawP)/rawP*100):null; // move needed from current price to reach strike
   const _pctCol='var(--silver)'; // neutral — sign shows which side of the strike; red/green was misleading for CCs
-  const _pctHtml=_pctToStrike!==null?`<span style="font-size:0.825rem;font-weight:480"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:0.75rem;font-weight:480;color:var(--silver)">To Strike</span></span>`:'';
+  const _pctHtml=_pctToStrike!==null?`<span class="rot-to-strike" style="font-size:0.825rem;font-weight:480"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:0.75rem;font-weight:480;color:var(--silver)">To Strike</span></span>`:'';
   const _dteColor='var(--silver)';
   const dteBadge=activeDTE!==null
     ?`<span class="rot-dte-badge" style="color:${_dteColor};border-color:${_dteColor}">${activeDTEExpiry?fmtDateShort(activeDTEExpiry):''} (${activeDTE}d)</span>`
@@ -5406,7 +5410,7 @@ function renderRotationWindow(wheel){
   const _rss=rotationShareStats(wheel,db.trades,_priceOf);
   const _stage=wheelStage(m.sharesHeld,openPos?openPos.action:null,m.trades.some(t=>t.action==='OUT'));
   const _stepNames=['Put','Assigned','Call','Called away'];
-  const _steps=`<div class="wl-steps">${_stepNames.map((n,i)=>`<div class="wl-st${i<_stage?' d':i===_stage?' n':''}"><b></b><span class="wl-sl">${n}</span>${i===_stage&&openPos?`<span class="wl-leg">${openPos.action==='CSP'?'Put':'Call'} $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d</span>`:''}</div>`).join('')}</div>`;
+  const _steps=`<div class="wl-steps">${_stepNames.map((n,i)=>`<div class="wl-st${i<_stage?' d':i===_stage?' n':''}"><b></b><span class="wl-sl">${n}</span>${i===_stage&&openPos?`<span class="wl-leg">${openPos.action==='CSP'?'Put':'Call'} $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d<span class="wl-leg-ts">${_pctToStrike!=null?` · ${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}% to strike`:''}</span></span>`:''}</div>`).join('')}</div>`;
   const _fact=(l,v,c='')=>`<div class="wl-f"><span>${l}</span><b class="${c}">${v}</b></div>`;
   const _divs=m.trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0);
   const _cs=wheelCardSummary({sharesHeld:m.sharesHeld,breakeven:m.breakeven,openShares:_rss.openShares,openCost:_rss.openCost,openPos,premiumNet:m.premiumRealised,sharesRealised:_rss.realised,divs:_divs,closed:!isOpen});
@@ -5435,7 +5439,7 @@ function renderRotationWindow(wheel){
   // Part-covered shares: held minus shares under open covered calls (skipped if any call has no share count)
   const _idle=(()=>{if(_stage!==2||!isOpen||!(m.sharesHeld>0))return 0;const calls=openOptionLegs(m.trades).filter(o=>o.action==='STOC');if(!calls.length||calls.some(o=>!(o._rem>0)&&!Number(o.shares)))return 0;const cov=calls.reduce((a,o)=>a+(o._rem>0?o._rem:Number(o.shares)),0);return Math.max(0,m.sharesHeld-cov);})();
   const wheelCardBody=`<div class="wl-body">
-    <div class="wl-top"><span class="wl-stage">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')+(_idle>0?` · ${_idle} shares idle`:'')}</span>${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}" data-exps="${esc((isOpen?openOptionLegs(m.trades):[]).filter(o=>o.expiry).map(o=>o.expiry).join(','))}">${earningsBadge(wheel.ticker,(isOpen?openOptionLegs(m.trades):[]).map(o=>o.expiry).filter(Boolean))}</span>`):''}</div>
+    <div class="wl-top"><span class="wl-stage${(_stage===0&&!openPos)||_stage===1||_idle>0?'':' wl-stage-open'}">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')+(_idle>0?` · ${_idle} shares idle`:'')}</span>${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}" data-exps="${esc((isOpen?openOptionLegs(m.trades):[]).filter(o=>o.expiry).map(o=>o.expiry).join(','))}">${earningsBadge(wheel.ticker,(isOpen?openOptionLegs(m.trades):[]).map(o=>o.expiry).filter(Boolean))}</span>`):''}</div>
     ${_steps}${_memo}
     <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
   </div>`;
@@ -5682,14 +5686,6 @@ function syncPwaInstallUi(){
   if(foot){
     const show=canInstall||showIos;
     foot.classList.toggle('pwa-visible', show);
-    document.body.classList.toggle('pwa-install-on', show && isPhoneLayout());
-    const tab=document.getElementById('tabbar');
-    if(show&&tab){
-      const h=Math.ceil(tab.getBoundingClientRect().height);
-      foot.style.bottom=(h+2)+'px';
-    }else{
-      foot.style.bottom='';
-    }
   }
 }
 async function promptPwaInstall(){
@@ -6522,6 +6518,7 @@ function renderHome(){
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
     <div class="tk-row tk-hd"><span>Ticker</span><span>${today.slice(0,4)}</span><span>All time</span></div>
     ${tpl.map(t=>`<div class="tk-row"><span class="tk-sym">${esc(t.ticker)}</span><span class="tk-year ${cls(t.year)}" data-lbl="${esc(today.slice(0,4))}">${sgn(t.year)}</span><span class="tk-all ${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}</div>`:''}
+  <div id="pwa-foot"><button type="button" class="pwa-install-link" id="pwa-foot-install" hidden>Install app</button><span class="pwa-ios-tip" id="pwa-foot-ios" hidden>Install: tap Share, then Add to Home Screen</span></div>
 </div>`;
 }
 
