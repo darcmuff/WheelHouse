@@ -3,7 +3,16 @@ const A=path.join(__dirname,'..','app');const L=fs.readFileSync(path.join(A,'lan
 const{analyticsTag,countEvent}=require('../app/analytics.js');
 test('root shows the landing page; /app/ and /index.html are the app',()=>{assert.ok(/^\/\s+\/landing\.html\s+200!$/m.test(R));assert.ok(/^\/app\s+\/index\.html\s+200$/m.test(R)&&/^\/app\/\*\s+\/index\.html\s+200$/m.test(R));assert.ok(!/301/.test(R.replace(/^#.*$/mg,'')),'no slash redirect loop');
   const h=fs.readFileSync(path.join(A,'index.html'),'utf8');assert.ok(h.includes('<base href="/">'));});
-test('installed app and returning users skip the landing page',()=>{assert.ok(L.includes("display-mode: standalone")&&L.includes("'wh-view'")&&L.includes("location.replace('/app/'"));assert.ok(L.indexOf('location.replace')<L.indexOf('<style>'),'redirect runs before anything renders');});
+test('installed app and returning users skip the landing page',()=>{assert.ok(L.includes("display-mode: standalone")&&L.includes("'wh-view'")&&L.includes("location.replace('/app/'"));assert.ok(L.indexOf('location.replace')<L.indexOf('<style>'),'redirect runs before anything renders');assert.ok(L.includes("ot-open-app=1")&&L.includes("document.cookie"),'fallback redirect sets the cookie');});
+test('returning visits to / are rewritten to the app in one document load',()=>{
+  const edge=fs.readFileSync(path.join(__dirname,'..','netlify/edge-functions/open-app.js'),'utf8');
+  const toml=fs.readFileSync(path.join(__dirname,'..','netlify.toml'),'utf8');
+  const h=fs.readFileSync(path.join(A,'index.html'),'utf8');
+  assert.ok(edge.includes("cookies.get('ot-open-app')")&&edge.includes("context.rewrite('/index.html')")&&edge.includes("searchParams.has('home')"));
+  assert.ok(toml.includes('open-app')&&toml.includes('path = "/"'));
+  assert.ok(h.includes("ot-open-app=1")&&h.includes("history.replaceState(null,'','/app/'"));
+  assert.ok(!h.includes("location.replace('/app/'")||h.indexOf("history.replaceState(null,'','/app/'")>0);
+});
 test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');});
 test('landing leads with the USPs, top three first, then the rest, plans, not financial advice, CTAs, no hype',()=>{
   const i=id=>L.indexOf('id="'+id+'"');assert.ok(i('usp-broker')>0&&i('usp-broker')<i('usp-honest')&&i('usp-honest')<i('usp-smartscan')&&i('usp-smartscan')<i('plans'),'USP order');

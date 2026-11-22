@@ -9,7 +9,10 @@
   if(/[?&]home\b/.test(location.search))return;
   var standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
   var returning=['wh-view','wh-theme','wh-dateFmt','wheel_tracker_v7'].some(function(k){return localStorage.getItem(k)!==null;});
-  if(standalone||returning)location.replace('/app/'+location.search+location.hash);
+  if(standalone||returning){
+    document.cookie='ot-open-app=1; Path=/; Max-Age=31536000; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');
+    location.replace('/app/'+location.search+location.hash);
+  }
 }catch(e){}})();
 </script>
 <title>OpTrack: Options Wheel Tracker</title>

@@ -2289,6 +2289,13 @@ function themeFromStored(v){return v==='dark'?'dark':'light';}
     window.location.replace('https://optrack.app/app/');
     return;
   }
+  // Returning visits: remember to open the app, and if this HTML was served at / (cookie rewrite), show /app/ without a second load.
+  try{
+    document.cookie='ot-open-app=1; Path=/; Max-Age=31536000; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');
+    if((location.pathname==='/'||location.pathname==='')&&!/[?&]home(?:&|=|$)/.test(location.search)){
+      history.replaceState(null,'','/app/'+location.search+location.hash);
+    }
+  }catch(e){}
   // Restore theme preference
   // Stored 'wh-theme' keeps its old meaning: 'light' → light, 'dark' → dark. Nothing stored → light (new default). Read-only.
   var theme=localStorage.getItem('wh-theme');
@@ -9438,7 +9445,7 @@ window.hideXpop = hideXpop;
 // (offline / CDN blocked), show a plain message with Retry instead of a misleading sign-in form.
 setTimeout(function(){if(window._authResolved)return;var t=document.getElementById('loading-text');if(t)t.innerHTML='Still connecting… check your connection. <a href="#" onclick="location.reload();return false" style="color:inherit;text-decoration:underline">Retry</a>';},15000);
 </script>
-<!-- Register the offline service worker. sw-update.js reloads a fresh open onto the new version and never shows a banner. -->
+<!-- Register the offline service worker. sw-update.js activates a new worker silently: no reload, no banner. -->
 <script src="sw-update.js"></script>
 </body>
 </html>
