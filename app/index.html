@@ -1124,6 +1124,13 @@ select,textarea,
   box-sizing: border-box;
   padding: 7px 13px; /* was 8px 14px */
 }
+.hk-nx{cursor:pointer}
+.hk-nx:hover{background:rgba(255,90,54,.07)}
+.hk-nx:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+@keyframes nx-flash{0%{box-shadow:inset 0 0 0 2px var(--orange),0 0 0 6px rgba(255,90,54,.22)}100%{box-shadow:inset 0 0 0 2px transparent,0 0 0 0 transparent}}
+.nx-flash{animation:nx-flash 1.5s ease-out}
+.pc-measure{font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-weight:480;font-size:0.825rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);padding:0.1875rem 0.45rem;cursor:pointer;margin:0;flex:0 0 auto}
+
 /* LEAP cards match wheel cards: no orange outline, expanded or collapsed. */
 .leap-card.lcw {
   border: 0 !important;
@@ -2867,6 +2874,7 @@ function _revealWheel(wheelId){
   if(w.status==='closed'&&!showClosed)showClosed=true;
   if(hidden.has(wheelId)&&!showHidden)showHidden=true;
   minimised.delete(wheelId);
+  collapsedWheels.delete(wheelId);
   expanded.add(wheelId);
   _saveUIState();
 }
@@ -2885,6 +2893,41 @@ function goToTrade(wheelId,tradeId){
   setTimeout(()=>{
     const row=document.querySelector(`[data-tid="${tradeId}"]`);
     if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
+  },80);
+}
+function _flashTrade(el){
+  if(!el)return;
+  el.classList.remove('nx-flash');
+  void el.offsetWidth;
+  el.classList.add('nx-flash');
+  setTimeout(()=>el.classList.remove('nx-flash'),1600);
+}
+function goToNextExpiry(el){
+  if(!el)return;
+  const kind=el.dataset.kind,id=el.dataset.id,wid=el.dataset.wid,pid=el.dataset.pid;
+  if(kind==='wheel'){
+    if(wid){listShowAll.add(wid);_revealWheel(wid);}
+    switchView('positions');
+    setTimeout(()=>{
+      const row=id&&document.querySelector('[data-tid="'+CSS.escape(id)+'"]');
+      const card=wid&&document.getElementById('rw-'+wid);
+      const t=row||card;
+      if(t){t.scrollIntoView({behavior:'smooth',block:row?'center':'start'});_flashTrade(t);}
+    },80);
+    return;
+  }
+  const L=(db.opts||[]).find(x=>x.id===id);
+  const cardId=pid||(L&&L.parentLeapId)||id;
+  if(cardId){collapsedLeaps.delete(cardId);listShowAll.add(cardId);}
+  if(L&&L.status!=='open')showClosedLeaps=true;
+  if(cardId&&hiddenLeaps.has(cardId)&&!showHiddenLeaps)showHiddenLeaps=true;
+  _saveUIState();
+  switchView('options');
+  setTimeout(()=>{
+    const row=id&&(document.querySelector('[data-pmid="'+CSS.escape(id+':sto')+'"]')||document.querySelector('[data-pmid^="'+CSS.escape(id)+':"]'));
+    const card=cardId&&document.querySelector('[data-leap="'+CSS.escape(cardId)+'"]');
+    const t=row||card;
+    if(t){t.scrollIntoView({behavior:'smooth',block:row?'center':'start'});_flashTrade(t);}
   },80);
 }
 // Clear the sticky highlight once an action lands on the focused trade (save, delete, expire)
@@ -5784,8 +5827,8 @@ function homeFigures(rows,today){
 }
 // Pure: soonest open expiry across wheel legs [{ticker,strike,type,expiry}] and open option legs.
 function nextExpiry(wheelLegs,legs,today){
-  const all=[...(wheelLegs||[]).map(l=>({ticker:l.ticker,what:(l.action==='CSP'?'put':'call')+' $'+(+l.strike||0),expiry:l.expiry})),
-    ...(legs||[]).filter(l=>l.status==='open'&&l.expiry).map(l=>({ticker:l.underlying||l.und||l.ticker||'',what:(l.side==='long'?'LEAP':'call')+' $'+(+l.strike||0),expiry:l.expiry}))]
+  const all=[...(wheelLegs||[]).map(l=>({kind:'wheel',id:l.id,wheelId:l.wheelId,ticker:l.ticker,what:(l.action==='CSP'?'put':'call')+' $'+(+l.strike||0),expiry:l.expiry})),
+    ...(legs||[]).filter(l=>l.status==='open'&&l.expiry).map(l=>({kind:'leap',id:l.id,parentLeapId:l.parentLeapId||null,ticker:l.underlying||l.und||l.ticker||'',what:(l.side==='long'?'LEAP':'call')+' $'+(+l.strike||0),expiry:l.expiry}))]
     .filter(x=>x.expiry&&x.expiry>=today).sort((a,b)=>a.expiry.localeCompare(b.expiry));
   if(!all.length)return null;
   const d=Math.round((new Date(all[0].expiry+'T12:00:00')-new Date(today+'T12:00:00'))/864e5);
@@ -5817,7 +5860,7 @@ function renderHome(){
     <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price, plus premium on open wheel options.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Open premium ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}</div></div>
     <div class="hk hk-rel"><button type="button" class="hk-cog" aria-label="Return settings" title="Account size and monthly target" onclick="event.stopPropagation();openRetCfg(this)"><svg width="16" height="16" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button><div class="hk-l">${caw.pct!=null?'Account size':'Capital at work'} ${ii(caw.pct!=null?`The account size you set in Settings. The line below shows how much of it is tied up in open puts, shares and LEAPs.`:`Open put collateral, open shares and open LEAP cost. Return this month uses this figure.`)}</div><div class="hk-v">${caw.pct!=null?fmtMoney(rs.account).replace(/\.\d\d$/,''):fmtMoney(caw.total).replace(/\.\d\d$/,'')}</div><div class="hk-s">${caw.pct!=null?`${fmtMoney(caw.total).replace(/\.\d\d$/,'')} at work (${caw.pct.toFixed(0)}%) · Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`:`Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`}</div></div>
     <div class="hk"><div class="hk-l">Win rate ${ii(`Closed sold options only, incl. PMCC calls. A win kept the premium or was bought back cheaper. Open options don’t count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
-    <div class="hk"><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
+    <div class="hk${nx?' hk-nx':''}"${nx?` role="button" tabindex="0" aria-label="Go to next expiry, ${esc(nx.ticker+' '+nx.what)}" data-kind="${esc(nx.kind||'')}" data-id="${esc(nx.id||'')}" data-wid="${esc(nx.wheelId||'')}" data-pid="${esc(nx.parentLeapId||'')}" onclick="goToNextExpiry(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToNextExpiry(this)}"`:''}><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="hk-grid hk-row2">
     <div class="hk" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p){p.hidden=!p.hidden;_nyOpen=!p.hidden}"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':_pend.length?'':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):_pend.length?_pend.length+' pending':'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':'')+(_pend.length?` · ${_pend.length} pending`:''):_pend.length?'dismissed, not fixed yet':'nothing to do'}</div></div>
@@ -7104,14 +7147,29 @@ function pnlBuckets(daily,range,gran,today){
   return{start,end:today,gran,buckets,gain:Math.round(tot.gain*100)/100,loss:Math.round(tot.loss*100)/100,net:Math.round((tot.gain-tot.loss)*100)/100};
 }
 let pnlRange='All',pnlFull=false;
+const PNL_MEASURES=[['pnl','Options P&L'],['premium','Premium collected'],['closed','Closed P&L']];
+function _loadPnlMeasure(){try{const v=localStorage.getItem('optrack-pnl-measure');if(PNL_MEASURES.some(m=>m[0]===v))return v;}catch(e){}return 'pnl';}
+let pnlMeasure=_loadPnlMeasure();
+function setPnlMeasure(k){if(!PNL_MEASURES.some(m=>m[0]===k))return;pnlMeasure=k;try{localStorage.setItem('optrack-pnl-measure',k);}catch(e){}_pnlRedraw();}
 function pnlCurveHtml(){
   const today=new Date().toISOString().slice(0,10);
   const B=pnlBuckets(realisedDaily(db.trades,db.opts||[],today),pnlRange,null,today); // granularity follows the range
   const el=typeof document!=='undefined'&&document.getElementById('pnl-curve');
   const W=pnlFull?Math.max(600,window.innerWidth-96):Math.max(600,(el&&el.clientWidth?el.clientWidth-40:1100)),H=pnlFull?Math.max(320,window.innerHeight-170):380;
   const PL=60,PR=14,PT=14,PB=30,cw=W-PL-PR,ch=H-PT-PB,n=Math.max(1,B.buckets.length);
-  const _pcEmpty=!B.buckets.some(b=>b.gain||b.loss);const mx=_pcEmpty?100:Math.max(1,...B.buckets.map(b=>Math.max(b.gain,b.loss))),mn=0,rg=mx; // empty: a tidy $0–$100 scale instead of $0,$0,$1,$1 // both bars rise from zero
-  const Y=v=>PT+(mx-v)/rg*ch,y0=Y(0),slot=cw/n,bw=Math.max(1,Math.min(28,slot*0.36));
+  const _pcEmpty=!B.buckets.some(b=>b.gain||b.loss);
+  const _m=pnlMeasure||'pnl';
+  let mx,mn,rg,bw;
+  if(_m==='closed'){
+    const nets=B.buckets.map(b=>b.net);
+    mx=_pcEmpty?100:Math.max(1,...nets,0);mn=_pcEmpty?0:Math.min(0,...nets);rg=mx-mn||1;
+  }else if(_m==='premium'){
+    mx=_pcEmpty?100:Math.max(1,...B.buckets.map(b=>b.gain));mn=0;rg=mx;
+  }else{
+    mx=_pcEmpty?100:Math.max(1,...B.buckets.map(b=>Math.max(b.gain,b.loss)));mn=0;rg=mx; // empty: a tidy $0–$100 scale instead of $0,$0,$1,$1 // both bars rise from zero
+  }
+  const Y=v=>PT+(mx-v)/rg*ch,y0=Y(0),slot=cw/n;
+  bw=Math.max(1,Math.min(28,_m==='pnl'?slot*0.36:slot*0.5));
   const raw=rg/5,m=Math.pow(10,Math.floor(Math.log10(raw))),step=[1,2,5,10].map(k=>k*m).find(k=>k>=raw)||m*10;
   const money=v=>(v<0?'-':'')+'$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1).replace(/\.0$/,'')+'k':Math.round(Math.abs(v)));
   let grid='';for(let v=Math.ceil(mn/step)*step;v<=mx+1e-9;v+=step){const y=Y(v).toFixed(1);grid+=`<line x1="${PL}" x2="${W-PR}" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width="1"${Math.abs(v)<1e-9?'':' stroke-dasharray="2 4"'}/><text x="${PL-8}" y="${+y+3}" text-anchor="end" fill="var(--text3)" font-size="12">${money(v)}</text>`;}
@@ -7119,27 +7177,47 @@ function pnlCurveHtml(){
   const every=Math.max(1,Math.ceil(n/(cw/70)));
   const tipLab=k=>B.gran==='Week'?'Week of '+lab(k):B.gran==='Month'?new Date(k+'T12:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'}):new Date(k+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   let bars='';B.buckets.forEach((b,i)=>{const cx=PL+slot*i+slot/2;
-    if(b.gain)bars+=`<rect x="${(cx-bw-1).toFixed(1)}" y="${Y(b.gain).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.gain)).toFixed(1)}" rx="2" fill="var(--green)" fill-opacity="0.85"/>`;
-    if(b.loss)bars+=`<rect x="${(cx+1).toFixed(1)}" y="${Y(b.loss).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.loss)).toFixed(1)}" rx="2" fill="var(--red)" fill-opacity="0.85"/>`;
-    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-l="${tipLab(b.key)}" data-g="${b.gain}" data-s="${b.loss}" data-n="${b.net}" onmousemove="pnlTip(event,this)" onmouseleave="pnlTip(null)"></rect>`;
+    if(_m==='premium'){
+      if(b.gain)bars+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${Y(b.gain).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.gain)).toFixed(1)}" rx="2" fill="var(--green)" fill-opacity="0.85"/>`;
+    }else if(_m==='closed'){
+      if(b.net){const up=b.net>=0;bars+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${(up?Y(b.net):y0).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y0-Y(b.net))).toFixed(1)}" rx="2" fill="${up?'var(--green)':'var(--red)'}" fill-opacity="0.85"/>`;}
+    }else{
+      if(b.gain)bars+=`<rect x="${(cx-bw-1).toFixed(1)}" y="${Y(b.gain).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.gain)).toFixed(1)}" rx="2" fill="var(--green)" fill-opacity="0.85"/>`;
+      if(b.loss)bars+=`<rect x="${(cx+1).toFixed(1)}" y="${Y(b.loss).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.loss)).toFixed(1)}" rx="2" fill="var(--red)" fill-opacity="0.85"/>`;
+    }
+    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-m="${_m}" data-l="${tipLab(b.key)}" data-g="${b.gain}" data-s="${b.loss}" data-n="${b.net}" onmousemove="pnlTip(event,this)" onmouseleave="pnlTip(null)"></rect>`;
     if(i%every===0)bars+=`<text x="${cx.toFixed(1)}" y="${H-10}" text-anchor="middle" fill="var(--text3)" font-size="12">${lab(b.key)}</text>`;});
-  const col=B.net<0?'var(--red)':'var(--green)';
+  const _fig=_m==='premium'?B.gain:B.net;
+  const col=_fig<0?'var(--red)':'var(--green)';
   const btn=(k,on,fn)=>`<button type="button" class="pc-r${on?' on':''}" onclick="${fn}('${k}')">${k}</button>`;
-  return`<div class="pc-head"><div class="a-chart-title" style="margin:0">Options P&amp;L ${ii('Options only, realised, matching the Monthly P&L table: wheel puts and calls plus PMCC short calls, on the day they closed, expired or were assigned. Green = premium collected, red = buyback costs. Share sales, dividends and closed LEAPs are in Shares & LEAPs P&L. Open options are not included. Hover a bar for that period.')}</div>
-    <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span><span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> collected · <span class="r">${fmtMoney(-B.loss)}</span> loss</span>
+  const _mt=PNL_MEASURES.find(x=>x[0]===_m)||PNL_MEASURES[0];
+  const _tips={pnl:'Options only, realised, matching the Monthly P&L table: wheel puts and calls plus PMCC short calls, on the day they closed, expired or were assigned. Green = premium collected, red = buyback costs. Share sales, dividends and closed LEAPs are in Shares & LEAPs P&L. Open options are not included. Hover a bar for that period.',
+    premium:'The green series already on Options P&L: realised premium collected in each period. Buyback losses are not deducted. Same source as the Monthly P&L options figures.',
+    closed:'Net options P&L in each period (premium collected minus buyback losses), the same net already shown on Options P&L. One bar per period, green when the period is a gain and red when it is a loss.'};
+  const _sub=_m==='pnl'?`<span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> collected · <span class="r">${fmtMoney(-B.loss)}</span> loss</span>`:'';
+  const _leg=_m==='premium'?`<div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Premium collected</div>`
+    :_m==='closed'?`<div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Gain</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div>`
+    :`<div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Premium collected</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div>`;
+  return`<div class="pc-head"><div class="a-chart-title" style="margin:0">${esc(_mt[1])} ${ii(_tips[_m]||_tips.pnl)}</div>
+    <select class="pc-measure" aria-label="Chart measure" onchange="setPnlMeasure(this.value)">${PNL_MEASURES.map(([k,l])=>`<option value="${k}"${k===_m?' selected':''}>${l}</option>`).join('')}</select>
+    <span class="pc-net" style="color:${col}">${_fig>0?'+':''}${fmtMoney(_fig)}</span>${_sub}
     <div class="pc-btns">${PNL_RANGES.map(([k])=>btn(k,k===pnlRange,'setPnlRange')).join('')}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
     <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg>${_pcEmpty?'<div class="pc-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:0.8125rem;pointer-events:none">Your realised P&amp;L shows here once a trade closes, expires or is assigned.</div>':''}<div class="pc-tip" id="pc-tip"></div></div>
-    <div class="a-chart-legend"><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Premium collected</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div></div>`;
+    <div class="a-chart-legend">${_leg}</div>`;
 }
 function pnlTip(e,el){const t=document.getElementById('pc-tip');if(!t)return;if(!e){t.style.display='none';return;}
   const box=t.parentElement.getBoundingClientRect();
-  t.innerHTML=`<b>${el.dataset.l}</b><div>Premium collected <span class="g">${fmtMoney(+el.dataset.g)}</span></div><div>Loss <span class="r">${fmtMoney(-el.dataset.s)}</span></div><div>Net <span class="${+el.dataset.n<0?'r':'g'}">${fmtMoney(+el.dataset.n)}</span></div>`;
+  const m=el.dataset.m||'pnl';
+  const net=`<div>Net <span class="${+el.dataset.n<0?'r':'g'}">${fmtMoney(+el.dataset.n)}</span></div>`;
+  t.innerHTML=m==='premium'?`<b>${el.dataset.l}</b><div>Premium collected <span class="g">${fmtMoney(+el.dataset.g)}</span></div>`
+    :m==='closed'?`<b>${el.dataset.l}</b>${net}`
+    :`<b>${el.dataset.l}</b><div>Premium collected <span class="g">${fmtMoney(+el.dataset.g)}</span></div><div>Loss <span class="r">${fmtMoney(-el.dataset.s)}</span></div>${net}`;
   t.style.display='block';const x=e.clientX-box.left+14;t.style.left=Math.min(x,box.width-170)+'px';t.style.top=Math.max(0,e.clientY-box.top-70)+'px';}
 function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.innerHTML=pnlCurveHtml();}
 function setPnlRange(k){pnlRange=k;_pnlRedraw();}
 function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=document.getElementById('pnl-curve');if(el)el.classList.toggle('pc-full',pnlFull);document.body.classList.toggle('pc-lock',pnlFull);_pnlRedraw();}
 function goToHealth(){switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
-window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;
+window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
 window.addEventListener('resize',()=>_pnlRedraw());
 
@@ -8595,7 +8673,7 @@ window.closeSortMenu = closeSortMenu;
 window.openEditTrade = openEditTrade;
 window.saveWheelCurrentPrice = saveWheelCurrentPrice;
 window.saveOptCurrentPrice = saveOptCurrentPrice;
-window.goToTrade = goToTrade;
+window.goToTrade = goToTrade; window.goToNextExpiry = goToNextExpiry;
 window.goToWheel = goToWheel; // module-scope rule: inline handlers need window exposure
 window.sortLog = sortLog;
 window.openAddTrade = openAddTrade;

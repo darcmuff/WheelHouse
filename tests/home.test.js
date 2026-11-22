@@ -50,3 +50,30 @@ test('LEAP payback bar is the share of cost won back by calls, 0–100', () => {
   assert.strictEqual(leapPayback(15000, -200).pct, 0);
   assert.strictEqual(leapPayback(1000, 5000).pct, 100);
 });
+
+test('next expiry passes through trade identity without changing the pick', () => {
+  const nx = S.nextExpiry(
+    [{ id: 'w1', wheelId: 'wh', ticker: 'TSLA', action: 'CSP', strike: 300, expiry: '2026-12-18' }],
+    [{ id: 'n1', status: 'open', side: 'short', und: 'NVDA', strike: 190, expiry: '2026-10-31' }, { id: 'x', status: 'closed', expiry: '2026-10-24' }],
+    '2026-10-23');
+  assert.strictEqual(nx.ticker, 'NVDA');
+  assert.strictEqual(nx.dte, 8);
+  assert.strictEqual(nx.kind, 'leap');
+  assert.strictEqual(nx.id, 'n1');
+  const wheel = S.nextExpiry(
+    [{ id: 'w1', wheelId: 'wh', ticker: 'AMD', action: 'CSP', strike: 150, expiry: '2026-10-30' }],
+    [{ id: 'n1', status: 'open', side: 'short', und: 'NVDA', strike: 190, expiry: '2026-11-20' }],
+    '2026-10-23');
+  assert.strictEqual(wheel.ticker, 'AMD');
+  assert.strictEqual(wheel.kind, 'wheel');
+  assert.strictEqual(wheel.id, 'w1');
+  assert.strictEqual(wheel.wheelId, 'wh');
+  assert.strictEqual(wheel.what, 'put $150');
+});
+test('Next expiry tile is clickable and keyboard-accessible when a trade exists', () => {
+  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const home = extractFn('renderHome');
+  assert.ok(home.includes('hk-nx') && home.includes('goToNextExpiry(this)') && home.includes('role="button"') && home.includes('tabindex="0"'));
+  assert.ok(H.includes('function goToNextExpiry') && H.includes('_flashTrade') && H.includes('nx-flash'));
+  assert.ok(/animation:\s*nx-flash 1\.5s/.test(H) || /nx-flash 1\.5s/.test(H));
+});
