@@ -7173,9 +7173,8 @@ function pnlCurveHtml(){
   const el=typeof document!=='undefined'&&document.getElementById('pnl-curve');
   const W=pnlFull?Math.max(600,window.innerWidth-96):Math.max(600,(el&&el.clientWidth?el.clientWidth-40:1100)),H=pnlFull?Math.max(320,window.innerHeight-170):380;
   const PL=60,PR=14,PT=14,PB=30,cw=W-PL-PR,ch=H-PT-PB,n=Math.max(1,B.buckets.length);
-  const _pcEmpty=!B.buckets.some(b=>b.net);const nets=B.buckets.map(b=>b.net);
-  const mx=_pcEmpty?100:Math.max(1,...nets,0),mn=_pcEmpty?0:Math.min(0,...nets),rg=mx-mn||1; // empty: a tidy $0–$100 scale; net bars rise above or fall below zero
-  const Y=v=>PT+(mx-v)/rg*ch,y0=Y(0),slot=cw/n,bw=Math.max(1,Math.min(28,slot*0.5));
+  const _pcEmpty=!B.buckets.some(b=>b.gain||b.loss);const mx=_pcEmpty?100:Math.max(1,...B.buckets.map(b=>Math.max(b.gain,b.loss))),mn=0,rg=mx; // empty: a tidy $0–$100 scale instead of $0,$0,$1,$1 // both bars rise from zero
+  const Y=v=>PT+(mx-v)/rg*ch,y0=Y(0),slot=cw/n,bw=Math.max(1,Math.min(28,slot*0.36));
   const raw=rg/5,m=Math.pow(10,Math.floor(Math.log10(raw))),step=[1,2,5,10].map(k=>k*m).find(k=>k>=raw)||m*10;
   const money=v=>(v<0?'-':'')+'$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1).replace(/\.0$/,'')+'k':Math.round(Math.abs(v)));
   let grid='';for(let v=Math.ceil(mn/step)*step;v<=mx+1e-9;v+=step){const y=Y(v).toFixed(1);grid+=`<line x1="${PL}" x2="${W-PR}" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width="1"${Math.abs(v)<1e-9?'':' stroke-dasharray="2 4"'}/><text x="${PL-8}" y="${+y+3}" text-anchor="end" fill="var(--text3)" font-size="12">${money(v)}</text>`;}
@@ -7183,25 +7182,29 @@ function pnlCurveHtml(){
   const every=Math.max(1,Math.ceil(n/(cw/70)));
   const tipLab=k=>B.gran==='Week'?'Week of '+lab(k):B.gran==='Month'?new Date(k+'T12:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'}):new Date(k+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   let bars='';B.buckets.forEach((b,i)=>{const cx=PL+slot*i+slot/2;
-    if(b.net){const up=b.net>=0;bars+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${(up?Y(b.net):y0).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y0-Y(b.net))).toFixed(1)}" rx="2" fill="${up?'var(--green)':'var(--red)'}" fill-opacity="0.85"/>`;}
-    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-l="${tipLab(b.key)}" data-n="${b.net}" onmousemove="pnlTip(event,this)" onmouseleave="pnlTip(null)"></rect>`;
+    if(b.gain)bars+=`<rect x="${(cx-bw-1).toFixed(1)}" y="${Y(b.gain).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.gain)).toFixed(1)}" rx="2" fill="var(--green)" fill-opacity="0.85"/>`;
+    if(b.loss)bars+=`<rect x="${(cx+1).toFixed(1)}" y="${Y(b.loss).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.loss)).toFixed(1)}" rx="2" fill="var(--red)" fill-opacity="0.85"/>`;
+    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-l="${tipLab(b.key)}" data-g="${b.gain}" data-s="${b.loss}" data-n="${b.net}" onmousemove="pnlTip(event,this)" onmouseleave="pnlTip(null)"></rect>`;
     if(i%every===0)bars+=`<text x="${cx.toFixed(1)}" y="${H-10}" text-anchor="middle" fill="var(--text3)" font-size="12">${lab(b.key)}</text>`;});
   const col=B.net<0?'var(--red)':'var(--green)';
   const btn=(k,on,fn)=>`<button type="button" class="pc-r${on?' on':''}" onclick="${fn}('${k}')">${k}</button>`;
-  const _tips={all:'Options only, realised, matching the Monthly P&L table: wheel puts and calls plus PMCC short calls, on the day they closed, expired or were assigned. One bar per period is the net. Green = profit, red = loss. Share sales, dividends and closed LEAPs are in Shares & LEAPs P&L. Open options are not included. Hover a bar for that period.',
-    wheel:'The wheel share of that same Options P&L: realised net on wheel puts and calls only. PMCC short calls are in PMCC calls. Open options are not included.',
-    pmcc:'The PMCC short-call share of that same Options P&L: realised net on PMCC short calls. Closed long LEAPs stay in Shares & LEAPs P&L. Open options are not included.',
-    shares:'The same realised figures as the Shares & LEAPs P&L table: each share sale (called away or sold) matched first in, first out against what those shares cost, dividends, and each long LEAP when it is sold or expires. One bar per period is the net. Green = profit, red = loss. Booked on the day it closed.'};
-  const _leg=`<div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>Profit</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>Loss</div>`;
+  const _isSh=_m==='shares';
+  const _tips={all:'Options only, realised, matching the Monthly P&L table: wheel puts and calls plus PMCC short calls, on the day they closed, expired or were assigned. Green = premium collected, red = buyback costs. Share sales, dividends and closed LEAPs are in Shares & LEAPs P&L. Open options are not included. Hover a bar for that period.',
+    wheel:'The wheel share of that same Options P&L: realised premium and buybacks on wheel puts and calls only. PMCC short calls are in PMCC calls. Open options are not included.',
+    pmcc:'The PMCC short-call share of that same Options P&L: realised premium and buybacks on PMCC short calls. Closed long LEAPs stay in Shares & LEAPs P&L. Open options are not included.',
+    shares:'The same realised figures as the Shares & LEAPs P&L table: each share sale (called away or sold) matched first in, first out against what those shares cost, dividends, and each long LEAP when it is sold or expires. Green = gains, red = losses. Booked on the day it closed.'};
+  const _sub=`<span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> ${_isSh?'gains':'collected'} · <span class="r">${fmtMoney(-B.loss)}</span> ${_isSh?'losses':'loss'}</span>`;
+  const _leg=`<div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>${_isSh?'Gains':'Premium collected'}</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>${_isSh?'Losses':'Loss'}</div>`;
   return`<div class="pc-head"><select class="pc-measure" aria-label="Chart measure" onchange="setPnlMeasure(this.value)">${PNL_MEASURES.map(([k,l])=>`<option value="${k}"${k===_m?' selected':''}>${l}</option>`).join('')}</select>${ii(_tips[_m]||_tips.all)}
-    <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span>
+    <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span>${_sub}
     <div class="pc-btns">${PNL_RANGES.map(([k])=>btn(k,k===pnlRange,'setPnlRange')).join('')}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
     <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg>${_pcEmpty?'<div class="pc-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:0.8125rem;pointer-events:none">Your realised P&amp;L shows here once a trade closes, expires or is assigned.</div>':''}<div class="pc-tip" id="pc-tip"></div></div>
     <div class="a-chart-legend">${_leg}</div>`;
 }
 function pnlTip(e,el){const t=document.getElementById('pc-tip');if(!t)return;if(!e){t.style.display='none';return;}
   const box=t.parentElement.getBoundingClientRect();
-  t.innerHTML=`<b>${el.dataset.l}</b><div>Net <span class="${+el.dataset.n<0?'r':'g'}">${fmtMoney(+el.dataset.n)}</span></div>`;
+  const gLab=pnlMeasure==='shares'?'Gains':'Premium collected',lLab=pnlMeasure==='shares'?'Losses':'Loss';
+  t.innerHTML=`<b>${el.dataset.l}</b><div>${gLab} <span class="g">${fmtMoney(+el.dataset.g)}</span></div><div>${lLab} <span class="r">${fmtMoney(-el.dataset.s)}</span></div><div>Net <span class="${+el.dataset.n<0?'r':'g'}">${fmtMoney(+el.dataset.n)}</span></div>`;
   t.style.display='block';const x=e.clientX-box.left+14;t.style.left=Math.min(x,box.width-170)+'px';t.style.top=Math.max(0,e.clientY-box.top-70)+'px';}
 function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.innerHTML=pnlCurveHtml();}
 function setPnlRange(k){pnlRange=k;_pnlRedraw();}
