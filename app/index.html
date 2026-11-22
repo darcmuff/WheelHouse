@@ -25,7 +25,7 @@
 <script src="wc-brand.js"></script>
 <script src="popular.js"></script>
 <script src="analytics.js" defer></script>
-<meta name="theme-color" content="#f6f5f1">
+<meta name="theme-color" content="#f8f9fc">
 
 <!-- Firebase loaded inside main module script -->
 <style>
@@ -1090,7 +1090,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .lcw>.lc-bar i{background:#FF5A36}
 .lcw>.trade-body{background:var(--bg2);color:var(--text);border:1px solid rgba(17,15,21,.08);border-radius:12px;margin:0 18px 18px!important;box-shadow:0 2px 4px rgba(17,15,21,.05)}
 .lcw .trade-body .btn{border-radius:6px;font-family:inherit}
-@media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 14px 6px;flex-wrap:wrap;gap:0.4rem 0.5rem}.lcw>.wl-top{padding:0 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}}
+@media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 8px 6px;flex-wrap:nowrap;align-items:flex-start;gap:0.4rem 0.35rem;min-width:0;box-sizing:border-box}.lcw>.lc-h>div:first-child{min-width:0;flex:1}.lcw>.lc-h .lc-h-right{flex-shrink:0;align-self:flex-start;margin-left:auto;margin-right:0}.lcw>.wl-top{padding:0 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}}
 /* Called away (and the other wheel steps) at AA on every card gradient */
 .wc .wl-st{color:#fff}
 .wc .rot-earn{color:#fff;background:rgba(0,0,0,.16)}
@@ -1183,6 +1183,524 @@ select,textarea,
 .lcw>.lc-h .lc-h-right .lc-lacts{margin-left:0;padding-left:0}
 .lcw>.wl-top{padding:0 22px 8px;justify-content:flex-end}
 .lcw .rot-earn{color:#fff;background:rgba(0,0,0,.16)}
+
+
+/* Phone layout helpers: hidden on desktop so >700px stays unchanged. */
+.card-more{display:none}
+.card-acts-inline{display:contents}
+.tr-card{display:none}
+.db-short{display:none}
+.live-phone{display:none}
+#pwa-foot{display:none}
+#settings-install.pwa-install-item{
+  font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
+  border-radius:6px;
+  text-align:left;
+  font-size:0.8125rem;
+}
+#settings-ios-install{
+  margin:0;
+  padding:0.4rem 0.875rem;
+  font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-size:0.75rem;
+  font-weight:480;
+  color:var(--text2);
+  border-radius:6px;
+  line-height:1.35;
+}
+
+/* Phone chrome: tab bar, ⋯ menu, form controls */
+@media(max-width:700px){
+  #tabbar a.nav-item[data-view="log"]{display:none}
+  #tabbar .nav-item{min-height:44px;min-width:44px;box-sizing:border-box;justify-content:center}
+  .settings-log{display:none!important}
+  .card-acts-inline{display:none!important}
+  .card-more{display:block;position:relative;flex-shrink:0;margin-left:0.15rem;z-index:4}
+  .card-more[open]{z-index:6}
+  .lcw>.lc-h:not(.wc-art):not(.lc-tex),.wc>.rot-header{z-index:3}
+  .card-more-sum{list-style:none;cursor:pointer;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#fff;font-size:1.25rem;line-height:1;font-weight:720;padding:0;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.45)}
+  .card-more-sum::-webkit-details-marker,.card-more-sum::marker{display:none;content:''}
+  .card-more-menu{position:absolute;right:0;top:calc(100% + 0.25rem);z-index:80;min-width:10.5rem;background:#fff!important;color:#110f15!important;border:1px solid #e4e5ea;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:0.25rem;display:flex;flex-direction:column}
+  .card-more-item{display:block;width:100%;text-align:left;background:#fff!important;border:0;border-radius:6px;color:#110f15!important;font:inherit;font-weight:720;font-size:0.875rem;min-height:44px;padding:0.5rem 0.75rem;cursor:pointer}
+  .card-more-item:hover{background:#f0f1f5!important}
+  .tn-gear,.pw-eye,.wl-wi-x,.hk-cog,.mx{
+    min-width:44px;min-height:44px;box-sizing:border-box;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  .ii{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:1em;min-height:1em}
+  .ii::after{content:'';position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
+  .trade-form-grid{grid-template-columns:1fr!important;gap:0.75rem!important}
+  .trade-form-grid .fld{grid-column:1/-1!important}
+  .trade-form-grid input,.trade-form-grid select,.trade-form-grid textarea,.trade-form-grid .wh-pick-btn{
+    min-height:44px;box-sizing:border-box;width:100%;border-radius:6px!important
+  }
+  .trade-form-grid input[type=date]{position:relative;padding-right:2.4rem}
+  .trade-form-grid input[type=date]::-webkit-calendar-picker-indicator{position:absolute;right:0.5rem;width:1.25rem;height:1.25rem}
+  #mTrade .mbox,#mPaste .mbox{width:auto;max-width:calc(100vw - 1.25rem);padding:0.875rem}
+  #auth-password{padding-right:2.85rem!important}
+  .lc-nw{white-space:nowrap}
+}
+
+
+@media(max-width:700px){
+  #demo-banner{padding:0.28rem 0.75rem;gap:0.45rem;font-size:0.75rem;flex-wrap:nowrap;align-items:center;min-height:2.75rem;box-sizing:border-box}
+  #demo-banner .db-full{display:none}
+  #demo-banner .db-short{display:inline;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  #demo-banner .db-act{flex-shrink:0;gap:0.35rem}
+  #demo-banner button,#demo-banner .db-go{border-radius:6px;padding:0.28rem 0.6rem;min-height:32px;box-sizing:border-box;display:inline-flex;align-items:center}
+  .ot-demo #topnav{top:var(--demo-banner-h,2.75rem)}
+
+  .tgrid,.pmcc-open .tgrid,.pmcc-trades .tgrid,.trade-body .tgrid{
+    display:flex!important;flex-direction:column;width:100%;max-width:100%;
+    padding-left:0!important;padding-right:0!important;box-sizing:border-box;min-width:0!important;
+  }
+  .trade-body,.trade-body.open,.wc .trade-body,.lcw>.trade-body,.pmcc-open,.pmcc-trades{
+    overflow-x:hidden!important;max-width:100%;min-width:0;box-sizing:border-box;
+  }
+  .thead-row,.tgrid>.thead-row,.pmcc-open .tgrid>.thead-row.has-to-strike,.wc .trade-body .thead-row{
+    display:none!important;
+  }
+  .trow,.trow.has-to-strike,.wc .trade-body .trow.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike,.pmcc-trades .trow{
+    display:block!important;grid-template-columns:none!important;grid-template-areas:none!important;
+    grid-column:auto!important;width:100%;max-width:100%;min-width:0!important;min-height:0!important;
+    padding:0.7rem 0.85rem!important;box-sizing:border-box;white-space:normal;
+  }
+  .pmcc-open .tgrid>.trow.has-to-strike>span,.trow>span{grid-column:auto!important;white-space:normal!important}
+  .trow>:not(.sel-mark):not(.tr-card){display:none!important}
+  .trow>.tr-card{
+    display:flex;flex-direction:column;gap:0.28rem;min-width:0;max-width:100%;
+  }
+  .trow-empty>:not(.tr-card){display:block!important}
+  .trow-empty{padding:0.75rem 0.85rem!important}
+  .tr-l1,.tr-l2{display:flex;align-items:center;gap:0.4rem 0.55rem;min-width:0;width:100%}
+  .tr-l1{align-items:center}
+  .tr-ab{display:flex;align-items:center;gap:0.25rem;flex-shrink:0}
+  .tr-id{font-weight:720;flex-shrink:0;white-space:nowrap}
+  .tr-cap{margin-left:auto;text-align:right;font-weight:720;flex:0 0 auto;min-width:min-content;max-width:none;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:0.05rem}
+  .tr-cap,.tr-cap *{white-space:nowrap!important;overflow-wrap:normal;word-break:normal}
+  .tr-cap>div:first-child{font-size:0.75rem;font-weight:480;line-height:1.2}
+  .tr-cap>div:last-child{font-size:0.9rem;font-weight:720;line-height:1.2}
+  .tr-edit{flex:0 0 auto}
+  .tr-edit .btn{min-width:44px;min-height:44px;box-sizing:border-box;padding:0 0.65rem;border-radius:6px;display:inline-flex;align-items:center;justify-content:center}
+  .tr-dates{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:0.8125rem}
+  .tr-prem{margin-left:auto;flex-shrink:0;font-size:0.8125rem;font-weight:720}
+  .tr-l3{display:flex;flex-wrap:wrap;align-items:center;gap:0.2rem 0.7rem;min-width:0;width:100%;font-size:0.75rem;color:var(--text3);line-height:1.4}
+  .tr-l3>span,.tr-l3 .row-warn,.tr-l3 .row-tag{min-width:0;white-space:nowrap}
+  .tr-l3 .tr-dot{display:none}
+  .tr-l3 .row-warn{display:inline-flex;flex-wrap:wrap;gap:0.25rem;align-items:center;white-space:normal}
+  .tr-l3 .g,.tr-l3 .r{font-weight:720}
+  .list-more{width:100%;padding:0.35rem 0.85rem;box-sizing:border-box}
+
+  /* Monthly P&L / Shares & LEAPs: two-line rows, no horizontal clip */
+  .d-panel-body{overflow-x:hidden}
+  .mpl-table{width:100%}
+  .mpl-table thead{display:none}
+  .mpl-table,.mpl-table tbody{display:block;width:100%}
+  .mpl-table tr{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:0.55rem;row-gap:0.15rem;padding:0.6rem 1rem;border-bottom:1px solid var(--bg3);box-sizing:border-box;width:100%}
+  .mpl-table tr::after{content:'';flex-basis:100%;order:3;height:0;overflow:hidden}
+  .mpl-table td{border:0;padding:0;white-space:normal;min-width:0}
+  .mpl-table td.mpl-month{order:1;flex:1 1 auto;font-weight:720;min-width:0}
+  .mpl-table td:last-child{order:2;flex:0 0 auto;text-align:right;font-weight:720}
+  .mpl-table td:not(.mpl-month):not(:last-child){order:4;flex:0 1 auto;color:var(--text3);font-size:0.75rem}
+  .mpl-table td[data-lbl]::before{content:attr(data-lbl) " ";font-weight:480;color:var(--text3)}
+  .mpl-table .mpl-sum td.mpl-month{font-weight:720}
+
+  /* P&L by ticker: two-line rows */
+  .tk-pnl{overflow:hidden;min-width:0}
+  .tk-pnl .hc-h{flex-wrap:wrap;gap:0.25rem 0.75rem}
+  .tk-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"sym all" "yr yr";column-gap:0.75rem;row-gap:0.1rem;padding:0.55rem 0;min-width:0}
+  .tk-row>span{min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis}
+  .tk-row>span+span{text-align:right}
+  .tk-row .tk-sym{grid-area:sym;font-weight:720}
+  .tk-row .tk-all{grid-area:all;font-weight:720}
+  .tk-row .tk-year{grid-area:yr;font-size:0.75rem;color:var(--text3);text-align:left}
+  .tk-row .tk-year::before{content:attr(data-lbl) " ";font-weight:480;color:var(--text3)}
+  .tk-row.tk-hd{display:none}
+
+  /* What if? — full-width phone form, stacked results, 44px controls */
+  .wl-body .wl-wi,.lcw .wl-wi{
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-areas:"in x" "out out" "act act";
+    align-items:start;
+    column-gap:0.35rem;
+    row-gap:0.55rem;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    margin:0.5rem 0 0.75rem;
+    padding:0.7rem 0.7rem 0.7rem;
+    box-sizing:border-box;
+  }
+  .wl-body .wl-wi-x,.lcw .wl-wi-x{
+    grid-area:x;
+    position:static;
+    align-self:start;
+    justify-self:end;
+    min-width:44px;min-height:44px;
+    padding:0;
+    display:inline-flex;align-items:center;justify-content:center;
+    line-height:1;font-size:1.35rem;
+  }
+  .wl-body .wl-wi-in,.lcw .wl-wi-in{
+    grid-area:in;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    align-items:end;
+    gap:0.5rem;
+    margin:0;
+    min-width:0;
+    flex-wrap:nowrap;
+  }
+  .wl-body .wl-wi-in label,.lcw .wl-wi-in label{min-width:0}
+  .wl-body .wl-wi-in input,.lcw .wl-wi-in input{
+    width:100%;
+    max-width:none;
+    min-height:44px;
+    box-sizing:border-box;
+    margin-top:0.18rem;
+    padding:0.4rem 0.5rem;
+    font-size:1rem;
+    border-radius:6px;
+  }
+  .wl-body .wl-wi [data-wi="out"],.lcw .wl-wi [data-wi="out"]{
+    grid-area:out;
+    display:flex;
+    flex-direction:column;
+    flex-wrap:nowrap;
+    gap:0;
+    width:100%;
+    justify-content:flex-start;
+    border-top:1px solid var(--border);
+    padding-top:0.15rem;
+  }
+  .wl-body .wl-wi-r,.lcw .wl-wi-r{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:0.5rem;
+    width:100%;
+    box-sizing:border-box;
+    padding:0.35rem 0;
+    border-top:0;
+    white-space:normal;
+  }
+  .wl-body .wl-wi-r + .wl-wi-r,.lcw .wl-wi-r + .wl-wi-r{border-top:1px solid var(--border)}
+  .wl-body .wl-wi-r .wl-wi-v,.lcw .wl-wi-r .wl-wi-v{align-items:flex-end;text-align:right}
+  .wl-body .wl-wi-act,.lcw .wl-wi-act{
+    grid-area:act;
+    display:flex;
+    justify-content:stretch;
+    margin:0;
+    width:100%;
+  }
+  .wl-body .wl-wi-act .btn,.lcw .wl-wi-act .btn{
+    width:100%;
+    min-height:44px;
+    border-radius:6px;
+    box-sizing:border-box;
+  }
+
+  /* Collapsed wheel bars: ⋯ menu instead of inline Close/Edit */
+  .wc.rot-mini-bar>.lc-h{align-items:center;flex-wrap:nowrap;padding:10px 12px;gap:0.4rem}
+  .wc.rot-mini-bar>.lc-h .rot-mini-main{flex:1 1 auto;min-width:0}
+  .wc.rot-mini-bar .lc-lacts-wrap{display:none!important}
+  .wc.rot-mini-bar .rot-badge{flex-shrink:0;margin-left:0.15rem}
+}
+
+/* Phone: tight gutters — cards sit ~8px from the screen edge. */
+@media(max-width:700px){
+  #content{
+    padding-top:8px!important;
+    padding-left:max(8px, env(safe-area-inset-left))!important;
+    padding-right:max(8px, env(safe-area-inset-right))!important;
+  }
+  #topnav,#demo-banner{
+    padding-left:max(8px, env(safe-area-inset-left))!important;
+    padding-right:max(8px, env(safe-area-inset-right))!important;
+  }
+  .v2-bar .v2-copy,.v2-hero>.v2-copy{padding-left:8px!important;padding-right:8px!important}
+  .v2-hero .v2-strip,.v2-home .v2-strip,.v2-light .v2-strip,.v2-strip{padding-left:8px!important;padding-right:8px!important}
+  .hcard,.d-panel,.home-chart,.chart-card{margin-left:0;margin-right:0}
+  .mpl-table tr{padding-left:8px;padding-right:8px}
+
+  .wc>.rot-header{padding-left:8px!important;padding-right:8px!important}
+  .wc .wl-body{padding-left:8px;padding-right:8px}
+  .wc .wl-facts{padding:12px 8px}
+  .wc .wl-memo{margin-inline:0}
+  .wc .trade-body,.wc .trade-body.open{margin:0 8px 8px}
+  .wc.rot-mini-bar>.lc-h{padding:10px 8px}
+
+  .lcw>.lc-h{padding-left:8px;padding-right:8px}
+  .lcw>.wl-top{padding-left:8px;padding-right:8px}
+  .lcw>.lc-hero{margin:0 8px 10px;padding:10px 8px}
+  .lcw>.lc-bar{margin-left:8px;margin-right:8px}
+  .lcw>.wl-memo{margin-inline:8px}
+  .lcw>.trade-body{margin:0 8px 8px!important}
+
+  /* Keep Edit on screen even when an EXP chip is on the row */
+  .trow,.trow.has-to-strike,.wc .trade-body .trow.has-to-strike,.pmcc-open .tgrid>.trow.has-to-strike,.pmcc-trades .trow{
+    padding:0.6rem 0.5rem!important;
+  }
+  .tr-l1{gap:0.25rem 0.35rem;min-width:0}
+  .tr-cap{min-width:0;flex:1 1 auto}
+  .tr-edit{flex:0 0 auto;flex-shrink:0}
+  .tr-edit .btn{border-radius:6px}
+
+  /* Phone Home overview: tiles sit on the page at the 8px gutter */
+  .v2-hero.v2-light.v2-home,.home .v2-hero.v2-home{
+    background:transparent;
+    box-shadow:none;
+    border:0;
+    border-radius:0;
+    margin:0 0 8px;
+    color:inherit;
+  }
+  .v2-hero.v2-home>.v2-copy,.v2-hero.v2-home>.v2-copy.home-head{
+    padding:2px 0 8px!important;
+    align-items:center;
+  }
+  .v2-hero.v2-home .home-head h1{
+    font-size:1.125rem;
+    line-height:1.2;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .v2-hero.v2-home .home-head p{display:none}
+  .v2-hero.v2-home>.v2-strip,.v2-light.v2-home .v2-strip{
+    padding:0!important;
+    background:transparent;
+    border-top:0;
+    box-shadow:none;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  /* Flatten the two desktop Home grids into one 2-col grid on phone (no orphan cell). */
+  .v2-home .v2-strip{
+    display:grid!important;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    align-items:stretch;
+  }
+  .v2-home .hk-grid,.v2-home .hk-grid.hk-row2{
+    display:contents;
+  }
+  .v2-home .hk-grid .hk.big{grid-column:1/-1}
+  .v2-hero.v2-home .hk-grid>.hk,.v2-home .hk-grid .hk{
+    height:auto;
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+    overflow:hidden;
+    background:var(--bg2);
+    border:1px solid #cfd3da;
+    box-shadow:0 1px 2px rgba(17,15,21,.05);
+    border-radius:8px;
+    padding:8px;
+    transition:border-color .15s ease;
+  }
+  .v2-hero.v2-home .hk-grid>.hk.hk-need{
+    border-color:#FF5A36;
+    box-shadow:none;
+  }
+  .v2-home .hk-l{
+    text-transform:none;
+    letter-spacing:0.01em;
+    font-size:12px;
+    font-weight:720;
+    line-height:1.25;
+    color:var(--text3);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    min-width:0;
+    display:flex;
+    align-items:center;
+  }
+  .v2-home .hk-l .ii{flex-shrink:0;margin-left:0.15rem}
+  .v2-home .hk-rel .hk-l{padding-right:28px}
+  .v2-home .hk-cog{
+    position:absolute;
+    top:2px;
+    right:2px;
+    z-index:1;
+    min-width:0;
+    min-height:0;
+    width:28px;
+    height:28px;
+    padding:0;
+    border-radius:6px;
+  }
+  .v2-home .hk-cog::after{
+    content:'';
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:44px;
+    height:44px;
+    transform:translate(-50%,-50%);
+  }
+  .v2-home .hk-v,.v2-home .hk.big .hk-v,.v2-home .hk-grid .hk.big .hk-v{
+    font-size:22px;
+    margin-top:4px;
+  }
+  .v2-home .hk-s{
+    font-size:11px;
+    line-height:1.3;
+    color:var(--text3);
+    margin-top:2px;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    overflow:hidden;
+  }
+  .v2-home .hk-wl b{font-size:18px;line-height:1.2}
+  .v2-home .hk-wl span{font-size:11px}
+
+  /* Phone Home P&L chart: 8px insets, compact header, range buttons on one row */
+  .home-chart:not(.pc-full){
+    padding:8px;
+    box-sizing:border-box;
+  }
+  .home-chart .pc-head{
+    flex-wrap:wrap;
+    align-items:flex-start;
+    gap:4px 8px;
+    margin-bottom:6px;
+  }
+  .home-chart .pc-head-main{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:2px 8px;
+    flex:1 1 100%;
+    min-width:0;
+  }
+  .home-chart .a-chart-title{
+    font-size:0.8125rem;
+    line-height:1.2;
+    margin:0;
+  }
+  .home-chart .pc-net{font-size:0.9375rem;line-height:1.2}
+  .home-chart .pc-sub{
+    flex:1 1 100%;
+    font-size:0.75rem;
+    line-height:1.25;
+    margin:0;
+  }
+  .home-chart .pc-btns{
+    margin-left:0;
+    flex:1 1 100%;
+    width:100%;
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:4px;
+    min-width:0;
+  }
+  .home-chart .pc-r{
+    flex:1 1 0;
+    min-width:0;
+    min-height:32px;
+    height:32px;
+    padding:0 2px;
+    box-sizing:border-box;
+    border-radius:6px;
+    font-size:12px;
+    font-weight:720;
+    line-height:1;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+  }
+  .home-chart .pc-fs{display:none}
+
+  /* Line Monthly P&L / Shares & LEAPs titles up with the 8px row insets */
+  .d-panel:has(.mpl-table) .d-panel-hdr{
+    padding-left:8px;
+    padding-right:8px;
+  }
+  /* Keep Next expiry / price + change / Called away on one line; ⋯ in the card header */
+  .wc>.rot-header{flex-wrap:nowrap;align-items:center;gap:0.2rem;min-width:0;box-sizing:border-box}
+  .wc>.rot-header .rot-header-price{flex-shrink:0;flex-direction:row!important;flex-wrap:nowrap;align-items:baseline;white-space:nowrap}
+  .wc>.rot-header .rot-header-price>span{white-space:nowrap;flex-shrink:0}
+  .wc>.rot-header .card-more{margin-left:auto;margin-right:0;flex-shrink:0}
+  .wc>.rot-header .card-more-sum{position:relative;min-width:32px;min-height:32px;width:32px;height:32px;font-size:1.15rem}
+  .wc>.rot-header .card-more-sum::after{content:'';position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
+  .wc .wl-body{padding:0.25rem 0.65rem 0.75rem}
+  .wc .wl-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.875rem 0.625rem}
+  .wc .wl-facts>.wl-f{text-align:left!important}
+  .wc .wl-facts>.wl-be{grid-column:1/-1}
+
+  /* Stepper sub-label clamp (phone only, so desktop stays identical) */
+  .wl-st:first-child .wl-leg{align-self:flex-start;text-align:left}
+  .wl-st:last-child .wl-leg{align-self:flex-end;text-align:right}
+  .wl-st:not(:first-child):not(:last-child) .wl-leg{align-self:center;text-align:center}
+
+  /* Hide earnings warnings, the PPD field, and the LEAP % under Unrealised/Realised */
+  .rot-earn,.rot-earn-slot{display:none!important}
+  .row-tag[title^="Earnings"]{display:none!important}
+  #mTrade .fld:has(#tf-ppd){display:none!important}
+  .lcw>.lc-hero .lc-pct{display:none}
+
+  /* Live badge stays on desktop; phone uses .live-phone (quote status) */
+  .live-desk{display:none}
+  .live-phone{display:inline}
+
+  /* Compact the existing measure dropdown in the chart header */
+  .home-chart .pc-measure{
+    flex:0 0 auto;
+    max-width:9.5rem;
+    min-height:28px;
+    height:28px;
+    font-size:12px;
+    padding:0 28px 0 0.4rem;
+    border-radius:6px;
+    background-position:right 8px center;
+  }
+
+  /* Phone install footer (hidden unless JS adds .pwa-visible) */
+  #pwa-foot{display:none}
+  #pwa-foot.pwa-visible{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:fixed;
+    left:0;right:0;
+    bottom:calc(5.25rem + env(safe-area-inset-bottom,0px));
+    z-index:59;
+    padding:0.2rem 8px;
+    pointer-events:none;
+  }
+  #pwa-foot .pwa-install-link,#pwa-foot .pwa-ios-tip{
+    pointer-events:auto;
+    font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;
+    font-size:0.75rem;
+    font-weight:480;
+    color:var(--text2);
+    background:none;
+    border:0;
+    border-radius:6px;
+    padding:0.2rem 0.45rem;
+    cursor:pointer;
+    text-decoration:underline;
+    text-underline-offset:2px;
+  }
+  #pwa-foot .pwa-ios-tip{cursor:default;text-decoration:none;text-align:center}
+  body.pwa-install-on #content{padding-bottom:calc(5.5rem + 2.25rem)!important}
+}
+
+@media(max-width:480px){
+  .wc .wl-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wc .wl-f>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wc .wl-steps{overflow:visible}
+  .wc .wl-st{white-space:nowrap;font-size:0.64rem;min-width:0;overflow:visible}
+  .wc .wl-sl{white-space:nowrap;text-align:center;line-height:1.2;padding:1px 3px;overflow:visible}
+  .wc .wl-st:last-child .wl-sl{align-self:flex-end;text-align:right}
+}
 </style>
 </head>
 <body>
@@ -1384,6 +1902,7 @@ select,textarea,
     </div>
   </header>
   <nav id="tabbar"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheels</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
+  <div id="pwa-foot"><button type="button" class="pwa-install-link" id="pwa-foot-install" hidden>Install app</button><span class="pwa-ios-tip" id="pwa-foot-ios" hidden>Install: tap Share, then Add to Home Screen</span></div>
 
   <!-- CONTENT -->
   <div id="content"></div>
@@ -1699,7 +2218,9 @@ select,textarea,
         </select>
       </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
-      <button class="btn btn-ghost btn-full" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
+      <button class="btn btn-ghost btn-full settings-log" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
+      <button type="button" id="settings-install" class="btn btn-ghost btn-full pwa-install-item" hidden onclick="promptPwaInstall()">Install app</button>
+      <p id="settings-ios-install" class="pwa-ios-tip" hidden>Install: tap Share, then Add to Home Screen</p>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button id="settings-export" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem" onclick="exportMyData()">⇩ Export my data</button>
       <a id="settings-legal" href="legal.html" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;text-decoration:none;color:var(--text2)">Privacy, terms &amp; disclaimer</a>
@@ -2987,6 +3508,7 @@ function _saveUIState(){
 }
 
 function render(){
+  if(view==='log'&&isPhoneLayout())view='dash';
   const _nwKeep=view==='positions'&&_nwOpen, _nwWas=document.getElementById('new-rot-ticker-top'), _nwTyped=_nwWas?_nwWas.value:'', _nwFocus=document.activeElement===_nwWas;
   _saveUIState();
   renderSidebar();
@@ -3317,19 +3839,30 @@ function renderPmccListRow(e,spot,today){
     const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}
   }
   const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
+  const _ab=`<span class="ab ab-${e.action}">${e.action}</span>`;
+  const _warn=typeof shortRowWarnTags==='function'&&e.open&&c&&e.action==='STO'?shortRowWarnTags(c.underlying,{isOpen:true,isCall:true,expiry:c.expiry||e.expiry,today,spot,strike:+c.strike||e.strike,mark:c.mark!=null&&c.mark!==''?+c.mark:null}):'';
+  const _entered=fmtDateFull(e.entered);
+  const _expiry=closer?'—':(e.expiry?fmtDateFull(e.expiry):'—');
+  const _strike=e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—';
+  const _prem=e.premium?'$'+fmtPrem(e.premium):'—';
+  const _shares=e.qty?String(e.qty*100):'—';
+  const _total=`<span class="${e.total>=0?'g':'r'}">${fmtMoney(e.total)}</span>`;
+  const _fees=e.fees?'$'+fmt2(e.fees):'—';
+  const _edit=`<button class="btn btn-ghost btn-sm" onclick="openPmccLegEdit('${esc(e.legId)}');event.stopPropagation()">Edit</button>`;
   return`<div class="trow has-to-strike${e.action==='EXP'?' expired-trade':''}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}" data-act="${esc(e.action||'')}" data-strike="${e.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
-    <span class="action-cell"><span class="ab ab-${e.action}">${e.action}</span>${typeof shortRowWarnTags==='function'&&e.open&&c&&e.action==='STO'?shortRowWarnTags(c.underlying,{isOpen:true,isCall:true,expiry:c.expiry||e.expiry,today,spot,strike:+c.strike||e.strike,mark:c.mark!=null&&c.mark!==''?+c.mark:null}):''}</span>
-    <span>${fmtDateFull(e.entered)}</span>
-    <span>${closer?'—':(e.expiry?fmtDateFull(e.expiry):'—')}</span>
-    <span>${e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—'}</span>
+    <span class="action-cell">${_ab}${_warn}</span>
+    <span>${_entered}</span>
+    <span>${_expiry}</span>
+    <span>${_strike}</span>
     <span class="to-strike m">${esc(ts)}</span>
-    <span>${e.premium?'$'+fmtPrem(e.premium):'—'}</span>
-    <span>${e.qty?e.qty*100:'—'}</span>
-    <span class="${e.total>=0?'g':'r'}">${fmtMoney(e.total)}</span>
-    <span>${e.fees?'$'+fmt2(e.fees):'—'}</span>
+    <span>${_prem}</span>
+    <span>${_shares}</span>
+    ${_total}
+    <span>${_fees}</span>
     <span style="white-space:nowrap">${ppd}</span>
     <span style="color:${capColor}">${cap}</span>
-    <span style="display:flex;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="openPmccLegEdit('${esc(e.legId)}');event.stopPropagation()">Edit</button></span>
+    <span style="display:flex;justify-content:flex-end">${_edit}</span>
+    ${typeof tradeRowPhoneCard==='function'?tradeRowPhoneCard({ab:_ab,exp:'',warn:_warn,id:_strike,cap:cap,capColor:capColor,entered:_entered,expiry:_expiry,premium:_prem,shares:_shares,fees:_fees,total:_total,ppd:ppd,toStrike:ts,edit:_edit}):''}
   </div>`;
 }
 // Long trade lists: show the newest `limit` rows only (no DOM for the rest). Open legs always shown; a roll chain is never split.
@@ -3398,29 +3931,30 @@ function leapSpotHtml(q,strike,open,sym){
   if(!q||!(q.price>0))return typeof pricePendingHtml==='function'?pricePendingHtml(sym,'lc-spot'):'';
   const pct=q.pct!=null&&q.state!=='DELAYED'?q.pct:null,up=pct!=null&&pct>=0;
   const mv=pct!=null?` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}%</span>`:'';
-  const tag=open?'':' <span style="color:var(--text3);font-weight:480">close</span>';
+  const tag=open?'':' <span class="lc-nw" style="color:var(--text3);font-weight:480">close</span>';
   const d=strike>0?(q.price-strike)/strike*100:null;
-  const vs=d!=null?` <span style="color:var(--text3);font-weight:480">· ${Math.abs(d).toFixed(1)}% ${d>=0?'above':'below'} strike</span>`:'';
+  const vs=d!=null?` <span class="lc-nw" style="color:var(--text3);font-weight:480">· ${Math.abs(d).toFixed(1)}% ${d>=0?'above':'below'} strike</span>`:'';
   return `<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${q.price.toFixed(2)}${mv}${tag}${vs}</span>`;
 }
 // LEAP option's own move today. Prefer the quote's previous close (Cboe prev_day_close); else the first mark seen today, kept locally.
 function leapDayOpen(k,mark){try{const d=new Date().toISOString().slice(0,10),key='optrack-optopen';let m=JSON.parse(localStorage.getItem(key)||'{}');if(m.d!==d)m={d};if(m[k]==null&&mark>0){m[k]=mark;localStorage.setItem(key,JSON.stringify(m));}return m[k]??null;}catch(e){return null;}}
 function leapOptHtml(mark,prevClose,dayOpen){
   if(!(mark>0))return '';const base=prevClose>0?+prevClose:dayOpen>0?+dayOpen:null;
-  let mv='';if(base){const ch=mark-base,pct=ch/base*100,up=ch>=0;mv=` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}% (${up?'+':'-'}$${Math.abs(ch).toFixed(2)})</span> <span style="color:var(--text3);font-weight:480">today</span>`;}
+  let mv='';if(base){const ch=mark-base,pct=ch/base*100,up=ch>=0;mv=` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}% (${up?'+':'-'}$${Math.abs(ch).toFixed(2)})</span> <span class="lc-nw" style="color:var(--text3);font-weight:480">today</span>`;}
   return `<span class="lc-opt" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span style="color:var(--text3);font-weight:480">Option</span> $${(+mark).toFixed(2)}${mv}</span>`;
 }
 function leapLogoHtml(sym,open){return rotNumHtml({ticker:sym,sortOrder:String(sym||'?').charAt(0)||'?'},open);}
 function leapHeaderRightHtml(l,open,leapExp,gid){
-  const badge=open?`<span class="rot-badge open">● Live</span>`:`<span class="leap-badge cl">${esc(l.status)}</span>`;
+  const badge=open?(typeof liveBadgeHtml==='function'?liveBadgeHtml(l.underlying,true):`<span class="rot-badge open">● Live</span>`):`<span class="leap-badge cl">${esc(l.status)}</span>`;
   const acts=open
-    ?`<span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span>`
-    :`<span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span>`;
+    ?`<span class="card-acts-inline"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></span>`
+    :`<span class="card-acts-inline"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></span>`;
   const minBtn=leapExp
-    ?`<button class="rot-header-btn" onclick="event.stopPropagation();toggleLeapExpand('${esc(l.id)}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>`
-    :`<button class="rot-header-btn" onclick="event.stopPropagation();toggleLeapExpand('${esc(l.id)}')" title="Expand"><svg class="sq-20" viewBox="0 0 256 256" fill="none" stroke="var(--orange)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M104,104 48,48M48,88V48H88M152,104 208,48M168,48H208V88M104,152 48,208M48,168V208H88M152,152 208,208M168,208H208V168"/></svg></button>`;
-  const hideBtn=`<button class="rot-header-btn" onclick="event.stopPropagation();toggleHideLeap('${esc(l.id)}')" title="Hide"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>`;
-  return`<span class="lc-h-right">${badge}${acts}${minBtn}${hideBtn}</span>`;
+    ?`<button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleLeapExpand('${esc(l.id)}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>`
+    :`<button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleLeapExpand('${esc(l.id)}')" title="Expand"><svg class="sq-20" viewBox="0 0 256 256" fill="none" stroke="var(--orange)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M104,104 48,48M48,88V48H88M152,104 208,48M168,48H208V88M104,152 48,208M48,168V208H88M152,152 208,208M168,208H208V168"/></svg></button>`;
+  const hideBtn=`<button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleHideLeap('${esc(l.id)}')" title="Hide"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>`;
+  const more=`<details class="card-more" onclick="event.stopPropagation()"><summary class="card-more-sum" aria-label="More actions">⋯</summary><div class="card-more-menu">${open?`<button type="button" class="card-more-item" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button type="button" class="card-more-item" onclick="openLeapEdit('${esc(l.id)}')">Edit</button><button type="button" class="card-more-item" onclick="toggleLeapExpand('${esc(l.id)}')">${leapExp?'Minimise':'Expand'}</button><button type="button" class="card-more-item" onclick="toggleHideLeap('${esc(l.id)}')">Hide</button></div></details>`;
+  return`<span class="lc-h-right">${badge}${acts}${minBtn}${hideBtn}${more}</span>`;
 }
 function leapMiniRealisedHtml(open,S,P){
   let n=null;
@@ -3449,7 +3983,7 @@ function renderLeapCard(l,spot,today){
     const leapExp=!collapsedLeaps.has(l.id);
     const earnH=leapExp?leapEarnHtml(l):'';
     return`<div class="leap-card lc lcw${leapExp?'':' lc-mini-bar'}" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession(),l.underlying)}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${!leapExp?leapMiniRealisedHtml(true,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>${earnH?`<div class="wl-top">${earnH}</div>`:''}
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${(typeof isPhoneLayout==='function'&&isPhoneLayout())?`<span class="lc-nw">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call</span> · <span class="lc-nw">${_fdShort(l.expiry)}</span>${S.expired?' · Expired':S.left!=null?`<span class="lc-nw"> · ${S.left} days left</span>`:''}`:`${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}`}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession(),l.underlying)}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${!leapExp?leapMiniRealisedHtml(true,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>${earnH?`<div class="wl-top">${earnH}</div>`:''}
     ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
@@ -3465,7 +3999,7 @@ function renderLeapCard(l,spot,today){
   const leapExp=!collapsedLeaps.has(l.id);
   const rq=S.pl!=null&&S.cost>0?Math.round(S.pl/S.cost*10000)/100:null;
   return`<div class="leap-card lc lcw${leapExp?'':' lc-mini-bar'}" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${l.closeDate?` · ${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}`:''}</span>${!leapExp?leapMiniRealisedHtml(false,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${(typeof isPhoneLayout==='function'&&isPhoneLayout())?`<span class="lc-nw">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call</span> · <span class="lc-nw">${_fdShort(l.expiry)}</span>${l.closeDate?` · <span class="lc-nw">${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}</span>`:''}`:`${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${l.closeDate?` · ${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}`:''}`}</span>${!leapExp?leapMiniRealisedHtml(false,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>
   ${leapExp?`${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Paid → closed</div><div class="lc-v">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
@@ -4357,12 +4891,12 @@ function renderRotationMini(wheel){
     detail='Waiting for a put';
   }
   const priceH=rawP!=null
-    ?`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${rawP.toFixed(2)}${chg!=null?` <span style="color:${chgColor}">${chg>=0?'▲':'▼'}${Math.abs(chgPct).toFixed(2)}%</span> <span style="color:var(--text3);font-weight:480">today</span>`:''}</span>`
+    ?`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${rawP.toFixed(2)}${chg!=null?` <span style="color:${chgColor}">${chg>=0?'▲':'▼'}${Math.abs(chgPct).toFixed(2)}%</span> <span class="lc-nw" style="color:var(--text3);font-weight:480">today</span>`:''}</span>`
     :pricePendingHtml(wheel.ticker,'lc-spot');
   const pnlH=`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span class="${colorN(m.realisedPnL)}">${fmtMoney(m.realisedPnL)}</span> <span style="color:var(--text3);font-weight:480">realised</span></span>`;
   return`<div class="rotation-window wc rot-mini-bar ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" data-ticker="${esc(wheel.ticker||'')}" style="--wc-bg:${wcBg(wheel.ticker)};${isHidden?'opacity:.5':''}">
     ${wcArtHtml(wheel.ticker)}
-    <div class="lc-h" style="cursor:pointer" onclick="toggleMinimise('${wheel.id}')"><div class="rot-mini-main"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">▸</span>${rotNumHtml(wheel,isOpen)}<span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span><span class="lc-ct">${esc(detail)}</span>${priceH}${pnlH}</div><span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span><span class="lc-lacts-wrap" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span></span></div>
+    <div class="lc-h" style="cursor:pointer" onclick="toggleMinimise('${wheel.id}')"><div class="rot-mini-main"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">▸</span>${rotNumHtml(wheel,isOpen)}<span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span><span class="lc-ct">${esc(detail)}</span>${priceH}${pnlH}</div>${typeof liveBadgeHtml==='function'?liveBadgeHtml(wheel.ticker,isOpen):`<span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span>`}<span class="lc-lacts-wrap card-acts-inline" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span></span><details class="card-more" onclick="event.stopPropagation()"><summary class="card-more-sum" aria-label="More actions">⋯</summary><div class="card-more-menu"><button type="button" class="card-more-item" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button type="button" class="card-more-item" onclick="openEditWheel('${wheel.id}')">Edit</button></div></details></div>
   </div>`;
 }
 
@@ -4965,12 +5499,13 @@ function renderRotationWindow(wheel){
       <span class="rot-label">${_dateSpan}</span>
       <span class="rot-shares">${shares}</span>
       ${_pctHtml}
-      <span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span>
-      <span class="lc-lacts" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span>
-      ${posSortBy==='manual'?`<button class="rot-header-btn" onclick="event.stopPropagation();moveWheel('${wheel.id}',-1)" title="Move up"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" transform="rotate(180 128 128)"/></svg></button>
-      <button class="rot-header-btn" onclick="event.stopPropagation();moveWheel('${wheel.id}',1)" title="Move down"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></button>`:``}
-      <button class="rot-header-btn" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>
-      <button class="rot-header-btn" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>
+      ${typeof liveBadgeHtml==='function'?liveBadgeHtml(wheel.ticker,isOpen):`<span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span>`}
+      <span class="card-acts-inline" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span></span>
+      ${posSortBy==='manual'?`<button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();moveWheel('${wheel.id}',-1)" title="Move up"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" transform="rotate(180 128 128)"/></svg></button>
+      <button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();moveWheel('${wheel.id}',1)" title="Move down"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></button>`:``}
+      <button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>
+      <button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>
+      <details class="card-more" onclick="event.stopPropagation()"><summary class="card-more-sum" aria-label="More actions">⋯</summary><div class="card-more-menu"><button type="button" class="card-more-item" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button type="button" class="card-more-item" onclick="openEditWheel('${wheel.id}')">Edit</button>${posSortBy==='manual'?`<button type="button" class="card-more-item" onclick="moveWheel('${wheel.id}',-1)">Move up</button><button type="button" class="card-more-item" onclick="moveWheel('${wheel.id}',1)">Move down</button>`:''}<button type="button" class="card-more-item" onclick="toggleMinimise('${wheel.id}')">Minimise</button><button type="button" class="card-more-item" onclick="toggleHide('${wheel.id}')">Hide</button></div></details>
     </div>
     ${wheelCardBody}
     ${expandedHtml}
@@ -5119,6 +5654,81 @@ function wheelListCells(t,L){
   const cell=closedCapturedHtml(o);r.cap=cell.html;r.capColor=cell.color;
   return r;
 }
+function isPhoneLayout(){return typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(max-width:700px)').matches;}
+let _pwaDeferredPrompt=null;
+function isPwaStandalone(){
+  return (window.matchMedia&&(window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches||window.matchMedia('(display-mode: minimal-ui)').matches))||!!(navigator&&navigator.standalone);
+}
+function isIosSafari(){
+  const ua=navigator.userAgent||'';
+  const iOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const webkit=/\bWebKit\b/.test(ua);
+  const other=/\b(CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|YaBrowser|GSA)\b/.test(ua);
+  return !!(iOS&&webkit&&!other);
+}
+function syncPwaInstallUi(){
+  const standalone=isPwaStandalone();
+  const canInstall=!standalone&&!!_pwaDeferredPrompt;
+  const showIos=!standalone&&!canInstall&&isIosSafari();
+  const settingsBtn=document.getElementById('settings-install');
+  const settingsTip=document.getElementById('settings-ios-install');
+  const foot=document.getElementById('pwa-foot');
+  const footBtn=document.getElementById('pwa-foot-install');
+  const footTip=document.getElementById('pwa-foot-ios');
+  if(settingsBtn)settingsBtn.hidden=!canInstall;
+  if(settingsTip)settingsTip.hidden=!showIos;
+  if(footBtn)footBtn.hidden=!canInstall;
+  if(footTip)footTip.hidden=!showIos;
+  if(foot){
+    const show=canInstall||showIos;
+    foot.classList.toggle('pwa-visible', show);
+    document.body.classList.toggle('pwa-install-on', show && isPhoneLayout());
+    const tab=document.getElementById('tabbar');
+    if(show&&tab){
+      const h=Math.ceil(tab.getBoundingClientRect().height);
+      foot.style.bottom=(h+2)+'px';
+    }else{
+      foot.style.bottom='';
+    }
+  }
+}
+async function promptPwaInstall(){
+  if(!_pwaDeferredPrompt)return;
+  const ev=_pwaDeferredPrompt;
+  try{await ev.prompt();}catch(e){}
+  _pwaDeferredPrompt=null;
+  syncPwaInstallUi();
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_pwaDeferredPrompt=e;syncPwaInstallUi();});
+window.addEventListener('appinstalled',()=>{_pwaDeferredPrompt=null;syncPwaInstallUi();});
+try{
+  const mq=window.matchMedia&&window.matchMedia('(display-mode: standalone)');
+  if(mq&&mq.addEventListener)mq.addEventListener('change',syncPwaInstallUi);
+  else if(mq&&mq.addListener)mq.addListener(syncPwaInstallUi);
+}catch(e){}
+function quoteLiveBadge(sym,open){
+  // Presentation only: hide the Live pill when a non-delayed quote is present; show a status when not live.
+  if(!open)return`<span class="rot-badge closed">Closed</span>`;
+  const q=typeof quotes!=='undefined'?quotes[sym]:null;
+  if(q&&q.price>0&&q.state!=='DELAYED')return '';
+  if(typeof isPricePending==='function'&&isPricePending(sym))return '';
+  const label=(!q||!(q.price>0))?'No quote':'Delayed';
+  return`<span class="rot-badge closed">${label}</span>`;
+}
+function liveBadgeHtml(sym,open){
+  if(!open)return`<span class="rot-badge closed">Closed</span>`;
+  return`<span class="rot-badge open live-desk">● Live</span><span class="live-phone">${quoteLiveBadge(sym,true)}</span>`;
+}
+function tradeRowPhoneCard(p){
+  const mid=xs=>xs.filter(Boolean).join('<span class="tr-dot">·</span>');
+  const nz=v=>v&&v!=='—';
+  const cap=p.cap==null||p.cap===''?'—':p.cap;
+  const warn=p.warn||'';
+  const ts=nz(p.toStrike)?`<span class="tr-to">To strike ${p.toStrike}</span>`:'';
+  return`<div class="tr-card"><div class="tr-l1"><span class="tr-ab">${p.ab}${p.exp||''}</span><span class="tr-id">${p.id||'—'}</span><span class="tr-cap" style="color:${p.capColor||'var(--text3)'}">${cap}</span><span class="tr-edit">${p.edit||''}</span></div><div class="tr-l2"><span class="tr-dates">${p.entered||'—'} → ${p.expiry||'—'}</span><span class="tr-prem">${p.premium||'—'}</span></div><div class="tr-l3">${mid([nz(p.shares)?`<span>Shares ${p.shares}</span>`:'',p.total?`<span>Total ${p.total}</span>`:'',ts,warn])}</div></div>`;
+}
+
+
 function renderTradeRow(t,wheelTrades,opts){
   // opts (optional): {rocHtml, rocColor, editOnclick, noEdit, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
   opts=opts||{};
@@ -5136,21 +5746,31 @@ function renderTradeRow(t,wheelTrades,opts){
   const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
+  const _ab=`<span class="ab ab-${t.action}">${t.action}</span>`;
+  const _warn=typeof shortRowWarnTags==='function'&&opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?shortRowWarnTags(opts.list.ticker||t.ticker,{isOpen:true,isCall:t.action==='STOC',expiry:t.expiry,today:opts.list.today,spot:opts.list.spot,strike:t.strike,mark:t.currentPrice!=null&&t.currentPrice!==''?+t.currentPrice:(opts.list.marks&&opts.list.marks[wheelLegOcc(opts.list.ticker,t)])}):'';
+  const _entered=fmtDateFull(t.entered);
+  const _expiry=(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—';
+  const _strike=t.strike?fmtStrike(t.strike):'—';
+  const _prem=t.premium?'$'+fmtPrem(t.premium):'—';
+  const _shares=opts.list?(()=>{const lab=wheelRemainLabel(t,wheelTrades,opts.list.today);return lab?esc(lab):(t.shares||'—');})():(t.shares||'—');
+  const _total=`<span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>`;
+  const _fees=t.fees?'$'+fmt2(t.fees):'—';
+  const _edit=opts.noEdit?'':opts.editBtn?`<button class="btn btn-ghost btn-sm" onclick="${editOn};event.stopPropagation()">Edit</button>`:`<button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>`;
+  const _tsText=hasExtra?String(opts.extraAfterStrike||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim():'';
   return`<div class="trow ${rowCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}" data-act="${esc(t.action||'')}" data-strike="${t.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
-    <span class="action-cell"><span class="ab ab-${t.action}">${t.action}</span>${expBadge}${typeof shortRowWarnTags==='function'&&opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?shortRowWarnTags(opts.list.ticker||t.ticker,{isOpen:true,isCall:t.action==='STOC',expiry:t.expiry,today:opts.list.today,spot:opts.list.spot,strike:t.strike,mark:t.currentPrice!=null&&t.currentPrice!==''?+t.currentPrice:(opts.list.marks&&opts.list.marks[wheelLegOcc(opts.list.ticker,t)])}):''}</span>
-    <span>${fmtDateFull(t.entered)}</span>
-    <span>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</span>
-    <span>${t.strike?fmtStrike(t.strike):'—'}</span>
+    <span class="action-cell">${_ab}${expBadge}${_warn}</span>
+    <span>${_entered}</span>
+    <span>${_expiry}</span>
+    <span>${_strike}</span>
     ${hasExtra?opts.extraAfterStrike:''}
-    <span>${t.premium?'$'+fmtPrem(t.premium):'—'}</span>
-    <span style="white-space:nowrap">${opts.list?(()=>{const lab=wheelRemainLabel(t,wheelTrades,opts.list.today);return lab?esc(lab):(t.shares||'—');})():(t.shares||'—')}</span>
-    <span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>
-    <span>${t.fees?'$'+fmt2(t.fees):'—'}</span>
+    <span>${_prem}</span>
+    <span style="white-space:nowrap">${_shares}</span>
+    ${_total}
+    <span>${_fees}</span>
     <span style="white-space:nowrap">${ppdDisplay}</span>
     <span style="color:${rocColor}">${rocDisplay}</span>
-    <span style="display:flex;gap:0.1875rem;justify-content:flex-end">
-      ${opts.noEdit?'':opts.editBtn?`<button class="btn btn-ghost btn-sm" onclick="${editOn};event.stopPropagation()">Edit</button>`:`<button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>`}
-    </span>
+    <span style="display:flex;gap:0.1875rem;justify-content:flex-end">${_edit}</span>
+    ${typeof tradeRowPhoneCard==='function'?tradeRowPhoneCard({ab:_ab,exp:expBadge,warn:_warn,id:_strike,cap:rocDisplay,capColor:rocColor,entered:_entered,expiry:_expiry,premium:_prem,shares:_shares,fees:_fees,total:_total,ppd:ppdDisplay,toStrike:_tsText,edit:_edit}):''}
   </div>`;
 }
 
@@ -5901,7 +6521,7 @@ function renderHome(){
   ${renderMonthlyRealised()}
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
     <div class="tk-row tk-hd"><span>Ticker</span><span>${today.slice(0,4)}</span><span>All time</span></div>
-    ${tpl.map(t=>`<div class="tk-row"><span>${esc(t.ticker)}</span><span class="${cls(t.year)}">${sgn(t.year)}</span><span class="${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}</div>`:''}
+    ${tpl.map(t=>`<div class="tk-row"><span class="tk-sym">${esc(t.ticker)}</span><span class="tk-year ${cls(t.year)}" data-lbl="${esc(today.slice(0,4))}">${sgn(t.year)}</span><span class="tk-all ${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}</div>`:''}
 </div>`;
 }
 
@@ -5946,8 +6566,8 @@ function renderMonthlyRealised(){
   const yr=String(new Date().getFullYear());
   const sum=(list,keys)=>{const o={};keys.forEach(k=>o[k]=list.reduce((a,r)=>a+(r[k]||0),0));return o;};
   const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
-  const cell=(v,cls)=>`<td class="num ${v?cls:'m'}">${v?fmtMoney(v):'—'}</td>`;
-  const pcell=v=>`<td class="num ${v?colorN(v):'m'}" style="font-weight:720">${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
+  const cell=(v,cls,lab)=>`<td class="num ${v?cls:'m'}"${lab?` data-lbl="${lab}"`:''}>${v?fmtMoney(v):'—'}</td>`;
+  const pcell=(v,lab)=>`<td class="num ${v?colorN(v):'m'}" style="font-weight:720"${lab?` data-lbl="${lab}"`:''}>${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
   const panel=(title,tip,heads,rows,keys,line)=>`<div class="d-panel">
       <div class="d-panel-hdr"><span class="d-panel-title">${title} ${ii(tip)}</span></div>
       <div class="d-panel-body">
@@ -5957,17 +6577,17 @@ function renderMonthlyRealised(){
         ${line('All time',sum(rows,keys),'mpl-sum')}</tbody></table>
       </div>
     </div>`;
-  const tr=(label,cls,cells)=>`<tr class="${cls||''}"><td>${label}</td>${cells}</tr>`;
+  const tr=(label,cls,cells)=>`<tr class="${cls||''}"><td class="mpl-month">${label}</td>${cells}</tr>`;
   const opt=all.filter(r=>r.collected||r.loss);
   let html=opt.length?panel('Monthly P&amp;L',`Options only, realised: booked in the month an option closed, expired or was assigned/called away; open options are excluded. Premium collected = credits of wheel puts and calls that ended that month, sell-to-close credits and credits of PMCC short calls. Loss = buyback costs on wheel options and PMCC calls. Profit = Premium collected minus Loss. Share sales and closed LEAPs are in Shares & LEAPs P&L below.`,
-    ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'g')+cell(r.loss?-r.loss:0,'r')+pcell(r.profit))):'';
+    ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'g','Collected')+cell(r.loss?-r.loss:0,'r','Loss')+pcell(r.profit,'Profit'))):'';
   // Positions: FIFO share sales + closed long LEAPs (+ dividends), one table
   const sh=all.filter(r=>r.shareSales||r.divs||r.leapGain||r.leapLoss);
   const showDiv=sh.some(r=>r.divs);
   const pg=r=>(r.shareGain||0)+(r.leapGain||0),pl=r=>(r.shareLoss||0)+(r.leapLoss||0);
   const posRows=sh.map(r=>({...r,posGain:pg(r),posLoss:pl(r),posNet:(r.shares||0)+(r.leapNet||0)+(r.divs||0)}));
   if(sh.length)html+=panel('Shares &amp; LEAPs P&amp;L',`Realised only, covering shares and LEAPs. Each share sale (called away or sold) is matched against what those shares cost in the same wheel, first in, first out; each long LEAP counts when it is sold or expires. Booked in the month it closed. Gains = closed above cost, Losses = closed below cost.${showDiv?' Dividends have their own column and are included in Net.':''} Shares and LEAPs still held are in Unrealised. PMCC short calls are in Monthly P&L above.`,
-    ['Gains','Losses',...(showDiv?['Dividends']:[]),'Net'],posRows,['posGain','posLoss','divs','posNet'],(l,r,c)=>tr(l,c,cell(r.posGain,'g')+cell(r.posLoss?-r.posLoss:0,'r')+(showDiv?cell(r.divs,'g'):'')+pcell(r.posNet)));
+    ['Gains','Losses',...(showDiv?['Dividends']:[]),'Net'],posRows,['posGain','posLoss','divs','posNet'],(l,r,c)=>tr(l,c,cell(r.posGain,'g','Gains')+cell(r.posLoss?-r.posLoss:0,'r','Losses')+(showDiv?cell(r.divs,'g','Dividends'):'')+pcell(r.posNet,'Net')));
   return html;
 }
 
@@ -7240,7 +7860,7 @@ function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=documen
 function goToHealth(){switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
-window.addEventListener('resize',()=>_pnlRedraw());
+window.addEventListener('resize',()=>{_pnlRedraw();if(view==='log'&&isPhoneLayout())switchView('dash');if(typeof syncPwaInstallUi==='function')syncPwaInstallUi();});
 
 function renderAnalytics(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();
@@ -8053,7 +8673,7 @@ function showPastePreview(p){
         <div><div class="mini-lbl">DTE</div><div class="fs-sm">${p.days!=null?p.days+'d':'—'}</div></div>
         <div><div class="mini-lbl">Premium</div><div class="fs-sm">$${(p.premium||0).toFixed(4)}</div></div>
         <div><div class="mini-lbl">Shares</div><div class="fs-sm">${p.shares||'—'}</div></div>
-        <div><div class="mini-lbl">Fees</div><div class="fs-sm">$${(p.fees||0).toFixed(2)}</div></div>
+        ${isPhoneLayout()?'':`<div><div class="mini-lbl">Fees</div><div class="fs-sm">$${(p.fees||0).toFixed(2)}</div></div>`}
       </div>
     </div>
     <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>`;
@@ -8121,7 +8741,7 @@ function authTab(tab){
   document.getElementById('auth-error').style.display='none';
   const fw=document.getElementById('auth-forgot-wrap');if(fw)fw.style.display=isSign?'block':'none';
   const lead=document.getElementById('auth-lead');if(lead)lead.style.display=isSign?'none':'block';
-  const pw=document.getElementById('auth-password');if(pw&&document.activeElement!==pw)pw.placeholder=isSign?'Password':'Password (6 or more characters)';
+  const pw=document.getElementById('auth-password');if(pw&&document.activeElement!==pw)pw.placeholder=isSign?'Password':(isPhoneLayout()?'Password, 6+ characters':'Password (6 or more characters)');
 }
 authTab('signin');
 
@@ -8488,8 +9108,10 @@ function demoBoot(){
   document.getElementById('auth-overlay').style.display='none';
   document.documentElement.classList.add('ot-demo');
   const bar=document.createElement('div');bar.id='demo-banner';
-  bar.innerHTML='<span><b>Demo</b> with made-up trades. Nothing is saved to an account. Long press or right-click any trades to see the real net.</span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/app/?signup=1" class="db-go" onclick="window.otTrack&&window.otTrack(\'/start-free\')">Start free</a></span>';
+  bar.innerHTML='<span class="db-copy"><span class="db-full"><b>Demo</b> with made-up trades. Nothing is saved to an account. Long press or right-click any trades to see the real net.</span><span class="db-short"><b>Demo</b> · made-up trades</span></span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/app/?signup=1" class="db-go" onclick="window.otTrack&&window.otTrack(\'/start-free\')">Start free</a></span>';
   document.body.prepend(bar);
+  const _syncDemoBan=()=>{document.documentElement.style.setProperty('--demo-banner-h',bar.offsetHeight+'px');};
+  _syncDemoBan();window.addEventListener('resize',_syncDemoBan);
   ['settings-export','settings-signout','settings-delete','settings-user'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   const sx=document.getElementById('settings-legal');if(sx){const r=document.createElement('button');r.className='btn btn-ghost btn-full';r.style.cssText='text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem';r.textContent='↺ Reset demo';r.onclick=()=>OT_DEMO.reset();sx.after(r);}
   const ta=document.getElementById('paste-raw');if(ta){const b=document.createElement('button');b.type='button';b.id='demo-sample';b.className='btn btn-ghost';b.style.cssText='margin-top:0.5rem;font-size:0.75rem';b.textContent='Try a sample';b.onclick=()=>{ta.value=OT_DEMO.sample();ta.focus();};ta.after(b);}
@@ -8615,9 +9237,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (onboardBtn) onboardBtn.addEventListener('click', onboardSubmit);
   const tickerField = document.getElementById('onboard-ticker');
   if (tickerField) tickerField.addEventListener('keydown', e => { if(e.key==='Enter') onboardSubmit(); });
+  syncPwaInstallUi();
 });
 
 window.togglePw = togglePw;
+window.promptPwaInstall = promptPwaInstall;
 window.authTab = authTab;
 window.authSubmit = authSubmit;
 window.authGoogle = authGoogle;
