@@ -13,7 +13,21 @@ test('returning visits to / are rewritten to the app in one document load',()=>{
   assert.ok(h.includes("ot-open-app=1")&&h.includes("history.replaceState(null,'','/app/'"));
   assert.ok(!h.includes("location.replace('/app/'")||h.indexOf("history.replaceState(null,'','/app/'")>0);
 });
-test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');});
+test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');assert.strictEqual(m.scope,'/');});
+test('landing, app and start all link /manifest.json and register the service worker',()=>{
+  const start=fs.readFileSync(path.join(A,'start.html'),'utf8');
+  const app=fs.readFileSync(path.join(A,'index.html'),'utf8');
+  for (const [name,src] of [['landing',L],['start',start],['app',app]]){
+    assert.ok(src.includes('rel="manifest" href="/manifest.json"'), name+' manifest');
+    assert.ok(src.includes('src="sw-update.js"')||src.includes("src='sw-update.js'"), name+' sw');
+  }
+  assert.ok(start.includes('src="pwa-install.js"')&&L.includes('src="pwa-install.js"'));
+  const pwa=fs.readFileSync(path.join(A,'pwa-install.js'),'utf8');
+  assert.ok(pwa.includes('beforeinstallprompt')&&!pwa.includes('preventDefault()'));
+  assert.ok(app.includes('beforeinstallprompt')&&!/beforeinstallprompt[^;]*preventDefault/.test(app));
+  assert.ok(app.includes('id="tn-install"')&&app.includes('tnBtn.hidden=!canInstall'));
+  assert.ok(fs.readFileSync(path.join(A,'sw.js'),'utf8').includes('./pwa-install.js'));
+});
 test('landing leads with the USPs, top three first, then the rest, plans, not financial advice, CTAs, no hype',()=>{
   const i=id=>L.indexOf('id="'+id+'"');assert.ok(i('usp-broker')>0&&i('usp-broker')<i('usp-honest')&&i('usp-honest')<i('usp-smartscan')&&i('usp-smartscan')<i('plans'),'USP order');
   ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Pick any trades. See the real net.','PMCC','every minute','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','Try the demo','href="/start"','id="plans"','id="start-free"','id="try-demo"','id="signin-top"','id="go-pro"','href="/app/?signup=1"','signup=1&checkout=monthly'].forEach(s=>assert.ok(L.includes(s),s));

@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Start OpTrack</title>
 <meta name="description" content="Track your options wheel and LEAPs. Free plan, or Pro for a few quid a month.">
-<meta name="theme-color" content="#f8f9fc"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#f8f9fc"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="/manifest.json">
 <meta property="og:title" content="Start OpTrack"><meta property="og:image" content="optrack-share.png">
 <script src="brand.js"></script>
 <script src="analytics.js" defer></script>
@@ -38,11 +38,13 @@ details p{margin:0;padding:0 1rem 1rem}
 .hero{display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:start}.hero h2{margin-top:1.5rem}.faq{display:grid;grid-template-columns:1fr 1fr;gap:0 .75rem;align-items:start}.end{display:flex;gap:.75rem;justify-content:center}.end .btn{min-width:12rem}
 @media (max-width:860px){.hero,.faq{grid-template-columns:1fr;gap:0}}
 footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1rem;flex-wrap:wrap}
+.hdr-right{display:flex;align-items:center;gap:0.75rem}
+.install-app{background:none;border:0;padding:0;color:var(--text3,#5b5d62);font:inherit;font-size:0.8125rem;font-weight:480;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header><a class="logo" href="/"><img src="logo-mark.svg" alt="" width="47" height="47"><span class="wm" data-brand="name">OpTrack</span></a><a class="btn g sm" href="/app/">Sign in</a></header>
+  <header><a class="logo" href="/"><img src="logo-mark.svg" alt="" width="47" height="47"><span class="wm" data-brand="name">OpTrack</span></a><span class="hdr-right"><button type="button" class="install-app" data-pwa-install hidden onclick="promptPwaInstall()">Install app</button><a class="btn g sm" href="/app/">Sign in</a></span></header>
 
   <div class="hero"><div>
   <h1><span data-brand="name">OpTrack</span></h1>
@@ -99,6 +101,7 @@ footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap
   if(!P.gating)document.getElementById('gating-note').textContent='For now everything is free while I finish setting up, so Start free gets you the lot.';
 })();
 </script>
+<script src="pwa-install.js"></script>
 <script src="sw-update.js"></script>
 </body>
 </html>
