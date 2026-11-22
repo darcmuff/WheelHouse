@@ -32,6 +32,18 @@ test('chart dropdown is All / Wheel P&L / PMCC calls / Shares & LEAPs P&L and is
   assert.ok(css.includes('padding:0.1875rem 32px') && css.includes('background-position:right 12px') && css.includes('font-weight:480') && css.includes('border-radius:6px'));
   assert.ok(load.includes("return 'all'"));
   assert.ok(extractFn('setPnlMeasure').includes("localStorage.setItem('optrack-pnl-measure'"));
+  assert.ok(H.includes("if(b.net)") && H.includes("Y(b.net)") && !H.includes('if(b.gain)bars'));
+  assert.ok(!html.includes('pc-sub') && !html.includes('collected'));
+  assert.ok(H.includes('>Profit</div>') && H.includes('>Loss</div>'));
+});
+test('chart tooltip and legend describe net profit or loss only', () => {
+  const tip = extractFn('pnlTip');
+  const html = extractFn('pnlCurveHtml');
+  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  assert.ok(tip.includes('Net') && tip.includes('el.dataset.n') && !tip.includes('dataset.g') && !tip.includes('Premium collected'));
+  assert.ok(H.includes('>Profit</div>') && H.includes('>Loss</div>'));
+  assert.ok(!html.includes('pc-sub'));
+  assert.ok(H.includes('Math.min(0,...nets)'));
 });
 test('Wheel and PMCC calls series are a split of the same realisedDaily inputs, and nets sum to All', () => {
   const { extractFn, extractConst } = require('./extract');
