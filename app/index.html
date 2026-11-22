@@ -5695,7 +5695,7 @@ async function promptPwaInstall(){
   _pwaDeferredPrompt=null;
   syncPwaInstallUi();
 }
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_pwaDeferredPrompt=e;syncPwaInstallUi();});
+window.addEventListener('beforeinstallprompt',e=>{_pwaDeferredPrompt=e;syncPwaInstallUi();});
 window.addEventListener('appinstalled',()=>{_pwaDeferredPrompt=null;syncPwaInstallUi();});
 try{
   const mq=window.matchMedia&&window.matchMedia('(display-mode: standalone)');
