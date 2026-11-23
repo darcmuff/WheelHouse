@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T21:49:34.016Z",
+  "generatedAt": "2026-11-23T16:42:01.711Z",
   "limit": 250,
   "metric": "YTD 2026 average daily options contract volume (all expirations), CBOE-family exchanges — Macroption table; cross-checked against ElixStocks OCC daily snapshot.",
   "approximation": true,
@@ -14,7 +14,7 @@
       "name": "ElixStocks — Options volume by day (OCC)",
       "url": "https://elixstocks.com/options",
       "field": "contracts_traded",
-      "tradingDay": "Nov 11, 2026"
+      "tradingDay": "Nov 18, 2026"
     }
   ],
   "skippedWhileBuilding": [],
@@ -41,7 +41,7 @@
       "avgDailyVolume": 256663,
       "name": "Apple Inc",
       "macroptionRank": 3,
-      "elixDailyRank": 7
+      "elixDailyRank": 6
     },
     {
       "rank": 4,
@@ -49,7 +49,7 @@
       "avgDailyVolume": 197398,
       "name": "Amazon.com Inc",
       "macroptionRank": 4,
-      "elixDailyRank": 12
+      "elixDailyRank": 7
     },
     {
       "rank": 5,
@@ -65,7 +65,7 @@
       "avgDailyVolume": 188672,
       "name": "Intel Corp",
       "macroptionRank": 6,
-      "elixDailyRank": 13
+      "elixDailyRank": 17
     },
     {
       "rank": 7,
@@ -73,7 +73,7 @@
       "avgDailyVolume": 167344,
       "name": "Micron Technology Inc",
       "macroptionRank": 7,
-      "elixDailyRank": 5
+      "elixDailyRank": 8
     },
     {
       "rank": 8,
@@ -81,7 +81,7 @@
       "avgDailyVolume": 146023,
       "name": "Palantir Technologies Inc - Class A",
       "macroptionRank": 8,
-      "elixDailyRank": 28
+      "elixDailyRank": 18
     },
     {
       "rank": 9,
@@ -89,7 +89,7 @@
       "avgDailyVolume": 141715,
       "name": "Meta Platforms Inc - Class A",
       "macroptionRank": 9,
-      "elixDailyRank": 14
+      "elixDailyRank": 15
     },
     {
       "rank": 10,
@@ -97,7 +97,7 @@
       "avgDailyVolume": 140132,
       "name": "Strategy Inc - Class A",
       "macroptionRank": 10,
-      "elixDailyRank": 26
+      "elixDailyRank": 13
     },
     {
       "rank": 11,
@@ -105,7 +105,7 @@
       "avgDailyVolume": 125927,
       "name": "Advanced Micro Devices Inc",
       "macroptionRank": 11,
-      "elixDailyRank": 6
+      "elixDailyRank": 9
     },
     {
       "rank": 12,
@@ -113,7 +113,7 @@
       "avgDailyVolume": 115231,
       "name": "Netflix Inc",
       "macroptionRank": 12,
-      "elixDailyRank": 29
+      "elixDailyRank": 25
     },
     {
       "rank": 13,
@@ -129,7 +129,7 @@
       "avgDailyVolume": 99285,
       "name": "Super Micro Computer Inc",
       "macroptionRank": 14,
-      "elixDailyRank": 22
+      "elixDailyRank": 34
     },
     {
       "rank": 15,
@@ -137,7 +137,7 @@
       "avgDailyVolume": 98821,
       "name": "SoFi Technologies Inc",
       "macroptionRank": 15,
-      "elixDailyRank": 24
+      "elixDailyRank": 26
     },
     {
       "rank": 16,
@@ -145,7 +145,7 @@
       "avgDailyVolume": 86827,
       "name": "MARA Holdings Inc (formerly Marathon Digital Holdings Inc)",
       "macroptionRank": 16,
-      "elixDailyRank": 36
+      "elixDailyRank": 29
     },
     {
       "rank": 17,
@@ -153,7 +153,7 @@
       "avgDailyVolume": 84853,
       "name": "Iris Energy Ltd",
       "macroptionRank": 17,
-      "elixDailyRank": 20
+      "elixDailyRank": 22
     },
     {
       "rank": 18,
@@ -161,7 +161,7 @@
       "avgDailyVolume": 81725,
       "name": "Space Exploration Technologies Corp - Class A",
       "macroptionRank": 18,
-      "elixDailyRank": 8
+      "elixDailyRank": 5
     },
     {
       "rank": 19,
@@ -169,7 +169,7 @@
       "avgDailyVolume": 75731,
       "name": "Oracle Corp",
       "macroptionRank": 19,
-      "elixDailyRank": 21
+      "elixDailyRank": 23
     },
     {
       "rank": 20,
@@ -177,7 +177,7 @@
       "avgDailyVolume": 72318,
       "name": "Broadcom Inc",
       "macroptionRank": 20,
-      "elixDailyRank": 17
+      "elixDailyRank": 19
     },
     {
       "rank": 21,
@@ -185,15 +185,14 @@
       "avgDailyVolume": 72254,
       "name": "Robinhood Markets Inc - Class A",
       "macroptionRank": 21,
-      "elixDailyRank": 30
+      "elixDailyRank": 42
     },
     {
       "rank": 22,
       "symbol": "NOK",
       "avgDailyVolume": 56459,
       "name": "Nokia Corp",
-      "macroptionRank": 22,
-      "elixDailyRank": 61
+      "macroptionRank": 22
     },
     {
       "rank": 23,
@@ -201,7 +200,7 @@
       "avgDailyVolume": 55177,
       "name": "Coinbase Global Inc - Class A",
       "macroptionRank": 23,
-      "elixDailyRank": 53
+      "elixDailyRank": 44
     },
     {
       "rank": 24,
@@ -209,7 +208,7 @@
       "avgDailyVolume": 51048,
       "name": "Alphabet Inc - Class C",
       "macroptionRank": 24,
-      "elixDailyRank": 32
+      "elixDailyRank": 35
     },
     {
       "rank": 25,
@@ -217,7 +216,7 @@
       "avgDailyVolume": 50136,
       "name": "Nebius Group N.V. - Class A",
       "macroptionRank": 25,
-      "elixDailyRank": 19
+      "elixDailyRank": 27
     },
     {
       "rank": 26,
@@ -225,15 +224,14 @@
       "avgDailyVolume": 49765,
       "name": "CoreWeave Inc - Class A",
       "macroptionRank": 26,
-      "elixDailyRank": 9
+      "elixDailyRank": 20
     },
     {
       "rank": 27,
       "symbol": "ONDS",
       "avgDailyVolume": 48802,
       "name": "Ondas Holdings Inc",
-      "macroptionRank": 27,
-      "elixDailyRank": 39
+      "macroptionRank": 27
     },
     {
       "rank": 28,
@@ -241,7 +239,7 @@
       "avgDailyVolume": 44189,
       "name": "Taiwan Semiconductor Manufacturing",
       "macroptionRank": 28,
-      "elixDailyRank": 35
+      "elixDailyRank": 43
     },
     {
       "rank": 29,
@@ -256,7 +254,7 @@
       "avgDailyVolume": 42606,
       "name": "Alibaba Group Holding Ltd",
       "macroptionRank": 30,
-      "elixDailyRank": 48
+      "elixDailyRank": 31
     },
     {
       "rank": 31,
@@ -264,7 +262,7 @@
       "avgDailyVolume": 42546,
       "name": "Sandisk Corp",
       "macroptionRank": 31,
-      "elixDailyRank": 25
+      "elixDailyRank": 36
     },
     {
       "rank": 32,
@@ -272,7 +270,7 @@
       "avgDailyVolume": 40916,
       "name": "Marvell Technology Inc",
       "macroptionRank": 32,
-      "elixDailyRank": 27
+      "elixDailyRank": 45
     },
     {
       "rank": 33,
@@ -287,7 +285,7 @@
       "avgDailyVolume": 39897,
       "name": "AST SpaceMobile Inc - Class A",
       "macroptionRank": 34,
-      "elixDailyRank": 49
+      "elixDailyRank": 40
     },
     {
       "rank": 35,
@@ -295,7 +293,7 @@
       "avgDailyVolume": 38716,
       "name": "Hims &amp; Hers Health Inc - Class A",
       "macroptionRank": 35,
-      "elixDailyRank": 31
+      "elixDailyRank": 74
     },
     {
       "rank": 36,
@@ -303,7 +301,7 @@
       "avgDailyVolume": 36052,
       "name": "TeraWulf Inc",
       "macroptionRank": 36,
-      "elixDailyRank": 15
+      "elixDailyRank": 41
     },
     {
       "rank": 37,
@@ -311,7 +309,7 @@
       "avgDailyVolume": 34740,
       "name": "ServiceNow Inc",
       "macroptionRank": 37,
-      "elixDailyRank": 51
+      "elixDailyRank": 38
     },
     {
       "rank": 38,
@@ -319,7 +317,7 @@
       "avgDailyVolume": 34649,
       "name": "Bank Of America Corp",
       "macroptionRank": 38,
-      "elixDailyRank": 55
+      "elixDailyRank": 28
     },
     {
       "rank": 39,
@@ -327,7 +325,7 @@
       "avgDailyVolume": 33349,
       "name": "Rocket Lab USA Inc",
       "macroptionRank": 39,
-      "elixDailyRank": 33
+      "elixDailyRank": 62
     },
     {
       "rank": 40,
@@ -342,7 +340,7 @@
       "avgDailyVolume": 32024,
       "name": "Rivian Automotive Inc - Class A",
       "macroptionRank": 41,
-      "elixDailyRank": 68
+      "elixDailyRank": 67
     },
     {
       "rank": 42,
@@ -350,7 +348,7 @@
       "avgDailyVolume": 30943,
       "name": "Moderna Inc",
       "macroptionRank": 42,
-      "elixDailyRank": 50
+      "elixDailyRank": 64
     },
     {
       "rank": 43,
@@ -358,7 +356,7 @@
       "avgDailyVolume": 30676,
       "name": "Walmart Inc",
       "macroptionRank": 43,
-      "elixDailyRank": 47
+      "elixDailyRank": 30
     },
     {
       "rank": 44,
@@ -366,7 +364,7 @@
       "avgDailyVolume": 30649,
       "name": "Nike Inc - Class B",
       "macroptionRank": 44,
-      "elixDailyRank": 43
+      "elixDailyRank": 55
     },
     {
       "rank": 45,
@@ -374,7 +372,7 @@
       "avgDailyVolume": 29857,
       "name": "Ford Motor Company",
       "macroptionRank": 45,
-      "elixDailyRank": 84
+      "elixDailyRank": 81
     },
     {
       "rank": 46,
@@ -382,7 +380,7 @@
       "avgDailyVolume": 29347,
       "name": "Circle Internet Group Inc - Class A",
       "macroptionRank": 46,
-      "elixDailyRank": 67
+      "elixDailyRank": 95
     },
     {
       "rank": 47,
@@ -397,7 +395,7 @@
       "avgDailyVolume": 27841,
       "name": "Pfizer Inc",
       "macroptionRank": 48,
-      "elixDailyRank": 79
+      "elixDailyRank": 50
     },
     {
       "rank": 49,
@@ -405,7 +403,7 @@
       "avgDailyVolume": 27297,
       "name": "American Airlines Group Inc",
       "macroptionRank": 49,
-      "elixDailyRank": 86
+      "elixDailyRank": 92
     },
     {
       "rank": 50,
@@ -420,7 +418,7 @@
       "avgDailyVolume": 26502,
       "name": "Bloom Energy Corp - Class A",
       "macroptionRank": 51,
-      "elixDailyRank": 34
+      "elixDailyRank": 51
     },
     {
       "rank": 52,
@@ -428,7 +426,7 @@
       "avgDailyVolume": 26280,
       "name": "Cipher Mining Inc",
       "macroptionRank": 52,
-      "elixDailyRank": 37
+      "elixDailyRank": 71
     },
     {
       "rank": 53,
@@ -436,7 +434,7 @@
       "avgDailyVolume": 25927,
       "name": "Applied Digital Corporation",
       "macroptionRank": 53,
-      "elixDailyRank": 45
+      "elixDailyRank": 68
     },
     {
       "rank": 54,
@@ -458,15 +456,14 @@
       "avgDailyVolume": 23686,
       "name": "Unitedhealth Group Inc",
       "macroptionRank": 56,
-      "elixDailyRank": 69
+      "elixDailyRank": 33
     },
     {
       "rank": 57,
       "symbol": "NU",
       "avgDailyVolume": 23580,
       "name": "Nu Holdings Ltd Class A",
-      "macroptionRank": 57,
-      "elixDailyRank": 54
+      "macroptionRank": 57
     },
     {
       "rank": 58,
@@ -474,7 +471,7 @@
       "avgDailyVolume": 23505,
       "name": "Qualcomm Inc",
       "macroptionRank": 58,
-      "elixDailyRank": 70
+      "elixDailyRank": 89
     },
     {
       "rank": 59,
@@ -489,7 +486,7 @@
       "avgDailyVolume": 22491,
       "name": "Exxon Mobil Corp",
       "macroptionRank": 60,
-      "elixDailyRank": 66
+      "elixDailyRank": 47
     },
     {
       "rank": 61,
@@ -497,7 +494,7 @@
       "avgDailyVolume": 22069,
       "name": "Riot Platforms Inc",
       "macroptionRank": 61,
-      "elixDailyRank": 40
+      "elixDailyRank": 24
     },
     {
       "rank": 62,
@@ -512,14 +509,15 @@
       "avgDailyVolume": 21415,
       "name": "Uber Technologies Inc",
       "macroptionRank": 63,
-      "elixDailyRank": 42
+      "elixDailyRank": 57
     },
     {
       "rank": 64,
       "symbol": "CRM",
       "avgDailyVolume": 20785,
       "name": "Salesforce Inc",
-      "macroptionRank": 64
+      "macroptionRank": 64,
+      "elixDailyRank": 75
     },
     {
       "rank": 65,
@@ -534,7 +532,7 @@
       "avgDailyVolume": 19432,
       "name": "IonQ Inc",
       "macroptionRank": 66,
-      "elixDailyRank": 85
+      "elixDailyRank": 77
     },
     {
       "rank": 67,
@@ -549,7 +547,7 @@
       "avgDailyVolume": 18567,
       "name": "Carvana Co. - Class A",
       "macroptionRank": 68,
-      "elixDailyRank": 89
+      "elixDailyRank": 49
     },
     {
       "rank": 69,
@@ -557,7 +555,7 @@
       "avgDailyVolume": 18443,
       "name": "Boeing Company",
       "macroptionRank": 69,
-      "elixDailyRank": 63
+      "elixDailyRank": 54
     },
     {
       "rank": 70,
@@ -578,15 +576,15 @@
       "symbol": "T",
       "avgDailyVolume": 17531,
       "name": "AT&amp;T Inc",
-      "macroptionRank": 72,
-      "elixDailyRank": 57
+      "macroptionRank": 72
     },
     {
       "rank": 73,
       "symbol": "NVO",
       "avgDailyVolume": 17189,
       "name": "Novo Nordisk",
-      "macroptionRank": 73
+      "macroptionRank": 73,
+      "elixDailyRank": 53
     },
     {
       "rank": 74,
@@ -601,15 +599,14 @@
       "avgDailyVolume": 16262,
       "name": "Cisco Systems Inc",
       "macroptionRank": 75,
-      "elixDailyRank": 72
+      "elixDailyRank": 46
     },
     {
       "rank": 76,
       "symbol": "ARM",
       "avgDailyVolume": 16008,
       "name": "Arm Holdings plc.",
-      "macroptionRank": 76,
-      "elixDailyRank": 44
+      "macroptionRank": 76
     },
     {
       "rank": 77,
@@ -637,30 +634,30 @@
       "symbol": "JPM",
       "avgDailyVolume": 15473,
       "name": "JPMorgan Chase &amp; Company",
-      "macroptionRank": 80
+      "macroptionRank": 80,
+      "elixDailyRank": 70
     },
     {
       "rank": 81,
       "symbol": "VZ",
       "avgDailyVolume": 15460,
       "name": "Verizon Communications Inc",
-      "macroptionRank": 81,
-      "elixDailyRank": 100
+      "macroptionRank": 81
     },
     {
       "rank": 82,
       "symbol": "OXY",
       "avgDailyVolume": 15239,
       "name": "Occidental Petroleum Corp",
-      "macroptionRank": 82
+      "macroptionRank": 82,
+      "elixDailyRank": 61
     },
     {
       "rank": 83,
       "symbol": "OKLO",
       "avgDailyVolume": 15044,
       "name": "Oklo Inc",
-      "macroptionRank": 83,
-      "elixDailyRank": 92
+      "macroptionRank": 83
     },
     {
       "rank": 84,
@@ -668,14 +665,15 @@
       "avgDailyVolume": 14839,
       "name": "Dell Technologies Inc - Class C",
       "macroptionRank": 84,
-      "elixDailyRank": 41
+      "elixDailyRank": 63
     },
     {
       "rank": 85,
       "symbol": "FCX",
       "avgDailyVolume": 14703,
       "name": "Freeport-McMoRan Inc",
-      "macroptionRank": 85
+      "macroptionRank": 85,
+      "elixDailyRank": 59
     },
     {
       "rank": 86,
@@ -683,7 +681,7 @@
       "avgDailyVolume": 14696,
       "name": "Citigroup Inc",
       "macroptionRank": 86,
-      "elixDailyRank": 94
+      "elixDailyRank": 91
     },
     {
       "rank": 87,
@@ -719,15 +717,14 @@
       "avgDailyVolume": 13998,
       "name": "PG&amp;E Corp",
       "macroptionRank": 91,
-      "elixDailyRank": 52
+      "elixDailyRank": 21
     },
     {
       "rank": 92,
       "symbol": "TTD",
       "avgDailyVolume": 13761,
       "name": "Trade Desk Inc - Class A",
-      "macroptionRank": 92,
-      "elixDailyRank": 38
+      "macroptionRank": 92
     },
     {
       "rank": 93,
@@ -741,7 +738,8 @@
       "symbol": "RKT",
       "avgDailyVolume": 13457,
       "name": "Rocket Companies Inc Class A",
-      "macroptionRank": 94
+      "macroptionRank": 94,
+      "elixDailyRank": 76
     },
     {
       "rank": 95,
@@ -756,7 +754,7 @@
       "avgDailyVolume": 13250,
       "name": "Crowdstrike Holdings Inc - Class A",
       "macroptionRank": 96,
-      "elixDailyRank": 71
+      "elixDailyRank": 39
     },
     {
       "rank": 97,
@@ -771,7 +769,7 @@
       "avgDailyVolume": 12829,
       "name": "Coca-Cola Company",
       "macroptionRank": 98,
-      "elixDailyRank": 78
+      "elixDailyRank": 52
     },
     {
       "rank": 99,
@@ -807,15 +805,14 @@
       "avgDailyVolume": 12558,
       "name": "Wells Fargo &amp; Company",
       "macroptionRank": 103,
-      "elixDailyRank": 98
+      "elixDailyRank": 72
     },
     {
       "rank": 104,
       "symbol": "GLW",
       "avgDailyVolume": 12464,
       "name": "Corning Inc",
-      "macroptionRank": 104,
-      "elixDailyRank": 83
+      "macroptionRank": 104
     },
     {
       "rank": 105,
@@ -823,14 +820,15 @@
       "avgDailyVolume": 12452,
       "name": "Chevron Corp",
       "macroptionRank": 105,
-      "elixDailyRank": 87
+      "elixDailyRank": 58
     },
     {
       "rank": 106,
       "symbol": "PDD",
       "avgDailyVolume": 12241,
       "name": "PDD Holdings Inc",
-      "macroptionRank": 106
+      "macroptionRank": 106,
+      "elixDailyRank": 79
     },
     {
       "rank": 107,
@@ -859,7 +857,7 @@
       "avgDailyVolume": 11737,
       "name": "Applied Optoelectronics Inc",
       "macroptionRank": 110,
-      "elixDailyRank": 62
+      "elixDailyRank": 82
     },
     {
       "rank": 111,
@@ -922,16 +920,14 @@
       "symbol": "WDC",
       "avgDailyVolume": 11249,
       "name": "Western Digital Corp",
-      "macroptionRank": 119,
-      "elixDailyRank": 97
+      "macroptionRank": 119
     },
     {
       "rank": 120,
       "symbol": "RDDT",
       "avgDailyVolume": 11220,
       "name": "Reddit Inc - Class A",
-      "macroptionRank": 120,
-      "elixDailyRank": 74
+      "macroptionRank": 120
     },
     {
       "rank": 121,
@@ -939,15 +935,14 @@
       "avgDailyVolume": 11157,
       "name": "Lam Research Corp",
       "macroptionRank": 121,
-      "elixDailyRank": 76
+      "elixDailyRank": 84
     },
     {
       "rank": 122,
       "symbol": "APP",
       "avgDailyVolume": 11104,
       "name": "Applovin Corp - Class A",
-      "macroptionRank": 122,
-      "elixDailyRank": 73
+      "macroptionRank": 122
     },
     {
       "rank": 123,
@@ -975,7 +970,8 @@
       "symbol": "PANW",
       "avgDailyVolume": 10810,
       "name": "Palo Alto Networks Inc",
-      "macroptionRank": 126
+      "macroptionRank": 126,
+      "elixDailyRank": 37
     },
     {
       "rank": 127,
@@ -1003,7 +999,8 @@
       "symbol": "HL",
       "avgDailyVolume": 10109,
       "name": "Hecla Mining Company",
-      "macroptionRank": 130
+      "macroptionRank": 130,
+      "elixDailyRank": 32
     },
     {
       "rank": 131,
@@ -1018,22 +1015,22 @@
       "avgDailyVolume": 10047,
       "name": "Costco Wholesale Corp",
       "macroptionRank": 132,
-      "elixDailyRank": 59
+      "elixDailyRank": 94
     },
     {
       "rank": 133,
       "symbol": "AMAT",
       "avgDailyVolume": 10042,
       "name": "Applied Materials Inc",
-      "macroptionRank": 133,
-      "elixDailyRank": 65
+      "macroptionRank": 133
     },
     {
       "rank": 134,
       "symbol": "DIS",
       "avgDailyVolume": 9989,
       "name": "Walt Disney Co (The)",
-      "macroptionRank": 134
+      "macroptionRank": 134,
+      "elixDailyRank": 65
     },
     {
       "rank": 135,
@@ -1047,8 +1044,7 @@
       "symbol": "HPE",
       "avgDailyVolume": 9612,
       "name": "Hewlett Packard Enterprise Company",
-      "macroptionRank": 136,
-      "elixDailyRank": 91
+      "macroptionRank": 136
     },
     {
       "rank": 137,
@@ -1111,8 +1107,7 @@
       "symbol": "GS",
       "avgDailyVolume": 8864,
       "name": "Goldman Sachs Group Inc",
-      "macroptionRank": 145,
-      "elixDailyRank": 96
+      "macroptionRank": 145
     },
     {
       "rank": 146,
@@ -1134,7 +1129,7 @@
       "avgDailyVolume": 8613,
       "name": "Petroleo Brasileiro S.A. Petrobras",
       "macroptionRank": 148,
-      "elixDailyRank": 46
+      "elixDailyRank": 83
     },
     {
       "rank": 149,
@@ -1204,8 +1199,7 @@
       "symbol": "B",
       "avgDailyVolume": 7630,
       "name": "Barrick Gold Corp",
-      "macroptionRank": 158,
-      "elixDailyRank": 93
+      "macroptionRank": 158
     },
     {
       "rank": 159,
@@ -1219,15 +1213,15 @@
       "symbol": "ALAB",
       "avgDailyVolume": 7524,
       "name": "Astera Labs Inc",
-      "macroptionRank": 160,
-      "elixDailyRank": 82
+      "macroptionRank": 160
     },
     {
       "rank": 161,
       "symbol": "MRK",
       "avgDailyVolume": 7470,
       "name": "Merck &amp; Co Inc",
-      "macroptionRank": 161
+      "macroptionRank": 161,
+      "elixDailyRank": 99
     },
     {
       "rank": 162,
@@ -1276,7 +1270,8 @@
       "symbol": "TGT",
       "avgDailyVolume": 7103,
       "name": "Target Corp",
-      "macroptionRank": 168
+      "macroptionRank": 168,
+      "elixDailyRank": 66
     },
     {
       "rank": 169,
@@ -1290,8 +1285,7 @@
       "symbol": "VST",
       "avgDailyVolume": 7076,
       "name": "Vistra Corp",
-      "macroptionRank": 170,
-      "elixDailyRank": 58
+      "macroptionRank": 170
     },
     {
       "rank": 171,
@@ -1347,7 +1341,8 @@
       "symbol": "NCLH",
       "avgDailyVolume": 6925,
       "name": "Norwegian Cruise Line Holdings Ltd",
-      "macroptionRank": 178
+      "macroptionRank": 178,
+      "elixDailyRank": 86
     },
     {
       "rank": 179,
@@ -1355,7 +1350,7 @@
       "avgDailyVolume": 6896,
       "name": "Lumentum Holdings Inc",
       "macroptionRank": 179,
-      "elixDailyRank": 64
+      "elixDailyRank": 87
     },
     {
       "rank": 180,
@@ -1383,15 +1378,15 @@
       "symbol": "BMY",
       "avgDailyVolume": 6835,
       "name": "Bristol-Myers Squibb Company",
-      "macroptionRank": 183,
-      "elixDailyRank": 95
+      "macroptionRank": 183
     },
     {
       "rank": 184,
       "symbol": "JNJ",
       "avgDailyVolume": 6772,
       "name": "Johnson &amp; Johnson",
-      "macroptionRank": 184
+      "macroptionRank": 184,
+      "elixDailyRank": 93
     },
     {
       "rank": 185,
@@ -1476,7 +1471,7 @@
       "avgDailyVolume": 6049,
       "name": "United Parcel Service Inc - Class B",
       "macroptionRank": 196,
-      "elixDailyRank": 77
+      "elixDailyRank": 90
     },
     {
       "rank": 197,
@@ -1658,8 +1653,7 @@
       "symbol": "HUT",
       "avgDailyVolume": 5146,
       "name": "Hut 8 Corp",
-      "macroptionRank": 222,
-      "elixDailyRank": 88
+      "macroptionRank": 222
     },
     {
       "rank": 223,
@@ -1722,15 +1716,15 @@
       "symbol": "STX",
       "avgDailyVolume": 4979,
       "name": "Seagate Technology Holdings Plc",
-      "macroptionRank": 231,
-      "elixDailyRank": 90
+      "macroptionRank": 231
     },
     {
       "rank": 232,
       "symbol": "COP",
       "avgDailyVolume": 4962,
       "name": "Conoco Phillips",
-      "macroptionRank": 232
+      "macroptionRank": 232,
+      "elixDailyRank": 100
     },
     {
       "rank": 233,
@@ -1765,14 +1759,16 @@
       "symbol": "FSLR",
       "avgDailyVolume": 4859,
       "name": "First Solar Inc",
-      "macroptionRank": 237
+      "macroptionRank": 237,
+      "elixDailyRank": 48
     },
     {
       "rank": 238,
       "symbol": "GM",
       "avgDailyVolume": 4858,
       "name": "General Motors Company",
-      "macroptionRank": 238
+      "macroptionRank": 238,
+      "elixDailyRank": 85
     },
     {
       "rank": 239,
@@ -1807,8 +1803,7 @@
       "symbol": "COHR",
       "avgDailyVolume": 4679,
       "name": "Coherent Corp",
-      "macroptionRank": 243,
-      "elixDailyRank": 75
+      "macroptionRank": 243
     },
     {
       "rank": 244,
