@@ -539,18 +539,24 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .more-data .a-table-nums th:nth-child(n+2),.more-data .a-table-nums td:nth-child(n+2),
 .more-data .a-table th.num,.more-data .a-table td.num{text-align:right;font-variant-numeric:tabular-nums lining-nums}
 .more-data .a-empty{color:var(--text3);font-size:0.825rem;padding:0.5rem 0 0.25rem;text-align:left;line-height:1.45}
-.more-data .delta-table tr.nodelta td{color:var(--text3)}
+.more-data .stack-table tr.nodelta td{color:var(--text3)}
+.more-data .rot-badge{border-radius:6px!important}
+.more-data .stack-table{width:auto;max-width:100%}
+.more-data .stack-table th:nth-child(n+2),.more-data .stack-table td:nth-child(n+2){width:7.25rem;padding-left:1rem;white-space:nowrap}
 @media(max-width:700px){
   .more-data{padding:0.25rem 0.875rem 2rem}
   .more-data .d-grid-4,.more-data .a-stat-grid{grid-template-columns:1fr 1fr;gap:0.75rem}
   .more-data .d-grid-2{grid-template-columns:1fr}
-  .more-data .delta-table,.more-data .delta-table tbody,.more-data .delta-table tr,.more-data .delta-table th,.more-data .delta-table td{display:block}
-  .more-data .delta-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
-  .more-data .delta-table tr{padding:0.55rem 0;border-bottom:1px solid var(--border)}
-  .more-data .delta-table td{display:flex;justify-content:space-between;gap:0.75rem;text-align:right;padding:0.1rem 0;border:0;font-size:0.825rem}
-  .more-data .delta-table td:first-child{font-weight:720;text-align:left;margin-bottom:0.15rem}
-  .more-data .delta-table td:not(:first-child)::before{content:attr(data-l);color:var(--text3);font-weight:480}
-  .more-data .delta-table th:nth-child(n+2),.more-data .delta-table td:nth-child(n+2){text-align:right}
+  .more-data .stack-table{width:100%}
+  .more-data .stack-table,.more-data .stack-table tbody,.more-data .stack-table tr,.more-data .stack-table th,.more-data .stack-table td{display:block}
+  .more-data .stack-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  .more-data .stack-table tr{padding:0.55rem 0;border-bottom:1px solid var(--border)}
+  .more-data .stack-table td{display:flex;justify-content:space-between;gap:0.75rem;text-align:right;padding:0.1rem 0;border:0;font-size:0.825rem;width:auto}
+  .more-data .stack-table td:first-child{font-weight:720;text-align:left;margin-bottom:0.15rem}
+  .more-data .stack-table td:not(:first-child)::before{content:attr(data-l);color:var(--text3);font-weight:480}
+  .more-data .a-table-wrap .a-table:not(.stack-table){min-width:44rem}
+  .more-data .a-table-wrap .a-table:not(.stack-table) th,
+  .more-data .a-table-wrap .a-table:not(.stack-table) td{white-space:nowrap}
 }
 .a-heatmap{display:grid;gap:0.1875rem}
 .a-heat-cell{border-radius:0.1875rem;display:flex;align-items:center;justify-content:center;font-size:0.675rem;font-weight:720;min-height:1.75rem;transition:opacity .15s}
@@ -6437,7 +6443,7 @@ function renderStatsOverview(){
       <span style="display:flex;gap:0.75rem;align-items:center">${health.length?healthBadge+(_pendH.length?`<span style="color:var(--text3);font-size:0.825rem;font-weight:720">${_pendH.length} pending</span>`:''):_pendH.length?`<span style="color:var(--text3);font-size:0.825rem;font-weight:720">${_pendH.length} pending</span>`:`<span style="color:var(--green);font-size:0.825rem;font-weight:720">✓ All clear</span>`}</span>
     </div>
     ${health.length?`<div class="d-panel-body">
-      ${tradeTableHead()}
+      ${health.some(i=>db.trades.some(x=>x.id===i.tradeId))?tradeTableHead():''}
       ${healthRows}
     </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades${(db.opts||[]).length?` and ${(db.opts||[]).length} option legs`:''} checked — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
   </div>`;
@@ -7021,7 +7027,7 @@ function analyticsDeltaTable(title,items,tip){
     if(!rocByKey[key])rocByKey[key]={sum:0,n:0};
     rocByKey[key].sum+=roc;rocByKey[key].n++;
   });
-  html+=`<div class="a-table-wrap"><table class="a-table a-table-nums delta-table"><thead><tr><th>Delta at open</th><th>Trades</th><th>Win rate</th><th>Total P&amp;L</th><th>Avg P&amp;L</th><th>Avg AROC</th></tr></thead><tbody>`;
+  html+=`<div class="a-table-wrap"><table class="a-table a-table-nums stack-table"><thead><tr><th>Delta at open</th><th>Trades</th><th>Win rate</th><th>Total P&amp;L</th><th>Avg P&amp;L</th><th>Avg AROC</th></tr></thead><tbody>`;
   (B.rows||[]).forEach(b=>{
     const wr=b.wr!=null?b.wr+'%':'—';
     const r=rocByKey[b.key];
@@ -8788,10 +8794,10 @@ function renderAnalytics(){
   }
   const dteRows=Object.entries(dteAnalysis).map(([label,d])=>`<tr>
     <td style="font-weight:720;color:var(--silver)">${label}</td>
-    <td>${d.count}</td>
-    <td class="g">${fmtMoney(d.totalPrem)}</td>
-    <td style="color:var(--orange)">${fmtMoney(d.avgPPD)}/d</td>
-    <td style="color:${d.avgROC!=null?(d.avgROC>=15?'var(--green)':d.avgROC>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${d.avgROC!=null?d.avgROC.toFixed(1)+'%':'—'}</td>
+    <td data-l="Trades">${d.count}</td>
+    <td data-l="Total" class="g">${fmtMoney(d.totalPrem)}</td>
+    <td data-l="Avg PPD" style="color:var(--orange)">${fmtMoney(d.avgPPD)}/d</td>
+    <td data-l="Avg AROC" style="color:${d.avgROC!=null?(d.avgROC>=15?'var(--green)':d.avgROC>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${d.avgROC!=null?d.avgROC.toFixed(1)+'%':'—'}</td>
   </tr>`).join('');
 
 
@@ -8882,7 +8888,7 @@ function renderAnalytics(){
 
   // ═══ ASSEMBLE ═══
   const dteTable=dteRows
-    ?`<div class="a-table-wrap"><table class="a-table a-table-nums"><thead><tr><th>DTE</th><th>Trades</th><th>Total</th><th>Avg PPD</th><th>Avg AROC</th></tr></thead><tbody>${dteRows}</tbody></table></div>`
+    ?`<div class="a-table-wrap"><table class="a-table a-table-nums stack-table"><thead><tr><th>DTE</th><th>Trades</th><th>Total</th><th>Avg PPD</th><th>Avg AROC</th></tr></thead><tbody>${dteRows}</tbody></table></div>`
     :`<p class="a-empty">No closed trades to show yet.</p>`;
   return`<div class="a-wrap">
     <div class="a-section">${sec('Performance','All-time returns and records',true)}${perfStats}
