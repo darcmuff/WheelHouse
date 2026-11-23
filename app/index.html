@@ -715,7 +715,14 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .rep-delta th:nth-child(n+2){text-align:right}
 .rep-delta .rep-nodelta{color:var(--text3)}
 .tr-delta{color:var(--text3);font-weight:480;font-size:0.75rem;margin-left:0.3rem;white-space:nowrap}
-@media(max-width:480px){.rep-delta table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}.rep-delta th,.rep-delta td{padding:0.3125rem 0.4rem;white-space:nowrap;font-size:0.75rem}}
+@media(max-width:480px){
+  .rep-delta table,.rep-delta thead,.rep-delta tbody,.rep-delta tr,.rep-delta th,.rep-delta td{display:block}
+  .rep-delta thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  .rep-delta tr{padding:0.55rem 0;border-bottom:1px solid var(--border)}
+  .rep-delta td{display:flex;justify-content:space-between;gap:0.75rem;text-align:right;padding:0.1rem 0;white-space:normal;font-size:0.825rem}
+  .rep-delta td:first-child{font-weight:720;text-align:left;margin-bottom:0.15rem}
+  .rep-delta td:not(:first-child)::before{content:attr(data-l);color:var(--text3);font-weight:480}
+}
 .home-more{margin:0.25rem 0 0;font-size:0.78rem;color:var(--text3)}.home-more a{color:var(--orange);cursor:pointer}
 @media(max-width:900px){.hk-grid{grid-template-columns:1fr 1fr}.hk.big{grid-column:1/-1}.home-grid{grid-template-columns:1fr}}
 
@@ -6883,7 +6890,7 @@ function reportDeltaTable(title,intro,items){
   B.rows.forEach(b=>{
     const wr=b.wr!=null?b.wr+'%':'—';
     const nodelta=b.key==='No delta'?' class="rep-nodelta"':'';
-    html+=`<tr${nodelta}><td>${esc(b.label)}</td><td>${b.count}</td><td>${wr}</td><td>${money(b.totalPnl)}</td><td>${money(b.avgPnl)}</td></tr>`;
+    html+=`<tr${nodelta}><td>${esc(b.label)}</td><td data-l="Trades">${b.count}</td><td data-l="Win rate">${wr}</td><td data-l="Total P&amp;L">${money(b.totalPnl)}</td><td data-l="Avg P&amp;L">${money(b.avgPnl)}</td></tr>`;
     lines.push(b.label+': '+b.count+' trade'+(b.count===1?'':'s')+', win rate '+(b.wr!=null?b.wr+'%':'—')+', total '+(typeof reportMoney==='function'?reportMoney(b.totalPnl):b.totalPnl)+', average '+(typeof reportMoney==='function'?reportMoney(b.avgPnl):b.avgPnl)+'.');
   });
   html+='</tbody></table>';
