@@ -63,6 +63,8 @@ GitHub Actions: `.github/workflows/onboard-sim.yml` (workflow_dispatch, optional
 
 - `dev` (sw v351): Google's account picker can show optrack.app instead of wheelhouse-61982.firebaseapp.com. `app/_redirects` proxies `/__/auth/*` and `/__/firebase/*` to the Firebase auth helper (200, before the SPA rewrites). `authDomain` uses `location.hostname` only on `optrack.app`; dev, localhost and other hosts stay on firebaseapp.com, so Google sign-in on the dev site is unchanged. The service worker already bypasses `/__/` and was not bumped. This must not go to main until Marc adds the Google OAuth redirect URI `https://optrack.app/__/auth/handler` (and `https://optrack.app` as a JavaScript origin if missing). Email sign-in is unaffected.
 
+- `dev` (sw v355): Performance by Delta, LEAP short calls and Performance by DTE tables span the full More data card on desktop, with even column widths. Presentation only.
+
 - `dev` (sw v354): Stacked More data tables on a 390px phone now span the card so figures sit on the right, not in a narrow 7.25rem column.
 
 - `dev` (sw v353): Follow-up tidy of More data after v352: DTE stacks on a 390px phone so columns are not clipped, ticker and wheel scoreboard tables scroll horizontally with a minimum width, scoreboard badges are 6px, Data Health no longer shows an empty trade-table header, and delta/DTE columns use even widths on desktop.
