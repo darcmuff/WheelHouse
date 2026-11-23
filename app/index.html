@@ -6703,10 +6703,10 @@ function reportPeriods(rows,today,winItems){
     const profit=rd(list.reduce((a,r)=>a+(r.profit||0),0));
     const leaps=rd(list.reduce((a,r)=>a+(r.leapNet||0),0));
     const collected=rd(list.reduce((a,r)=>a+(r.collected||0),0));
-    const wheel=rd(list.reduce((a,r)=>a+(r.premium||0),0));
     const closedItems=(winItems||[]).filter(i=>reportDateInPeriod(i.date,k.key,today));
     const wins=closedItems.filter(i=>i.win).length,losses=closedItems.filter(i=>!i.win).length,closed=wins+losses;
-    return{key:k.key,label:k.label,options:rd(profit+leaps),premium:profit,collected,wheel,leaps,closed,wins,losses,wr:closed?((wins/closed)*100).toFixed(1):null};
+    // wheel = short premium (wheel + covered calls), same as profit; wheel + LEAPs = options P&L
+    return{key:k.key,label:k.label,options:rd(profit+leaps),premium:profit,collected,wheel:profit,leaps,closed,wins,losses,wr:closed?((wins/closed)*100).toFixed(1):null};
   });
 }
 function reportPeriodLine(p){

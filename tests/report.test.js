@@ -190,6 +190,22 @@ test('YTD, last month, last year and Total bucket monthly rows; empty periods ar
   assert.strictEqual(by.total.options, by.ytd.options + by.lastYear.options);
   const F = Fns.reportFigures(rows, '2026-11-23', 10000, {base:'caw',target:2}, []);
   assert.strictEqual(by.total.options, F.options);
+  P.forEach(p => assert.strictEqual(p.options, Math.round((p.wheel + p.leaps) * 100) / 100, p.key));
+});
+
+test('period wheel + LEAPs equals options P&L when covered-call premium is in profit', () => {
+  const rows = [
+    {ym:'2026-10', profit:2103.42, leapNet:-1201.30, collected:2243.46, premium:1374.72},
+    {ym:'2026-11', profit:500, leapNet:0, collected:500, premium:400},
+  ];
+  const P = Fns.reportPeriods(rows, '2026-11-23', []);
+  const by = Object.fromEntries(P.map(p => [p.key, p]));
+  assert.strictEqual(by.lastMonth.options, 902.12);
+  assert.strictEqual(by.lastMonth.wheel, 2103.42);
+  assert.strictEqual(by.lastMonth.leaps, -1201.30);
+  assert.strictEqual(by.total.options, 1402.12);
+  P.forEach(p => assert.strictEqual(p.options, Math.round((p.wheel + p.leaps) * 100) / 100, p.key));
+  assert.match(Fns.reportPeriodLine(by.lastMonth), /wheel \+\$2,103\.42, LEAPs -\$1,201\.30/);
 });
 
 test('a period with no trades is $0 and No closed trades, not blank', () => {
