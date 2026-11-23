@@ -31,6 +31,7 @@
 <script src="brand.js"></script>
 <script src="wc-brand.js"></script>
 <script src="popular.js"></script>
+<script src="delta.js"></script>
 <script src="analytics.js" defer></script>
 <meta name="theme-color" content="#f8f9fc">
 
@@ -703,6 +704,17 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .rep-periods p:last-child{margin-bottom:0}
 .rep-copy{margin-top:1rem;border-radius:6px}
 .rep-note{font-size:0.75rem;color:var(--text3);margin-top:0.875rem;line-height:1.45}
+.rep-delta{margin:1.25rem 0 0;padding:0.875rem 0 0;border-top:1px solid var(--border)}
+.rep-delta h2{font-size:1rem;font-weight:720;margin:0 0 0.5rem;color:var(--text)}
+.rep-delta h3{font-size:0.875rem;font-weight:720;margin:1rem 0 0.5rem;color:var(--text)}
+.rep-delta p{font-size:0.875rem;line-height:1.5;margin:0 0 0.625rem}
+.rep-delta table{width:100%;border-collapse:collapse;font-size:0.825rem;margin:0.25rem 0 0.75rem}
+.rep-delta th,.rep-delta td{text-align:left;padding:0.375rem 0.5rem;border-bottom:1px solid var(--border);font-weight:480}
+.rep-delta th{color:var(--text3);font-weight:720}
+.rep-delta td:nth-child(n+2){text-align:right}
+.rep-delta th:nth-child(n+2){text-align:right}
+.rep-delta .rep-nodelta{color:var(--text3)}
+.tr-delta{color:var(--text3);font-weight:480;font-size:0.75rem;margin-left:0.3rem;white-space:nowrap}
 .home-more{margin:0.25rem 0 0;font-size:0.78rem;color:var(--text3)}.home-more a{color:var(--orange);cursor:pointer}
 @media(max-width:900px){.hk-grid{grid-template-columns:1fr 1fr}.hk.big{grid-column:1/-1}.home-grid{grid-template-columns:1fr}}
 
@@ -1978,7 +1990,7 @@ select,textarea,
       <div class="fld"><label>Date Entered</label><input id="tf-entered" type="date" oninput="autoCalcDTE()"></div>
       <div class="fld" id="tg-expiry"><label>Expiry Date</label><input id="tf-expiry" type="date" oninput="autoCalcDTE()"></div>
       <div class="fld" id="tg-strike"><label>Strike ($)</label><input id="tf-strike" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"></div>
-      <div class="fld" id="tg-delta"><label>Delta <small style="color:#555">optional</small></label><input id="tf-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30"></div>
+      <div class="fld" id="tg-delta"><label>Delta <small id="tf-delta-hint" style="color:var(--text3)">optional</small></label><input id="tf-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30" oninput="if(typeof paintTradeDeltaHint==='function')paintTradeDeltaHint()"></div>
       <div class="fld"><label id="tf-prem-lbl">Premium per Share</label><input id="tf-premium" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0.0000" oninput="autoCalcTotal()"></div>
       <div class="fld" id="tg-current-price" style="display:none"><label for="current-price">Current price</label><input id="current-price" name="current-price" aria-label="Current price" type="number" step="0.0001" placeholder="0.0000"></div>
       <div class="fld"><label>Shares</label><input id="tf-shares" type="number" step="1" placeholder="100" oninput="autoCalcTotal()"></div>
@@ -2097,6 +2109,7 @@ select,textarea,
       <div class="fld"><label>Fees total ($)</label><input id="lf-fees" type="number" step="0.01" value="0"></div>
       <div class="fld"><label>Review date <small style="color:#555">optional</small></label><input id="lf-review" type="date"></div>
       <div class="fld" id="lf-mark-wrap"><label for="lf-mark">Current price</label><input id="lf-mark" name="current-price" aria-label="Current price" type="number" step="0.01"></div>
+      <div class="fld" id="lf-delta-wrap"><label>Delta at open <small id="lf-delta-hint" style="color:var(--text3)">optional</small></label><input id="lf-delta" type="number" step="0.01" min="0" max="1" placeholder="0.80" oninput="if(typeof paintLeapDeltaHint==='function')paintLeapDeltaHint()"></div>
     </div>
     <div class="fld"><label>Notes / thesis</label><input id="lf-notes" type="text"></div>
     <div class="mfoot" style="margin-top:0.5rem;padding-top:0.5rem">
@@ -2118,6 +2131,7 @@ select,textarea,
       <div class="fld"><label>Contracts</label><input id="pe-qty" type="number" step="1"></div>
       <div class="fld"><label>Sell price / sh</label><input id="pe-price" type="number" step="0.01"></div>
       <div class="fld" id="pe-cp-wrap"><label for="pe-current-price">Current price</label><input id="pe-current-price" name="current-price" aria-label="Current price" type="number" step="0.01"></div>
+      <div class="fld"><label>Delta at open <small id="pe-delta-hint" style="color:var(--text3)">optional</small></label><input id="pe-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30" oninput="if(typeof paintPeDeltaHint==='function')paintPeDeltaHint()"></div>
       <div class="fld"><label>Sold on</label><input id="pe-date" type="date"></div>
       <div class="fld"><label>Fees</label><input id="pe-fees" type="number" step="0.01"></div>
     </div>
@@ -3559,6 +3573,7 @@ function render(){
   if(view==='report')c.innerHTML=renderReport();
   if(view==='options'){const _wf=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.wl-wi')?[document.activeElement.closest('.wl-wi').id,document.activeElement.dataset.wi]:null;c.innerHTML=renderOptions();wlWhatIfRestore(_wf);leapBrandPaint();fetchOptionMarks(false);}
   if(typeof selPaint==='function')selPaint();
+  if(typeof scheduleDeltaSpots==='function')scheduleDeltaSpots();
 }
 
 // ════════════════════════════════════════════════════════
@@ -3883,7 +3898,7 @@ function renderPmccListRow(e,spot,today){
   const _warn=typeof shortRowWarnTags==='function'&&e.open&&c&&e.action==='STO'?shortRowWarnTags(c.underlying,{isOpen:true,isCall:true,expiry:c.expiry||e.expiry,today,spot,strike:+c.strike||e.strike,mark:c.mark!=null&&c.mark!==''?+c.mark:null}):'';
   const _entered=fmtDateFull(e.entered);
   const _expiry=closer?'—':(e.expiry?fmtDateFull(e.expiry):'—');
-  const _strike=e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—';
+  const _strike=(e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—')+(typeof openDeltaBadge==='function'&&e.action==='STO'&&c?openDeltaBadge(c,c.underlying):'');
   const _prem=e.premium?'$'+fmtPrem(e.premium):'—';
   const _shares=e.qty?String(e.qty*100):'—';
   const _total=`<span class="${e.total>=0?'g':'r'}">${fmtMoney(e.total)}</span>`;
@@ -3941,8 +3956,9 @@ function openPmccLegEdit(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
   const v=(k,x)=>document.getElementById(k).value=x??'';
   v('pe-id',l.id);v('pe-strike',l.strike);v('pe-expiry',l.expiry);v('pe-qty',l.qty);v('pe-price',l.entryPrice);v('pe-date',l.entryDate);v('pe-fees',l.fees??0);
-  v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);v('pe-current-price',l.mark);
+  v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);v('pe-current-price',l.mark);v('pe-delta',l.deltaAtOpen);
   document.getElementById('pe-cp-wrap').style.display=l.status==='open'?'':'none';
+  if(typeof paintPeDeltaHint==='function')paintPeDeltaHint();
   document.getElementById('pe-close').style.display=l.status==='closed'?'grid':'none';
   document.getElementById('pe-exp').style.display=l.status==='open'?'':'none';
   document.getElementById('pe-err').style.display='none';
@@ -3953,6 +3969,7 @@ function savePmccLeg(){
   const g=k=>document.getElementById(k).value,i=(db.opts||[]).findIndex(x=>x.id===g('pe-id'));if(i<0)return;
   const r=pmccEditLeg(db.opts[i],{strike:g('pe-strike'),expiry:g('pe-expiry'),qty:g('pe-qty'),price:g('pe-price'),date:g('pe-date'),fees:g('pe-fees'),cprice:g('pe-cprice'),cdate:g('pe-cdate'),cfees:g('pe-cfees'),mark:g('pe-current-price')});
   const e=document.getElementById('pe-err');if(r.err){e.textContent=r.err;e.style.display='block';return;}
+  const _dlt=parseFloat(document.getElementById('pe-delta').value);if(isNaN(_dlt)){delete r.leg.deltaAtOpen;}else r.leg.deltaAtOpen=_dlt;
   db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmccLeg');render();
 }
 function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
@@ -4023,7 +4040,7 @@ function renderLeapCard(l,spot,today){
     const leapExp=!collapsedLeaps.has(l.id);
     const earnH=leapExp?leapEarnHtml(l):'';
     return`<div class="leap-card lc lcw${leapExp?'':' lc-mini-bar'}" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${(typeof isPhoneLayout==='function'&&isPhoneLayout())?`<span class="lc-nw">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call</span> · <span class="lc-nw">${_fdShort(l.expiry)}</span>${S.expired?' · Expired':S.left!=null?`<span class="lc-nw"> · ${S.left} days left</span>`:''}`:`${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}`}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession(),l.underlying)}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${!leapExp?leapMiniRealisedHtml(true,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>${earnH?`<div class="wl-top">${earnH}</div>`:''}
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${(typeof isPhoneLayout==='function'&&isPhoneLayout())?`<span class="lc-nw">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call</span> · <span class="lc-nw">${_fdShort(l.expiry)}</span>${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}${S.expired?' · Expired':S.left!=null?`<span class="lc-nw"> · ${S.left} days left</span>`:''}`:`${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}`}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession(),l.underlying)}${open&&typeof leapOptHtml==='function'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${!leapExp?leapMiniRealisedHtml(true,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>${earnH?`<div class="wl-top">${earnH}</div>`:''}
     ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
@@ -4039,12 +4056,12 @@ function renderLeapCard(l,spot,today){
   const leapExp=!collapsedLeaps.has(l.id);
   const rq=S.pl!=null&&S.cost>0?Math.round(S.pl/S.cost*10000)/100:null;
   return`<div class="leap-card lc lcw${leapExp?'':' lc-mini-bar'}" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
-  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${(typeof isPhoneLayout==='function'&&isPhoneLayout())?`<span class="lc-nw">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call</span> · <span class="lc-nw">${_fdShort(l.expiry)}</span>${l.closeDate?` · <span class="lc-nw">${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}</span>`:''}`:`${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${l.closeDate?` · ${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}`:''}`}</span>${!leapExp?leapMiniRealisedHtml(false,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${(typeof isPhoneLayout==='function'&&isPhoneLayout())?`<span class="lc-nw">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call</span> · <span class="lc-nw">${_fdShort(l.expiry)}</span>${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}${l.closeDate?` · <span class="lc-nw">${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}</span>`:''}`:`${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}${l.closeDate?` · ${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}`:''}`}</span>${!leapExp?leapMiniRealisedHtml(false,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>
   ${leapExp?`${note?`<div class="lc-note">${note}</div>`:''}
   <div class="lc-hero"><div><div class="lc-k">Paid → closed</div><div class="lc-v">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
     <div><div class="lc-k">Realised ${ii('The LEAP\'s gain or loss when it closed or expired, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'—':(S.pl>=0?'+':'')+m0(S.pl)}</div>${rq==null?'':`<div class="lc-pct ${colorN(rq)}" style="font-size:0.825rem;font-weight:480">${rq>=0?'+':''}${rq.toFixed(2)}%</div>`}</div>
-    <div><div class="lc-k">Opened</div><div class="lc-v sm">${_fdShort(l.entryDate)}</div></div></div>
+    <div><div class="lc-k">Opened</div><div class="lc-v sm">${_fdShort(l.entryDate)}${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}</div></div></div>
   <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
   ${renderPmcc(l,today,spot)}
 `:''}</div>`;
@@ -4102,7 +4119,7 @@ function renderOptions(){
 // ── + LEAP / edit: single long call ──
 function openLeapAdd(){
   if(!leapCapOk(1,db.opts)){openUpgrade('unlimited',capMsg('leap'));return;}
-  ['lf-id','lf-und','lf-strike','lf-expiry','lf-price','lf-review','lf-notes','lf-mark'].forEach(id=>document.getElementById(id).value='');
+  ['lf-id','lf-und','lf-strike','lf-expiry','lf-price','lf-review','lf-notes','lf-mark','lf-delta'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('lf-qty').value='1';document.getElementById('lf-fees').value='0';
   document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('mLeapTitle').textContent='Add LEAP (long call)';
@@ -4115,8 +4132,9 @@ function openLeapEdit(id){
   const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
   const v=(k,x)=>document.getElementById(k).value=x??'';
   v('lf-id',l.id);v('lf-und',l.underlying);v('lf-strike',l.strike);v('lf-expiry',l.expiry);v('lf-qty',l.qty);v('lf-price',l.entryPrice);
-  v('lf-date',l.entryDate);v('lf-fees',l.fees??0);v('lf-review',l.reviewDate);v('lf-notes',l.notes);v('lf-mark',l.mark);
+  v('lf-date',l.entryDate);v('lf-fees',l.fees??0);v('lf-review',l.reviewDate);v('lf-notes',l.notes);v('lf-mark',l.mark);v('lf-delta',l.deltaAtOpen);
   document.getElementById('mLeapTitle').textContent='Edit LEAP';
+  if(typeof paintLeapDeltaHint==='function')paintLeapDeltaHint();
   document.getElementById('lf-mark-wrap').style.display=l.status==='open'?'':'none';document.getElementById('lf-del').style.display='';
   document.getElementById('lf-xacts').style.display='none';
   document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='none';switchLeapTab('manual');
@@ -4138,6 +4156,7 @@ function saveLeap(){
   const old=id?(db.opts||[]).find(l=>l.id===id):null;
   const r=leapFormLeg({und:g('lf-und'),strike:g('lf-strike'),expiry:g('lf-expiry'),qty:g('lf-qty'),price:g('lf-price'),date:g('lf-date'),fees:g('lf-fees'),review:g('lf-review'),notes:g('lf-notes'),mark:g('lf-mark'),newId:uid()},old);
   if(r.err){alert(r.err);return;}
+  const _dlt=parseFloat(g('lf-delta'));if(isNaN(_dlt)){delete r.leg.deltaAtOpen;}else r.leg.deltaAtOpen=_dlt;
   if(!old&&!leapCapOk(1,db.opts)){openUpgrade('unlimited',capMsg('leap'));return;}
   db.opts=db.opts||[];const i=db.opts.findIndex(l=>l.id===r.leg.id);if(i>-1)db.opts[i]=r.leg;else db.opts.push(r.leg);
   _saveOpt(r.leg);closeModal('mLeap');render();
@@ -5775,7 +5794,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const _warn=typeof shortRowWarnTags==='function'&&opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?shortRowWarnTags(opts.list.ticker||t.ticker,{isOpen:true,isCall:t.action==='STOC',expiry:t.expiry,today:opts.list.today,spot:opts.list.spot,strike:t.strike,mark:(()=>{const live=opts.list.marks&&opts.list.marks[wheelLegOcc(opts.list.ticker,t)];const typed=t.currentPrice!=null&&t.currentPrice!=='';const fresh=typed&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);return typed&&(fresh||live==null)?+t.currentPrice:live;})()}):'';
   const _entered=fmtDateFull(t.entered);
   const _expiry=(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—';
-  const _strike=t.strike?fmtStrike(t.strike):'—';
+  const _strike=(t.strike?fmtStrike(t.strike):'—')+(typeof openDeltaBadge==='function'&&(t.action==='CSP'||t.action==='STOC'||t.action==='STO')?openDeltaBadge(t,t.ticker):'');
   const _prem=t.premium?'$'+fmtPrem(t.premium):'—';
   const _shares=opts.list?(()=>{const lab=wheelRemainLabel(t,wheelTrades,opts.list.today);return lab?esc(lab):(t.shares||'—');})():(t.shares||'—');
   const _total=`<span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>`;
@@ -6616,6 +6635,293 @@ function renderMonthlyRealised(){
   return html;
 }
 
+
+// ════════════════════════════════════════════════════════
+// Delta at open (display only). Estimates Black-Scholes delta from the fill
+// premium and the underlying at open. Does not change P&L, realised, win/loss,
+// parsers or pricing. Fill time, when stored as filledAt, uses an intraday bar;
+// otherwise the daily close is used. createdAt and optleg ts are not fill times.
+// ════════════════════════════════════════════════════════
+const _HIST_LS='ot-histclose-v1';
+let _histCache={};
+try{_histCache=JSON.parse(localStorage.getItem(_HIST_LS)||'{}')||{};}catch(e){_histCache={};}
+let _deltaFetchGen=0,_deltaFetchBusy=false,_histTried=new Set();
+
+function _histPersist(){try{localStorage.setItem(_HIST_LS,JSON.stringify(_histCache));}catch(e){}}
+function histSpotOf(ticker,date,filledAt){
+  const sym=String(ticker||'').toUpperCase();
+  const pack=_histCache[sym];if(!pack)return null;
+  if(filledAt&&pack.ats&&pack.ats[filledAt]&&pack.ats[filledAt].price>0)return pack.ats[filledAt];
+  const d=String(date||filledAt||'').slice(0,10);
+  if(d&&pack.days&&pack.days[d]&&pack.days[d].price>0)return pack.days[d];
+  if(!d||!pack.days)return null;
+  for(let i=1;i<=10;i++){
+    const dt=new Date(d+'T12:00:00Z');dt.setUTCDate(dt.getUTCDate()-i);
+    const k=dt.toISOString().slice(0,10);
+    if(pack.days[k]&&pack.days[k].price>0)return pack.days[k];
+  }
+  return null;
+}
+function openDeltaLookups(){
+  const out=[];
+  (db.trades||[]).forEach(t=>{
+    if(!t||(t.action!=='CSP'&&t.action!=='STOC'&&t.action!=='STO'))return;
+    if(!t.ticker||!t.strike||!t.expiry||!(+t.premium>0))return;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(t):null;
+    out.push({ticker:t.ticker,date:t.entered,filledAt});
+  });
+  (db.opts||[]).forEach(l=>{
+    if(!l||l.demo)return;
+    if(!l.underlying||!l.strike||!l.expiry||!(+l.entryPrice>0))return;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(l):null;
+    out.push({ticker:l.underlying,date:l.entryDate,filledAt});
+  });
+  return out;
+}
+function _histMerge(sym,json){
+  const pack=_histCache[sym]||(_histCache[sym]={days:{},ats:{}});
+  if(!pack.days)pack.days={};if(!pack.ats)pack.ats={};
+  const closes=json&&json.closes||{};
+  Object.keys(closes).forEach(d=>{
+    const v=closes[d];
+    const price=v&&typeof v==='object'?+v.price:+v;
+    if(price>0)pack.days[d]={price,precision:(v&&v.precision)||'day',bar:(v&&v.bar)||'1d',date:(v&&v.date)||d};
+  });
+  const spots=json&&json.spots||{};
+  Object.keys(spots).forEach(at=>{
+    const v=spots[at];
+    if(v&&v.price>0)pack.ats[at]=v;
+  });
+}
+async function ensureDeltaSpots(){
+  if(typeof DeltaOpen==='undefined')return false;
+  const need=openDeltaLookups();
+  const missing={};
+  need.forEach(n=>{
+    const sym=String(n.ticker||'').toUpperCase();if(!sym)return;
+    if(n.filledAt&&histSpotOf(sym,n.date,n.filledAt))return;
+    if(!n.filledAt&&histSpotOf(sym,n.date,null))return;
+    const dateK=n.date?sym+'|d:'+String(n.date).slice(0,10):null;
+    const atK=n.filledAt?sym+'|t:'+n.filledAt:null;
+    if((atK&&_histTried.has(atK))||(!n.filledAt&&dateK&&_histTried.has(dateK)))return;
+    const g=missing[sym]||(missing[sym]={dates:new Set(),ats:new Set()});
+    if(n.date)g.dates.add(String(n.date).slice(0,10));
+    if(n.filledAt)g.ats.add(n.filledAt);
+  });
+  const syms=Object.keys(missing);
+  if(!syms.length)return false;
+  await Promise.all(syms.map(async sym=>{
+    const g=missing[sym];
+    const qs=new URLSearchParams({symbol:sym});
+    if(g.dates.size)qs.set('dates',[...g.dates].sort().join(','));
+    if(g.ats.size)qs.set('at',[...g.ats].join(','));
+    try{
+      const r=await fetch('/.netlify/functions/histclose?'+qs.toString(),{signal:AbortSignal.timeout(12000)});
+      if(!r.ok)return;
+      const j=await r.json();
+      _histMerge(sym,j);
+    }catch(e){}
+    g.dates.forEach(d=>_histTried.add(sym+'|d:'+d));
+    g.ats.forEach(a=>_histTried.add(sym+'|t:'+a));
+  }));
+  _histPersist();
+  return true;
+}
+function scheduleDeltaSpots(){
+  if(typeof DeltaOpen==='undefined')return;
+  const gen=++_deltaFetchGen;
+  if(_deltaFetchBusy)return;
+  _deltaFetchBusy=true;
+  ensureDeltaSpots().then(changed=>{
+    _deltaFetchBusy=false;
+    if(gen!==_deltaFetchGen){scheduleDeltaSpots();return;}
+    if(!changed){paintOpenDeltaHints();return;}
+    if(document.querySelector('.mb.open')){paintOpenDeltas();paintOpenDeltaHints();refreshReportDelta();return;}
+    if(typeof view!=='undefined'&&view==='report')refreshReportDelta();
+    else paintOpenDeltas();
+    paintOpenDeltaHints();
+  }).catch(()=>{_deltaFetchBusy=false;});
+}
+function openDeltaBadge(row,ticker){
+  if(typeof DeltaOpen==='undefined'||!row)return'';
+  const typ=DeltaOpen.optionTypeFromTrade(row);
+  if(!typ)return'';
+  const filledAt=DeltaOpen.fillTimestamp(row);
+  const spot=histSpotOf(ticker||row.ticker||row.underlying,row.entered||row.entryDate,filledAt);
+  const r=DeltaOpen.resolveOpenDelta(row,spot&&spot.price);
+  if(!r||r.absDelta==null)return'';
+  const title=DeltaOpen.precisionHover(r.src||'estimated',spot&&spot.precision,spot&&spot.bar);
+  return`<small class="tr-delta" title="${esc(title)}">${esc(DeltaOpen.formatDelta(r.absDelta))}</small>`;
+}
+function paintOpenDeltas(){
+  // Badges are baked into row HTML; a quiet re-render of visible lists would
+  // be heavier. When a modal is closed we let the next render pick them up.
+  if(typeof view!=='undefined'&&view!=='report'&&!document.querySelector('.mb.open')&&typeof render==='function'){
+    // Avoid a loop: scheduleDeltaSpots is called from render, but cache is warm
+    // so ensureDeltaSpots returns false and we stop here if we re-enter via render.
+    const prev=_deltaFetchGen;
+    render();
+    _deltaFetchGen=prev;
+  }
+}
+function paintTradeDeltaHint(){
+  const hint=document.getElementById('tf-delta-hint');if(!hint||typeof DeltaOpen==='undefined')return;
+  const typed=(document.getElementById('tf-delta').value||'').trim();
+  if(typed){hint.textContent='optional — typed value is used';hint.title='Delta at open, typed on the trade.';return;}
+  const id=(document.getElementById('tf-id')||{}).value;
+  const old=(db.trades||[]).find(x=>x.id===id)||{};
+  const t={action:typeof actionFromSelect==='function'?actionFromSelect(document.getElementById('tf-action').value):document.getElementById('tf-action').value,strike:document.getElementById('tf-strike').value,expiry:document.getElementById('tf-expiry').value,entered:document.getElementById('tf-entered').value,premium:document.getElementById('tf-premium').value,ticker:document.getElementById('tf-ticker').value,filledAt:old.filledAt};
+  const spot=histSpotOf(t.ticker,t.entered,DeltaOpen.fillTimestamp(t));
+  const r=DeltaOpen.resolveOpenDelta(t,spot&&spot.price);
+  if(r.absDelta!=null){hint.textContent='optional · estimated '+r.absDelta.toFixed(2);hint.title=DeltaOpen.precisionHover('estimated',spot&&spot.precision,spot&&spot.bar);}
+  else{hint.textContent='optional';hint.title='';}
+}
+function paintLeapDeltaHint(){
+  const hint=document.getElementById('lf-delta-hint');if(!hint||typeof DeltaOpen==='undefined')return;
+  const typed=(document.getElementById('lf-delta').value||'').trim();
+  if(typed){hint.textContent='optional — typed value is used';hint.title='Delta at open, typed on the trade.';return;}
+  const id=(document.getElementById('lf-id')||{}).value;
+  const old=(db.opts||[]).find(x=>x.id===id)||{};
+  const l={type:'C',side:'long',strike:document.getElementById('lf-strike').value,expiry:document.getElementById('lf-expiry').value,entryDate:document.getElementById('lf-date').value,entryPrice:document.getElementById('lf-price').value,underlying:document.getElementById('lf-und').value,filledAt:old.filledAt,deltaAtOpen:old.deltaAtOpen};
+  const spot=histSpotOf(l.underlying,l.entryDate,DeltaOpen.fillTimestamp(l));
+  const r=DeltaOpen.resolveOpenDelta(l,spot&&spot.price);
+  if(r.absDelta!=null){hint.textContent='optional · estimated '+r.absDelta.toFixed(2);hint.title=DeltaOpen.precisionHover('estimated',spot&&spot.precision,spot&&spot.bar);}
+  else{hint.textContent='optional';hint.title='';}
+}
+function paintPeDeltaHint(){
+  const hint=document.getElementById('pe-delta-hint');if(!hint||typeof DeltaOpen==='undefined')return;
+  const typed=(document.getElementById('pe-delta').value||'').trim();
+  if(typed){hint.textContent='optional — typed value is used';hint.title='Delta at open, typed on the trade.';return;}
+  const id=(document.getElementById('pe-id')||{}).value;
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l){hint.textContent='optional';return;}
+  const cur={...l,deltaAtOpen:null,strike:document.getElementById('pe-strike').value,expiry:document.getElementById('pe-expiry').value,entryDate:document.getElementById('pe-date').value,entryPrice:document.getElementById('pe-price').value};
+  const spot=histSpotOf(l.underlying,cur.entryDate,DeltaOpen.fillTimestamp(l));
+  const r=DeltaOpen.resolveOpenDelta(cur,spot&&spot.price);
+  if(r.absDelta!=null){hint.textContent='optional · estimated '+r.absDelta.toFixed(2);hint.title=DeltaOpen.precisionHover('estimated',spot&&spot.precision,spot&&spot.bar);}
+  else{hint.textContent='optional';hint.title='';}
+}
+function paintOpenDeltaHints(){
+  if(document.getElementById('mTrade')&&document.getElementById('mTrade').classList.contains('open'))paintTradeDeltaHint();
+  if(document.getElementById('mLeap')&&document.getElementById('mLeap').classList.contains('open'))paintLeapDeltaHint();
+  if(document.getElementById('mPmccLeg')&&document.getElementById('mPmccLeg').classList.contains('open'))paintPeDeltaHint();
+}
+// Display-only: same close matching as reportWinLossItems, plus the opening trade
+// so a delta can be attached. Win flag and amount are unchanged.
+function reportDeltaSoldItems(wheels,trades,legs,spotOf){
+  const items=[];
+  (wheels||[]).forEach(wheel=>{
+    const closingAction=a=>(a==='BTC'||a==='STC')?1:0;
+    const list=(trades||[]).filter(t=>t.wheelId===wheel.id)
+      .sort((a,b)=>{const dc=a.entered.localeCompare(b.entered);if(dc!==0)return dc;return closingAction(a.action)-closingAction(b.action);});
+    const stack=[];
+    const popLastLive=()=>{for(let j=stack.length-1;j>=0;j--){if(!stack[j].expired)return stack.splice(j,1)[0];}return stack.pop();};
+    const pushItem=(open,date,win,amount)=>{
+      const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(open):null;
+      const spot=spotOf?spotOf(open.ticker,open.entered,filledAt):null;
+      const d=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveOpenDelta(open,spot&&spot.price):{absDelta:null};
+      items.push({date,win,amount,open,absDelta:d.absDelta,src:d.src,precision:spot&&spot.precision,bar:spot&&spot.bar});
+    };
+    for(const t of list){
+      if(t.action==='CSP'||t.action==='STOC'){
+        stack.push({total:t.total,expired:!!t.expiredWorthless,strike:t.strike,expiry:t.expiry||null,open:t});
+      }else if(t.action==='IN'){
+        if(stack.length>0){const o=popLastLive();pushItem(o.open,t.entered||'',true,o.total);}
+      }else if(t.action==='BTC'||t.action==='STC'){
+        if(stack.length>0){
+          const ks=Number(t.strike);
+          let i=stack.findIndex(o=>!o.expired&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          if(i<0)i=stack.findIndex(o=>!o.expired&&Number(o.strike)===ks);
+          if(i<0)i=stack.findIndex(o=>Number(o.strike)===ks);
+          if(i<0&&(t.strike==null||t.strike==='')){const o=popLastLive();if(o){const net=o.total-t.total;pushItem(o.open,t.entered||'',o.total>=t.total,net);}continue;}
+          if(i>=0){const o=stack.splice(i,1)[0];pushItem(o.open,t.entered||'',o.total>=t.total,o.total-t.total);}
+        }
+      }else if(t.action==='OUT'){
+        if(stack.length>0){const o=popLastLive();pushItem(o.open,t.entered||'',true,o.total);}
+      }
+    }
+    while(stack.length>0){
+      const o=stack.pop();
+      if(o.expired)pushItem(o.open,o.expiry||'',true,o.total);
+    }
+  });
+  (legs||[]).forEach(l=>{
+    if(!l||l.side!=='short'||l.demo)return;
+    if(l.status==='open')return;
+    const r=OPTS.legPnL(l).realized;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(l):null;
+    const spot=spotOf?spotOf(l.underlying||l.ticker,l.entryDate,filledAt):null;
+    const d=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveOpenDelta(l,spot&&spot.price):{absDelta:null};
+    items.push({date:l.closeDate||l.expiry||'',win:r>=0,amount:r,open:l,absDelta:d.absDelta,src:d.src,precision:spot&&spot.precision,bar:spot&&spot.bar});
+  });
+  return items;
+}
+function reportDeltaLeapItems(legs,spotOf){
+  return (legs||[]).filter(l=>l&&l.side==='long'&&(l.type==='C'||l.type==='call')&&!l.parentLeapId&&l.status!=='open'&&!l.demo).map(l=>{
+    const r=OPTS.legPnL(l).realized;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(l):null;
+    const spot=spotOf?spotOf(l.underlying||l.ticker,l.entryDate,filledAt):null;
+    const d=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveOpenDelta(l,spot&&spot.price):{absDelta:null};
+    return{date:l.closeDate||l.expiry||'',win:r>=0,amount:r,open:l,absDelta:d.absDelta,src:d.src,precision:spot&&spot.precision,bar:spot&&spot.bar};
+  });
+}
+function reportDeltaTable(title,intro,items){
+  const B=typeof DeltaOpen!=='undefined'?DeltaOpen.bucketItems(items):{rows:[],best:null,noDelta:0};
+  const money=n=>{
+    if(n==null||isNaN(n))return'—';
+    const abs=Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    const cls=n<0?'r':'g';
+    return`<span class="${cls}">${n<0?'-':'+'}$${abs}</span>`;
+  };
+  let html=`<h2>${esc(title)}</h2><p>${esc(intro)}</p>`;
+  if(!items.length){
+    html+=`<p class="rep-nodelta">No closed trades in this group yet.</p>`;
+    return{html,lines:[title+'. No closed trades in this group yet.'],best:null};
+  }
+  html+=`<table><thead><tr><th>Delta at open</th><th>Trades</th><th>Win rate</th><th>Total P&amp;L</th><th>Avg P&amp;L</th></tr></thead><tbody>`;
+  const lines=[title+'.'];
+  B.rows.forEach(b=>{
+    const wr=b.wr!=null?b.wr+'%':'—';
+    const nodelta=b.key==='No delta'?' class="rep-nodelta"':'';
+    html+=`<tr${nodelta}><td>${esc(b.label)}</td><td>${b.count}</td><td>${wr}</td><td>${money(b.totalPnl)}</td><td>${money(b.avgPnl)}</td></tr>`;
+    lines.push(b.label+': '+b.count+' trade'+(b.count===1?'':'s')+', win rate '+(b.wr!=null?b.wr+'%':'—')+', total '+(typeof reportMoney==='function'?reportMoney(b.totalPnl):b.totalPnl)+', average '+(typeof reportMoney==='function'?reportMoney(b.avgPnl):b.avgPnl)+'.');
+  });
+  html+='</tbody></table>';
+  if(B.best){
+    const sentence='The '+B.best.label+' bucket had the best average P&L, at '+(typeof reportMoney==='function'?reportMoney(B.best.avgPnl):B.best.avgPnl)+' a trade.';
+    html+=`<p>${sentence.replace(/([+-]\$[\d,]+(?:\.\d{2})?)/g,(m,n)=>'<span class="'+(n.charAt(0)==='-'?'r':'g')+'">'+n+'</span>')}</p>`;
+    lines.push(sentence);
+  }
+  if(B.noDelta){
+    const note=B.noDelta+' trade'+(B.noDelta===1?' has':'s have')+' no delta — the stock price on the open date was missing, or the premium could not be solved for implied vol.';
+    html+=`<p class="rep-nodelta">${esc(note)}</p>`;
+    lines.push(note);
+  }
+  return{html,lines,best:B.best};
+}
+function reportDeltaSection(){
+  const spotOf=(ticker,date,filledAt)=>histSpotOf(ticker,date,filledAt);
+  const sold=reportDeltaSoldItems(db.wheels,db.trades,db.opts,spotOf);
+  const leaps=reportDeltaLeapItems(db.opts,spotOf);
+  const soldBlock=reportDeltaTable('Delta at open','Closed sold options (cash-secured puts and covered calls), grouped by the option\'s absolute delta when it was opened. Estimated from the fill premium and the stock price at open — the 1-minute or 5-minute bar when a fill time is stored, otherwise the hourly bar or the daily close — unless you typed a delta on the trade.',sold);
+  const leapBlock=leaps.length||true?reportDeltaTable('LEAPs (bought calls)','Closed long calls only, using the same realised P&L and win rule as the rest of this Report.',leaps):{html:'',lines:[]};
+  // Always show the LEAP table when it's simple; empty state is fine.
+  const html=`<div class="rep-delta" id="report-delta">${soldBlock.html}${leapBlock.html}</div>`;
+  return{html,lines:soldBlock.lines.concat(leapBlock.lines||[])};
+}
+function refreshReportDelta(){
+  const el=document.getElementById('report-delta');if(!el)return;
+  const next=reportDeltaSection();
+  el.outerHTML=next.html;
+  const card=document.getElementById('report-text');
+  if(card&&next.lines&&next.lines.length){
+    const base=(card.getAttribute('data-copy')||'').split('\n\nDelta at open.')[0];
+    card.setAttribute('data-copy',base+'\n\n'+next.lines.join('\n\n'));
+  }
+}
+function reportDeltaSectionHtml(){return reportDeltaSection().html;}
+function reportDeltaSectionLines(){return reportDeltaSection().lines;}
+
+
 // Report: display-only. Calls existing monthly/return functions and aggregates their outputs.
 // Does not change any financial formula, parser or business logic.
 function reportClosedLegPnLs(legs){
@@ -6820,15 +7126,16 @@ function renderReport(){
   const periods=reportPeriods(rows,today,reportWinLossItems(db.wheels,db.trades,legs));
   const periodLines=periods.map(reportPeriodLine);
   const sentences=reportSentences(F);
-  const copy=sentences.concat(periodLines).join('\n\n');
+  const delta=typeof reportDeltaSection==='function'?reportDeltaSection():{html:'',lines:[]};
+  const copy=sentences.concat(periodLines,delta.lines||[]).join('\n\n');
   const paint=s=>s.replace(/([+-]\$[\d,]+(?:\.\d{2})?)/g,(m,n)=>`<span class="${n.charAt(0)==='-'?'r':'g'}">${n}</span>`)
     .replace(/([+−]\d+\.\d{2}%)/g,(m,n)=>`<span class="${n.charAt(0)==='−'||n.charAt(0)==='-'?'r':'g'}">${n}</span>`);
   const paras=sentences.map(s=>`<p>${paint(esc(s))}</p>`).join('');
   const periodHtml=`<div class="rep-periods">`+periodLines.map(s=>`<p>${paint(esc(s))}</p>`).join('')+`</div>`;
   return`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>Report</h1><a onclick="switchView('analytics')">More stats →</a></div>
-  <div class="rep-wrap"><div class="rep-card" id="report-text" data-copy="${esc(copy).replace(/\n/g,'&#10;')}">${paras}${periodHtml}
+  <div class="rep-wrap"><div class="rep-card" id="report-text" data-copy="${esc(copy).replace(/\n/g,'&#10;')}">${paras}${periodHtml}${delta.html||''}
     <button type="button" class="btn btn-ghost rep-copy" id="report-copy" onclick="copyReport()">Copy summary</button>
-    <p class="rep-note">Same realised figures as Home. Short premium and the monthly return are wheel and covered calls, not closed LEAPs. Closed-trade counts and win rate use the same sold-option rule as Home. Nothing is sent off this device.</p>
+    <p class="rep-note">Same realised figures as Home. Short premium and the monthly return are wheel and covered calls, not closed LEAPs. Closed-trade counts and win rate use the same sold-option rule as Home. Delta at open is an estimate from the fill and the stock price at open, unless you typed one. Nothing is sent off this device.</p>
   </div></div>`;
 }
 function copyReport(){
@@ -7244,6 +7551,7 @@ function openEditTrade(id){
   if(t.createdAt){const caDate=t.createdAt.slice(0,10);document.getElementById('tf-created-at').value=fmtDateFull(caDate)+' ('+new Date(t.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+')';caDiv.style.display='';}
   else{caDiv.style.display='none';}
   populateWheelSelect(t.wheelId,t.ticker);onActionChange();openModal('mTrade');
+  if(typeof paintTradeDeltaHint==='function')paintTradeDeltaHint();
 }
 function onTickerInput(){const tk=document.getElementById('tf-ticker').value.toUpperCase().trim();populateWheelSelect(null,tk);}
 function onActionChange(){
@@ -7254,6 +7562,7 @@ function onActionChange(){
   document.getElementById('tg-delta').style.opacity=isSellOpt?'1':'0.4';
   document.getElementById('tf-prem-lbl').textContent=STOCKS.has(a)?'Price per Share':'Premium per Share';
   autoCalcTotal();
+  if(typeof paintTradeDeltaHint==='function')paintTradeDeltaHint();
 }
 function autoCalcTotal(){
   const a=actionFromSelect(document.getElementById('tf-action').value);
@@ -7309,6 +7618,7 @@ function saveTrade(){
       if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
       updated.verified=old.verified||false;                    // preserve verification status
       if(old.currentPrice!=null&&old.currentPrice!==''){updated.currentPrice=old.currentPrice;updated.currentPriceAt=old.currentPriceAt||null;}
+      if(old.filledAt)updated.filledAt=old.filledAt;
       if(action==='CSP'||action==='STOC'){const raw=document.getElementById('current-price').value.trim();if(raw===''){delete updated.currentPrice;delete updated.currentPriceAt;}else if(!(old.currentPrice!=null&&+old.currentPrice===+raw)){updated.currentPrice=+raw;updated.currentPriceAt=new Date().toISOString();}}
       if(action==='IN'){if(openMarket)updated.openMarket=true;else delete updated.openMarket;}
       db.trades[idx]=updated;

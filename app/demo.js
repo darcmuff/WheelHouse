@@ -50,6 +50,16 @@
         return J(D[sym]?{symbol:sym,date:D[sym].date,amount:D[sym].amount,source:'demo'}:{symbol:sym,date:null,amount:null});
       }
       if(fn==='symbol'){var q=(u.searchParams.get('q')||'').toLowerCase();var all=[{symbol:'KO',name:'Coca-Cola'},{symbol:'AMD',name:'Advanced Micro Devices'},{symbol:'SOFI',name:'SoFi'},{symbol:'AAPL',name:'Apple'},{symbol:'MSFT',name:'Microsoft'},{symbol:'TSLA',name:'Tesla'},{symbol:'SPCX',name:'Space Exploration Technologies'},{symbol:'NVDA',name:'Nvidia'},{symbol:'PEP',name:'PepsiCo'}];return J({results:all.filter(function(x){return x.symbol.toLowerCase().indexOf(q)>=0||x.name.toLowerCase().indexOf(q)>=0;}).slice(0,8)});}
+      if(fn==='histclose'){
+        var HIST=Object.assign({TSLA:280},SPOT);
+        var s0=HIST[sym];if(!s0)return J({symbol:sym,closes:{},spots:{},source:'demo'});
+        var annual={NVDA:0.35,AMD:0.2,SOFI:0.15,AAPL:0.12,MSFT:0.12,TSLA:0.15,KO:0.06,PEP:0.05,SPCX:0.1}[sym]||0.1;
+        var px=function(date){var days=(Date.now()-Date.parse(date+'T12:00:00Z'))/864e5;var p=Math.round(s0/Math.pow(1+annual,Math.max(0,days)/365)*100)/100;return{price:p,precision:'day',bar:'1d',date:date};};
+        var closes={},spots={};
+        (u.searchParams.get('dates')||'').split(',').forEach(function(d){d=d.trim();if(/^\d{4}-\d{2}-\d{2}$/.test(d))closes[d]=px(d);});
+        (u.searchParams.get('at')||'').split(',').forEach(function(at){at=at.trim();if(!at)return;var d=(at.match(/^\d{4}-\d{2}-\d{2}/)||[])[0];if(d)spots[at]=Object.assign({},px(d));});
+        return J({symbol:sym,closes:closes,spots:spots,source:'demo'});
+      }
       return J({error:'Not available in the demo.'},503);
     }
     return realFetch(input,init);
