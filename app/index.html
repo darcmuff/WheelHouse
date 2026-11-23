@@ -2387,7 +2387,7 @@ import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer, on
 
 const _firebaseConfig = {
   apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
-  authDomain: "wheelhouse-61982.firebaseapp.com",
+  authDomain: location.hostname === 'optrack.app' ? location.hostname : "wheelhouse-61982.firebaseapp.com",
   projectId: "wheelhouse-61982",
   storageBucket: "wheelhouse-61982.firebasestorage.app",
   messagingSenderId: "466853706084",

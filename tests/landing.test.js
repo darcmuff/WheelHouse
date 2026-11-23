@@ -66,3 +66,13 @@ test('analytics: goatcounter on the public site, cookie-free providers only, nev
   const H=fs.readFileSync(path.join(A,'index.html'),'utf8');
   assert.ok(H.includes("sessionStorage.setItem('ot-signup','1')")&&H.includes("otTrack('/signup-complete')")&&H.includes("otTrack('/first-trade-saved')"));});
 test('service worker keeps the app, not the landing page, as the offline shell',()=>{const s=fs.readFileSync(path.join(A,'sw.js'),'utf8');assert.ok(s.includes("const SHELL = './index.html'")&&s.includes('x.put(SHELL, c)'));});
+
+test('Firebase auth helper is proxied; authDomain is optrack.app only on that host',()=>{
+  const authRule=/^\/__\/auth\/\*\s+https:\/\/wheelhouse-61982\.firebaseapp\.com\/__\/auth\/:splat\s+200$/m;
+  const fbRule=/^\/__\/firebase\/\*\s+https:\/\/wheelhouse-61982\.firebaseapp\.com\/__\/firebase\/:splat\s+200$/m;
+  assert.ok(authRule.test(R)&&fbRule.test(R));
+  assert.ok(R.search(authRule)<R.search(/^\/\s+\/landing\.html/m),'proxy rules sit before the SPA catch-all');
+  const h=fs.readFileSync(path.join(A,'index.html'),'utf8');
+  assert.ok(h.includes("location.hostname === 'optrack.app' ? location.hostname : \"wheelhouse-61982.firebaseapp.com\""));
+  assert.ok(!/authDomain:[^\n]*netlify\.app/.test(h),'dev Netlify hosts stay on firebaseapp.com');
+});

@@ -1,3 +1,8 @@
+# Proxy Firebase Auth helper so Google's picker can say optrack.app (after the console redirect URI is added).
+# Keep these above the SPA rewrites. Dev still uses firebaseapp.com as authDomain until that URI exists.
+/__/auth/*  https://wheelhouse-61982.firebaseapp.com/__/auth/:splat  200
+/__/firebase/*  https://wheelhouse-61982.firebaseapp.com/__/firebase/:splat  200
+
 # Landing page at the site root; the app lives at /app/ (and /index.html keeps working).
 # Returning users (cookie ot-open-app) are rewritten to the app at / by the open-app edge function, one document load.
 # The landing page still location.replace('/app/') as a fallback when that cookie is not set yet.
