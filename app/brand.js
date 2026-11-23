@@ -42,5 +42,7 @@ window.BRAND = {
 
   // ── Privacy-friendly, cookie-free analytics. Off until set.
   // provider: '' (off) | 'plausible' (set domain) | 'goatcounter' (set goatcounter, e.g. 'https://yourname.goatcounter.com/count')
-  analytics: { provider: 'goatcounter', domain: '', goatcounter: 'https://optrack.goatcounter.com/count' }
+  analytics: { provider: 'goatcounter', domain: '', goatcounter: 'https://optrack.goatcounter.com/count' },
+
+  optrackBot: { url: 'https://x.ai/bot/o3uycIpqy16pM04-Yh1AW' }
 };
