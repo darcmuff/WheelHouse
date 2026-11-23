@@ -42,3 +42,8 @@ test('moving the mouse off a flipped tile flips it back', () => {
   assert.ok(/addEventListener\('mouseout',e=>\{const t=e\.target\.closest&&e\.target\.closest\('\.hk\.hk-flipped'\);if\(t&&!\(e\.relatedTarget&&t\.contains\(e\.relatedTarget\)\)\)unflip\(\);\}\)/.test(SRC));
   assert.ok(!/\.hk-back\{[^}]*overflow-y:auto/.test(SRC), 'no scroll on flipped tiles');
 });
+test('on a phone, Home tile ⓘ uses the viewport popup so the text can fit', () => {
+  assert.ok(SRC.includes("isPhoneLayout())||innerWidth<=700){show(b);return;}"));
+  assert.ok(/#ii-pop\{[^}]*overflow-wrap:break-word/.test(SRC));
+  assert.ok(/@media\(max-width:700px\)\{#ii-pop\{max-width:min\(17rem,calc\(100vw - 16px\)\)/.test(SRC));
+});
