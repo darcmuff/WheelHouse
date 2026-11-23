@@ -41,3 +41,26 @@ test('granularity defaults per range, override works, empty buckets kept', () =>
   assert.ok(wk.buckets.every(b => new Date(b.key + 'T12:00:00').getUTCDay() === 1));
   assert.strictEqual(S.pnlBuckets(D, '1Y', 'Day', TODAY).net, S.pnlBuckets(D, '1Y', null, TODAY).net);
 });
+
+test('YTD range starts Jan 1, defaults to Month, excludes prior-year entries', () => {
+  const today = '2026-10-27';
+  const daily = [
+    { date: '2025-12-15', gain: 100, loss: 0 },
+    { date: '2026-01-05', gain: 300, loss: 0 },
+    { date: '2026-06-10', gain: 0, loss: 50 },
+    { date: '2026-10-14', gain: 200, loss: 20 },
+  ];
+  const ytd = S.pnlBuckets(daily, 'YTD', null, today);
+  assert.strictEqual(ytd.start, '2026-01-01');
+  assert.strictEqual(ytd.end, today);
+  assert.strictEqual(ytd.gran, 'Month');
+  assert.strictEqual(ytd.buckets[0].key, '2026-01-01');
+  assert.ok(ytd.buckets.every(b => b.key >= '2026-01-01' && b.key <= today));
+  const year = daily.filter(e => e.date >= '2026-01-01' && e.date <= today);
+  const expectedNet = Math.round(year.reduce((a, e) => a + e.gain - e.loss, 0) * 100) / 100;
+  assert.strictEqual(ytd.net, expectedNet);
+  assert.strictEqual(ytd.gain, Math.round(year.reduce((a, e) => a + e.gain, 0) * 100) / 100);
+  assert.strictEqual(ytd.loss, Math.round(year.reduce((a, e) => a + e.loss, 0) * 100) / 100);
+  const allNet = Math.round(daily.reduce((a, e) => a + e.gain - e.loss, 0) * 100) / 100;
+  assert.notStrictEqual(ytd.net, allNet);
+});

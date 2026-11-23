@@ -8471,8 +8471,8 @@ function realisedDaily(trades,legs,today){
     add(dt,p.openCash);add(dt,p.realized-p.openCash);});
   return Object.values(d).sort((x,y)=>x.date.localeCompare(y.date)).map(o=>({date:o.date,gain:Math.round(o.gain*100)/100,loss:Math.round(o.loss*100)/100,amount:Math.round((o.gain-o.loss)*100)/100}));
 }
-const PNL_RANGES=[['1W',7],['1M',30],['3M',91],['6M',182],['1Y',365],['All',0]];
-const PNL_DEFAULT_GRAN={'1W':'Day','1M':'Day','3M':'Week','6M':'Week','1Y':'Month','All':'Month'};
+const PNL_RANGES=[['1W',7],['1M',30],['3M',91],['6M',182],['YTD','ytd'],['1Y',365],['All',0]];
+const PNL_DEFAULT_GRAN={'1W':'Day','1M':'Day','3M':'Week','6M':'Week','YTD':'Month','1Y':'Month','All':'Month'};
 const _iso=t=>new Date(t).toISOString().slice(0,10);
 function _bucketKey(date,gran){
   if(gran==='Month')return date.slice(0,7)+'-01';
@@ -8490,9 +8490,9 @@ function earliestTradeDate(trades,legs){
 // Buckets for a range and granularity: every bucket from range start to today (empty ones too), {key,gain,loss,net}.
 // All: fromDate (earliest trade date) or the first day in daily, whichever is earlier, through today.
 function pnlBuckets(daily,range,gran,today,fromDate){
-  const r=PNL_RANGES.find(x=>x[0]===range)||PNL_RANGES[5];gran=gran||PNL_DEFAULT_GRAN[r[0]];
+  const r=PNL_RANGES.find(x=>x[0]===range)||PNL_RANGES[PNL_RANGES.length-1];gran=gran||PNL_DEFAULT_GRAN[r[0]];
   const dataStart=daily&&daily[0]?daily[0].date:today;
-  const start=r[1]?_iso(new Date(today+'T12:00:00')-r[1]*864e5+864e5):([fromDate,dataStart].filter(Boolean).sort()[0]||today);
+  const start=r[1]==='ytd'?today.slice(0,4)+'-01-01':r[1]?_iso(new Date(today+'T12:00:00')-r[1]*864e5+864e5):([fromDate,dataStart].filter(Boolean).sort()[0]||today);
   const map={};let k=_bucketKey(start,gran);const endK=_bucketKey(today,gran);
   for(let n=0;k<=endK&&n<2000;n++){map[k]={key:k,gain:0,loss:0};const t=new Date(k+'T12:00:00');
     k=gran==='Month'?_iso(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,1,12)):_iso(t.getTime()+(gran==='Week'?7:1)*864e5);}
