@@ -6653,7 +6653,7 @@ function renderHome(){
   </div></section>
   <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><span class="ny-desk"><a onclick="switchView('analytics')">More data →</a> · <a onclick="switchView('report')">Report →</a> · </span><a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length&&!_pend.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a class="ny-desk" onclick="goToHealth()">See all</a></div>`:''}`:''}${_pend.length?`<div class="ny-hd">Pending</div>${_pend.slice(0,8).map(i=>healthItemHtml(i,true)).join('')}`:''}</div>
   <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
-  ${renderMonthlyRealised()}
+  <div id="home-monthly">${renderMonthlyForMeasure(pnlMeasure)}</div>
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
     <div class="tk-row tk-hd"><span>Ticker</span><span>${today.slice(0,4)}</span><span>All time</span></div>
     ${tpl.map(t=>`<div class="tk-row"><span class="tk-sym">${esc(t.ticker)}</span><span class="tk-year ${cls(t.year)}" data-lbl="${esc(today.slice(0,4))}">${sgn(t.year)}</span><span class="tk-all ${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}</div>`:''}
@@ -8523,10 +8523,10 @@ function pnlBuckets(daily,range,gran,today,fromDate){
   return{start,end:today,gran,buckets,gain:Math.round(tot.gain*100)/100,loss:Math.round(tot.loss*100)/100,net:Math.round((tot.gain-tot.loss)*100)/100};
 }
 let pnlRange='All',pnlFull=false;
-const PNL_MEASURES=[['all','All'],['wheel','Wheel P&L'],['pmcc','PMCC calls'],['shares','Shares & LEAPs P&L']];
+const PNL_MEASURES=[['all','All'],['options','All options'],['wheel','Wheel P&L'],['pmcc','PMCC calls'],['shares','Shares & LEAPs P&L']];
 function _loadPnlMeasure(){try{let v=localStorage.getItem('optrack-pnl-measure');if(v==='leaps')v='pmcc';if(PNL_MEASURES.some(m=>m[0]===v)){if(localStorage.getItem('optrack-pnl-measure')!==v)localStorage.setItem('optrack-pnl-measure',v);return v;}if(v)localStorage.setItem('optrack-pnl-measure','all');}catch(e){}return 'all';}
 let pnlMeasure=_loadPnlMeasure();
-function setPnlMeasure(k){if(!PNL_MEASURES.some(m=>m[0]===k))return;pnlMeasure=k;try{localStorage.setItem('optrack-pnl-measure',k);}catch(e){}_pnlRedraw();}
+function setPnlMeasure(k){if(!PNL_MEASURES.some(m=>m[0]===k))return;pnlMeasure=k;try{localStorage.setItem('optrack-pnl-measure',k);}catch(e){}_pnlRedraw();const mo=document.getElementById('home-monthly');if(mo)mo.innerHTML=renderMonthlyForMeasure(k);}
 // Chart-only: dated events already used by the Shares & LEAPs P&L table (FIFO share sales, dividends, closed long LEAPs). No new P&L math.
 function sharesLeapsDaily(trades,legs,today){
   const d={};const add=(dt,v)=>{if(!dt||!v)return;dt=String(dt).slice(0,10);const o=d[dt]||(d[dt]={date:dt,gain:0,loss:0});if(v>=0)o.gain+=v;else o.loss-=v;};
@@ -8547,8 +8547,54 @@ function mergePnlDaily(a,b){
 function pnlDailyForMeasure(measure,trades,legs,today){
   if(measure==='wheel')return realisedDaily(trades,[],today);
   if(measure==='pmcc'||measure==='leaps')return realisedDaily([],legs||[],today);
+  if(measure==='options')return realisedDaily(trades,legs||[],today);
   if(measure==='shares')return sharesLeapsDaily(trades,legs||[],today);
   return mergePnlDaily(realisedDaily(trades,legs||[],today),sharesLeapsDaily(trades,legs||[],today));
+}
+// Display only: bucket an existing daily series by month. No new P&L math.
+function calcMonthlyForMeasure(measure,trades,legs,today){
+  const mo={};
+  (pnlDailyForMeasure(measure,trades,legs,today)||[]).forEach(e=>{
+    if(!e||!e.date)return;const ym=String(e.date).slice(0,7);
+    const r=mo[ym]||(mo[ym]={ym,collected:0,loss:0});r.collected+=e.gain||0;r.loss+=e.loss||0;
+  });
+  return Object.keys(mo).sort((a,b)=>b.localeCompare(a)).map(ym=>{
+    const r=mo[ym],collected=Math.round(r.collected*100)/100,loss=Math.round(r.loss*100)/100;
+    return{ym,collected,gain:collected,loss,net:Math.round((collected-loss)*100)/100,profit:Math.round((collected-loss)*100)/100};
+  });
+}
+// Home table under the P&L graph: same measure as the dropdown, all months, not the chart range.
+function renderMonthlyForMeasure(measure){
+  measure=measure||(typeof pnlMeasure!=='undefined'&&pnlMeasure)||'all';
+  const today=new Date().toISOString().slice(0,10);
+  const rows=calcMonthlyForMeasure(measure,db.trades,db.opts||[],today).filter(r=>r.collected||r.loss);
+  if(!rows.length)return '';
+  const label=(PNL_MEASURES.find(m=>m[0]===measure)||[measure,measure])[1];
+  const isSh=measure==='shares'||measure==='all';
+  const yr=today.slice(0,4);
+  const sum=(list,keys)=>{const o={};keys.forEach(k=>o[k]=Math.round(list.reduce((a,r)=>a+(r[k]||0),0)*100)/100);return o;};
+  const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+  const cell=(v,cls,lab)=>`<td class="num ${v?cls:'m'}"${lab?` data-lbl="${lab}"`:''}>${v?fmtMoney(v):'—'}</td>`;
+  const pcell=(v,lab)=>`<td class="num ${v?colorN(v):'m'}" style="font-weight:720"${lab?` data-lbl="${lab}"`:''}>${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
+  const heads=isSh?['Gains','Losses','Net']:['Premium collected','Loss','Profit'];
+  const keys=isSh?['collected','loss','net']:['collected','loss','profit'];
+  const tips={
+    all:'Everything realised in that month: wheel options, PMCC short calls, share sales, dividends and closed LEAPs. Figures match the All bars above. Open options are not included.',
+    options:'Options only: realised premium and buybacks on wheel puts and calls and PMCC short calls, combined. Figures match the All options bars above. Share sales, dividends and closed LEAPs are not included.',
+    wheel:'Wheel options only: realised premium and buybacks on wheel puts and calls. Figures match the Wheel P&L bars above. PMCC short calls are not included.',
+    pmcc:'PMCC short calls only: realised premium and buybacks. Figures match the PMCC calls bars above. Closed long LEAPs stay in Shares & LEAPs P&L.',
+    shares:'The same realised figures as the Shares & LEAPs P&L bars above: share sales (first in, first out), dividends, and closed long LEAPs. Open shares and LEAPs are not included.'
+  };
+  const line=(l,r,c)=>`<tr class="${c||''}"><td class="mpl-month">${l}</td>${isSh?cell(r.collected,'g','Gains')+cell(r.loss?-r.loss:0,'r','Losses')+pcell(r.net,'Net'):cell(r.collected,'g','Collected')+cell(r.loss?-r.loss:0,'r','Loss')+pcell(r.profit,'Profit')}</tr>`;
+  return`<div class="d-panel">
+      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L · ${label} ${ii(tips[measure]||tips.all)}</span></div>
+      <div class="d-panel-body">
+        <table class="a-table mpl-table"><thead><tr><th>Month</th>${heads.map(h=>`<th class="num">${h}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
+        ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr)),keys),'mpl-sum')}
+        ${line('All time',sum(rows,keys),'mpl-sum')}</tbody></table>
+      </div>
+    </div>`;
 }
 // Projected yearly income: same realised YTD total as the Home P&L graph on All + YTD,
 // paced from the first trade this year (or 1 Jan if you started earlier). Display only.
@@ -8601,6 +8647,7 @@ function pnlCurveHtml(){
   const btn=(k,on,fn)=>`<button type="button" class="pc-r${on?' on':''}" onclick="${fn}('${k}')">${k}</button>`;
   const _isSh=_m==='shares'||_m==='all';
   const _tips={all:'Everything realised: wheel puts and calls, PMCC short calls, share sales, dividends and closed LEAPs, on the day they closed, expired or were assigned. Green = gains (including premium collected), red = losses (including buyback costs). Open options are not included. Hover a bar for that period.',
+    options:'Realised premium and buybacks on wheel puts and calls and PMCC short calls, combined. Share sales, dividends and closed long LEAPs stay in Shares & LEAPs P&L. Open options are not included.',
     wheel:'The wheel share of that same Options P&L: realised premium and buybacks on wheel puts and calls only. PMCC short calls are in PMCC calls. Open options are not included.',
     pmcc:'The PMCC short-call share of that same Options P&L: realised premium and buybacks on PMCC short calls. Closed long LEAPs stay in Shares & LEAPs P&L. Open options are not included.',
     shares:'The same realised figures as the Shares & LEAPs P&L table: each share sale (called away or sold) matched first in, first out against what those shares cost, dividends, and each long LEAP when it is sold or expires. Green = gains, red = losses. Booked on the day it closed.'};

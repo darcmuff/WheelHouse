@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const { extractFn } = require('./extract');
 test('P&L bar chart and Data health tile live on Home only', () => {
   const home = extractFn('renderHome'), stats = extractFn('renderStatsOverview') + extractFn('renderAnalytics');
-  assert.ok(home.includes('id="pnl-curve"') && home.includes('pnlCurveHtml()'));
+  assert.ok(home.includes('id="pnl-curve"') && home.includes('pnlCurveHtml()') && home.includes('id="home-monthly"') && home.includes('renderMonthlyForMeasure(pnlMeasure)'));
   assert.ok(!home.includes('Data health ${ii(') && home.includes('Needs you ${ii(') && home.includes('Data issues'));
   assert.ok(!home.includes('Options P&amp;L by month'));
   assert.ok(!stats.includes('pnl-curve') && !stats.includes("kpi('Data health'"));
@@ -13,12 +13,12 @@ test('no Day/Week/Month toggle: granularity is automatic from the range', () => 
   assert.ok(!src.includes("'Day','Week','Month'") && !src.includes('setPnlGran'));
 });
 
-test('chart dropdown is All / Wheel P&L / PMCC calls / Shares & LEAPs P&L and is the title', () => {
+test('chart dropdown is All / All options / Wheel P&L / PMCC calls / Shares & LEAPs P&L and is the title', () => {
   const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
   const load = extractFn('_loadPnlMeasure');
   const daily = extractFn('pnlDailyForMeasure');
   const html = extractFn('pnlCurveHtml');
-  assert.ok(H.includes("['all','All']") && H.includes("['wheel','Wheel P&L']") && H.includes("['pmcc','PMCC calls']") && H.includes("['shares','Shares & LEAPs P&L']"));
+  assert.ok(H.includes("['all','All']") && H.includes("['options','All options']") && H.includes("['wheel','Wheel P&L']") && H.includes("['pmcc','PMCC calls']") && H.includes("['shares','Shares & LEAPs P&L']"));
   assert.ok(!H.includes("['leaps','LEAPs P&L']") && !H.includes("['pnl','Options P&L']") && !H.includes("['premium','Premium collected']") && !H.includes("['closed','Closed P&L']"));
   assert.ok(!html.includes('a-chart-title') && html.includes('pc-measure') && html.includes('${ii('));
   assert.ok(daily.includes("realisedDaily(trades,[],today)") && daily.includes("realisedDaily([],legs||[],today)") && daily.includes("realisedDaily(trades,legs||[],today)"));
