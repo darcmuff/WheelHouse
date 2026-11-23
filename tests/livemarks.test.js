@@ -10,7 +10,7 @@ const fom = extractFn('fetchOptionMarks');
 check('fetchOptionMarks saves a changed quote', /_saveOpt\(l\)/.test(fom));
 const saves = [];
 const run = new Function('db', 'fetch', 'quotes', 'OPTS', '_saveOpt', 'AbortSignal',
-  `let _optMarkStatus='',view='x';const render=()=>{};` + ['adjMark','isRegularSession','steadyMark','markNote','_markStamp'].map(extractFn).join('\n') + `\nasync ` + fom + `\nreturn fetchOptionMarks(true);`);
+  `let _optMarkStatus='',view='x';const render=()=>{};` + ['adjMark','isRegularSession','steadyMark','markNote','_markStamp','markDay','isSameMarkDay'].map(extractFn).join('\n') + '\nasync ' + extractFn('fetchOptchain') + `\nasync ` + fom + `\nreturn fetchOptionMarks(true);`);
 const leg = { id: 'a', status: 'open', underlying: 'SPCX', expiry: '2027-12-17', strike: 150, type: 'C', side: 'long', markSrc: 'cboe', mark: 1, markAt: '2026-10-29T15:00:00.000Z' };
 run({ opts: [leg] }, async () => ({ ok: true, json: async () => ({ asOf: '2026-11-09T19:28:27Z', spot: 140, contracts: { K: { bid: 30.3, ask: 31.1, delta: 0.6, gamma: 0.005, src: 'cboe' } } }) }), {},
   { occ: () => 'K' }, l => saves.push(l), { timeout: () => null }).then(() => {
@@ -36,6 +36,26 @@ run({ opts: [leg] }, async () => ({ ok: true, json: async () => ({ asOf: '2026-1
   check('header shows Expired instead of negative days', /S\.expired\?' · Expired'/.test(card));
   const h = OPTS.health([{ id: 'x', underlying: 'SPCX', type: 'C', side: 'long', strike: 150, expiry: '2026-09-30', qty: 5, entryPrice: 20, status: 'open' }], [], '2026-10-29');
   check('Needs you: "SPCX LEAP expired — close it"', h.some(i => i.text === 'SPCX LEAP expired — close it'));
-  console.log(`\n${pass} passed, ${fail} failed`);
-  if (fail) process.exit(1);
+
+  // 4. A typed mark from a previous day does not block today's quote; a same-day typed mark does, until Refresh.
+  const mkRun = (force) => new Function('db', 'fetch', 'quotes', 'OPTS', '_saveOpt', 'AbortSignal', 'canUse',
+    `let _optMarkStatus='',view='x',_optMarksAt=0;const render=()=>{};` +
+    ['adjMark','isRegularSession','steadyMark','markNote','_markStamp','markDay','isSameMarkDay'].map(extractFn).join('\n') +
+    '\nasync ' + extractFn('fetchOptchain') + `\nasync ` + fom + `\nreturn fetchOptionMarks(${force ? 'true' : 'false'});`);
+  const todayQuote = async () => ({ ok: true, json: async () => ({ asOf: '2026-11-23T15:28:15Z', spot: 140, contracts: { K: { bid: 30.3, ask: 31.1, delta: 0.6, gamma: 0.005, src: 'cboe' } } }) });
+  const occ = { occ: () => 'K' };
+  const stale = { id: 'b', status: 'open', underlying: 'SPCX', expiry: '2027-12-17', strike: 150, type: 'C', side: 'long', markSrc: 'manual', mark: 9, markAt: '2026-11-20T21:00:00.000Z' };
+  return mkRun(false)({ opts: [stale] }, todayQuote, {}, occ, () => {}, { timeout: () => null }, () => true).then(() => {
+    check('previous-day typed mark is replaced by today\'s quote', stale.mark === 30.7 && stale.markSrc === 'cboe');
+    const today = { id: 'c', status: 'open', underlying: 'SPCX', expiry: '2027-12-17', strike: 150, type: 'C', side: 'long', markSrc: 'manual', mark: 9, markAt: new Date().toISOString() };
+    return mkRun(false)({ opts: [today] }, todayQuote, {}, occ, () => {}, { timeout: () => null }, () => true).then(() => {
+      check('same-day typed mark stays until Refresh', today.mark === 9 && today.markSrc === 'manual');
+      const forced = { id: 'd', status: 'open', underlying: 'SPCX', expiry: '2027-12-17', strike: 150, type: 'C', side: 'long', markSrc: 'manual', mark: 9, markAt: new Date().toISOString() };
+      return mkRun(true)({ opts: [forced] }, todayQuote, {}, occ, () => {}, { timeout: () => null }, () => true).then(() => {
+        check('Refresh overwrites a same-day typed mark', forced.mark === 30.7 && forced.markSrc === 'cboe');
+        console.log(`\n${pass} passed, ${fail} failed`);
+        if (fail) process.exit(1);
+      });
+    });
+  });
 });

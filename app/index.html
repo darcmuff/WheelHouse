@@ -4764,6 +4764,26 @@ function markNote(mark,why,u,live,c){if(mark==null)return'';const q=c&&c.bid>0&&
   return base+(why==='adjusted'?`15-min delayed option quote${q}, adjusted to ${u} at $${(+live).toFixed(2)}`
     :why==='held-small'?`15-min delayed option quote${q}; small change ignored to keep it steady`
     :`15-min delayed option quote${q}${isRegularSession()?'':', market closed so not adjusted'}`);}
+// New York calendar date (YYYY-MM-DD). Used only to tell a same-session typed price from a previous day's one.
+function markDay(iso){
+  const d=iso instanceof Date?iso:(iso?new Date(iso):new Date());
+  if(isNaN(+d))return'';
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+}
+function isSameMarkDay(iso,now){const a=markDay(iso),b=markDay(now||new Date());return!!a&&a===b;}
+async function fetchOptchain(symbol,contracts){
+  const url=`/.netlify/functions/optchain?symbol=${encodeURIComponent(symbol)}&contracts=${contracts}`;
+  let last=null;
+  for(let i=0;i<2;i++){
+    try{
+      const r=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(40000)});
+      if(r.ok)return r;
+      last=new Error('HTTP '+r.status);
+    }catch(e){last=e;}
+    if(i===0)await new Promise(res=>setTimeout(res,400));
+  }
+  throw last||new Error('optchain failed');
+}
 async function fetchWheelMarks(force){
   if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
   const byU={};
@@ -4771,8 +4791,8 @@ async function fetchWheelMarks(force){
   let changed=false;
   for(const[u,set]of Object.entries(byU)){
     try{
-      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${[...set].join(',')}`,{cache:'no-store',signal:AbortSignal.timeout(15000)});
-      if(!r.ok)continue;const j=await r.json();
+      const r=await fetchOptchain(u,[...set].join(','));
+      const j=await r.json();
       set.forEach(k=>{const c=j.contracts&&j.contracts[k]||null;_wheelMarkRaw[k]={u,c,strike:+k.slice(-8)/1000,type:k.slice(-9,-8),spot:j.spot>0?j.spot:null};changed=true;});
     }catch(e){console.warn('Wheel marks:',u,e.message);}
   }
@@ -4787,7 +4807,11 @@ async function fetchOptionMarks(force, onlyId){
   if(onlyId)open=open.filter(l=>l.id===onlyId);
   if(!open.length){if(!onlyId)_optMarkStatus='';return;}
   if(!onlyId){
-    if(!force&&_optMarksAt&&!canUse('live-refresh'))return; // free plan: marks once per visit, no auto refresh
+    if(!force&&_optMarksAt&&!canUse('live-refresh')){
+      // free plan: marks once per visit, but a leftover Friday mark is fetched again on the next session
+      const stale=open.some(l=>l.markAt&&markDay(l.markAt)<markDay());
+      if(!stale)return;
+    }
     if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
   }
   const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
@@ -4795,15 +4819,14 @@ async function fetchOptionMarks(force, onlyId){
   const noteFail=l=>{if(l.markWhy!=='none'){l.markWhy='none';l.markNote='No reliable quote for this contract';changed=true;}};
   for(const[u,ls]of Object.entries(byU)){
     try{
-      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${ls.map(OPTS.occ).join(',')}`,{cache:'no-store',signal:AbortSignal.timeout(15000)});
-      if(!r.ok)throw new Error('HTTP '+r.status);
+      const r=await fetchOptchain(u,ls.map(OPTS.occ).join(','));
       const j=await r.json();
       if(j.spot>0)quotes[u]=quotes[u]||{price:j.spot,prev:j.spot,change:0,pct:0,state:'DELAYED'};
       ls.forEach(l=>{
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
-        // a price typed in the last 5 days stays until Refresh. An older typed price does not block the quote.
-        if(!force&&l.markSrc==='manual'&&l.markAt&&(Date.now()-Date.parse(l.markAt))/864e5<5)return;
+        // a price typed today (New York session date) stays until Refresh. A previous day's typed price does not block today's quote.
+        if(!force&&l.markSrc==='manual'&&l.markAt&&isSameMarkDay(l.markAt))return;
         const c=j.contracts&&j.contracts[OPTS.occ(l)];
         const live=quotes[u]&&quotes[u].state!=='DELAYED'?quotes[u].price:null;
         const prevM=l.mark!=null&&l.mark!==''?+l.mark:null;
@@ -5669,7 +5692,9 @@ function wheelListCells(t,L){
     const d=dd(L.today,t.entered);if(d&&t.total)r.ppd=ppdCellHtml(t.total*(baseSh?openSh/baseSh:1)/d,d);
     const occ=wheelLegOcc(L.ticker,t),known=!!(L.marks&&Object.prototype.hasOwnProperty.call(L.marks,occ));
     const mark=L.marks?L.marks[occ]:null;
-    if(t.currentPrice!=null&&t.currentPrice!==''&&prem>0){const px=+t.currentPrice;const cv=Math.round(px*openSh*100)/100;const pf=Math.round((prem-px)*openSh*100)/100;const pct=Math.round((prem-px)/prem*100);const c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${px.toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;return r;}
+    const hasTyped=t.currentPrice!=null&&t.currentPrice!=='';
+    const typedFresh=hasTyped&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);
+    if(hasTyped&&prem>0&&(typedFresh||mark==null)){const px=+t.currentPrice;const cv=Math.round(px*openSh*100)/100;const pf=Math.round((prem-px)*openSh*100)/100;const pct=Math.round((prem-px)/prem*100);const c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${px.toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;return r;}
     if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:openSh/100};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
@@ -5726,7 +5751,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
   const hasExtra=opts.extraAfterStrike!=null;
   const _ab=`<span class="ab ab-${t.action}">${t.action}</span>`;
-  const _warn=typeof shortRowWarnTags==='function'&&opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?shortRowWarnTags(opts.list.ticker||t.ticker,{isOpen:true,isCall:t.action==='STOC',expiry:t.expiry,today:opts.list.today,spot:opts.list.spot,strike:t.strike,mark:t.currentPrice!=null&&t.currentPrice!==''?+t.currentPrice:(opts.list.marks&&opts.list.marks[wheelLegOcc(opts.list.ticker,t)])}):'';
+  const _warn=typeof shortRowWarnTags==='function'&&opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?shortRowWarnTags(opts.list.ticker||t.ticker,{isOpen:true,isCall:t.action==='STOC',expiry:t.expiry,today:opts.list.today,spot:opts.list.spot,strike:t.strike,mark:(()=>{const live=opts.list.marks&&opts.list.marks[wheelLegOcc(opts.list.ticker,t)];const typed=t.currentPrice!=null&&t.currentPrice!=='';const fresh=typed&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);return typed&&(fresh||live==null)?+t.currentPrice:live;})()}):'';
   const _entered=fmtDateFull(t.entered);
   const _expiry=(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—';
   const _strike=t.strike?fmtStrike(t.strike):'—';

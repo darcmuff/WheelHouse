@@ -211,9 +211,9 @@ const _mk = async () => {
   calls.length = 0; r = await getMarks('AAPL', [A], { fetchImpl: fake(u => u.includes('cboe') ? cboe : fh), finnhubKey: 'k' });
   check('marks: Nasdaq and Finnhub skipped when Cboe covers all', calls.join() === 'cboe' && r.sources.join() === 'cboe');
   calls.length = 0; r = await getMarks('AAPL', [A, B], { fetchImpl: fake(u => u.includes('cboe') ? new Error('net') : u.includes('nasdaq') ? nd : null), finnhubKey: 'k' });
-  check('marks: Cboe down, Nasdaq fills the gap', r.contracts[B].src === 'nasdaq' && r.contracts[B].bid === 1.9 && r.contracts[A].src === 'nasdaq' && r.sources.join() === 'nasdaq' && calls.join() === 'cboe,nasdaq', { r, calls });
+  check('marks: Cboe down, Nasdaq fills the gap', r.contracts[B].src === 'nasdaq' && r.contracts[B].bid === 1.9 && r.contracts[A].src === 'nasdaq' && r.sources.join() === 'nasdaq' && calls.join() === 'cboe,cboe,nasdaq', { r, calls });
   calls.length = 0; r = await getMarks('AAPL', [A, B], { fetchImpl: fake(u => u.includes('cboe') ? new Error('net') : null), finnhubKey: 'bad' });
-  check('marks: Cboe down + Nasdaq/Finnhub 401 → empty, no throw (manual/BS fallback)', Object.keys(r.contracts).length === 0 && r.sources.length === 0 && calls.join() === 'cboe,nasdaq,finnhub', { r, calls });
+  check('marks: Cboe down + Nasdaq/Finnhub 401 → empty, no throw (manual/BS fallback)', Object.keys(r.contracts).length === 0 && r.sources.length === 0 && calls.join() === 'cboe,cboe,nasdaq,finnhub', { r, calls });
   calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : u.includes('nasdaq') ? none : { error: "You don't have access to this resource." }), finnhubKey: 'k' });
   check('marks: Finnhub {error} payload ignored', !r.contracts[B]);
   calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : u.includes('nasdaq') ? none : fh) });

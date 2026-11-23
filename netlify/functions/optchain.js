@@ -98,12 +98,14 @@ const NASDAQ_HEADERS = {
 async function getMarks(sym, wanted, { fetchImpl = fetch, finnhubKey } = {}) {
   const out = { asOf: null, spot: null, delayed: true, sources: [], contracts: {} };
   const tryJson = async (url, opts) => { try { const r = await fetchImpl(url, opts); if (!r.ok) return null; return await r.json(); } catch (e) { return null; } };
-  const cboe = await tryJson(`https://cdn-api.cboe.com/api/global/delayed_quotes/options/${encodeURIComponent(INDEX.has(sym) ? '_' + sym : sym)}.json`,
-    { headers: CBOE_HEADERS, signal: AbortSignal.timeout(12000), redirect: 'follow' });
+  const cboeUrl = `https://cdn-api.cboe.com/api/global/delayed_quotes/options/${encodeURIComponent(INDEX.has(sym) ? '_' + sym : sym)}.json`;
+  const cboeOpts = () => ({ headers: CBOE_HEADERS, signal: AbortSignal.timeout(8000), redirect: 'follow' });
+  let cboe = await tryJson(cboeUrl, cboeOpts());
+  if (!cboe) cboe = await tryJson(cboeUrl, cboeOpts()); // one retry on timeout / network / non-OK
   if (cboe) { const p = pick(cboe, wanted); Object.assign(out.contracts, p.contracts); out.asOf = p.asOf; out.spot = p.spot; if (Object.keys(p.contracts).length) out.sources.push('cboe'); }
   let missing = wanted.filter(w => !out.contracts[w]);
   if (missing.length) {
-    const nd = await tryJson(nasdaqUrl(sym), { headers: NASDAQ_HEADERS, signal: AbortSignal.timeout(12000) });
+    const nd = await tryJson(nasdaqUrl(sym), { headers: NASDAQ_HEADERS, signal: AbortSignal.timeout(8000) });
     if (nd) {
       const p = pickNasdaq(nd, missing);
       Object.assign(out.contracts, p.contracts);
@@ -113,7 +115,7 @@ async function getMarks(sym, wanted, { fetchImpl = fetch, finnhubKey } = {}) {
     missing = wanted.filter(w => !out.contracts[w]);
   }
   if (missing.length && finnhubKey) {
-    const fh = await tryJson(`https://finnhub.io/api/v1/stock/option-chain?symbol=${encodeURIComponent(sym)}&token=${finnhubKey}`, { signal: AbortSignal.timeout(12000) });
+    const fh = await tryJson(`https://finnhub.io/api/v1/stock/option-chain?symbol=${encodeURIComponent(sym)}&token=${finnhubKey}`, { signal: AbortSignal.timeout(8000) });
     if (fh && !fh.error) { const p = pickFinnhub(fh, missing); Object.assign(out.contracts, p.contracts); if (out.spot == null) out.spot = p.spot; if (Object.keys(p.contracts).length) out.sources.push('finnhub'); }
   }
   if (!out.asOf) out.asOf = new Date().toISOString();
