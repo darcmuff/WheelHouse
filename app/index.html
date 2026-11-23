@@ -1501,8 +1501,37 @@ select,textarea,
     display:flex;
     align-items:center;
   }
-  .v2-home .hk-l .ii{flex-shrink:0;margin-left:0.15rem}
-  .v2-home .hk-rel .hk-l{padding-right:28px}
+  .v2-home .hk-l .ii{
+    flex-shrink:0;
+    margin-left:0.15rem;
+    margin-top:-3px;
+    margin-bottom:-3px;
+    font-size:20px;
+    line-height:1;
+    width:20px;
+    height:20px;
+    min-width:20px;
+    min-height:20px;
+    padding:0;
+    opacity:1;
+  }
+  .home-chart .ii{
+    font-size:20px;
+    line-height:1;
+    width:20px;
+    height:20px;
+    min-width:20px;
+    min-height:20px;
+    padding:0;
+    opacity:1;
+    flex-shrink:0;
+  }
+  .v2-home .hk-l .ii::after,
+  .home-chart .ii::after{
+    width:32px;
+    height:32px;
+  }
+  .v2-home .hk-rel .hk-l{padding-right:32px}
   .v2-home .hk-cog{
     position:absolute;
     top:2px;
