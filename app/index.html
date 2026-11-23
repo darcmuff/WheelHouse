@@ -521,6 +521,8 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .more-data{padding:0.25rem 1.25rem 2.5rem;max-width:75rem;margin:0 auto;font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif}
 .more-data .a-wrap{padding:0;max-width:none}
 .more-data .ms-head{margin:0.25rem 0 1rem}
+.more-data .ms-kpis{display:flex;flex-direction:column;gap:0.5rem}
+.more-data .ms-scope{display:flex;justify-content:flex-end;align-items:center;gap:0.25rem}
 .more-data .d-panel,.more-data .d-kpi,.more-data .a-chart-box,.more-data .a-stat{
   border-radius:6px!important;box-shadow:none;
 }
@@ -6423,8 +6425,12 @@ function buildMiniCal(){
 
 function renderStatsOverview(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();const cap=calcCapitalStats();
-  const py=calcProjectedYearly(db.trades,db.opts||[],new Date().toISOString().slice(0,10));
+  const today=new Date().toISOString().slice(0,10),scope=moreScope();
+  const pyAll=calcProjectedYearly(db.trades,db.opts||[],today);
+  const pyWheel=calcProjectedYearly(db.trades,[],today);
+  const py=scope==='wheel'?pyWheel:pyAll;
   const monthly=calcMonthlyPnL();
+  const rowsAll=calcMonthlyRealised(db.trades,monthlyExtraSources(db.opts||[]));
   const openWheels=db.wheels.filter(w=>w.status==='open').sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
   const liveOpts=db.wheels.flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id))).sort((a,b)=>a.expiry.localeCompare(b.expiry));
   const recentTrades=[...db.trades].sort((a,b)=>b.entered.localeCompare(a.entered)).slice(0,8);
@@ -6463,6 +6469,9 @@ function renderStatsOverview(){
   const thisMo=monthly.length?(monthly.find(m=>m.ym===_thisYm)||_zeroMo(_thisYm)):null;
   const lastMo=monthly.length?(monthly.find(m=>m.ym===_lastYm)||_zeroMo(_lastYm)):null;
   const moCompare=lastMo&&thisMo?(thisMo.pNet-lastMo.pNet):null;
+  const allMonth=rowsAll.length?homeFigures(rowsAll,today).month.total:null;
+  const allLast=rowsAll.length?homeFigures(rowsAll,_lastYm+'-15').month.total:null;
+  const moCompareAll=allMonth!=null&&allLast!=null?(allMonth-allLast):null;
 
   // Action count
 
@@ -6480,11 +6489,18 @@ function renderStatsOverview(){
     </div>`;
   }
 
-  const k1=kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
-  const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
+  const allDay=pyAll.days>0?pyAll.total/pyAll.days:null;
+  const k1=scope==='wheel'
+    ?kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.')
+    :kpi('Realised P&L '+new Date().getFullYear(),fmtMoney(pyAll.total),allDay!=null?`${fmtMoney(allDay)}/day · ${fmtMoney(allDay*7)}/wk`:'no trades yet',pyAll.total>=0?'var(--green)':'var(--red)',true,'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends. Open positions are not included.');
+  const k2=scope==='wheel'
+    ?kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.')
+    :kpi('Premium This Month',allMonth!=null?fmtMoney(allMonth):'—',moCompareAll!=null?`${moCompareAll>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompareAll))} vs last month`:'first month',allMonth!=null&&allMonth>=0?'var(--green)':'var(--red)',false,'Net realised option premium this calendar month across wheels and PMCC short calls — credits minus buybacks. Closed long LEAPs and share sales are not included.');
   const pySub=py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`;
   const pyCol=py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)';
-  const pyTip='All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.';
+  const pyTip=scope==='wheel'
+    ?'Wheel realised income this year — option premium, stock sales and dividends — scaled to 365 days from your first wheel trade this year, or from 1 January if you started earlier. PMCC short calls, closed LEAPs and open positions are not included.'
+    :'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.';
   const k3=kpi('Projected Yearly',py.yearly!=null?fmtMoney(py.yearly):'—',pySub,pyCol,false,pyTip);
 
   // AROC trailing
@@ -6561,7 +6577,8 @@ function renderStatsOverview(){
   return`<div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
 
     <!-- KPI Row -->
-    <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div>
+    <div class="ms-kpis"><div class="ms-scope" role="group" aria-label="More data scope"><button type="button" class="pc-r${scope==='all'?' on':''}" aria-pressed="${scope==='all'?'true':'false'}" onclick="setMoreScope('all')">All</button><button type="button" class="pc-r${scope==='wheel'?' on':''}" aria-pressed="${scope==='wheel'?'true':'false'}" onclick="setMoreScope('wheel')">Wheel</button></div>
+    <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div></div>
 
     <!-- Alert strip -->
 
@@ -8545,6 +8562,20 @@ function calcProjectedYearly(trades,legs,today){
   const days=Math.max(1,Math.round((new Date(today+'T12:00:00')-new Date(paceStart+'T12:00:00'))/86400000)+1);
   return{total,days,since:paceStart,startedMidYear:first>yearStart,yearly:(total/days)*365};
 }
+// More data KPI scope: 'all' (default) or 'wheel'. Display only; persists in localStorage.
+function moreScope(){
+  try{if(localStorage.getItem('optrack-more-scope')==='wheel')return'wheel';}catch(e){}
+  return'all';
+}
+function setMoreScope(k){
+  if(k!=='all'&&k!=='wheel')return;
+  try{localStorage.setItem('optrack-more-scope',k);}catch(e){}
+  if(typeof view!=='undefined'&&view==='analytics'&&typeof switchView==='function'){
+    const y=typeof window!=='undefined'?window.scrollY:0;
+    switchView('analytics');
+    if(typeof window!=='undefined')window.scrollTo(0,y);
+  }
+}
 function pnlCurveHtml(){
   const today=new Date().toISOString().slice(0,10);
   const _m=pnlMeasure||'all';
@@ -8660,13 +8691,14 @@ function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.inn
 function setPnlRange(k){pnlRange=k;_pnlRedraw();}
 function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=document.getElementById('pnl-curve');if(el)el.classList.toggle('pc-full',pnlFull);document.body.classList.toggle('pc-lock',pnlFull);_pnlRedraw();}
 function goToHealth(){if(isPhoneLayout())return;switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
-window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;window.pnlTipShow=pnlTipShow;window.pnlTipHide=pnlTipHide;window.pnlTipHtml=pnlTipHtml;
+window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.setMoreScope=setMoreScope;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;window.pnlTipShow=pnlTipShow;window.pnlTipHide=pnlTipHide;window.pnlTipHtml=pnlTipHtml;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
 window.addEventListener('resize',()=>{_pnlRedraw();if((view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())switchView('dash');});
 
 function renderAnalytics(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();
-  const py=calcProjectedYearly(db.trades,db.opts||[],new Date().toISOString().slice(0,10));
+  const today=new Date().toISOString().slice(0,10),scope=moreScope();
+  const py=calcProjectedYearly(db.trades,scope==='wheel'?[]:(db.opts||[]),today);
   const timing=calcTimingStats();const bw=calcBestWorst();const cap=calcCapitalStats();
   const streaks=calcStreaks();const breakdown=calcTradeBreakdown();const monthly=calcMonthlyPnL();
   const allAroc=db.wheels.filter(w=>w.status==='closed').map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
@@ -8752,7 +8784,7 @@ function renderAnalytics(){
     ${stat(profitFactorStr,'Profit Factor','gross credits ÷ debits',parseFloat(profitFactorStr)>=1.5?'var(--green)':'var(--text2)','Gross premium credits divided by total buyback debits. Above 1.0 means profitable overall. Above 2.0 is excellent.')}
     ${stat(wl.wr?wl.wr+'%':'—','Win Rate',wl.wins+'W · '+wl.losses+'L',parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)','Percentage of option cycles that ended profitably — expired worthless or closed for a gain.')}
     ${stat(fmtMoney(s.pNet),'Premium','all-time, net of buybacks',s.pNet>=0?'var(--green)':'var(--red)','Realised option premium, all-time: sells that were bought back, expired or assigned, net of buybacks. Open options not counted.')}
-    ${stat(py.yearly!=null?fmtMoney(py.yearly):'—','Annualised Projection',py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`,py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)','All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.')}
+    ${stat(py.yearly!=null?fmtMoney(py.yearly):'—','Annualised Projection',py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`,py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)',scope==='wheel'?'Wheel realised income this year — option premium, stock sales and dividends — scaled to 365 days from your first wheel trade this year, or from 1 January if you started earlier. PMCC short calls, closed LEAPs and open positions are not included.':'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.')}
   </div>`;
 
   // ── Equity curve (cumulative premium SVG) ──

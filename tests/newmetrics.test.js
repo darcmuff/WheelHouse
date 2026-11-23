@@ -85,9 +85,12 @@ test('More stats: exposure and utilisation use Home capital at work; utilisation
   assert.ok(!H.includes('The account size you set in Settings.'));
   assert.ok(H.includes('The account size you set here.'));
   assert.ok(H.includes("kpi('Projected Yearly',py.yearly!=null?fmtMoney(py.yearly):'—'"));
-  assert.ok(H.includes('calcProjectedYearly(db.trades,db.opts||[],new Date().toISOString().slice(0,10))'));
+  assert.ok(H.includes('calcProjectedYearly(db.trades,db.opts||[],today)'));
+  assert.ok(H.includes("calcProjectedYearly(db.trades,[],today)"));
   assert.ok(H.includes('based on ${py.days} days YTD'));
   assert.ok(H.includes('based on ${py.days}d since ${fmtDayMon(py.since)}'));
+  assert.ok(H.includes("setMoreScope('all')") && H.includes("setMoreScope('wheel')"));
+  assert.ok(H.includes("localStorage.getItem('optrack-more-scope')"));
   assert.ok(!H.includes("kpi('Capital Utilisation'"));
   assert.ok(!H.includes('cap.maxCap||1'), 'old biggest-put proxy gone');
   assert.ok(H.includes('const caw=currentCapitalAtWork();'), 'Home uses the same helper');
