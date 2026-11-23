@@ -154,3 +154,52 @@ test('report delta sold items keep the same win flag and amount as the Report', 
   assert.strictEqual(leap[0].amount, X.OPTS.legPnL(legs[1]).realized);
   assert.strictEqual(leap[0].win, leap[0].amount >= 0);
 });
+
+test('fill time is read as Europe/London with GMT and BST offsets', () => {
+  const gmt = D.filledAtFromDateAndTime('2026-01-15', '14:52');
+  assert.strictEqual(gmt.value, '2026-01-15T14:52:00+00:00');
+  assert.strictEqual(gmt.offsetMinutes, 0);
+  const bst = D.filledAtFromDateAndTime('2026-07-15', '14:52');
+  assert.strictEqual(bst.value, '2026-07-15T14:52:00+01:00');
+  assert.strictEqual(bst.offsetMinutes, 60);
+  const oneDigit = D.filledAtFromDateAndTime('2026-07-15', '9:05');
+  assert.strictEqual(oneDigit.value, '2026-07-15T09:05:00+01:00');
+  const withSec = D.filledAtFromDateAndTime('2026-07-15', '14:52:03');
+  assert.strictEqual(withSec.value, '2026-07-15T14:52:03+01:00');
+  assert.strictEqual(D.fillTimeFromFilledAt(bst.value), '14:52');
+  assert.strictEqual(D.fillTimeFromFilledAt(withSec.value), '14:52:03');
+});
+
+test('DST changeover dates: spring gap is rejected, autumn fold keeps BST', () => {
+  // 29 March 2026: 01:00 GMT jumps to 02:00 BST.
+  assert.strictEqual(D.filledAtFromDateAndTime('2026-03-29', '00:59').value, '2026-03-29T00:59:00+00:00');
+  assert.strictEqual(D.filledAtFromDateAndTime('2026-03-29', '01:00').error, 'not-a-london-time');
+  assert.strictEqual(D.filledAtFromDateAndTime('2026-03-29', '01:30').error, 'not-a-london-time');
+  assert.strictEqual(D.filledAtFromDateAndTime('2026-03-29', '02:00').value, '2026-03-29T02:00:00+01:00');
+  // 25 October 2026: 02:00 BST falls back to 01:00 GMT. 01:30 is ambiguous — earlier (BST).
+  assert.strictEqual(D.filledAtFromDateAndTime('2026-10-25', '00:59').value, '2026-10-25T00:59:00+01:00');
+  assert.strictEqual(D.filledAtFromDateAndTime('2026-10-25', '01:30').value, '2026-10-25T01:30:00+01:00');
+  assert.strictEqual(D.filledAtFromDateAndTime('2026-10-25', '02:00').value, '2026-10-25T02:00:00+00:00');
+});
+
+test('blank fill time writes nothing; malformed input is rejected', () => {
+  const blank = D.filledAtFromDateAndTime('2026-01-15', '');
+  assert.strictEqual(blank.value, null);
+  assert.strictEqual(blank.blank, true);
+  assert.ok(!blank.error);
+  assert.strictEqual(D.filledAtFromDateAndTime('2026-01-15', '   ').blank, true);
+  const preserved = D.resolveFilledAt('2026-01-15', '', '2026-01-15T14:52:00+00:00');
+  assert.strictEqual(preserved.value, '2026-01-15T14:52:00+00:00');
+  assert.strictEqual(preserved.blank, true);
+  const fresh = D.resolveFilledAt('2026-01-15', '', null);
+  assert.strictEqual(fresh.value, null);
+  assert.strictEqual(fresh.blank, true);
+  for (const bad of ['14', '14:5', '25:00', '14:60', 'abc', '2pm', '14.52']) {
+    const r = D.filledAtFromDateAndTime('2026-01-15', bad);
+    assert.strictEqual(r.value, null, bad);
+    assert.strictEqual(r.error, 'malformed', bad);
+  }
+  assert.match(D.fillTimeHintText('malformed'), /14:52/);
+  assert.match(D.fillTimeHintText('not-a-london-time'), /does not exist/);
+  assert.doesNotMatch(D.fillTimeHintText('malformed'), /red/i);
+});

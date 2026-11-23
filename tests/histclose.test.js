@@ -65,3 +65,30 @@ test('histClose falls back to the daily close when no intraday bars exist', asyn
   assert.strictEqual(r.spots[fill].precision, 'day');
   assert.strictEqual(r.spots[fill].price, 50);
 });
+
+test('a filledAt built from a London fill time uses the 1-minute bar, not the daily close', async () => {
+  const D = require('../app/delta.js');
+  const built = D.filledAtFromDateAndTime('2026-11-10', '14:52');
+  assert.strictEqual(built.value, '2026-11-10T14:52:00+00:00');
+  const fill = built.value;
+  const fillSec = Date.parse(fill) / 1000;
+  const calls = [];
+  const fake = async (url) => {
+    calls.push(url);
+    if (url.includes('resolution=1') || url.includes('interval=1m')) {
+      return { ok: true, json: async () => ({ s: 'ok', t: [fillSec - 20], c: [69.41], chart: { result: [{ timestamp: [fillSec - 20], indicators: { quote: [{ close: [69.41] }] } }] } }) };
+    }
+    if (url.includes('resolution=D') || url.includes('interval=1d')) {
+      const day = Date.parse('2026-11-10T21:00:00Z') / 1000;
+      return { ok: true, json: async () => ({ s: 'ok', t: [day], c: [70], chart: { result: [{ timestamp: [day], indicators: { quote: [{ close: [70] }] } }] } }) };
+    }
+    return { ok: false, status: 404, json: async () => ({ s: 'no_data' }) };
+  };
+  const r = await H.histClose('KO', ['2026-11-10'], [fill], { fetchImpl: fake, finnhubKey: 'k', now: Date.parse('2026-11-23T12:00:00Z') });
+  assert.ok(calls.some(u => u.includes('resolution=1')), calls);
+  assert.ok(r.spots[fill]);
+  assert.strictEqual(r.spots[fill].precision, 'minute');
+  assert.strictEqual(r.spots[fill].bar, '1m');
+  assert.strictEqual(r.spots[fill].price, 69.41);
+  assert.notStrictEqual(r.spots[fill].price, r.closes['2026-11-10'].price);
+});

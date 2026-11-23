@@ -207,11 +207,101 @@
     return { rows, best, noDelta, buckets: BUCKETS.map(b => b.key) };
   }
 
+  const LONDON = 'Europe/London';
+
+  // Plain HH:MM, or HH:MM:SS. Leading hour zero optional. Blank is not an error.
+  function parseFillTime(str) {
+    const raw = String(str == null ? '' : str).trim();
+    if (!raw) return { blank: true };
+    const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(raw);
+    if (!m) return { error: 'malformed' };
+    const hour = +m[1], minute = +m[2], second = m[3] != null ? +m[3] : 0;
+    if (hour > 23 || minute > 59 || second > 59) return { error: 'malformed' };
+    return { hour, minute, second };
+  }
+
+  function formatInZone(ms, timeZone) {
+    const fmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timeZone || LONDON,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23'
+    });
+    const p = {};
+    fmt.formatToParts(new Date(ms)).forEach(x => { p[x.type] = x.value; });
+    let hour = +p.hour;
+    let day = +p.day, month = +p.month, year = +p.year;
+    // Some engines report midnight as 24; roll that to 00:00 the next calendar day is wrong —
+    // treat 24 as 00 on the same formatted date parts the engine already gave.
+    if (hour === 24) hour = 0;
+    return { year, month, day, hour, minute: +p.minute, second: +p.second };
+  }
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function formatOffset(offMin) {
+    const sign = offMin >= 0 ? '+' : '-';
+    const abs = Math.abs(offMin);
+    return sign + pad2(Math.floor(abs / 60)) + ':' + pad2(abs % 60);
+  }
+
+  // Combine a YYYY-MM-DD date with a London local time into ISO 8601 with the
+  // correct +00:00 (GMT) or +01:00 (BST) offset. DST is resolved from
+  // Europe/London, not a fixed offset. A spring-forward gap is rejected.
+  // An autumn fold picks the earlier instant (still BST).
+  function filledAtFromDateAndTime(dateStr, timeStr, timeZone) {
+    timeZone = timeZone || LONDON;
+    const d = String(dateStr || '').trim();
+    const t = parseFillTime(timeStr);
+    if (t.blank) return { value: null, blank: true };
+    if (t.error) return { value: null, error: 'malformed' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return { value: null, error: d ? 'bad-date' : 'blank-date' };
+    const y = +d.slice(0, 4), mo = +d.slice(5, 7), day = +d.slice(8, 10);
+    const matches = [];
+    [0, 60].forEach(offMin => {
+      const ms = Date.UTC(y, mo - 1, day, t.hour, t.minute, t.second) - offMin * 60000;
+      const p = formatInZone(ms, timeZone);
+      if (p.year === y && p.month === mo && p.day === day && p.hour === t.hour && p.minute === t.minute && p.second === t.second) {
+        matches.push({ ms, offMin });
+      }
+    });
+    if (!matches.length) return { value: null, error: 'not-a-london-time' };
+    matches.sort((a, b) => a.ms - b.ms);
+    const off = matches[0].offMin;
+    const value = d + 'T' + pad2(t.hour) + ':' + pad2(t.minute) + ':' + pad2(t.second) + formatOffset(off);
+    return { value, offsetMinutes: off };
+  }
+
+  // Blank input leaves any existing filledAt unchanged; a valid time replaces it.
+  function resolveFilledAt(dateStr, timeStr, previous, timeZone) {
+    const r = filledAtFromDateAndTime(dateStr, timeStr, timeZone);
+    if (r.error) return r;
+    if (r.blank) return { value: previous || null, blank: true };
+    return { value: r.value, offsetMinutes: r.offsetMinutes };
+  }
+
+  function fillTimeFromFilledAt(filledAt, timeZone) {
+    if (!filledAt) return '';
+    const ms = Date.parse(filledAt);
+    if (!isFinite(ms)) return '';
+    const p = formatInZone(ms, timeZone || LONDON);
+    return pad2(p.hour) + ':' + pad2(p.minute) + (p.second ? ':' + pad2(p.second) : '');
+  }
+
+  function fillTimeHintText(err) {
+    if (err === 'malformed') return 'Use a time like 14:52 (hours and minutes).';
+    if (err === 'not-a-london-time') return 'That time does not exist on this date in London.';
+    if (err === 'bad-date' || err === 'blank-date') return 'Enter the date first, then the fill time.';
+    return '';
+  }
+
   const DeltaOpen = {
-    RATE, IV_LO, IV_HI, BUCKETS,
+    RATE, IV_LO, IV_HI, BUCKETS, LONDON,
     ncdf, yearFraction, bs, impliedVol, deltaAtOpen,
     typedAbsDelta, fillTimestamp, optionTypeFromTrade, resolveOpenDelta,
-    bucketKey, bucketLabel, formatDelta, precisionHover, bucketItems
+    bucketKey, bucketLabel, formatDelta, precisionHover, bucketItems,
+    parseFillTime, filledAtFromDateAndTime, resolveFilledAt,
+    fillTimeFromFilledAt, fillTimeHintText, formatInZone
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = DeltaOpen;
   root.DeltaOpen = DeltaOpen;

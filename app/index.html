@@ -550,6 +550,10 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .wh-opt:hover,.wh-opt.on{background:var(--bg3)}
 .fld input[readonly]{color:var(--text3)}
 .fld textarea{resize:vertical;min-height:2.25rem}
+.fill-time-pair{display:flex;gap:0.375rem;align-items:flex-start;min-width:0}
+.fill-time-pair>.fld{flex:1 1 auto;min-width:0}
+.fld-fill-time{flex:0 0 6.75rem;max-width:7.5rem}
+.fill-time-hint{color:var(--text3);font-size:0.6875rem;line-height:1.3;font-weight:480}
 .mfoot{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.625rem;padding-top:0.625rem;border-top:1px solid var(--border)}
 
 /* ── COLOURS ── */
@@ -1268,7 +1272,9 @@ select,textarea,
   }
   .trade-form-grid input[type=date]{position:relative;padding-right:2.4rem}
   .trade-form-grid input[type=date]::-webkit-calendar-picker-indicator{position:absolute;right:0.5rem;width:1.25rem;height:1.25rem}
-  #mTrade .mbox,#mPaste .mbox{width:auto;max-width:calc(100vw - 1.25rem);padding:0.875rem}
+  #mTrade .mbox,#mPaste .mbox,#mPmcc .mbox,#mPmccLeg .mbox{width:auto;max-width:calc(100vw - 1.25rem);padding:0.875rem}
+  .fill-time-pair input{min-height:44px;box-sizing:border-box}
+  .fld-fill-time{flex:0 0 7rem;max-width:8rem}
   #auth-password{padding-right:2.85rem!important}
   .lc-nw{white-space:nowrap}
 }
@@ -1995,7 +2001,10 @@ select,textarea,
           <option value="DIV">DIV — Dividend</option>
         </select>
       </div>
-      <div class="fld"><label>Date Entered</label><input id="tf-entered" type="date" oninput="autoCalcDTE()"></div>
+      <div class="fill-time-pair">
+        <div class="fld"><label for="tf-entered">Date Entered</label><input id="tf-entered" type="date" oninput="autoCalcDTE();if(typeof paintFillTimeHint==='function')paintFillTimeHint('tf-entered','tf-fill-time','tf-fill-time-hint')"></div>
+        <div class="fld fld-fill-time"><label for="tf-fill-time">Fill time <small style="color:var(--text3)">optional</small></label><input id="tf-fill-time" type="text" inputmode="text" placeholder="14:52" autocomplete="off" spellcheck="false" aria-describedby="tf-fill-time-hint" oninput="if(typeof paintFillTimeHint==='function')paintFillTimeHint('tf-entered','tf-fill-time','tf-fill-time-hint');if(typeof paintTradeDeltaHint==='function')paintTradeDeltaHint()"><div id="tf-fill-time-hint" class="fill-time-hint" hidden></div></div>
+      </div>
       <div class="fld" id="tg-expiry"><label>Expiry Date</label><input id="tf-expiry" type="date" oninput="autoCalcDTE()"></div>
       <div class="fld" id="tg-strike"><label>Strike ($)</label><input id="tf-strike" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"></div>
       <div class="fld" id="tg-delta"><label>Delta <small id="tf-delta-hint" style="color:var(--text3)">optional</small></label><input id="tf-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30" oninput="if(typeof paintTradeDeltaHint==='function')paintTradeDeltaHint()"></div>
@@ -2140,7 +2149,10 @@ select,textarea,
       <div class="fld"><label>Sell price / sh</label><input id="pe-price" type="number" step="0.01"></div>
       <div class="fld" id="pe-cp-wrap"><label for="pe-current-price">Current price</label><input id="pe-current-price" name="current-price" aria-label="Current price" type="number" step="0.01"></div>
       <div class="fld"><label>Delta at open <small id="pe-delta-hint" style="color:var(--text3)">optional</small></label><input id="pe-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30" oninput="if(typeof paintPeDeltaHint==='function')paintPeDeltaHint()"></div>
-      <div class="fld"><label>Sold on</label><input id="pe-date" type="date"></div>
+      <div class="fill-time-pair">
+        <div class="fld"><label for="pe-date">Sold on</label><input id="pe-date" type="date" oninput="if(typeof paintFillTimeHint==='function')paintFillTimeHint('pe-date','pe-fill-time','pe-fill-time-hint')"></div>
+        <div class="fld fld-fill-time"><label for="pe-fill-time">Fill time <small style="color:var(--text3)">optional</small></label><input id="pe-fill-time" type="text" inputmode="text" placeholder="14:52" autocomplete="off" spellcheck="false" aria-describedby="pe-fill-time-hint" oninput="if(typeof paintFillTimeHint==='function')paintFillTimeHint('pe-date','pe-fill-time','pe-fill-time-hint');if(typeof paintPeDeltaHint==='function')paintPeDeltaHint()"><div id="pe-fill-time-hint" class="fill-time-hint" hidden></div></div>
+      </div>
       <div class="fld"><label>Fees</label><input id="pe-fees" type="number" step="0.01"></div>
     </div>
     <div id="pe-close" style="display:grid;margin-top:0.5rem;grid-template-columns:1fr 1fr 1fr;gap:0.5rem">
@@ -2187,7 +2199,10 @@ select,textarea,
       <div class="fld"><label>Contracts</label><input id="pcc-qty" type="number" step="1" min="1" value="1"></div>
       <div class="fld"><label id="pcc-price-lbl">Premium / share</label><input id="pcc-price" type="number" step="0.01"></div>
       <div class="fld" id="pcc-cp-wrap"><label for="pcc-current-price">Current price</label><input id="pcc-current-price" name="current-price" aria-label="Current price" type="number" step="0.01" placeholder="0.00"></div>
-      <div class="fld"><label id="pcc-date-lbl">Date sold</label><input id="pcc-date" type="date"></div>
+      <div class="fill-time-pair" id="pcc-fill-time-pair">
+        <div class="fld"><label id="pcc-date-lbl" for="pcc-date">Date sold</label><input id="pcc-date" type="date" oninput="if(typeof paintFillTimeHint==='function')paintFillTimeHint('pcc-date','pcc-fill-time','pcc-fill-time-hint')"></div>
+        <div class="fld fld-fill-time" id="pcc-fill-time-wrap"><label for="pcc-fill-time">Fill time <small style="color:var(--text3)">optional</small></label><input id="pcc-fill-time" type="text" inputmode="text" placeholder="14:52" autocomplete="off" spellcheck="false" aria-describedby="pcc-fill-time-hint" oninput="if(typeof paintFillTimeHint==='function')paintFillTimeHint('pcc-date','pcc-fill-time','pcc-fill-time-hint')"><div id="pcc-fill-time-hint" class="fill-time-hint" hidden></div></div>
+      </div>
       <div class="fld"><label>Fees total ($)</label><input id="pcc-fees" type="number" step="0.01" value="0"></div>
       <div class="fld" style="grid-column:span 2"><label>Notes</label><input id="pcc-notes" type="text"></div>
     </div>
@@ -3965,6 +3980,7 @@ function openPmccLegEdit(id){
   const v=(k,x)=>document.getElementById(k).value=x??'';
   v('pe-id',l.id);v('pe-strike',l.strike);v('pe-expiry',l.expiry);v('pe-qty',l.qty);v('pe-price',l.entryPrice);v('pe-date',l.entryDate);v('pe-fees',l.fees??0);
   v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);v('pe-current-price',l.mark);v('pe-delta',l.deltaAtOpen);
+  setFillTimeField('pe-fill-time','pe-fill-time-hint',l.filledAt);
   document.getElementById('pe-cp-wrap').style.display=l.status==='open'?'':'none';
   if(typeof paintPeDeltaHint==='function')paintPeDeltaHint();
   document.getElementById('pe-close').style.display=l.status==='closed'?'grid':'none';
@@ -3977,6 +3993,8 @@ function savePmccLeg(){
   const g=k=>document.getElementById(k).value,i=(db.opts||[]).findIndex(x=>x.id===g('pe-id'));if(i<0)return;
   const r=pmccEditLeg(db.opts[i],{strike:g('pe-strike'),expiry:g('pe-expiry'),qty:g('pe-qty'),price:g('pe-price'),date:g('pe-date'),fees:g('pe-fees'),cprice:g('pe-cprice'),cdate:g('pe-cdate'),cfees:g('pe-cfees'),mark:g('pe-current-price')});
   const e=document.getElementById('pe-err');if(r.err){e.textContent=r.err;e.style.display='block';return;}
+  const _fa=readFilledAtField('pe-date','pe-fill-time','pe-fill-time-hint',db.opts[i].filledAt);if(_fa.error)return;
+  if(_fa.value)r.leg.filledAt=_fa.value;
   const _dlt=parseFloat(document.getElementById('pe-delta').value);if(isNaN(_dlt)){delete r.leg.deltaAtOpen;}else r.leg.deltaAtOpen=_dlt;
   db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmccLeg');render();
 }
@@ -4229,7 +4247,8 @@ function openPmccSell(leapId){
   const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
   const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
   const v=(k,x)=>document.getElementById(k).value=x??'';
-  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste','pcc-current-price'].forEach(k=>v(k,''));
+  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste','pcc-current-price','pcc-fill-time'].forEach(k=>v(k,''));
+  const _pch=document.getElementById('pcc-fill-time-hint');if(_pch){_pch.textContent='';_pch.hidden=true;}
   v('pcc-qty',Math.max(1,(+L.qty||1)-P.open.reduce((a,l)=>a+(+l.qty||0),0)));v('pcc-fees','0');v('pcc-date',new Date().toISOString().slice(0,10));
   document.getElementById('mPmccTitle').textContent=`Add trade · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
   document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
@@ -4278,6 +4297,7 @@ function pmccSide(a){
   document.getElementById('pcc-price-lbl').textContent=a==='btc'?'Buyback price / share':'Premium / share';
   document.getElementById('pcc-date-lbl').textContent=a==='btc'?'Date bought':'Date sold';
   const cp=document.getElementById('pcc-cp-wrap');if(cp)cp.style.display=a==='sto'?'':'none';
+  const ftw=document.getElementById('pcc-fill-time-wrap');if(ftw)ftw.style.display=a==='sto'?'':'none';
   if(a==='btc'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const open=L?pmccShortsFor(L,db.opts||[]).filter(s=>s.status==='open'):[];if(open.length===1)document.getElementById('pcc-qty').value=open[0].qty;}
   document.getElementById('pcc-err').style.display='none';
 }
@@ -4401,6 +4421,8 @@ function savePmcc(){
   }
   const r=pmccFormLeg(f,L);
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
+  const _fa=readFilledAtField('pcc-date','pcc-fill-time','pcc-fill-time-hint',null);if(_fa.error)return;
+  if(_fa.value)r.leg.filledAt=_fa.value;
   const d=pmccDupOf(r.leg,db.opts);
   if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
   const cpRaw=g('pcc-current-price').trim();
@@ -6772,13 +6794,32 @@ function paintOpenDeltas(){
     _deltaFetchGen=prev;
   }
 }
+function readFilledAtField(dateId,timeId,hintId,previous){
+  const dateEl=document.getElementById(dateId),timeEl=document.getElementById(timeId),hint=hintId?document.getElementById(hintId):null;
+  const r=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveFilledAt(dateEl&&dateEl.value,timeEl&&timeEl.value,previous):{value:previous||null,blank:true};
+  if(hint){if(r.error){hint.textContent=DeltaOpen.fillTimeHintText(r.error);hint.hidden=false;}else{hint.textContent='';hint.hidden=true;}}
+  return r;
+}
+function paintFillTimeHint(dateId,timeId,hintId){readFilledAtField(dateId,timeId,hintId,null);}
+function setFillTimeField(timeId,hintId,filledAt){
+  const el=document.getElementById(timeId);if(!el)return;
+  el.value=(typeof DeltaOpen!=='undefined'&&filledAt)?(DeltaOpen.fillTimeFromFilledAt(filledAt)||''):'';
+  const hint=hintId?document.getElementById(hintId):null;if(hint){hint.textContent='';hint.hidden=true;}
+}
+function filledAtFromOpenForm(dateId,timeId,previous){
+  const timeEl=document.getElementById(timeId);
+  const dateEl=document.getElementById(dateId);
+  if(typeof DeltaOpen==='undefined')return previous||null;
+  const r=DeltaOpen.resolveFilledAt(dateEl&&dateEl.value,timeEl&&timeEl.value,previous);
+  return r.error?previous||null:r.value||null;
+}
 function paintTradeDeltaHint(){
   const hint=document.getElementById('tf-delta-hint');if(!hint||typeof DeltaOpen==='undefined')return;
   const typed=(document.getElementById('tf-delta').value||'').trim();
   if(typed){hint.textContent='optional — typed value is used';hint.title='Delta at open, typed on the trade.';return;}
   const id=(document.getElementById('tf-id')||{}).value;
   const old=(db.trades||[]).find(x=>x.id===id)||{};
-  const t={action:typeof actionFromSelect==='function'?actionFromSelect(document.getElementById('tf-action').value):document.getElementById('tf-action').value,strike:document.getElementById('tf-strike').value,expiry:document.getElementById('tf-expiry').value,entered:document.getElementById('tf-entered').value,premium:document.getElementById('tf-premium').value,ticker:document.getElementById('tf-ticker').value,filledAt:old.filledAt};
+  const t={action:typeof actionFromSelect==='function'?actionFromSelect(document.getElementById('tf-action').value):document.getElementById('tf-action').value,strike:document.getElementById('tf-strike').value,expiry:document.getElementById('tf-expiry').value,entered:document.getElementById('tf-entered').value,premium:document.getElementById('tf-premium').value,ticker:document.getElementById('tf-ticker').value,filledAt:filledAtFromOpenForm('tf-entered','tf-fill-time',old.filledAt)};
   const spot=histSpotOf(t.ticker,t.entered,DeltaOpen.fillTimestamp(t));
   const r=DeltaOpen.resolveOpenDelta(t,spot&&spot.price);
   if(r.absDelta!=null){hint.textContent='optional · estimated '+r.absDelta.toFixed(2);hint.title=DeltaOpen.precisionHover('estimated',spot&&spot.precision,spot&&spot.bar);}
@@ -6802,8 +6843,8 @@ function paintPeDeltaHint(){
   if(typed){hint.textContent='optional — typed value is used';hint.title='Delta at open, typed on the trade.';return;}
   const id=(document.getElementById('pe-id')||{}).value;
   const l=(db.opts||[]).find(x=>x.id===id);if(!l){hint.textContent='optional';return;}
-  const cur={...l,deltaAtOpen:null,strike:document.getElementById('pe-strike').value,expiry:document.getElementById('pe-expiry').value,entryDate:document.getElementById('pe-date').value,entryPrice:document.getElementById('pe-price').value};
-  const spot=histSpotOf(l.underlying,cur.entryDate,DeltaOpen.fillTimestamp(l));
+  const cur={...l,deltaAtOpen:null,strike:document.getElementById('pe-strike').value,expiry:document.getElementById('pe-expiry').value,entryDate:document.getElementById('pe-date').value,entryPrice:document.getElementById('pe-price').value,filledAt:filledAtFromOpenForm('pe-date','pe-fill-time',l.filledAt)};
+  const spot=histSpotOf(l.underlying,cur.entryDate,DeltaOpen.fillTimestamp(cur));
   const r=DeltaOpen.resolveOpenDelta(cur,spot&&spot.price);
   if(r.absDelta!=null){hint.textContent='optional · estimated '+r.absDelta.toFixed(2);hint.title=DeltaOpen.precisionHover('estimated',spot&&spot.precision,spot&&spot.bar);}
   else{hint.textContent='optional';hint.title='';}
@@ -7504,7 +7545,8 @@ function openAddTrade(wheelId){
   document.getElementById('tf-id').value='';
   document.getElementById('tf-action').value='CSP';
   document.getElementById('tf-entered').value=new Date().toISOString().slice(0,10);
-  ['tf-expiry','tf-strike','tf-delta','tf-premium','tf-shares','tf-total','tf-days','tf-ppd','tf-comment'].forEach(id=>document.getElementById(id).value='');
+  ['tf-expiry','tf-strike','tf-delta','tf-premium','tf-shares','tf-total','tf-days','tf-ppd','tf-comment','tf-fill-time'].forEach(id=>document.getElementById(id).value='');
+  const _tfh=document.getElementById('tf-fill-time-hint');if(_tfh){_tfh.textContent='';_tfh.hidden=true;}
   document.getElementById('tf-fees').value='0';
   const tr=document.getElementById('tf-roll');if(tr){tr.checked=false;document.getElementById('tf-roll-box').hidden=true;}
   document.getElementById('tf-delete-btn').style.display='none';
@@ -7526,6 +7568,7 @@ function openEditTrade(id){
   }
   document.getElementById('tf-id').value=t.id;document.getElementById('tf-ticker').value=t.ticker;
   document.getElementById('tf-action').value=actSel;document.getElementById('tf-entered').value=t.entered;
+  setFillTimeField('tf-fill-time','tf-fill-time-hint',t.filledAt);
   document.getElementById('tf-expiry').value=t.expiry||'';document.getElementById('tf-strike').value=t.strike||'';
   document.getElementById('tf-delta').value=t.delta||'';
   document.getElementById('tf-premium').value=t.premium||'';document.getElementById('tf-shares').value=t.shares||'';
@@ -7595,6 +7638,9 @@ function saveTrade(){
   const ticker=document.getElementById('tf-ticker').value.toUpperCase().trim();
   const entered=document.getElementById('tf-entered').value;
   if(!ticker){alert('Ticker required');return;}if(!entered){alert('Entry date required');return;}
+  const _oldTrade=id?(db.trades||[]).find(t=>t.id===id):null;
+  const _fa=readFilledAtField('tf-entered','tf-fill-time','tf-fill-time-hint',_oldTrade&&_oldTrade.filledAt);
+  if(_fa.error)return;
   const selAction=document.getElementById('tf-action').value;
   const action=actionFromSelect(selAction);
   const expiry=document.getElementById('tf-expiry').value||null;
@@ -7616,6 +7662,7 @@ function saveTrade(){
     premium,fees,shares,total,
     days:parseFloat(document.getElementById('tf-days').value)||0,ppd:parseFloat(document.getElementById('tf-ppd').value)||0,
     verified:false,comment:document.getElementById('tf-comment').value.trim()};
+  if(_fa.value)data.filledAt=_fa.value;
   if(action==='IN'){if(openMarket)data.openMarket=true;else delete data.openMarket;}
   if(id){
     const idx=db.trades.findIndex(t=>t.id===id);
@@ -7626,7 +7673,6 @@ function saveTrade(){
       if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
       updated.verified=old.verified||false;                    // preserve verification status
       if(old.currentPrice!=null&&old.currentPrice!==''){updated.currentPrice=old.currentPrice;updated.currentPriceAt=old.currentPriceAt||null;}
-      if(old.filledAt)updated.filledAt=old.filledAt;
       if(action==='CSP'||action==='STOC'){const raw=document.getElementById('current-price').value.trim();if(raw===''){delete updated.currentPrice;delete updated.currentPriceAt;}else if(!(old.currentPrice!=null&&+old.currentPrice===+raw)){updated.currentPrice=+raw;updated.currentPriceAt=new Date().toISOString();}}
       if(action==='IN'){if(openMarket)updated.openMarket=true;else delete updated.openMarket;}
       db.trades[idx]=updated;
