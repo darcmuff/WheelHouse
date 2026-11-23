@@ -15,6 +15,7 @@ function around(id, before, after) {
 
 test('Fill time fields sit next to the date, with the ids the bot will type into', () => {
   const fields = [
+    { time: 'pm-fill-time', date: 'pm-entered', hint: 'pm-fill-time-hint', label: 'Date Entered' },
     { time: 'tf-fill-time', date: 'tf-entered', hint: 'tf-fill-time-hint', label: 'Date Entered' },
     { time: 'pcc-fill-time', date: 'pcc-date', hint: 'pcc-fill-time-hint', label: 'Date sold' },
     { time: 'pe-fill-time', date: 'pe-date', hint: 'pe-fill-time-hint', label: 'Sold on' }
@@ -39,6 +40,10 @@ test('save paths write filledAt from the field and leave it alone when blank; pa
   assert.match(saveTrade, /readFilledAtField\('tf-entered','tf-fill-time','tf-fill-time-hint'/);
   assert.match(saveTrade, /if\(_fa\.error\)return/);
   assert.match(saveTrade, /if\(_fa\.value\)data\.filledAt=_fa\.value/);
+  const savePM = extractFn('savePMTrade');
+  assert.match(savePM, /readFilledAtField\('pm-entered','pm-fill-time','pm-fill-time-hint'/);
+  assert.match(savePM, /if\(_fa\.value\)newTrade\.filledAt=_fa\.value/);
+  assert.doesNotMatch(extractFn('confirmParsed'), /filledAt|pm-fill-time|tf-fill-time/);
   const savePmcc = extractFn('savePmcc');
   assert.match(savePmcc, /readFilledAtField\('pcc-date','pcc-fill-time','pcc-fill-time-hint'/);
   assert.match(savePmcc, /if\(_fa\.value\)r\.leg\.filledAt=_fa\.value/);

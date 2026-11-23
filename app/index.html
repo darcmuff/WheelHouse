@@ -2074,7 +2074,10 @@ select,textarea,
               <option value="DIV">DIV — Dividend</option>
             </select>
           </div>
-          <div class="fld"><label>Date Entered</label><input id="pm-entered" type="date" oninput="autoCalcPMDTE()"></div>
+          <div class="fill-time-pair">
+            <div class="fld"><label for="pm-entered">Date Entered</label><input id="pm-entered" type="date" oninput="autoCalcPMDTE();if(typeof paintFillTimeHint==='function')paintFillTimeHint('pm-entered','pm-fill-time','pm-fill-time-hint')"></div>
+            <div class="fld fld-fill-time"><label for="pm-fill-time">Fill time <small style="color:var(--text3)">optional</small></label><input id="pm-fill-time" type="text" inputmode="text" placeholder="14:52" autocomplete="off" spellcheck="false" aria-describedby="pm-fill-time-hint" oninput="if(typeof paintFillTimeHint==='function')paintFillTimeHint('pm-entered','pm-fill-time','pm-fill-time-hint')"><div id="pm-fill-time-hint" class="fill-time-hint" hidden></div></div>
+          </div>
           <div class="fld" id="pmg-expiry"><label>Expiry Date</label><input id="pm-expiry" type="date" oninput="autoCalcPMDTE()"></div>
           <div class="fld" id="pmg-strike"><label>Strike ($)</label><input id="pm-strike" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"></div>
           <div class="fld" id="pmg-delta"><label>Delta <small style="color:#555">optional</small></label><input id="pm-delta" type="number" step="0.01" min="0" max="1" placeholder="0.30"></div>
@@ -8933,7 +8936,8 @@ function switchPasteTab(tab){
     document.getElementById('pm-ticker').value=ticker;
     document.getElementById('pm-entered').value=new Date().toISOString().slice(0,10);
     document.getElementById('pm-action').value='CSP';
-    ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment','pm-current-price'].forEach(id=>document.getElementById(id).value='');
+    ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment','pm-current-price','pm-fill-time'].forEach(id=>document.getElementById(id).value='');
+    const _pmh=document.getElementById('pm-fill-time-hint');if(_pmh){_pmh.textContent='';_pmh.hidden=true;}
     document.getElementById('pm-fees').value='0';
     const pr=document.getElementById('pm-roll');if(pr){pr.checked=false;document.getElementById('pm-roll-box').hidden=true;}
     populatePMWheelSelect(wheelId,ticker);
@@ -8969,6 +8973,7 @@ function savePMTrade(){
   const ticker=document.getElementById('pm-ticker').value.toUpperCase().trim();
   const entered=document.getElementById('pm-entered').value;
   if(!ticker){alert('Ticker required');return;}if(!entered){alert('Entry date required');return;}
+  const _fa=readFilledAtField('pm-entered','pm-fill-time','pm-fill-time-hint',null);if(_fa.error)return;
   const selAction=document.getElementById('pm-action').value;
   const action=actionFromSelect(selAction);
   const openMarket=selAction==='IN_MKT';
@@ -8991,6 +8996,7 @@ function savePMTrade(){
     premium,fees,shares,total,days,ppd:days>0?total/days:0,
     verified:false,comment:document.getElementById('pm-comment').value.trim()};
   if(action==='IN'&&openMarket)newTrade.openMarket=true;
+  if(_fa.value)newTrade.filledAt=_fa.value;
   if(action==='CSP'||action==='STOC'){const raw=document.getElementById('pm-current-price').value.trim();if(raw!==''&&+raw>=0){newTrade.currentPrice=+raw;newTrade.currentPriceAt=new Date().toISOString();}}
   const _firstTrade=!db.trades.length;
   db.trades.push(newTrade);expanded.add(wheelId);
