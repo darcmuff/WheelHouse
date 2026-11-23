@@ -28,7 +28,7 @@ window.BRAND = {
       'leaps-full',       // LEAP + PMCC tracking beyond the free limit, LEAP analytics
       'live-refresh',     // option marks refreshed automatically every minute
       'robinhood-import', // Robinhood CSV import
-      'analytics',        // More stats: monthly target, analytics, scoreboard
+      'analytics',        // More data: monthly target, analytics, scoreboard
       'report'            // Written performance report from existing figures
     ]
   },
@@ -38,7 +38,7 @@ window.BRAND = {
     'leaps-full': 'Full LEAP and PMCC tracking',
     'live-refresh': 'Live captured profit (marks refresh every minute)',
     'robinhood-import': 'Robinhood CSV import',
-    'analytics': 'More stats: monthly return against your own target, and analytics',
+    'analytics': 'More data: monthly return against your own target, and analytics',
     'report': 'A written report of your options P&L, monthly return and premium'
   },
 

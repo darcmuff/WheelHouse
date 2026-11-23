@@ -518,6 +518,40 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .a-table th{background:var(--bg3);padding:0.5rem 0.75rem;text-align:left;color:var(--text3);font-size:0.675rem;font-weight:720;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);white-space:nowrap}
 .a-table td{padding:0.5625rem 0.75rem;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
 .a-table tr:hover td{background:rgba(255,255,255,.015)}
+.more-data{padding:0.25rem 1.25rem 2.5rem;max-width:75rem;margin:0 auto;font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif}
+.more-data .a-wrap{padding:0;max-width:none}
+.more-data .ms-head{margin:0.25rem 0 1rem}
+.more-data .d-panel,.more-data .d-kpi,.more-data .a-chart-box,.more-data .a-stat{
+  border-radius:6px!important;box-shadow:none;
+}
+.more-data .a-section{margin-bottom:1.5rem}
+.more-data .a-sec-hdr{margin-bottom:0.75rem;padding-bottom:0.5rem;gap:0.5rem 0.75rem;flex-wrap:wrap}
+.more-data .a-sec-title{font-size:0.9375rem;font-weight:720;color:var(--text);text-transform:none;letter-spacing:0}
+.more-data .a-sec-sub{font-size:0.75rem;color:var(--text3)}
+.more-data .a-chart-box{padding:1rem 1.125rem;margin-bottom:0.75rem}
+.more-data .a-chart-title{display:flex;align-items:center;gap:0.35rem;margin:0 0 0.75rem;font-size:0.8125rem;font-weight:720;text-transform:none;letter-spacing:0;color:var(--text)}
+.more-data .a-stat-grid{gap:0.75rem}
+.more-data .a-stat{padding:0.75rem 0.875rem}
+.more-data .a-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.more-data .a-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums lining-nums;font-size:0.825rem}
+.more-data .a-table th,.more-data .a-table td{padding:0.5rem 0.75rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.more-data .a-table th{font-weight:720;color:var(--text3);font-size:0.75rem;text-transform:none;letter-spacing:0;background:transparent}
+.more-data .a-table-nums th:nth-child(n+2),.more-data .a-table-nums td:nth-child(n+2),
+.more-data .a-table th.num,.more-data .a-table td.num{text-align:right;font-variant-numeric:tabular-nums lining-nums}
+.more-data .a-empty{color:var(--text3);font-size:0.825rem;padding:0.5rem 0 0.25rem;text-align:left;line-height:1.45}
+.more-data .delta-table tr.nodelta td{color:var(--text3)}
+@media(max-width:700px){
+  .more-data{padding:0.25rem 0.875rem 2rem}
+  .more-data .d-grid-4,.more-data .a-stat-grid{grid-template-columns:1fr 1fr;gap:0.75rem}
+  .more-data .d-grid-2{grid-template-columns:1fr}
+  .more-data .delta-table,.more-data .delta-table tbody,.more-data .delta-table tr,.more-data .delta-table th,.more-data .delta-table td{display:block}
+  .more-data .delta-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  .more-data .delta-table tr{padding:0.55rem 0;border-bottom:1px solid var(--border)}
+  .more-data .delta-table td{display:flex;justify-content:space-between;gap:0.75rem;text-align:right;padding:0.1rem 0;border:0;font-size:0.825rem}
+  .more-data .delta-table td:first-child{font-weight:720;text-align:left;margin-bottom:0.15rem}
+  .more-data .delta-table td:not(:first-child)::before{content:attr(data-l);color:var(--text3);font-weight:480}
+  .more-data .delta-table th:nth-child(n+2),.more-data .delta-table td:nth-child(n+2){text-align:right}
+}
 .a-heatmap{display:grid;gap:0.1875rem}
 .a-heat-cell{border-radius:0.1875rem;display:flex;align-items:center;justify-content:center;font-size:0.675rem;font-weight:720;min-height:1.75rem;transition:opacity .15s}
 .a-heat-cell:hover{opacity:.8}
@@ -2280,7 +2314,7 @@ select,textarea,
       </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full settings-log" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
-      <button class="btn btn-ghost btn-full" onclick="closeModal('mSettings');switchView('analytics')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem">More stats</button>
+      <button class="btn btn-ghost btn-full" onclick="closeModal('mSettings');switchView('analytics')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem">More data</button>
       <button class="btn btn-ghost btn-full" onclick="closeModal('mSettings');switchView('report')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem">Report</button>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button id="settings-export" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem" onclick="exportMyData()">⇩ Export my data</button>
@@ -2959,7 +2993,7 @@ function realisedPremium(trades,today){
   });
   return{events,open};
 }
-// Capital at work right now, the one figure used on Home and in More stats.
+// Capital at work right now, the one figure used on Home and in More data.
 function currentCapitalAtWork(){
   const sr=shareRealisations(db.trades);
   const shareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((sr.open[w.id]||{}).cost||0),0);
@@ -3592,7 +3626,7 @@ function render(){
   if(view==='positions'){const _wf=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.wl-wi')?[document.activeElement.closest('.wl-wi').id,document.activeElement.dataset.wi]:null;c.innerHTML=renderPositions();wlWhatIfRestore(_wf);fetchWheelMarks(false);if(typeof WcBrand!=='undefined')WcBrand.afterPositionsRender((db.wheels||[]).filter(w=>!hidden.has(w.id)||showHidden).filter(w=>w.status==='open'||showClosed).map(w=>w.ticker));if(_nwKeep){showNewWheel();const inp=document.getElementById('new-rot-ticker-top');if(inp){inp.value=_nwTyped;if(_nwFocus)inp.focus();}renderNwList();}}
   if(view==='log')c.innerHTML=renderActivityHead()+renderLog();
   if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
-  if(view==='analytics')c.innerHTML=`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More stats</h1><a onclick="switchView('report')">Report →</a></div>`+renderStatsOverview()+renderAnalytics();
+  if(view==='analytics')c.innerHTML=`<div class="more-data"><div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More data</h1><a onclick="switchView('report')">Report →</a></div>`+renderStatsOverview()+renderAnalytics()+`</div>`;
   if(view==='report')c.innerHTML=renderReport();
   if(view==='options'){const _wf=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.wl-wi')?[document.activeElement.closest('.wl-wi').id,document.activeElement.dataset.wi]:null;c.innerHTML=renderOptions();wlWhatIfRestore(_wf);leapBrandPaint();fetchOptionMarks(false);}
   if(typeof selPaint==='function')selPaint();
@@ -6514,7 +6548,7 @@ function renderStatsOverview(){
       </div>
     </div>`;
 
-  return`<div style="padding:0.875rem 1rem 3.125rem;display:flex;flex-direction:column;gap:0.625rem">
+  return`<div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
 
     <!-- KPI Row -->
     <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div>
@@ -6574,7 +6608,7 @@ function renderHome(){
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
   return`<div class="home">
-  <section class="v2-hero v2-light v2-home"><div class="v2-copy home-head"><div><h1>Overview</h1><p>Your options P&amp;L at a glance.</p><p class="home-more"><a onclick="switchView('analytics')">More stats</a> · <a onclick="switchView('report')">Report</a></p></div></div><div class="v2-strip">
+  <section class="v2-hero v2-light v2-home"><div class="v2-copy home-head"><div><h1>Overview</h1><p>Your options P&amp;L at a glance.</p><p class="home-more"><a onclick="switchView('analytics')">More data</a> · <a onclick="switchView('report')">Report</a></p></div></div><div class="v2-strip">
   <div class="hk-grid">
     <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Premium kept minus buyback losses on wheel and PMCC calls closed in ${mName}. Realised only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
@@ -6590,7 +6624,7 @@ function renderHome(){
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
   </div></section>
-  <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More stats →</a> · <a onclick="switchView('report')">Report →</a> · <a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length&&!_pend.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}${_pend.length?`<div class="ny-hd">Pending</div>${_pend.slice(0,8).map(i=>healthItemHtml(i,true)).join('')}`:''}</div>
+  <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More data →</a> · <a onclick="switchView('report')">Report →</a> · <a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length&&!_pend.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}${_pend.length?`<div class="ny-hd">Pending</div>${_pend.slice(0,8).map(i=>healthItemHtml(i,true)).join('')}`:''}</div>
   <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
   ${renderMonthlyRealised()}
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
@@ -6766,8 +6800,8 @@ function scheduleDeltaSpots(){
     _deltaFetchBusy=false;
     if(gen!==_deltaFetchGen){scheduleDeltaSpots();return;}
     if(!changed){paintOpenDeltaHints();return;}
-    if(document.querySelector('.mb.open')){paintOpenDeltas();paintOpenDeltaHints();refreshReportDelta();return;}
-    if(typeof view!=='undefined'&&view==='report')refreshReportDelta();
+    if(document.querySelector('.mb.open')){paintOpenDeltas();paintOpenDeltaHints();refreshAnalyticsDelta();return;}
+    if(typeof view!=='undefined'&&view==='analytics')refreshAnalyticsDelta();
     else paintOpenDeltas();
     paintOpenDeltaHints();
   }).catch(()=>{_deltaFetchBusy=false;});
@@ -6957,18 +6991,60 @@ function reportDeltaSection(){
   const html=`<div class="rep-delta" id="report-delta">${soldBlock.html}${leapBlock.html}</div>`;
   return{html,lines:soldBlock.lines.concat(leapBlock.lines||[])};
 }
-function refreshReportDelta(){
-  const el=document.getElementById('report-delta');if(!el)return;
-  const next=reportDeltaSection();
-  el.outerHTML=next.html;
-  const card=document.getElementById('report-text');
-  if(card&&next.lines&&next.lines.length){
-    const base=(card.getAttribute('data-copy')||'').split('\n\nDelta at open.')[0];
-    card.setAttribute('data-copy',base+'\n\n'+next.lines.join('\n\n'));
-  }
-}
 function reportDeltaSectionHtml(){return reportDeltaSection().html;}
 function reportDeltaSectionLines(){return reportDeltaSection().lines;}
+function analyticsDeltaRoc(item){
+  const t=item&&item.open;
+  if(!t||typeof calcTradeROC!=='function')return null;
+  return calcTradeROC(t,item.amount);
+}
+function analyticsDeltaTable(title,items,tip){
+  const money=n=>{
+    if(n==null||isNaN(n))return'—';
+    const abs=Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    const cls=n<0?'r':'g';
+    return`<span class="${cls}">${n<0?'-':'+'}$${abs}</span>`;
+  };
+  const rocStr=n=>n==null||isNaN(n)?'—':n.toFixed(1)+'%';
+  const tipHtml=tip&&typeof ii==='function'?ii(tip):'';
+  let html=`<div class="a-chart-box"><div class="a-chart-title">${esc(title)}${tipHtml}</div>`;
+  if(!items||!items.length){
+    html+=`<p class="a-empty">No closed trades to show yet.</p></div>`;
+    return html;
+  }
+  const B=typeof DeltaOpen!=='undefined'?DeltaOpen.bucketItems(items):{rows:[]};
+  const rocByKey={};
+  items.forEach(it=>{
+    const key=typeof DeltaOpen!=='undefined'?DeltaOpen.bucketKey(it.absDelta):'No delta';
+    const roc=analyticsDeltaRoc(it);
+    if(roc==null)return;
+    if(!rocByKey[key])rocByKey[key]={sum:0,n:0};
+    rocByKey[key].sum+=roc;rocByKey[key].n++;
+  });
+  html+=`<div class="a-table-wrap"><table class="a-table a-table-nums delta-table"><thead><tr><th>Delta at open</th><th>Trades</th><th>Win rate</th><th>Total P&amp;L</th><th>Avg P&amp;L</th><th>Avg AROC</th></tr></thead><tbody>`;
+  (B.rows||[]).forEach(b=>{
+    const wr=b.wr!=null?b.wr+'%':'—';
+    const r=rocByKey[b.key];
+    const avgRoc=r&&r.n?r.sum/r.n:null;
+    const nodelta=b.key==='No delta'?' class="nodelta"':'';
+    html+=`<tr${nodelta}><td>${esc(b.label)}</td><td data-l="Trades">${b.count}</td><td data-l="Win rate">${wr}</td><td data-l="Total P&amp;L">${money(b.totalPnl)}</td><td data-l="Avg P&amp;L">${money(b.avgPnl)}</td><td data-l="Avg AROC">${rocStr(avgRoc)}</td></tr>`;
+  });
+  html+='</tbody></table></div></div>';
+  return html;
+}
+function analyticsDeltaSectionHtml(){
+  const spotOf=(ticker,date,filledAt)=>typeof histSpotOf==='function'?histSpotOf(ticker,date,filledAt):null;
+  const sold=typeof reportDeltaSoldItems==='function'?reportDeltaSoldItems(db.wheels,db.trades,db.opts,spotOf):[];
+  const wheelItems=sold.filter(it=>it.open&&(it.open.action==='CSP'||it.open.action==='STOC'));
+  const leapShort=sold.filter(it=>it.open&&it.open.side==='short');
+  const tip='Estimated from the fill premium and the stock price at fill time, unless you typed a delta.';
+  return`<div id="analytics-delta">${analyticsDeltaTable('Performance by Delta',wheelItems,tip)}${analyticsDeltaTable('LEAP short calls',leapShort)}</div>`;
+}
+function refreshAnalyticsDelta(){
+  const el=document.getElementById('analytics-delta');if(!el)return;
+  el.outerHTML=analyticsDeltaSectionHtml();
+}
+function refreshReportDelta(){refreshAnalyticsDelta();}
 
 
 // Report: display-only. Calls existing monthly/return functions and aggregates their outputs.
@@ -7175,16 +7251,15 @@ function renderReport(){
   const periods=reportPeriods(rows,today,reportWinLossItems(db.wheels,db.trades,legs));
   const periodLines=periods.map(reportPeriodLine);
   const sentences=reportSentences(F);
-  const delta=typeof reportDeltaSection==='function'?reportDeltaSection():{html:'',lines:[]};
-  const copy=sentences.concat(periodLines,delta.lines||[]).join('\n\n');
+  const copy=sentences.concat(periodLines).join('\n\n');
   const paint=s=>s.replace(/([+-]\$[\d,]+(?:\.\d{2})?)/g,(m,n)=>`<span class="${n.charAt(0)==='-'?'r':'g'}">${n}</span>`)
     .replace(/([+−]\d+\.\d{2}%)/g,(m,n)=>`<span class="${n.charAt(0)==='−'||n.charAt(0)==='-'?'r':'g'}">${n}</span>`);
   const paras=sentences.map(s=>`<p>${paint(esc(s))}</p>`).join('');
   const periodHtml=`<div class="rep-periods">`+periodLines.map(s=>`<p>${paint(esc(s))}</p>`).join('')+`</div>`;
-  return`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>Report</h1><a onclick="switchView('analytics')">More stats →</a></div>
-  <div class="rep-wrap"><div class="rep-card" id="report-text" data-copy="${esc(copy).replace(/\n/g,'&#10;')}">${paras}${periodHtml}${delta.html||''}
+  return`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>Report</h1><a onclick="switchView('analytics')">More data →</a></div>
+  <div class="rep-wrap"><div class="rep-card" id="report-text" data-copy="${esc(copy).replace(/\n/g,'&#10;')}">${paras}${periodHtml}
     <button type="button" class="btn btn-ghost rep-copy" id="report-copy" onclick="copyReport()">Copy summary</button>
-    <p class="rep-note">Same realised figures as Home. Short premium and the monthly return are wheel and covered calls, not closed LEAPs. Closed-trade counts and win rate use the same sold-option rule as Home. Delta at open is an estimate from the fill and the stock price at open, unless you typed one. Nothing is sent off this device.</p>
+    <p class="rep-note">Same realised figures as Home. Short premium and the monthly return are wheel and covered calls, not closed LEAPs. Closed-trade counts and win rate use the same sold-option rule as Home. Nothing is sent off this device.</p>
   </div></div>`;
 }
 function copyReport(){
@@ -8648,7 +8723,7 @@ function renderAnalytics(){
     ${stat(fmtMoney(s.totalRealised),'Wheel Realised P&L','all-time: premium + shares + dividends',s.totalRealised>=0?'var(--green)':'var(--red)','Everything earned from the wheel — option premiums, stock sales, and dividends. Open stock positions excluded.')}
     ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed wheels','var(--orange)','Average annualised return on capital across closed wheels, realised only: (realised premium ÷ capital at risk) × (365 ÷ days held).')}
     ${stat(sortinoStr,'Sortino Ratio','risk-adjusted','var(--text)','Risk-adjusted return using only downside volatility. Higher is better. Unlike Sharpe, it does not penalise upside variance — fairer for option-selling strategies.')}
-    ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--red)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
+    ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--text)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
   </div>
   <div class="a-stat-grid" style="margin-top:0.625rem">
     ${stat(profitFactorStr,'Profit Factor','gross credits ÷ debits',parseFloat(profitFactorStr)>=1.5?'var(--green)':'var(--text2)','Gross premium credits divided by total buyback debits. Above 1.0 means profitable overall. Above 2.0 is excellent.')}
@@ -8719,20 +8794,6 @@ function renderAnalytics(){
     <td style="color:${d.avgROC!=null?(d.avgROC>=15?'var(--green)':d.avgROC>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${d.avgROC!=null?d.avgROC.toFixed(1)+'%':'—'}</td>
   </tr>`).join('');
 
-  // Delta analysis
-  const deltaRows2=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.delta!=null&&_net(t)!=null);
-  const deltaBuckets={};
-  for(const t of deltaRows2){
-    const b=t.delta<=0.15?'≤0.15':t.delta<=0.25?'0.16–0.25':t.delta<=0.35?'0.26–0.35':'≥0.36';
-    if(!deltaBuckets[b])deltaBuckets[b]={count:0,totalCr:0,totalROC:0,rocCount:0};
-    deltaBuckets[b].count++;deltaBuckets[b].totalCr+=_net(t);
-    const roc=calcTradeROC(t,_net(t));if(roc!=null){deltaBuckets[b].totalROC+=roc;deltaBuckets[b].rocCount++;}
-  }
-  const deltaTableRows=['≤0.15','0.16–0.25','0.26–0.35','≥0.36'].filter(k=>deltaBuckets[k]).map(k=>{
-    const b=deltaBuckets[k];const avgRoc=b.rocCount?b.totalROC/b.rocCount:null;
-    return`<tr><td style="font-weight:720;color:var(--silver)">${k}</td><td>${b.count}</td><td class="g">${fmtMoney(b.totalCr)}</td>
-    <td style="color:${avgRoc!=null?(avgRoc>=15?'var(--green)':'var(--orange)'):'var(--text3)'}">${avgRoc!=null?avgRoc.toFixed(1)+'%':'—'}</td></tr>`;
-  }).join('');
 
   // ── Section 4: Roll Effectiveness ──
   const rollSection=rollCount>0?`
@@ -8741,11 +8802,11 @@ function renderAnalytics(){
       ${stat(rollNet>=0?'+'+fmtMoney(rollNet):fmtMoney(rollNet),'Roll Net P&L','cumulative',rollNet>=0?'var(--green)':'var(--red)','Total premium collected from roll openings minus the cost of the buybacks that preceded them.')}
       ${stat(fmtMoney(rollCredits),'Roll Credits','premium collected','var(--green)','Premium collected from the new legs opened as part of rolls.')}
       ${stat(fmtMoney(rollDebits),'Roll Debits','buyback costs','var(--red)','Cost of buying back positions that were rolled into new ones.')}
-    </div>`:`<div style="padding:1.25rem;text-align:center;color:var(--text3);font-size:0.75rem">No rolls detected. Rolls are auto-linked when you paste paired BTC + open trades via SmartScan.</div>`;
+    </div>`:`<p class="a-empty">No rolls logged.</p>`;
 
   // ── Section 5: Strategy Comparison ──
   const cspBTC=db.trades.filter(t=>t.action==='BTC').reduce((s,t)=>s+(t.total||0),0);
-  const stratTable=`<div class="d-grid d-grid-2" style="gap:0.625rem">
+  const stratTable=`<div class="d-grid d-grid-2" style="gap:0.75rem">
     <div class="a-chart-box">
       <div class="a-chart-title">Cash-Secured Puts</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem">
@@ -8782,7 +8843,7 @@ function renderAnalytics(){
 
   // ── Section 6: Risk ──
   const riskStats=`<div class="a-stat-grid">
-    ${(c=>stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),c.total>0?'var(--red)':'var(--text3)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
+    ${(c=>stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),'var(--text)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
     ${stat(fmtMoney(cap.maxCap),'Peak Exposure','highest single CSP','var(--text2)','Largest single cash-secured put notional ever opened. Your peak capital requirement.')}
     ${stat(fmtMoney(cap.totalFees),'Total Fees',cap.feesPct.toFixed(1)+'% of gross premium','var(--text2)','All commissions and regulatory fees logged across every trade.')}
     ${stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
@@ -8800,14 +8861,14 @@ function renderAnalytics(){
     return`<tr>
       <td style="color:var(--orange)">${w.sortOrder||'?'}</td>
       <td>${esc(wheelLabelDisplay(w.label,w)==='—'?(w.ticker||''):wheelLabelDisplay(w.label,w))}</td>
-      <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:0.625rem;font-size:0.675rem">${w.status==='open'?'● Open':'Closed'}</span></td>
-      <td>${m.trades.length}</td>
-      <td class="g">${fmtMoney(m.premiumCredits)}</td>
-      <td class="${colorN(m.premiumRealised)}">${fmtMoney(m.premiumRealised)}</td>
-      <td class="${colorN(rotRealised)}">${fmtMoney(rotRealised)}</td>
-      <td>${m.breakeven!=null?'$'+fmt2(m.breakeven):'—'}</td>
-      <td class="${ar&&ar.aroc!=null?colorN(ar.aroc):'m'}">${ar&&ar.aroc!=null?ar.aroc.toFixed(1)+'%':'—'}</td>
-      <td class="${cr?colorN(cr.raw):'m'}" title="${cr?(cr.ann==null?'Under 7 days: raw return, not annualised':'Raw '+cr.raw.toFixed(1)+'% over '+cr.days+'d'+(cr.incUnrealised?', incl. unrealised':'')):''}">${cr?(cr.ann!=null?cr.ann.toFixed(1)+'%':cr.raw.toFixed(1)+'%*'):'—'}</td>
+      <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:6px;font-size:0.675rem">${w.status==='open'?'● Open':'Closed'}</span></td>
+      <td class="num">${m.trades.length}</td>
+      <td class="num g">${fmtMoney(m.premiumCredits)}</td>
+      <td class="num ${colorN(m.premiumRealised)}">${fmtMoney(m.premiumRealised)}</td>
+      <td class="num ${colorN(rotRealised)}">${fmtMoney(rotRealised)}</td>
+      <td class="num">${m.breakeven!=null?'$'+fmt2(m.breakeven):'—'}</td>
+      <td class="num ${ar&&ar.aroc!=null?colorN(ar.aroc):'m'}">${ar&&ar.aroc!=null?ar.aroc.toFixed(1)+'%':'—'}</td>
+      <td class="num ${cr?colorN(cr.raw):'m'}" title="${cr?(cr.ann==null?'Under 7 days: raw return, not annualised':'Raw '+cr.raw.toFixed(1)+'% over '+cr.days+'d'+(cr.incUnrealised?', incl. unrealised':'')):''}">${cr?(cr.ann!=null?cr.ann.toFixed(1)+'%':cr.raw.toFixed(1)+'%*'):'—'}</td>
     </tr>`;
   }).join('');
 
@@ -8820,29 +8881,21 @@ function renderAnalytics(){
   </div>`;
 
   // ═══ ASSEMBLE ═══
+  const dteTable=dteRows
+    ?`<div class="a-table-wrap"><table class="a-table a-table-nums"><thead><tr><th>DTE</th><th>Trades</th><th>Total</th><th>Avg PPD</th><th>Avg AROC</th></tr></thead><tbody>${dteRows}</tbody></table></div>`
+    :`<p class="a-empty">No closed trades to show yet.</p>`;
   return`<div class="a-wrap">
-    <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:1.25rem">
-      <span style="font-size:1.125rem;font-weight:480;color:var(--orange);letter-spacing:-0.5px">Analytics</span>
-      <span style="font-size:0.825rem;color:var(--text3)">All-time performance · ${totalTrades} trades · ${db.wheels.length} wheels</span>
-    </div>
-
-    <div class="a-section">${sec('Performance','Realised P&L, premium, returns & records',true)}${perfStats}
-    
+    <div class="a-section">${sec('Performance','All-time returns and records',true)}${perfStats}
       <div style="margin-top:0.75rem">${recordStats}</div>
     ${secEnd}</div>
 
-    <div class="a-section">${sec('Trade Quality','DTE, delta, CSP vs CC, tickers & rolls')}
-      <div class="d-grid d-grid-2" style="gap:0.75rem">
-        <div class="a-chart-box">
-          <div class="a-chart-title">Performance by DTE Range</div>
-          <table class="a-table"><thead><tr><th>DTE</th><th>Trades</th><th>Total</th><th>Avg PPD</th><th>Avg AROC</th></tr></thead><tbody>${dteRows}</tbody></table>
-        </div>
-        ${deltaTableRows?`<div class="a-chart-box">
-          <div class="a-chart-title">Performance by Delta</div>
-          <table class="a-table"><thead><tr><th>Delta</th><th>Trades</th><th>Credits</th><th>Avg AROC</th></tr></thead><tbody>${deltaTableRows}</tbody></table>
-        </div>`:`<div class="a-chart-box"><div class="a-chart-title">Delta Analysis</div><div style="padding:1.25rem;text-align:center;color:var(--text3);font-size:0.75rem">No delta data recorded. Add delta when entering trades to unlock this analysis.</div></div>`}
+    <div class="a-section">${sec('Trade Quality','DTE, delta and tickers',true)}
+      ${typeof analyticsDeltaSectionHtml==='function'?analyticsDeltaSectionHtml():''}
+      <div class="a-chart-box">
+        <div class="a-chart-title">Performance by DTE</div>
+        ${dteTable}
       </div>
-      <div class="a-stat-grid" style="margin-top:0.625rem">
+      <div class="a-stat-grid" style="margin-top:0.75rem">
         ${stat(timing.totalOptDays+'d','Total Option-Days','cumulative risk exposure','var(--text2)','Sum of DTE across every option opened. Your total time exposure to the market.')}
         ${stat(fmtMoney(avgTradeSize),'Avg Leg Size','per option opened','var(--text2)','Average premium collected each time you open a new option position.')}
         ${stat(bw.bestPPD?fmtMoney(bw.bestPPD.total/bw.bestPPD.days)+'/d':'—','Best PPD Trade',bw.bestPPD?bw.bestPPD.action+' · '+bw.bestPPD.days+'d':'','var(--green)','Single option trade with the highest Premium Per Day — your most capital-efficient trade.')}
@@ -8851,16 +8904,17 @@ function renderAnalytics(){
     ${stratTable}
       <div class="a-chart-box" style="margin-top:0.75rem">
         <div class="a-chart-title">Ticker Leaderboard</div>
-        <table class="a-table"><thead><tr><th>Ticker</th><th>Cycles</th><th>Trades</th><th>Premium</th><th>Avg AROC</th><th>Share</th></tr></thead><tbody>${tickerRows}</tbody></table>
+        ${tickerRows
+          ?`<div class="a-table-wrap"><table class="a-table a-table-nums"><thead><tr><th>Ticker</th><th>Cycles</th><th>Trades</th><th>Premium</th><th>Avg AROC</th><th>Share</th></tr></thead><tbody>${tickerRows}</tbody></table></div>`
+          :`<p class="a-empty">No wheels to rank yet.</p>`}
       </div>
-    
       <div style="margin-top:0.75rem">${rollSection}</div>
     ${secEnd}</div>
 
-    <div class="a-section">${sec('Risk & Exposure','Capital deployed, exposure & fees')}${riskStats}${secEnd}</div>
+    <div class="a-section">${sec('Risk & Exposure','Capital and fees')}${riskStats}${secEnd}</div>
 
-    <div class="a-section">${sec('Wheel Scoreboard','Per-wheel performance')}
-      <table class="a-table"><thead><tr><th>#</th><th>Wheel</th><th>Status</th><th>Trades</th><th>Gross</th><th>Premium</th><th>Realised P&L</th><th>Basis</th><th>AROC</th><th>Cycle /yr ${ii(`Realised only. AROC uses realised premium. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table>
+    <div class="a-section">${sec('Wheel Scoreboard','Per-wheel results')}
+      <div class="a-table-wrap"><table class="a-table"><thead><tr><th>#</th><th>Wheel</th><th>Status</th><th class="num">Trades</th><th class="num">Gross</th><th class="num">Premium</th><th class="num">Realised P&L</th><th class="num">Basis</th><th class="num">AROC</th><th class="num">Cycle /yr ${ii(`Realised only. AROC uses realised premium. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table></div>
     ${secEnd}</div>
   </div>`;
 }

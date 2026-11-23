@@ -128,7 +128,7 @@ test('paid feature, gate and GoatCounter path are wired, and no writes in report
   assert.match(SRC, /Last month/);
   assert.match(SRC, /Last year/);
   assert.match(SRC, />Total</);
-  assert.match(SRC, /Delta at open/);
+  assert.doesNotMatch(extractFn('renderReport'), /reportDeltaSection|report-delta|Delta at open is an estimate/);
   const body = ['reportFigures','reportClosedLegPnLs','reportSentences','renderReport','copyReport','reportPeriods','reportPeriodLine','reportWinLossItems','reportDeltaSoldItems','reportDeltaLeapItems','reportDeltaTable','reportDeltaSection'].map(extractFn).join('\n');
   assert.doesNotMatch(body, /_save|setDoc|deleteDoc|saveDB|fetch\(/);
 });

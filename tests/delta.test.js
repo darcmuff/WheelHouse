@@ -203,3 +203,19 @@ test('blank fill time writes nothing; malformed input is rejected', () => {
   assert.match(D.fillTimeHintText('not-a-london-time'), /does not exist/);
   assert.doesNotMatch(D.fillTimeHintText('malformed'), /red/i);
 });
+
+test('delta buckets live in More data, not the Report', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const analytics = extractFn('renderAnalytics');
+  const report = extractFn('renderReport');
+  const table = extractFn('analyticsDeltaTable');
+  const section = extractFn('analyticsDeltaSectionHtml');
+  assert.match(analytics, /analyticsDeltaSectionHtml/);
+  assert.match(section, /Performance by Delta/);
+  assert.match(section, /LEAP short calls/);
+  assert.match(section, /reportDeltaSoldItems/);
+  assert.match(table, /Avg AROC/);
+  assert.match(table, /No closed trades to show yet/);
+  assert.doesNotMatch(table, /Add delta when entering/);
+  assert.doesNotMatch(report, /reportDeltaSection|report-delta|Delta at open is an estimate/);
+});
