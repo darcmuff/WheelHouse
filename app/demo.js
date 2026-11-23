@@ -53,8 +53,7 @@
       if(fn==='histclose'){
         var HIST=Object.assign({TSLA:280},SPOT);
         var s0=HIST[sym];if(!s0)return J({symbol:sym,closes:{},spots:{},source:'demo'});
-        var annual={NVDA:0.35,AMD:0.2,SOFI:0.15,AAPL:0.12,MSFT:0.12,TSLA:0.15,KO:0.06,PEP:0.05,SPCX:0.1}[sym]||0.1;
-        var px=function(date){var days=(Date.now()-Date.parse(date+'T12:00:00Z'))/864e5;var p=Math.round(s0/Math.pow(1+annual,Math.max(0,days)/365)*100)/100;return{price:p,precision:'day',bar:'1d',date:date};};
+        var px=function(date){return{price:s0,precision:'day',bar:'1d',date:date};};
         var closes={},spots={};
         (u.searchParams.get('dates')||'').split(',').forEach(function(d){d=d.trim();if(/^\d{4}-\d{2}-\d{2}$/.test(d))closes[d]=px(d);});
         (u.searchParams.get('at')||'').split(',').forEach(function(at){at=at.trim();if(!at)return;var d=(at.match(/^\d{4}-\d{2}-\d{2}/)||[])[0];if(d)spots[at]=Object.assign({},px(d));});
