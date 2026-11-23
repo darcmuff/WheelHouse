@@ -698,6 +698,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .rep-card p{font-size:0.9375rem;line-height:1.55;color:var(--text);margin:0 0 0.875rem}
 .rep-card p:last-of-type{margin-bottom:0}
 .rep-card .g{color:var(--green)}.rep-card .r{color:var(--red)}
+.rep-periods{margin:1rem 0 0;padding:0.75rem 0 0;border-top:1px solid var(--border)}
+.rep-periods p{font-size:0.875rem;line-height:1.5;margin:0 0 0.625rem}
+.rep-periods p:last-child{margin-bottom:0}
 .rep-copy{margin-top:1rem;border-radius:6px}
 .rep-note{font-size:0.75rem;color:var(--text3);margin-top:0.875rem;line-height:1.45}
 .home-more{margin:0.25rem 0 0;font-size:0.78rem;color:var(--text3)}.home-more a{color:var(--orange);cursor:pointer}
@@ -6658,6 +6661,104 @@ function reportFigures(rows,today,cawTotal,rs,closedLegs){
     premium,premiumAvg:avg(premium,n),premiumComplete,premiumCompleteAvg:avg(premiumComplete,complete.length),
     best,worst,loser,optionsEx,capital:cap,target:rs&&rs.target,ret,base:rs&&rs.base};
 }
+// Display-only period bounds. Last month / last year are the previous full calendar month and year.
+function reportLastYm(today){
+  const y=+today.slice(0,4),m=+today.slice(5,7);
+  return m===1?(y-1)+'-12':y+'-'+String(m-1).padStart(2,'0');
+}
+function reportMonthEnd(ym){
+  const y=+ym.slice(0,4),m=+ym.slice(5,7);
+  return ym+'-'+String(new Date(Date.UTC(y,m,0)).getUTCDate()).padStart(2,'0');
+}
+function reportYmInPeriod(ym,key,today){
+  if(!ym)return false;
+  if(key==='total')return true;
+  const y=today.slice(0,4);
+  if(key==='ytd')return ym.slice(0,4)===y&&ym<=today.slice(0,7);
+  if(key==='lastMonth')return ym===reportLastYm(today);
+  if(key==='lastYear')return ym.slice(0,4)===String(+y-1);
+  return false;
+}
+function reportDateInPeriod(date,key,today){
+  if(key==='total')return true;
+  if(!date)return false;
+  const y=today.slice(0,4),lastM=reportLastYm(today);
+  if(key==='ytd')return date>=y+'-01-01'&&date<=today;
+  if(key==='lastMonth')return date>=lastM+'-01'&&date<=reportMonthEnd(lastM);
+  if(key==='lastYear')return date>=String(+y-1)+'-01-01'&&date<=String(+y-1)+'-12-31';
+  return false;
+}
+// Sum already-computed monthly rows (profit, leapNet, collected, premium) into the four report periods.
+function reportPeriods(rows,today,winItems){
+  const rd=n=>Math.round(n*100)/100;
+  const y=today.slice(0,4),lastM=reportLastYm(today),lastY=String(+y-1);
+  const keys=[
+    {key:'ytd',label:'Year to date'},
+    {key:'lastMonth',label:'Last month ('+reportMonthName(lastM)+')'},
+    {key:'lastYear',label:'Last year ('+lastY+')'},
+    {key:'total',label:'Total'}
+  ];
+  return keys.map(k=>{
+    const list=(rows||[]).filter(r=>r&&reportYmInPeriod(r.ym,k.key,today));
+    const profit=rd(list.reduce((a,r)=>a+(r.profit||0),0));
+    const leaps=rd(list.reduce((a,r)=>a+(r.leapNet||0),0));
+    const collected=rd(list.reduce((a,r)=>a+(r.collected||0),0));
+    const wheel=rd(list.reduce((a,r)=>a+(r.premium||0),0));
+    const closedItems=(winItems||[]).filter(i=>reportDateInPeriod(i.date,k.key,today));
+    const wins=closedItems.filter(i=>i.win).length,losses=closedItems.filter(i=>!i.win).length,closed=wins+losses;
+    return{key:k.key,label:k.label,options:rd(profit+leaps),premium:profit,collected,wheel,leaps,closed,wins,losses,wr:closed?((wins/closed)*100).toFixed(1):null};
+  });
+}
+function reportPeriodLine(p){
+  const empty=!p.closed&&!p.options&&!p.collected&&!p.wheel&&!p.leaps;
+  if(empty)return p.label+': $0. No closed trades.';
+  const trades=p.closed?p.closed+' closed trade'+(p.closed===1?'':'s')+', win rate '+p.wr+'%':'No closed trades';
+  const split=(p.wheel||p.leaps)?' (wheel '+reportMoney(p.wheel)+', LEAPs '+reportMoney(p.leaps)+')':'';
+  const pnl=p.options?reportMoney(p.options):'$0';
+  const prem=p.collected?reportMoney(p.collected):'$0';
+  return p.label+': '+pnl+' options P&L'+split+', '+trades+', premium collected '+prem+'.';
+}
+// Display-only: same closed sold-option outcomes as calcWinLoss, with the close date so periods can be bucketed.
+// Does not change calcWinLoss. Long LEAPs are excluded, matching Home.
+function reportWinLossItems(wheels,trades,legs){
+  const items=[];
+  (wheels||[]).forEach(wheel=>{
+    const closingAction=a=>(a==='BTC'||a==='STC')?1:0;
+    const list=(trades||[]).filter(t=>t.wheelId===wheel.id)
+      .sort((a,b)=>{const dc=a.entered.localeCompare(b.entered);if(dc!==0)return dc;return closingAction(a.action)-closingAction(b.action);});
+    const stack=[];
+    const popLastLive=()=>{for(let j=stack.length-1;j>=0;j--){if(!stack[j].expired)return stack.splice(j,1)[0];}return stack.pop();};
+    for(const t of list){
+      if(t.action==='CSP'||t.action==='STOC'){
+        stack.push({total:t.total,expired:!!t.expiredWorthless,strike:t.strike,expiry:t.expiry||null});
+      }else if(t.action==='IN'){
+        if(stack.length>0){const o=popLastLive();items.push({date:t.entered||'',win:true,amount:o.total});}
+      }else if(t.action==='BTC'||t.action==='STC'){
+        if(stack.length>0){
+          const ks=Number(t.strike);
+          let i=stack.findIndex(o=>!o.expired&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          if(i<0)i=stack.findIndex(o=>!o.expired&&Number(o.strike)===ks);
+          if(i<0)i=stack.findIndex(o=>Number(o.strike)===ks);
+          if(i<0&&(t.strike==null||t.strike==='')){const o=popLastLive();if(o){const net=o.total-t.total;items.push({date:t.entered||'',win:o.total>=t.total,amount:net});}continue;}
+          if(i>=0){const o=stack.splice(i,1)[0];items.push({date:t.entered||'',win:o.total>=t.total,amount:o.total-t.total});}
+        }
+      }else if(t.action==='OUT'){
+        if(stack.length>0){const o=popLastLive();items.push({date:t.entered||'',win:true,amount:o.total});}
+      }
+    }
+    while(stack.length>0){
+      const o=stack.pop();
+      if(o.expired)items.push({date:o.expiry||'',win:true,amount:o.total});
+    }
+  });
+  (legs||[]).forEach(l=>{
+    if(!l||l.side!=='short'||l.demo)return;
+    if(l.status==='open')return;
+    const r=OPTS.legPnL(l).realized;
+    items.push({date:l.closeDate||l.expiry||'',win:r>=0,amount:r});
+  });
+  return items;
+}
 function reportMoney(n){
   if(n==null||isNaN(n))return'—';
   const abs=Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
@@ -6716,15 +6817,18 @@ function renderReport(){
   const caw=currentCapitalAtWork();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
   const F=reportFigures(rows,today,caw.total,rs,reportClosedLegPnLs(legs));
+  const periods=reportPeriods(rows,today,reportWinLossItems(db.wheels,db.trades,legs));
+  const periodLines=periods.map(reportPeriodLine);
   const sentences=reportSentences(F);
-  const copy=sentences.join('\n\n');
+  const copy=sentences.concat(periodLines).join('\n\n');
   const paint=s=>s.replace(/([+-]\$[\d,]+(?:\.\d{2})?)/g,(m,n)=>`<span class="${n.charAt(0)==='-'?'r':'g'}">${n}</span>`)
     .replace(/([+−]\d+\.\d{2}%)/g,(m,n)=>`<span class="${n.charAt(0)==='−'||n.charAt(0)==='-'?'r':'g'}">${n}</span>`);
   const paras=sentences.map(s=>`<p>${paint(esc(s))}</p>`).join('');
+  const periodHtml=`<div class="rep-periods">`+periodLines.map(s=>`<p>${paint(esc(s))}</p>`).join('')+`</div>`;
   return`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>Report</h1><a onclick="switchView('analytics')">More stats →</a></div>
-  <div class="rep-wrap"><div class="rep-card" id="report-text" data-copy="${esc(copy).replace(/\n/g,'&#10;')}">${paras}
-    ${F.empty?'':`<button type="button" class="btn btn-ghost rep-copy" id="report-copy" onclick="copyReport()">Copy summary</button>`}
-    <p class="rep-note">Same realised figures as Home. Short premium and the monthly return are wheel and covered calls, not closed LEAPs. Nothing is sent off this device.</p>
+  <div class="rep-wrap"><div class="rep-card" id="report-text" data-copy="${esc(copy).replace(/\n/g,'&#10;')}">${paras}${periodHtml}
+    <button type="button" class="btn btn-ghost rep-copy" id="report-copy" onclick="copyReport()">Copy summary</button>
+    <p class="rep-note">Same realised figures as Home. Short premium and the monthly return are wheel and covered calls, not closed LEAPs. Closed-trade counts and win rate use the same sold-option rule as Home. Nothing is sent off this device.</p>
   </div></div>`;
 }
 function copyReport(){

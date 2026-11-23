@@ -15,8 +15,8 @@ function monthReturnPct(profit,capital,target){
   const pct=(profit||0)/capital*100;return{pct,ok:target>0?pct>=target:null};
 }
 `;
-const Fns = new Function(stubs + ['reportFigures','reportMoney','reportMonthName','reportLegKind','reportSentences'].map(extractFn).join('\n') +
-  '\nreturn {reportFigures,reportMoney,reportMonthName,reportLegKind,reportSentences};')();
+const Fns = new Function(stubs + ['reportFigures','reportMoney','reportMonthName','reportLegKind','reportSentences','reportLastYm','reportMonthEnd','reportYmInPeriod','reportDateInPeriod','reportPeriods','reportPeriodLine'].map(extractFn).join('\n') +
+  '\nreturn {reportFigures,reportMoney,reportMonthName,reportLegKind,reportSentences,reportLastYm,reportMonthEnd,reportYmInPeriod,reportDateInPeriod,reportPeriods,reportPeriodLine};')();
 
 test('empty rows produce an empty report', () => {
   assert.deepStrictEqual(Fns.reportFigures([], '2026-11-23', 10000, {base:'caw',target:2}, []), {empty:true});
@@ -124,6 +124,125 @@ test('paid feature, gate and GoatCounter path are wired, and no writes in report
   assert.match(SRC, /otTrack\('\/report'\)/);
   assert.match(SRC, /Copy summary/);
   assert.match(SRC, /function renderReport\(/);
-  const body = ['reportFigures','reportClosedLegPnLs','reportSentences','renderReport','copyReport'].map(extractFn).join('\n');
+  assert.match(SRC, /Year to date/);
+  assert.match(SRC, /Last month/);
+  assert.match(SRC, /Last year/);
+  assert.match(SRC, />Total</);
+  const body = ['reportFigures','reportClosedLegPnLs','reportSentences','renderReport','copyReport','reportPeriods','reportPeriodLine','reportWinLossItems'].map(extractFn).join('\n');
   assert.doesNotMatch(body, /_save|setDoc|deleteDoc|saveDB|fetch\(/);
+});
+
+test('period bounds: last month rolls over the year, month end is the last calendar day', () => {
+  assert.strictEqual(Fns.reportLastYm('2026-11-23'), '2026-10');
+  assert.strictEqual(Fns.reportLastYm('2026-01-15'), '2025-12');
+  assert.strictEqual(Fns.reportMonthEnd('2026-10'), '2026-10-31');
+  assert.strictEqual(Fns.reportMonthEnd('2026-02'), '2026-02-28');
+  assert.strictEqual(Fns.reportMonthEnd('2024-02'), '2024-02-29');
+  assert.ok(Fns.reportYmInPeriod('2026-01', 'ytd', '2026-11-23'));
+  assert.ok(!Fns.reportYmInPeriod('2025-12', 'ytd', '2026-11-23'));
+  assert.ok(Fns.reportYmInPeriod('2026-10', 'lastMonth', '2026-11-23'));
+  assert.ok(!Fns.reportYmInPeriod('2026-11', 'lastMonth', '2026-11-23'));
+  assert.ok(Fns.reportYmInPeriod('2025-12', 'lastYear', '2026-11-23'));
+  assert.ok(!Fns.reportYmInPeriod('2026-01', 'lastYear', '2026-11-23'));
+  assert.ok(Fns.reportDateInPeriod('2026-11-23', 'ytd', '2026-11-23'));
+  assert.ok(!Fns.reportDateInPeriod('2026-11-24', 'ytd', '2026-11-23'));
+  assert.ok(Fns.reportDateInPeriod('2026-10-31', 'lastMonth', '2026-11-23'));
+  assert.ok(!Fns.reportDateInPeriod('2026-11-01', 'lastMonth', '2026-11-23'));
+  assert.ok(Fns.reportDateInPeriod('2025-12-31', 'lastYear', '2026-11-23'));
+  assert.ok(!Fns.reportDateInPeriod('2026-01-01', 'lastYear', '2026-11-23'));
+});
+
+test('YTD, last month, last year and Total bucket monthly rows; empty periods are zero', () => {
+  const rows = [
+    {ym:'2025-12', profit:80, leapNet:20, collected:80, premium:80},
+    {ym:'2026-01', profit:50, leapNet:0, collected:50, premium:50},
+    {ym:'2026-10', profit:100, leapNet:-10, collected:120, premium:100},
+    {ym:'2026-11', profit:40, leapNet:0, collected:40, premium:40},
+  ];
+  const wins = [
+    {date:'2025-12-10', win:true},
+    {date:'2026-01-05', win:true},
+    {date:'2026-10-02', win:true},
+    {date:'2026-10-20', win:false},
+    {date:'2026-11-04', win:true},
+  ];
+  const P = Fns.reportPeriods(rows, '2026-11-23', wins);
+  const by = Object.fromEntries(P.map(p => [p.key, p]));
+  assert.strictEqual(P.length, 4);
+  assert.strictEqual(by.ytd.options, 180);
+  assert.strictEqual(by.ytd.wheel, 190);
+  assert.strictEqual(by.ytd.leaps, -10);
+  assert.strictEqual(by.ytd.collected, 210);
+  assert.strictEqual(by.ytd.closed, 4);
+  assert.strictEqual(by.ytd.wins, 3);
+  assert.strictEqual(by.ytd.losses, 1);
+  assert.strictEqual(by.ytd.wr, '75.0');
+  assert.strictEqual(by.lastMonth.options, 90);
+  assert.strictEqual(by.lastMonth.collected, 120);
+  assert.strictEqual(by.lastMonth.closed, 2);
+  assert.strictEqual(by.lastMonth.wr, '50.0');
+  assert.strictEqual(by.lastYear.options, 100);
+  assert.strictEqual(by.lastYear.closed, 1);
+  assert.strictEqual(by.lastYear.wr, '100.0');
+  assert.strictEqual(by.total.options, 280);
+  assert.strictEqual(by.total.collected, 290);
+  assert.strictEqual(by.total.closed, 5);
+  assert.strictEqual(by.total.options, by.ytd.options + by.lastYear.options);
+  const F = Fns.reportFigures(rows, '2026-11-23', 10000, {base:'caw',target:2}, []);
+  assert.strictEqual(by.total.options, F.options);
+});
+
+test('a period with no trades is $0 and No closed trades, not blank', () => {
+  const rows = [{ym:'2026-11', profit:25, leapNet:0, collected:25, premium:25}];
+  const P = Fns.reportPeriods(rows, '2026-11-23', [{date:'2026-11-02', win:true}]);
+  const lastYear = P.find(p => p.key === 'lastYear');
+  const lastMonth = P.find(p => p.key === 'lastMonth');
+  assert.strictEqual(lastYear.options, 0);
+  assert.strictEqual(lastYear.collected, 0);
+  assert.strictEqual(lastYear.closed, 0);
+  assert.strictEqual(lastYear.wr, null);
+  assert.strictEqual(Fns.reportPeriodLine(lastYear), 'Last year (2025): $0. No closed trades.');
+  assert.match(Fns.reportPeriodLine(lastMonth), /Last month \(October 2026\): \$0\. No closed trades\./);
+  const ytd = P.find(p => p.key === 'ytd');
+  assert.match(Fns.reportPeriodLine(ytd), /Year to date: \+\$25\.00 options P&L \(wheel \+\$25\.00/);
+  assert.match(Fns.reportPeriodLine(ytd), /1 closed trade, win rate 100\.0%/);
+  assert.match(Fns.reportPeriodLine(ytd), /premium collected \+\$25\.00/);
+  const none = Fns.reportPeriods([], '2026-11-23', []);
+  none.forEach(p => assert.match(Fns.reportPeriodLine(p), /\$0\. No closed trades\./));
+});
+
+test('reportWinLossItems totals match calcWinLoss, and dates bucket into last month vs YTD', () => {
+  const X = new Function(
+    extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+    extractFn('calcWinLoss') + extractFn('reportWinLossItems') +
+    '\nreturn {calcWinLoss,reportWinLossItems,set(db){this.db=db;}};'
+  );
+  // extractFn calcWinLoss reads db; build a sandbox with a mutable db
+  const S = new Function(
+    extractFn('optionsLib') + '\nconst OPTS=optionsLib();\nlet db={wheels:[],trades:[],opts:[]};\n' +
+    extractFn('calcWinLoss') + '\n' + extractFn('reportWinLossItems') +
+    '\nreturn {set(o){db.wheels=o.wheels||[];db.trades=o.trades||[];db.opts=o.opts||[];},calcWinLoss,items:()=>reportWinLossItems(db.wheels,db.trades,db.opts)};'
+  )();
+  const db = { wheels: [{ id: 'w', status: 'open' }], trades: [
+    { wheelId: 'w', action: 'CSP', strike: 300, total: 500, entered: '2026-01-01', expiredWorthless: true, expiry: '2026-01-17' },
+    { wheelId: 'w', action: 'CSP', strike: 290, total: 400, entered: '2026-10-01' },
+    { wheelId: 'w', action: 'BTC', strike: 290, total: 600, entered: '2026-10-10' },
+    { wheelId: 'w', action: 'CSP', strike: 280, total: 300, entered: '2026-11-01' },
+    { wheelId: 'w', action: 'IN', entered: '2026-11-20' },
+    { wheelId: 'w', action: 'STOC', strike: 320, total: 200, entered: '2026-11-22' },
+  ], opts: [] };
+  S.set(db);
+  const wl = S.calcWinLoss();
+  const items = S.items();
+  assert.strictEqual(items.filter(i => i.win).length, wl.wins);
+  assert.strictEqual(items.filter(i => !i.win).length, wl.losses);
+  assert.strictEqual(wl.wins, 2); assert.strictEqual(wl.losses, 1);
+  const P = Fns.reportPeriods([], '2026-11-23', items);
+  const by = Object.fromEntries(P.map(p => [p.key, p]));
+  assert.strictEqual(by.lastMonth.closed, 1);
+  assert.strictEqual(by.lastMonth.wins, 0);
+  assert.strictEqual(by.lastMonth.losses, 1);
+  assert.strictEqual(by.ytd.closed, 3);
+  assert.strictEqual(by.total.closed, 3);
+  assert.strictEqual(by.lastYear.closed, 0);
 });
