@@ -4771,7 +4771,7 @@ async function fetchWheelMarks(force){
   let changed=false;
   for(const[u,set]of Object.entries(byU)){
     try{
-      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${[...set].join(',')}`,{signal:AbortSignal.timeout(15000)});
+      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${[...set].join(',')}`,{cache:'no-store',signal:AbortSignal.timeout(15000)});
       if(!r.ok)continue;const j=await r.json();
       set.forEach(k=>{const c=j.contracts&&j.contracts[k]||null;_wheelMarkRaw[k]={u,c,strike:+k.slice(-8)/1000,type:k.slice(-9,-8),spot:j.spot>0?j.spot:null};changed=true;});
     }catch(e){console.warn('Wheel marks:',u,e.message);}
@@ -4795,7 +4795,7 @@ async function fetchOptionMarks(force, onlyId){
   const noteFail=l=>{if(l.markWhy!=='none'){l.markWhy='none';l.markNote='No reliable quote for this contract';changed=true;}};
   for(const[u,ls]of Object.entries(byU)){
     try{
-      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${ls.map(OPTS.occ).join(',')}`,{signal:AbortSignal.timeout(15000)});
+      const r=await fetch(`/.netlify/functions/optchain?symbol=${encodeURIComponent(u)}&contracts=${ls.map(OPTS.occ).join(',')}`,{cache:'no-store',signal:AbortSignal.timeout(15000)});
       if(!r.ok)throw new Error('HTTP '+r.status);
       const j=await r.json();
       if(j.spot>0)quotes[u]=quotes[u]||{price:j.spot,prev:j.spot,change:0,pct:0,state:'DELAYED'};
