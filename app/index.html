@@ -4720,33 +4720,39 @@ function isRegularSession(now){
   if(p.weekday==='Sat'||p.weekday==='Sun')return false;const m=(+p.hour%24)*60+(+p.minute);return m>=570&&m<960;
 }
 // Buy-back price for one exact contract. Pure.
-// c = that contract's quote {bid,ask,delta,gamma}; prev = last mark shown (or null); o = {strike,type:'P'|'C',regular}.
-// A usable quote is a two-sided market (bid>0, ask>=bid, spread ≤ $0.10 or ≤ 60% of mid). Anything else returns null
-// so the card says "no quote" instead of keeping a stale mark or an old last trade.
-// In the regular session the mid is brought forward to the live stock with this quote's own delta and gamma.
-// A spot gap over 12% cannot be brought forward honestly, so it is rejected. If only the gap is modest or the
-// delta is missing or the wrong sign, the delayed mid is kept unadjusted rather than dropped. Outside the regular
-// session the two spots are not the same moment, so the mid is shown unadjusted. Never below intrinsic. Wiggles under
-// max($0.02, 1%) stay put so the figure doesn't flicker.
+// c = that contract's quote {bid,ask,last,delta,gamma}; prev = last mark shown (or null); o = {strike,type:'P'|'C',regular}.
+// Preferred quote is a two-sided market (bid>0, ask>=bid, spread ≤ $0.10 or ≤ 60% of mid). A wider two-sided
+// market still uses the mid. If there is no two-sided bid/ask, a last trade > 0 is used. Only a quote with
+// no mid and no last returns null, so the card says "no quote".
+// In the regular session a mid (tight or wide) is brought forward to the live stock with this quote's own
+// delta and gamma. A last trade is not adjusted. A spot gap over 12% is not brought forward; the delayed
+// mid is kept unadjusted rather than dropped. If the delta is missing or the wrong sign, the delayed mid
+// is also kept unadjusted. Outside the regular session the two spots are not the same moment, so the mid
+// is shown unadjusted. Never below intrinsic. Wiggles under max($0.02, 1%) stay put so the figure doesn't flicker.
 function steadyMark(c,quoteSpot,liveSpot,prev,o){
   o=o||{};const r2=n=>Math.round(n*100)/100;
   if(!c)return null;
-  const b=+c.bid,a=+c.ask,good=b>0&&a>=b&&((a-b)<=0.10||(a-b)/((a+b)/2)<=0.6);
-  if(!good)return null;
-  const mid=(a+b)/2;let m=mid,why='mid';
-  if(o.regular&&quoteSpot>0&&liveSpot>0&&liveSpot!==quoteSpot){
-    const gap=Math.abs(liveSpot-quoteSpot)/quoteSpot;
-    if(gap>0.12)return null;
-    const signOk=o.type==='P'?+c.delta<=0.02:o.type==='C'?+c.delta>=-0.02:true;
-    const dOk=c.delta!=null&&!isNaN(+c.delta)&&Math.abs(+c.delta)<=1&&signOk;
-    if(dOk){
-      let d=+c.delta,g=isNaN(+c.gamma)||+c.gamma<0?0:+c.gamma,dS=liveSpot-quoteSpot;
-      const lo=o.type==='C'?0:-1,hi=o.type==='C'?1:0;
-      if(o.type==='C'||o.type==='P'){d=Math.min(hi,Math.max(lo,d));if(d+g*dS<lo||d+g*dS>hi)g=0;}
-      const adj=adjMark(mid,d,g,quoteSpot,liveSpot),room=Math.abs(dS);
-      m=Math.min(mid+room,Math.max(mid-room,adj));if(r2(m)!==r2(mid))why='adjusted';
+  const b=+c.bid,a=+c.ask,last=+c.last,two=b>0&&a>=b,mid=two?(a+b)/2:null;
+  const tight=two&&((a-b)<=0.10||(a-b)/mid<=0.6);
+  let m=null,why=null;
+  if(two){
+    m=mid;why=tight?'mid':'wide-mid';
+    if(o.regular&&quoteSpot>0&&liveSpot>0&&liveSpot!==quoteSpot){
+      const gap=Math.abs(liveSpot-quoteSpot)/quoteSpot;
+      if(gap<=0.12){
+        const signOk=o.type==='P'?+c.delta<=0.02:o.type==='C'?+c.delta>=-0.02:true;
+        const dOk=c.delta!=null&&!isNaN(+c.delta)&&Math.abs(+c.delta)<=1&&signOk;
+        if(dOk){
+          let d=+c.delta,g=isNaN(+c.gamma)||+c.gamma<0?0:+c.gamma,dS=liveSpot-quoteSpot;
+          const lo=o.type==='C'?0:-1,hi=o.type==='C'?1:0;
+          if(o.type==='C'||o.type==='P'){d=Math.min(hi,Math.max(lo,d));if(d+g*dS<lo||d+g*dS>hi)g=0;}
+          const adj=adjMark(mid,d,g,quoteSpot,liveSpot),room=Math.abs(dS);
+          m=Math.min(mid+room,Math.max(mid-room,adj));if(r2(m)!==r2(mid))why=tight?'adjusted':'wide-adjusted';
+        }
+      }
     }
-  }
+  }else if(last>0){m=last;why='last';}
+  else return null;
   if(o.strike>0&&liveSpot>0)m=Math.max(m,o.type==='C'?liveSpot-o.strike:o.strike-liveSpot);
   m=Math.max(0.01,r2(m));
   if(prev!=null&&Math.abs(m-prev)<Math.max(0.02,prev*0.01))return{mark:prev,why:'held-small'};
@@ -4760,10 +4766,15 @@ function wheelMarkNote(k){const r=_wheelMarkRaw[k];if(!r)return'';if(_wheelMarks
   return markNote(_wheelMarks[k],r.why,r.u,live,r.c);}
 // Plain words for the buy-back price actually used and where it came from.
 function markNote(mark,why,u,live,c){if(mark==null)return'';const q=c&&c.bid>0&&c.ask>0?` (bid $${(+c.bid).toFixed(2)} / ask $${(+c.ask).toFixed(2)})`:'';
+  const last=c&&c.last>0?` (last $${(+c.last).toFixed(2)})`:'';
+  const closed=isRegularSession()?'':', market closed so not adjusted';
   const base=`Buy-back price $${(+mark).toFixed(2)}: `;
   return base+(why==='adjusted'?`15-min delayed option quote${q}, adjusted to ${u} at $${(+live).toFixed(2)}`
     :why==='held-small'?`15-min delayed option quote${q}; small change ignored to keep it steady`
-    :`15-min delayed option quote${q}${isRegularSession()?'':', market closed so not adjusted'}`);}
+    :why==='wide-mid'?`15-min delayed option quote${q}, wide market, mid used${closed}`
+    :why==='wide-adjusted'?`15-min delayed option quote${q}, wide market, mid used, adjusted to ${u} at $${(+live).toFixed(2)}`
+    :why==='last'?`15-min delayed option quote${last||q}, last trade${closed}`
+    :`15-min delayed option quote${q}${closed}`);}
 // New York calendar date (YYYY-MM-DD). Used only to tell a same-session typed price from a previous day's one.
 function markDay(iso){
   const d=iso instanceof Date?iso:(iso?new Date(iso):new Date());
