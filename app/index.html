@@ -532,7 +532,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .more-data .a-chart-title{display:flex;align-items:center;gap:0.35rem;margin:0 0 0.75rem;font-size:0.8125rem;font-weight:720;text-transform:none;letter-spacing:0;color:var(--text)}
 .more-data .a-stat-grid{gap:0.75rem}
 .more-data .a-stat{padding:0.75rem 0.875rem}
-.more-data .a-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.more-data .a-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .more-data .a-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums lining-nums;font-size:0.825rem}
 .more-data .a-table th,.more-data .a-table td{padding:0.5rem 0.75rem;border-bottom:1px solid var(--border);vertical-align:middle}
 .more-data .a-table th{font-weight:720;color:var(--text3);font-size:0.75rem;text-transform:none;letter-spacing:0;background:transparent}
@@ -548,6 +548,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
   .more-data .d-grid-4,.more-data .a-stat-grid{grid-template-columns:1fr 1fr;gap:0.75rem}
   .more-data .d-grid-2{grid-template-columns:1fr}
   .more-data .stack-table{width:100%}
+  .more-data .stack-table th:nth-child(n+2),.more-data .stack-table td:nth-child(n+2){width:auto;padding-left:0}
   .more-data .stack-table,.more-data .stack-table tbody,.more-data .stack-table tr,.more-data .stack-table th,.more-data .stack-table td{display:block}
   .more-data .stack-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
   .more-data .stack-table tr{padding:0.55rem 0;border-bottom:1px solid var(--border)}
