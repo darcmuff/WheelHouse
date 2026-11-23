@@ -2039,6 +2039,7 @@ select,textarea,
         </div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="savePMTrade()">Save Trade</button></div>
       </div>
+      <p id="paste-optrack-bot" style="margin:0.625rem 0 0;font-size:0.75rem;color:var(--text3);line-height:1.45">Tired of typing trades? The OpTrack Bot can enter them from your broker emails (Robinhood tested). <a id="paste-optrack-bot-link" href="" target="_blank" rel="noopener" style="color:var(--text2);text-decoration:underline" onclick="if(typeof otTrack==='function')otTrack('/optrack-bot')">Get the bot</a></p>
     </div>
     <!-- Step 2: Preview & confirm -->
     <div id="paste-step2" style="display:none">
@@ -2227,6 +2228,12 @@ select,textarea,
       <button id="settings-export" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem" onclick="exportMyData()">⇩ Export my data</button>
       <a id="settings-legal" href="legal.html" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;text-decoration:none;color:var(--text2)">Privacy, terms &amp; disclaimer</a>
       <div class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;white-space:normal;align-items:flex-start;flex-direction:column;gap:0.15rem;cursor:default"><a id="settings-support" href="mailto:support@optrack.app?subject=OpTrack%20support" style="color:inherit;text-decoration:none">Contact support</a><span style="font-size:0.825rem;color:var(--text3);user-select:text">support@optrack.app</span></div>
+      <div style="border-top:1px solid var(--border);margin:0"></div>
+      <div id="settings-optrack-bot" style="padding:0.5rem 0.875rem 0.25rem">
+        <div style="font-size:0.8125rem;font-weight:720;color:var(--text);margin-bottom:0.375rem">OpTrack Bot</div>
+        <p style="margin:0 0 0.5rem;font-size:0.8125rem;line-height:1.5;color:var(--text2)">The OpTrack Bot is optional and runs on your own Grok Bot. It reads your broker confirmation emails in Gmail and types the trades into OpTrack through the normal screens. Robinhood is tested.</p>
+        <a id="settings-optrack-bot-link" href="" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.5rem 0.625rem;font-size:0.8125rem;text-decoration:none" onclick="if(typeof otTrack==='function')otTrack('/optrack-bot')">Get the OpTrack Bot</a>
+      </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <details id="settings-about" class="about-me" style="padding:0.25rem 0.875rem 0.375rem">
         <summary style="font-size:0.8125rem;font-weight:720;color:var(--text);cursor:pointer;padding:0.25rem 0">About Me</summary>
@@ -8922,6 +8929,11 @@ function showSignOutButton(user){
   if(userEl)userEl.textContent=user.email||user.displayName||'user';
 }
 
+function bindOptrackBotLinks(){
+  const u=(window.BRAND&&window.BRAND.optrackBot&&window.BRAND.optrackBot.url)||'';
+  document.querySelectorAll('#paste-optrack-bot-link,#settings-optrack-bot-link').forEach(a=>{if(u)a.href=u;});
+}
+bindOptrackBotLinks();
 function openSettings(){
   openModal('mSettings');
   // Sync toggle states
