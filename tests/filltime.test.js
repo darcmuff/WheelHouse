@@ -54,3 +54,9 @@ test('save paths write filledAt from the field and leave it alone when blank; pa
   assert.doesNotMatch(extractFn('pmccFormLeg'), /filledAt|fill-time|Fill time/);
   assert.doesNotMatch(extractFn('pickDate'), /filledAt|tf-fill-time/);
 });
+
+test('fill-time helpers are on window so the inline field handlers can run', () => {
+  for (const name of ['paintFillTimeHint','readFilledAtField','setFillTimeField']) {
+    assert.match(SRC, new RegExp(`window\\.${name}\\s*=\\s*${name}`), name);
+  }
+});
