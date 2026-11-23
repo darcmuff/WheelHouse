@@ -36,7 +36,7 @@ function build(B, files) {
   if (files['landing.html']) out['landing.html'] = brandText(files['landing.html'])
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(B.name + ': ' + B.tagline)}</title>`)
     .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${esc(B.name + ': ' + B.tagline)}">`)
-    .replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${esc(B.shareImage)}">`)
+    .replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${esc(share)}">`)
     .replace(/<link rel="icon" href="[^"]*">/, `<link rel="icon" href="${B.icons.favicon}">`)
     .replace(/<link rel="apple-touch-icon" href="[^"]*">/, `<link rel="apple-touch-icon" href="${B.icons.apple}">`);
   if (files['legal.html']) out['legal.html'] = brandText(files['legal.html']).replace(/<title>[^<]*<\/title>/, `<title>${esc(B.name)}: privacy, terms and disclaimer</title>`);
