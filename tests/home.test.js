@@ -77,3 +77,41 @@ test('Next expiry tile is clickable and keyboard-accessible when a trade exists'
   assert.ok(H.includes('function goToNextExpiry') && H.includes('_flashTrade') && H.includes('nx-flash'));
   assert.ok(/animation:\s*nx-flash 1\.5s/.test(H) || /nx-flash 1\.5s/.test(H));
 });
+
+test('LEAP payback bar has a tooltip for open and closed cards', () => {
+  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  assert.ok(H.includes('.ii, .lc-bar[data-tip]'));
+  assert.strictEqual((H.match(/\$\{leapBarHtml\(pb,P\.cost,P\.net,!open\)\}/g) || []).length, 2);
+  assert.ok(/\.lc-bar::after\{content:''/.test(H));
+  const { leapPayback, leapPaybackTip, leapBarHtml } = new Function(
+    require('./extract').extractFn('fmtMoney') +
+    require('./extract').extractFn('leapPayback') +
+    require('./extract').extractFn('leapPaybackTip') +
+    require('./extract').extractFn('leapBarHtml') +
+    'return {leapPayback,leapPaybackTip,leapBarHtml};'
+  )();
+  const pb = leapPayback(15000, 5680);
+  assert.strictEqual(leapPaybackTip(15000, 5680, pb.pct, false),
+    'LEAP payback: 38% of your $15,000 cost paid back by closed or expired short calls ($5,680 so far). Open calls count once closed.');
+  assert.strictEqual(leapPaybackTip(15000, 5680, pb.pct, true),
+    'LEAP payback: 38% of your $15,000 cost paid back by closed or expired short calls ($5,680 total). Open calls count once closed.');
+  const html = leapBarHtml(pb, 15000, 5680, false);
+  assert.ok(/class="lc-bar"/.test(html) && /role="button"/.test(html) && /tabindex="0"/.test(html));
+  assert.ok(/data-tip="LEAP payback: 38% of your \$15,000 cost paid back by closed or expired short calls \(\$5,680 so far\)\. Open calls count once closed\."/.test(html));
+  assert.ok(/aria-label="LEAP payback: 38%/.test(html) && /width:38%/.test(html));
+});
+
+test('More data and Report are hidden on phone and kept on desktop', () => {
+  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  assert.ok(/\.v2-hero\.v2-home \.home-head p\.home-more\{display:none\}/.test(H));
+  assert.ok(/\.settings-log,\.settings-more,\.settings-report\{display:none!important\}/.test(H));
+  assert.ok(/\.ny-desk\{display:none\}/.test(H));
+  assert.ok(H.includes('class="btn btn-ghost btn-full settings-more"'));
+  assert.ok(H.includes('class="btn btn-ghost btn-full settings-report"'));
+  assert.ok(H.includes('span class="ny-desk"'));
+  assert.ok(H.includes("(v==='log'||v==='analytics'||v==='report')&&isPhoneLayout())v='dash'"));
+  assert.ok(H.includes("(view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())view='dash'"));
+  assert.ok(H.includes("(view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())switchView('dash')"));
+  assert.ok(H.includes('function goToHealth(){if(isPhoneLayout())return;'));
+  assert.ok(H.includes('<p class="home-more"><a onclick="switchView(\'analytics\')">More data</a> · <a onclick="switchView(\'report\')">Report</a></p>'));
+});

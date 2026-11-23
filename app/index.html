@@ -852,7 +852,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .lc-h{display:flex;justify-content:space-between;align-items:center}.lc-lacts{display:flex;gap:0.25rem;margin-left:auto;padding-left:0.5rem}.lc-lacts .btn{padding:0.1875rem 0.5rem;font-size:0.825rem}.lc-tk{font-weight:720;font-size:0.9375rem;margin-right:0.5rem}.lc-ct{color:var(--text2);font-size:0.78rem}
 .lc-note{color:var(--text3);font-size:0.72rem;margin-top:0.25rem}
 .lc-hero{display:flex;justify-content:space-between;gap:1.75rem;margin-top:0.75rem;flex-wrap:nowrap;padding-inline:3rem}.lc-hero>div{flex:0 1 auto;min-width:0}.lc-hero>div:last-child:not(:first-child){text-align:right}.lc-k{color:var(--text3);font-size:0.72rem}.lc-v{font-size:1.25rem;font-weight:480}.lc-v.sm{font-size:0.95rem;margin-top:0.25rem}.lc-mut{color:var(--text2)}
-.lc-bar{height:0.3rem;background:var(--bg3);border-radius:1rem;margin:0.75rem 0 0.375rem;overflow:hidden}.lc-bar i{display:block;height:100%;background:var(--orange)}
+.lc-bar{position:relative;display:block;width:auto;box-sizing:border-box;height:0.3rem;margin:0.75rem 0 0.375rem;padding:0;border:0;border-radius:1rem;background:var(--bg3);overflow:visible;font:inherit;color:inherit;cursor:help;-webkit-appearance:none;appearance:none}.lc-bar i{display:block;height:100%;background:var(--orange);border-radius:inherit}.lc-bar::after{content:'';position:absolute;left:0;right:0;top:-16px;bottom:-16px}.lc-bar:focus{outline:none}.lc-bar:focus-visible{outline:1px solid var(--border);outline-offset:3px}
 .ii{position:relative;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0 0.125rem;margin-left:0.25rem;font:inherit;font-size:0.8em;font-weight:480;line-height:1;color:var(--text3);opacity:.7;cursor:help;vertical-align:baseline;text-transform:none;letter-spacing:0}
 /* ⓘ beside text that stayed above the small-font cut still gets the +20% */
 .wl-memo>.ii,.a-chart-title>.ii,.d-panel-title>.ii,.hc-h>h2>.ii{font-size:0.96em}.ii:hover,.ii:focus{opacity:1;color:var(--text2);outline:none}.ii:focus-visible{outline:1px solid var(--border);border-radius:4px}#ii-pop{position:fixed;z-index:10000;max-width:17rem;width:max-content;padding:0.5rem 0.625rem;border-radius:8px;background:var(--surface,var(--bg2,#fff));color:var(--text2);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:0.825rem;font-weight:480;line-height:1.45;text-align:left;white-space:normal;overflow-wrap:break-word;pointer-events:none;text-transform:none;letter-spacing:0}#ii-pop[hidden]{display:none}@media(max-width:700px){#ii-pop{max-width:min(17rem,calc(100vw - 16px));box-sizing:border-box}}
@@ -1288,7 +1288,8 @@ select,textarea,
 @media(max-width:700px){
   #tabbar a.nav-item[data-view="log"]{display:none}
   #tabbar .nav-item{min-height:44px;min-width:44px;box-sizing:border-box;justify-content:center}
-  .settings-log{display:none!important}
+  .settings-log,.settings-more,.settings-report{display:none!important}
+  .ny-desk{display:none}
   .card-acts-inline{display:none!important}
   .card-more{display:block;position:relative;flex-shrink:0;margin-left:0.15rem;z-index:4}
   .card-more[open]{z-index:6}
@@ -1543,7 +1544,7 @@ select,textarea,
     letter-spacing:-0.01em;
   }
   .v2-hero.v2-home .home-head p{display:none}
-  .v2-hero.v2-home .home-head p.home-more{display:block;margin:4px 0 0;font-size:0.78rem;color:var(--text3)}
+  .v2-hero.v2-home .home-head p.home-more{display:none}
   .v2-hero.v2-home>.v2-strip,.v2-light.v2-home .v2-strip{
     padding:0!important;
     background:transparent;
@@ -2321,8 +2322,8 @@ select,textarea,
       </div>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button class="btn btn-ghost btn-full settings-log" onclick="switchView('log');closeModal('mSettings')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem;flex-shrink:0"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-45.54-48.85a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM104,148a20,20,0,1,1,20,20A20,20,0,0,1,104,148Z"/></svg><span>Trade Log</span></button>
-      <button class="btn btn-ghost btn-full" onclick="closeModal('mSettings');switchView('analytics')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem">More data</button>
-      <button class="btn btn-ghost btn-full" onclick="closeModal('mSettings');switchView('report')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem">Report</button>
+      <button class="btn btn-ghost btn-full settings-more" onclick="closeModal('mSettings');switchView('analytics')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem">More data</button>
+      <button class="btn btn-ghost btn-full settings-report" onclick="closeModal('mSettings');switchView('report')" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem">Report</button>
       <div style="border-top:1px solid var(--border);margin:0"></div>
       <button id="settings-export" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem" onclick="exportMyData()">⇩ Export my data</button>
       <a id="settings-legal" href="legal.html" target="_blank" rel="noopener" class="btn btn-ghost btn-full" style="text-align:left;padding:0.625rem 0.875rem;font-size:0.8125rem;text-decoration:none;color:var(--text2)">Privacy, terms &amp; disclaimer</a>
@@ -3597,6 +3598,7 @@ function goToNextExpiry(el){
 // Clear the sticky highlight once an action lands on the focused trade (save, delete, expire)
 function _clearFocus(id){if(_focusTid&&(!id||_focusTid===id)){_focusTid=null;}}
 function switchView(v){
+  if((v==='log'||v==='analytics'||v==='report')&&isPhoneLayout())v='dash';
   if(v==='analytics'&&!canUse('analytics')){openUpgrade('analytics');return;}
   if(v==='report'&&!canUse('report')){openUpgrade('report');return;}
   view=v;
@@ -3625,7 +3627,7 @@ function _saveUIState(){
 }
 
 function render(){
-  if(view==='log'&&isPhoneLayout())view='dash';
+  if((view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())view='dash';
   const _nwKeep=view==='positions'&&_nwOpen, _nwWas=document.getElementById('new-rot-ticker-top'), _nwTyped=_nwWas?_nwWas.value:'', _nwFocus=document.activeElement===_nwWas;
   _saveUIState();
   renderSidebar();
@@ -4042,6 +4044,8 @@ function savePmccLeg(){
 function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
 // Pure: share of the LEAP's cost won back by calls sold against it (0–100, whole %).
 function leapPayback(cost,net){return{pct:cost>0?Math.max(0,Math.min(100,Math.round(net/cost*100))):0};}
+function leapPaybackTip(cost,net,pct,closed){const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');return`LEAP payback: ${pct}% of your ${m0(cost)} cost paid back by closed or expired short calls (${m0(Math.max(0,net))} ${closed?'total':'so far'}). Open calls count once closed.`;}
+function leapBarHtml(pb,cost,net,closed){const tip=leapPaybackTip(cost,net,pb.pct,closed),attr=String(tip).replace(/<[^>]*>/g,'').replace(/"/g,'&quot;');return`<div class="lc-bar" role="button" tabindex="0" data-tip="${attr}" aria-label="${attr}" onclick="event.stopPropagation()"><i style="width:${pb.pct}%"></i></div>`;}
 // Pure: Cost after calls vs original LEAP cost. Lower = green ▼ (calls paid you back); higher = red ▲.
 function leapAdjMoveHtml(cost,adj){
   if(!(cost>0)||adj==null||!Number.isFinite(+adj))return '';
@@ -4113,7 +4117,7 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.825rem;font-weight:720">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
     <div><div class="lc-k">Breakeven</div><div class="lc-v sm">$${S.be.toFixed(2)}</div></div></div>
-  <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
+  ${leapBarHtml(pb,P.cost,P.net,!open)}
   <div class="wl-memo" onclick="event.stopPropagation()"><button type="button" class="wl-wi-btn" onclick="event.stopPropagation();wlWhatIf('${esc(l.id)}')">What if?</button></div><div class="wl-wi" id="wi-${esc(l.id)}" hidden onclick="event.stopPropagation()" data-kind="leap" data-cost="${P.cost}" data-net="${P.net}" data-strike="${+l.strike||0}" data-qty="${S.q}"><button type="button" class="wl-wi-x" aria-label="Close" onclick="event.stopPropagation();wlWhatIfClose('${esc(l.id)}')">×</button><div class="wl-wi-in"><label>Strike<input data-wi="k" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 260" oninput="wlWhatIfCalc('${esc(l.id)}')"></label><label>Premium / share<input data-wi="p" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.00" oninput="wlWhatIfCalc('${esc(l.id)}')"></label></div><div data-wi="out"><div class="wl-wi-r"><span>New net cost</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div></div><div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();wlWhatIfLog('${esc(l.id)}')">Log this trade</button></div></div>
   ${renderPmcc(l,today,spot,true)}
 `:''}</div>`;
@@ -4129,7 +4133,7 @@ function renderLeapCard(l,spot,today){
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
     <div><div class="lc-k">Realised ${ii('The LEAP\'s gain or loss when it closed or expired, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'—':(S.pl>=0?'+':'')+m0(S.pl)}</div>${rq==null?'':`<div class="lc-pct ${colorN(rq)}" style="font-size:0.825rem;font-weight:480">${rq>=0?'+':''}${rq.toFixed(2)}%</div>`}</div>
     <div><div class="lc-k">Opened</div><div class="lc-v sm">${_fdShort(l.entryDate)}${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}</div></div></div>
-  <div class="lc-bar"><i style="width:${pb.pct}%"></i></div>
+  ${leapBarHtml(pb,P.cost,P.net,!open)}
   ${renderPmcc(l,today,spot)}
 `:''}</div>`;
 }
@@ -6631,7 +6635,7 @@ function renderHome(){
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
   </div></section>
-  <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><a onclick="switchView('analytics')">More data →</a> · <a onclick="switchView('report')">Report →</a> · <a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length&&!_pend.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a onclick="goToHealth()">See all</a></div>`:''}`:''}${_pend.length?`<div class="ny-hd">Pending</div>${_pend.slice(0,8).map(i=>healthItemHtml(i,true)).join('')}`:''}</div>
+  <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><span class="ny-desk"><a onclick="switchView('analytics')">More data →</a> · <a onclick="switchView('report')">Report →</a> · </span><a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length&&!_pend.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a class="ny-desk" onclick="goToHealth()">See all</a></div>`:''}`:''}${_pend.length?`<div class="ny-hd">Pending</div>${_pend.slice(0,8).map(i=>healthItemHtml(i,true)).join('')}`:''}</div>
   <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
   ${renderMonthlyRealised()}
   ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
@@ -8644,10 +8648,10 @@ function pnlTip(e,el){if(!e||!el){pnlTipHide();return;}pnlTipShow(el);}
 function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.innerHTML=pnlCurveHtml();}
 function setPnlRange(k){pnlRange=k;_pnlRedraw();}
 function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=document.getElementById('pnl-curve');if(el)el.classList.toggle('pc-full',pnlFull);document.body.classList.toggle('pc-lock',pnlFull);_pnlRedraw();}
-function goToHealth(){switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
+function goToHealth(){if(isPhoneLayout())return;switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;window.pnlTipShow=pnlTipShow;window.pnlTipHide=pnlTipHide;window.pnlTipHtml=pnlTipHtml;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
-window.addEventListener('resize',()=>{_pnlRedraw();if(view==='log'&&isPhoneLayout())switchView('dash');});
+window.addEventListener('resize',()=>{_pnlRedraw();if((view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())switchView('dash');});
 
 function renderAnalytics(){
   const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();
@@ -8938,12 +8942,13 @@ function iiPlace(r,w,h,vw,vh){
 (function(){
   if(typeof document==='undefined')return;
   let cur=null;
+  const tipOf=n=>n&&n.closest&&n.closest('.ii, .lc-bar[data-tip]');
   const pop=()=>{let p=document.getElementById('ii-pop');if(!p){p=document.createElement('div');p.id='ii-pop';p.setAttribute('role','tooltip');p.hidden=true;document.body.appendChild(p);}return p;};
   const show=b=>{const p=pop();p.textContent=b.getAttribute('data-tip')||'';p.hidden=false;const r=b.getBoundingClientRect(),q=p.getBoundingClientRect(),o=iiPlace(r,q.width,q.height,innerWidth,innerHeight);p.style.left=o.left+'px';p.style.top=o.top+'px';cur=b;};
   const hide=()=>{const p=document.getElementById('ii-pop');if(p)p.hidden=true;cur=null;};
-  document.addEventListener('mouseover',e=>{const b=e.target.closest&&e.target.closest('.ii');if(b&&b!==cur&&!b.closest('.hk'))show(b);});
-  document.addEventListener('mouseout',e=>{const b=e.target.closest&&e.target.closest('.ii');if(b&&b===cur&&!(e.relatedTarget&&b.contains(e.relatedTarget))&&document.activeElement!==b)hide();});
-  document.addEventListener('focusin',e=>{const b=e.target.closest&&e.target.closest('.ii');if(b&&!b.closest('.hk'))show(b);});
+  document.addEventListener('mouseover',e=>{const b=tipOf(e.target);if(b&&b!==cur&&!b.closest('.hk'))show(b);});
+  document.addEventListener('mouseout',e=>{const b=tipOf(e.target);if(b&&b===cur&&!(e.relatedTarget&&b.contains(e.relatedTarget))&&document.activeElement!==b)hide();});
+  document.addEventListener('focusin',e=>{const b=tipOf(e.target);if(b&&!b.closest('.hk'))show(b);});
   document.addEventListener('focusout',e=>{if(e.target===cur)hide();});
   // Home tiles: tapping ⓘ flips the tile itself to show the tip (same size) on desktop; on phone the text does not fit the tile, so the same viewport popup as other ⓘ tips is used (8px margins). Tap again or outside to close. One at a time.
   const unflip=()=>document.querySelectorAll('.hk.hk-flipped').forEach(t=>{t.classList.remove('hk-flipped');const k=t.querySelector('.hk-back');if(k)k.remove();});
@@ -8951,7 +8956,7 @@ function iiPlace(r,w,h,vw,vh){
   document.addEventListener('click',e=>{
     const t=e.target.closest&&e.target.closest('.hk');
     if(t&&t.classList.contains('hk-flipped')){e.stopPropagation();e.preventDefault();unflip();return;}
-    const b=e.target.closest&&e.target.closest('.ii');
+    const b=tipOf(e.target);
     if(b&&t){e.stopPropagation();e.preventDefault();hide();unflip();if((typeof isPhoneLayout==='function'&&isPhoneLayout())||innerWidth<=700){show(b);return;}const k=document.createElement('div');k.className='hk-back';k.innerHTML='<span class="hk-x" aria-label="Close">×</span><div class="hk-bt"></div>';k.querySelector('.hk-bt').textContent=b.getAttribute('data-tip')||'';t.appendChild(k);t.classList.add('hk-flipped');return;}
     if(b){show(b);}else{if(cur)hide();if(!t)unflip();}
   },true);
