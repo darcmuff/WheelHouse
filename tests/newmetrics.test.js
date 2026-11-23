@@ -84,12 +84,9 @@ test('More stats: exposure and utilisation use Home capital at work; utilisation
   assert.ok(!H.includes('Set an account size in Settings'));
   assert.ok(!H.includes('The account size you set in Settings.'));
   assert.ok(H.includes('The account size you set here.'));
-  assert.ok(H.includes("const rsU=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]);"));
-  assert.ok(H.includes("const showUtil=rsU.base==='account'&&rsU.account>0;"));
-  assert.ok(H.includes("kpi('Capital Utilisation'"));
-  assert.ok(H.includes("kpi('Capital at work'"));
-  assert.ok(H.includes('account size you set on Home'));
-  assert.ok(H.includes('Switch to Account size in the cog on Home'));
+  assert.ok(H.includes("kpi('Projected Yearly',fmtMoney(ytd.yearly)"));
+  assert.ok(H.includes('based on ${ytd.days} days YTD'));
+  assert.ok(!H.includes("kpi('Capital Utilisation'"));
   assert.ok(!H.includes('cap.maxCap||1'), 'old biggest-put proxy gone');
   assert.ok(H.includes('const caw=currentCapitalAtWork();'), 'Home uses the same helper');
 });

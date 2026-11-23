@@ -6453,13 +6453,6 @@ function renderStatsOverview(){
     </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades${(db.opts||[]).length?` and ${(db.opts||[]).length} option legs`:''} checked — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
   </div>`;
 
-  // Capital utilisation — follows the Home cog (Account size vs Capital at work)
-  const cawU=currentCapitalAtWork();
-  const rsU=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]);
-  const utilPct=utilisation(cawU.total,rsU.account);
-  const utilCol=utilPct==null?'var(--text3)':utilPct<70?'var(--green)':utilPct<85?'var(--yellow)':'var(--red)';
-  const showUtil=rsU.base==='account'&&rsU.account>0;
-
   // Last month comparison
   // Use the real calendar month (and the one before it), not just the last months that happen to have trades
   const _now=new Date();
@@ -6488,9 +6481,7 @@ function renderStatsOverview(){
 
   const k1=kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.');
   const k2=kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.');
-  const k3=showUtil
-    ?kpi('Capital Utilisation',utilPct.toFixed(0)+'%',fmtMoney(cawU.total)+' of '+fmtMoney(rsU.account),utilCol,false,'Capital at work (open put collateral, open shares and open LEAP cost) as a % of the account size you set on Home. Green below 70%, amber 70–85%, red above 85%.')
-    :kpi('Capital at work',fmtMoney(cawU.total),'Wheel '+fmtMoney(cawU.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(cawU.leaps).replace(/\.\d\d$/,''),'var(--text)',false,'Open put collateral, open shares and open LEAP cost. Switch to Account size in the cog on Home to see Capital Utilisation.');
+  const k3=kpi('Projected Yearly',fmtMoney(ytd.yearly),`based on ${ytd.days} days YTD`,ytd.yearly>=0?'var(--green)':'var(--red)',false,'Year-to-date realised income (option premium, stock sales and dividends, the same total as Wheel Realised P&L) divided by the days so far this year and multiplied by 365. Open positions are not included.');
 
   // AROC trailing
   const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
