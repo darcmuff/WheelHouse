@@ -12,6 +12,6 @@ test('startup view is always Wheel, saved tab ignored', () => {
 });
 
 test('switching tabs mid-session still works', () => {
-  assert.match(src, /function switchView\(v\)\{\s*(if\(v===.analytics.&&!canUse\(.analytics.\)\)\{openUpgrade\(.analytics.\);return;\}\s*)?(if\(v===.report.&&!canUse\(.report.\)\)\{openUpgrade\(.report.\);return;\}\s*)?view=v;/);
+  assert.match(src, /function switchView\(v\)\{\s*(if\(v===.analytics.&&!canUse\(.analytics.\)\)\{openUpgrade\(.analytics.\);return;\}\s*)?view=v;/);
 });
 

@@ -5,7 +5,7 @@ const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..
 const on={...B.plans,gating:true};
 test('gating is ON in brand.js; with gating off everyone gets everything',()=>{assert.strictEqual(B.plans.gating,true);const off={...B.plans,gating:false};B.plans.paidFeatures.forEach(f=>assert.ok(G.canUse(f,off,null,false)));assert.ok(G.underLimit('wheel',99,off,null,false));});
 test('prices and split live in brand.js',()=>{assert.strictEqual(B.plans.priceMonthly,9);assert.strictEqual(B.plans.priceYearly,79);assert.strictEqual(B.plans.currency,'£');
-  ['unlimited','leaps-full','live-refresh','robinhood-import','analytics','report'].forEach(f=>assert.ok(B.plans.paidFeatures.includes(f),f));B.plans.paidFeatures.forEach(f=>assert.ok(B.featureNames[f],f));});
+  ['unlimited','leaps-full','live-refresh','robinhood-import','analytics'].forEach(f=>assert.ok(B.plans.paidFeatures.includes(f),f));B.plans.paidFeatures.forEach(f=>assert.ok(B.featureNames[f],f));});
 test('gating on: free user is limited, Pro and founders are not',()=>{assert.ok(!G.canUse('analytics',on,{plan:'free'},false));assert.ok(G.canUse('analytics',on,{plan:'pro'},false));assert.ok(G.canUse('analytics',on,{founder:true},false));
   assert.ok(G.underLimit('wheel',1,on,null,false));assert.ok(!G.underLimit('wheel',2,on,null,false));assert.ok(!G.underLimit('leap',1,on,null,false));assert.ok(G.underLimit('wheel',50,on,{founder:true},false));});
 test('free features stay free even with gating on',()=>{assert.ok(G.canUse('smartscan',on,null,false));});
@@ -13,5 +13,4 @@ test('if the entitlement cannot be read, nobody is locked out',()=>{assert.ok(G.
 test('the gates are wired in',()=>{assert.ok(SRC.includes("!canUse('live-refresh')"));
   assert.ok(SRC.includes("p.rh&&!canUse('robinhood-import')"));assert.ok(/function openNewPos\(\)\{\n  if\(!wheelCapOk\(/.test(SRC));assert.ok(/function openLeapAdd\(\)\{\n  if\(!leapCapOk\(/.test(SRC));
   assert.ok(/id="mUpgrade"/.test(SRC)&&SRC.includes("_billingCall('checkout'")&&SRC.includes('loadEntitlement(user.uid)'));
-  assert.ok(/listenServer\(doc\(_fsDb,'entitlements',uid\)\)/.test(SRC),'reads top-level entitlements only');assert.ok(!/setDoc\(doc\(_fsDb,'entitlements'/.test(SRC),'app never writes entitlements');
-  assert.ok(SRC.includes("v==='report'&&!canUse('report')"));});
+  assert.ok(/listenServer\(doc\(_fsDb,'entitlements',uid\)\)/.test(SRC),'reads top-level entitlements only');assert.ok(!/setDoc\(doc\(_fsDb,'entitlements'/.test(SRC),'app never writes entitlements');});

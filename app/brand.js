@@ -28,8 +28,7 @@ window.BRAND = {
       'leaps-full',       // LEAP + PMCC tracking beyond the free limit, LEAP analytics
       'live-refresh',     // option marks refreshed automatically every minute
       'robinhood-import', // Robinhood CSV import
-      'analytics',        // More stats: monthly target, analytics, scoreboard
-      'report'            // Written performance report from existing figures
+      'analytics'         // More stats: monthly target, analytics, scoreboard
     ]
   },
   // Plain-English names for the comparison table and upgrade prompts.
@@ -38,8 +37,7 @@ window.BRAND = {
     'leaps-full': 'Full LEAP and PMCC tracking',
     'live-refresh': 'Live captured profit (marks refresh every minute)',
     'robinhood-import': 'Robinhood CSV import',
-    'analytics': 'More stats: monthly return against your own target, and analytics',
-    'report': 'A written report of your options P&L, monthly return and premium'
+    'analytics': 'More stats: monthly return against your own target, and analytics'
   },
 
   // ── Privacy-friendly, cookie-free analytics. Off until set.
