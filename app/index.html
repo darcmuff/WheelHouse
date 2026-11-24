@@ -1907,9 +1907,9 @@ select,textarea,
 #mSettings .st-body{display:flex;flex-direction:column;gap:0.875rem;padding:0.25rem 0 0.125rem}
 #mSettings .st-group{display:flex;flex-direction:column;gap:0.375rem}
 #mSettings .st-h{font-size:0.6875rem;font-weight:600;color:var(--text3);letter-spacing:0.02em;padding:0 0.25rem}
-#mSettings .st-row{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;width:100%;box-sizing:border-box;min-height:2.5rem;margin:0;padding:0.5rem 0.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px!important;font:inherit;font-size:0.8125rem;font-weight:480;line-height:1.3;color:var(--text);text-align:left;text-decoration:none;white-space:normal;cursor:pointer;opacity:1;transform:none;transition:background .15s}
-#mSettings .st-row:hover{background:var(--bg3);color:var(--text);border-color:var(--border);opacity:1}
-#mSettings .st-row:focus-visible{outline:2px solid var(--brand-orange);outline-offset:1px}
+#mSettings .st-row,#mSettings .st-desk .btn{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;width:100%;box-sizing:border-box;min-height:2.5rem;margin:0;padding:0.5rem 0.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px!important;font:inherit;font-size:0.8125rem;font-weight:480;line-height:1.3;color:var(--text);text-align:left;text-decoration:none;white-space:normal;cursor:pointer;opacity:1;transform:none;transition:background .15s}
+#mSettings .st-row:hover,#mSettings .st-desk .btn:hover{background:var(--bg3);color:var(--text);border-color:var(--border);opacity:1}
+#mSettings .st-row:focus-visible,#mSettings .st-desk .btn:focus-visible{outline:2px solid var(--brand-orange);outline-offset:1px}
 #mSettings .st-set{cursor:default}#mSettings .st-set:hover{background:var(--bg2)}
 #mSettings .st-set label[for]{cursor:pointer}
 #mSettings .st-val{color:var(--text3);font-size:0.75rem;user-select:text}
@@ -2459,9 +2459,9 @@ select,textarea,
       </section>
       <section class="st-group st-desk">
         <div class="st-h">Go to</div>
-        <button class="btn btn-ghost btn-full settings-log st-row" onclick="switchView('log');closeModal('mSettings')"><span>Trade Log</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="btn btn-ghost btn-full settings-more st-row" onclick="closeModal('mSettings');switchView('analytics')"><span>More data</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="btn btn-ghost btn-full settings-report st-row" onclick="closeModal('mSettings');switchView('report')"><span>Report</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn btn-ghost btn-full settings-log" onclick="switchView('log');closeModal('mSettings')"><span>Trade Log</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn btn-ghost btn-full settings-more" onclick="closeModal('mSettings');switchView('analytics')"><span>More data</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn btn-ghost btn-full settings-report" onclick="closeModal('mSettings');switchView('report')"><span>Report</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </section>
       <section class="st-group" id="settings-data">
         <div class="st-h">Your data</div>
