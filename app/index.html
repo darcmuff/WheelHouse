@@ -774,7 +774,9 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tn-gear{background:none;border:0;color:var(--text2);cursor:pointer;padding:0.375rem;border-radius:0.5rem;display:flex}.tn-gear:hover{background:var(--bg3)}
 /* OpTrack Bot ad in the desktop top bar (variant F). Desktop 1280px+ only; tabs and cog never squash. */
 .tn-tabs,.tn-right{flex-shrink:0}
-.tn-bot-wrap{flex:1 1 0;display:flex;justify-content:flex-end;min-width:0;margin-right:calc(24px - 1.5rem - 0.375rem);position:relative;top:0.5px}
+.tn-bot-wrap{flex:1 1 0;display:flex;justify-content:flex-end;min-width:0;margin-right:calc(24px - 1.5rem - 0.375rem)}
+/* Optically centre the ad and the cog in the visible header space (page top to the first card), i.e. down by half the 1.25rem content top padding. */
+@media(min-width:1280px){.tn-bot-wrap,.tn-bot-wrap+.tn-right{transform:translateY(calc(0.625rem + 0.5px))}}
 .tn-bot-wrap+.tn-right{margin-left:0}
 @media(max-width:1279.98px){.tn-bot-wrap{display:none}.tn-bot-wrap+.tn-right{margin-left:auto}}
 .tn-bot{display:flex;align-items:center;gap:0.75rem;white-space:nowrap;text-decoration:none;border-radius:6px;line-height:1;box-sizing:border-box;padding:0;background:none;border:0;box-shadow:none;color:var(--text);font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif}
