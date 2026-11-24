@@ -1,7 +1,7 @@
 // Cookie-free analytics, only when configured in brand.js (window.BRAND.analytics). Off by default.
 // Events: window.otTrack('/start-free') → goatcounter.count({path, event:true}).
 // Pageviews are loaded directly from each page <head> (count.js + goatPath). This file must not inject count.js again.
-// Never counts localhost, and never counts a simulator run (localStorage ot-sim=1).
+// Counts only on optrack.app / www.optrack.app, or when ?gc_test=1 / localStorage gc_test=1. Never on a simulator run (ot-sim=1).
 function analyticsTag(A, host){
   if(!A||!A.provider)return null;
   if(/^(localhost|127\.0\.0\.1)$/.test(host||''))return null;           // never count local development
@@ -9,18 +9,23 @@ function analyticsTag(A, host){
   if(A.provider==='goatcounter'&&/^https:\/\/[a-z0-9-]+\.goatcounter\.com\/count$/.test(A.goatcounter||''))return {src:'https://gc.zgo.at/count.js',attrs:{'data-goatcounter':A.goatcounter}};
   return null;
 }
-function countEvent(path, host, sim){
+function countEvent(path, host, sim, search, store){
   if(!path)return false;
-  if(/^(localhost|127\.0\.0\.1)$/.test(host||''))return false;
   if(sim)return false;
-  return true;
+  var allow=countEvent._allow;
+  if(!allow&&typeof window!=='undefined'&&typeof window.gcShouldCount==='function')allow=window.gcShouldCount;
+  if(!allow)return false;
+  return !!allow(host, search, store);
 }
-if(typeof module!=='undefined'&&module.exports){module.exports={analyticsTag,countEvent};}
+if(typeof module!=='undefined'&&module.exports){
+  countEvent._allow=require('./goat-path.js').gcShouldCount;
+  module.exports={analyticsTag,countEvent};
+}
 else (function(){
   window.otTrack=function(path){
-    var sim=false;
-    try{sim=localStorage.getItem('ot-sim')==='1';}catch(e){}
-    if(!countEvent(path,location.hostname,sim))return;
+    var sim=false,store=null;
+    try{sim=localStorage.getItem('ot-sim')==='1';store=localStorage.getItem('gc_test');}catch(e){}
+    if(!countEvent(path,location.hostname,sim,location.search,store))return;
     if(!document.querySelector('script[data-goatcounter]'))return;
     var gc=window.goatcounter;
     if(gc&&typeof gc.count==='function'){gc.count({path:path,event:true});return;}

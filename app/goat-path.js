@@ -1,6 +1,6 @@
-// Pure path cleaner for GoatCounter. The function body is inlined in each
-// counting page's <head> before count.js loads; tests check they stay in sync.
-// Strips twclid, fbclid and gclid; keeps utm_* and every other param.
+// Helpers inlined in each counting page's <head> before count.js; tests check they stay in sync.
+// goatPath: strip twclid, fbclid, gclid; keep utm_* and every other param.
+// Counting is live-host only (optrack.app / www.optrack.app) unless ?gc_test=1 or localStorage gc_test=1.
 function goatPath(p){
   p=String(p==null?'':p);
   var hash='',h=p.indexOf('#');
@@ -18,4 +18,20 @@ function goatPath(p){
   }
   return path+(kept.length?'?'+kept.join('&'):'')+hash;
 }
-if(typeof module!=='undefined'&&module.exports)module.exports={goatPath};
+function gcLiveHost(host){
+  host=String(host||'').toLowerCase();
+  return host==='optrack.app'||host==='www.optrack.app';
+}
+function gcTestFlag(search, store){
+  return /(?:^|[?&])gc_test=1(?:&|$)/.test(String(search||''))||store==='1';
+}
+function gcShouldCount(host, search, store){
+  return gcLiveHost(host)||gcTestFlag(search, store);
+}
+function gcTakePageview(state){
+  if(!state)state={};
+  if(state.sent)return false;
+  state.sent=true;
+  return true;
+}
+if(typeof module!=='undefined'&&module.exports)module.exports={goatPath,gcLiveHost,gcTestFlag,gcShouldCount,gcTakePageview};

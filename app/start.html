@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <script>
-// GoatCounter pageview at page start. Path strips twclid/fbclid/gclid; keeps utm_* and the rest.
+// GoatCounter: path cleaner, live-host gate, no auto pageview. count.js onload sends one view.
 (function(){
   function goatPath(p){
   p=String(p==null?'':p);
@@ -22,12 +22,56 @@
   }
   return path+(kept.length?'?'+kept.join('&'):'')+hash;
 }
+  function gcLiveHost(host){
+  host=String(host||'').toLowerCase();
+  return host==='optrack.app'||host==='www.optrack.app';
+}
+  function gcTestFlag(search, store){
+  return /(?:^|[?&])gc_test=1(?:&|$)/.test(String(search||''))||store==='1';
+}
+  function gcShouldCount(host, search, store){
+  return gcLiveHost(host)||gcTestFlag(search, store);
+}
+  function gcTakePageview(state){
+  if(!state)state={};
+  if(state.sent)return false;
+  state.sent=true;
+  return true;
+}
+  window.gcShouldCount=gcShouldCount;
   window.goatcounter=window.goatcounter||{};
   window.goatcounter.path=function(p){return goatPath(p)};
-  try{if(localStorage.getItem('ot-sim')==='1')window.goatcounter.no_onload=true;}catch(e){}
+  window.goatcounter.no_onload=true;
+  window._gcPv={sent:false};
+  window._gcSendPageview=function(){
+    if(window._gcSkip){window._gcPv.sent=true;return;}
+    if(!gcShouldCount(location.hostname,location.search,window._gcStoreTest))return;
+    var gc=window.goatcounter;
+    if(!gc||typeof gc.count!=='function')return;
+    var fire=function(){
+      if(!gcTakePageview(window._gcPv))return;
+      gc.count();
+    };
+    var ready=function(fn){
+      if(navigator&&typeof navigator.sendBeacon==='function'){fn();return;}
+      if(document.body){fn();return;}
+      document.addEventListener('DOMContentLoaded',fn,false);
+    };
+    if(!('visibilityState' in document)||document.visibilityState==='visible')
+      ready(fire);
+    else{
+      var f=function(){
+        if(document.visibilityState!=='visible')return;
+        document.removeEventListener('visibilitychange',f);
+        ready(fire);
+      };
+      document.addEventListener('visibilitychange',f);
+    }
+  };
 })();
 </script>
-<script data-goatcounter="https://optrack.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>try{if(localStorage.getItem('ot-sim')==='1')window._gcSkip=1;window._gcStoreTest=localStorage.getItem('gc_test');}catch(e){}if(window._gcSendPageview)window._gcSendPageview();</script>
+<script data-goatcounter="https://optrack.goatcounter.com/count" async src="https://gc.zgo.at/count.js" onload="window._gcSendPageview&&window._gcSendPageview()"></script>
 <title>Start OpTrack</title>
 <meta name="description" content="Track your options wheel and LEAPs. Free plan, or Pro for a few quid a month.">
 <meta name="theme-color" content="#f8f9fc"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="/manifest.json">
