@@ -8966,16 +8966,6 @@ function renderAnalytics(){
     <td data-l="Avg AROC" style="color:${d.avgROC!=null?(d.avgROC>=15?'var(--green)':d.avgROC>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${d.avgROC!=null?d.avgROC.toFixed(1)+'%':'—'}</td>
   </tr>`).join('');
 
-
-  // ── Section 4: Roll Effectiveness ──
-  const rollSection=rollCount>0?`
-    <div class="a-stat-grid">
-      ${stat(rollCount+' rolls','Total Rolls','linked roll pairs','var(--text)','Number of detected roll pairs — a BTC followed by a new CSP or STOC on the same ticker.')}
-      ${stat(rollNet>=0?'+'+fmtMoney(rollNet):fmtMoney(rollNet),'Roll Net P&L','cumulative',rollNet>=0?'var(--green)':'var(--red)','Total premium collected from roll openings minus the cost of the buybacks that preceded them.')}
-      ${stat(fmtMoney(rollCredits),'Roll Credits','premium collected','var(--green)','Premium collected from the new legs opened as part of rolls.')}
-      ${stat(fmtMoney(rollDebits),'Roll Debits','buyback costs','var(--red)','Cost of buying back positions that were rolled into new ones.')}
-    </div>`:`<p class="a-empty">No rolls logged.</p>`;
-
   // ── Section 5: Strategy Comparison ──
   const cspBTC=db.trades.filter(t=>t.action==='BTC').reduce((s,t)=>s+(t.total||0),0);
   const stratTable=`<div class="d-grid d-grid-2" style="gap:0.75rem">
@@ -9080,7 +9070,6 @@ function renderAnalytics(){
           ?`<div class="a-table-wrap"><table class="a-table a-table-nums"><thead><tr><th>Ticker</th><th>Cycles</th><th>Trades</th><th>Premium</th><th>Avg AROC</th><th>Share</th></tr></thead><tbody>${tickerRows}</tbody></table></div>`
           :`<p class="a-empty">No wheels to rank yet.</p>`}
       </div>
-      <div style="margin-top:0.75rem">${rollSection}</div>
     ${secEnd}</div>
 
     <div class="a-section">${sec('Risk & Exposure','Capital and fees')}${riskStats}${secEnd}</div>
