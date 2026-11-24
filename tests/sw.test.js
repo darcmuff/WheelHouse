@@ -10,4 +10,6 @@ test('sw never caches network-only calls', () => {
   assert.ok(g('/', 'POST'));
   assert.ok(!g('/icon-192.png'));
   assert.ok(!g('/'));
+  assert.ok(g('https://gc.zgo.at/count.js'), 'cross-origin count.js is not intercepted');
+  assert.ok(g('https://optrack.goatcounter.com/count?p=%2Fdemo'), 'cross-origin count beacons are not intercepted');
 });

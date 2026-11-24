@@ -4,6 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <base href="/"><!-- the app is served at /app/ (and still at /index.html); all relative paths resolve from the site root -->
+<script>
+// GoatCounter pageview at page start. Path strips twclid/fbclid/gclid; keeps utm_* and the rest.
+(function(){
+  function goatPath(p){
+  p=String(p==null?'':p);
+  var hash='',h=p.indexOf('#');
+  if(h>=0){hash=p.slice(h);p=p.slice(0,h)}
+  var q=p.indexOf('?');
+  if(q<0)return p+hash;
+  var path=p.slice(0,q),kept=[],parts=p.slice(q+1).split('&');
+  for(var i=0;i<parts.length;i++){
+    var pair=parts[i];if(!pair)continue;
+    var key=pair.split('=')[0],dec=key;
+    try{dec=decodeURIComponent(key.replace(/\+/g,' '))}catch(e){}
+    dec=String(dec).toLowerCase();
+    if(dec==='twclid'||dec==='fbclid'||dec==='gclid')continue;
+    kept.push(pair);
+  }
+  return path+(kept.length?'?'+kept.join('&'):'')+hash;
+}
+  window.goatcounter=window.goatcounter||{};
+  window.goatcounter.path=function(p){return goatPath(p)};
+})();
+</script>
+<script data-goatcounter="https://optrack.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -28,6 +53,7 @@
 <meta name="twitter:image" content="https://optrack.app/optrack-share.png">
 <link rel="manifest" href="/manifest.json">
 <script src="demo.js"></script>
+<script>try{if(localStorage.getItem('ot-sim')==='1')window.goatcounter.no_onload=true;}catch(e){}</script>
 <script src="brand.js"></script>
 <script src="wc-brand.js"></script>
 <script src="popular.js"></script>

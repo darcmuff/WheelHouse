@@ -1,5 +1,6 @@
 // Cookie-free analytics, only when configured in brand.js (window.BRAND.analytics). Off by default.
 // Events: window.otTrack('/start-free') → goatcounter.count({path, event:true}).
+// Pageviews are loaded directly from each page <head> (count.js + goatPath). This file must not inject count.js again.
 // Never counts localhost, and never counts a simulator run (localStorage ot-sim=1).
 function analyticsTag(A, host){
   if(!A||!A.provider)return null;
@@ -34,8 +35,4 @@ else (function(){
       (window._otQ||[]).splice(0).forEach(function(p){g.count({path:p,event:true});});
     },250);
   };
-  var sim=false;try{sim=localStorage.getItem('ot-sim')==='1';}catch(e){}
-  if(sim)return;
-  var t=analyticsTag(window.BRAND&&window.BRAND.analytics,location.hostname);if(!t)return;
-  var s=document.createElement('script');s.defer=true;s.src=t.src;for(var k in t.attrs)s.setAttribute(k,t.attrs[k]);document.head.appendChild(s);
 })();
