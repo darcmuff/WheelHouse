@@ -5,7 +5,7 @@ window.BRAND = {
   shortName: 'OpTrack',               // home-screen label (≤12 chars ideal)
   tagline: 'Options Wheel Tracker',
   description: 'Track, analyse and optimise your options wheel strategy.',
-  accent: '#f8f9fc',                  // manifest theme colour (brand orange #b83a1a lives in the CSS :root block as --brand-orange)
+  accent: '#f8f9fc',                  // manifest theme colour (brand orange #FF5A36 lives in the CSS :root block as --brand-orange)
   background: '#f8f9fc',
   cachePrefix: 'optrack',             // service-worker cache name prefix (lowercase, no spaces)
   siteUrl: 'https://optrack.app',                    // live public domain

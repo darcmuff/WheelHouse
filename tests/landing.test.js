@@ -48,7 +48,7 @@ test('landing drop the roll tagline, keep wheel wording, V2 hero cards',()=>{
   assert.ok(L.includes('class="v2show"')&&L.includes('img/hero-wheel.webp')&&L.includes('img/hero-leap.webp'));
   assert.ok(fs.existsSync(path.join(A,'img/hero-wheel.webp'))&&fs.existsSync(path.join(A,'img/hero-leap.webp')));
   assert.ok(L.includes('class="u v2a"')&&L.includes('class="price v2a"')&&L.includes('id="grokbot"'));
-  assert.ok(L.includes('border:1px solid #b83a1a')&&L.includes('background:#b83a1a'));
+  assert.ok(L.includes('border:1px solid #FF5A36')&&L.includes('background:#b83a1a'));
 });
 test('landing is light: no external CSS/fonts, images small',()=>{assert.ok(!/<link[^>]+stylesheet/.test(L));fs.readdirSync(path.join(A,'img')).forEach(f=>assert.ok(fs.statSync(path.join(A,'img',f)).size<60000,f));});
 test('analytics: goatcounter on the public site, cookie-free providers only, never on localhost or a simulator run',()=>{const ctx={window:{}};require('vm').runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);
