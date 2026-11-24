@@ -108,10 +108,12 @@
 <!-- Firebase loaded inside main module script -->
 <style>
 :root{
+  /* THE site orange (the New wheel button). Every orange points here; hover shades derive from it. */
+  --brand-orange:#b83a1a; --brand-orange-rgb:184,58,26; --brand-orange-hover:#a3321a;
   --bg:#f8f9fc; --bg2:#ffffff; --bg3:#f1f2f6; --bg4:#e4e6eb;
   --border:#e4e6eb; --border2:#d2d5dc;
-  --orange:#FF5A36; --orange2:#e84a28; --orangeL:#ffe6df; --orangeD:rgba(255,90,54,0.08);
-  --text:#110f15; --text2:#545a56; --text3:#5b5d62; --orange-safe:#b83a1a;
+  --orange:var(--brand-orange); --orange2:var(--brand-orange-hover); --orangeL:#f6e1da; --orangeD:rgba(var(--brand-orange-rgb),0.08);
+  --text:#110f15; --text2:#545a56; --text3:#5b5d62; --orange-safe:var(--brand-orange);
   --green:#2f7d57; --red:#b5483d; --blue:#3f6c9a; --yellow:#8a5a12; --silver:#3c423e;
   --shadow:0 2px 4px rgba(17,15,21,.05),0 8px 16px rgba(17,15,21,.06);
 }
@@ -122,10 +124,10 @@
   --bg4:     #363840;
   --border:  #33363d;
   --border2: #42454e;
-  --orange:  #0d9488;
-  --orange2: #14b8a6;
-  --orangeL: #ccfbf1;
-  --orangeD: rgba(255,90,54,0.12);
+  --orange:  var(--brand-orange);
+  --orange2: var(--brand-orange-hover);
+  --orangeL: rgba(var(--brand-orange-rgb),.14);
+  --orangeD: rgba(var(--brand-orange-rgb),0.12);
   --text:    #f0f1f3;
   --text2:   #b2b6bf;
   --text3:   #8d95a8;
@@ -238,7 +240,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .rot-mini .rot-logo{width:1.375rem;height:1.375rem}
 .rot-mini .mini-ticker{
   font-size:0.825rem;font-weight:720;color:var(--orange);letter-spacing:.4px;
-  background:var(--orangeD);border:1px solid rgba(249,115,22,.35);
+  background:var(--orangeD);border:1px solid rgba(var(--brand-orange-rgb),.35);
   padding:2px 0.4375rem;border-radius:0.25rem;text-align:center;
 }
 .rot-mini .mini-ticker.cn{color:var(--text3);background:var(--bg3);border-color:var(--border)}
@@ -315,7 +317,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .rot-logo.cn{opacity:.5}
 .rot-ticker{
   font-size:0.825rem;font-weight:720;color:var(--orange);letter-spacing:.4px;
-  background:var(--orangeD);border:1px solid rgba(249,115,22,.35);
+  background:var(--orangeD);border:1px solid rgba(var(--brand-orange-rgb),.35);
   padding:2px 0.4375rem;border-radius:0.25rem;flex-shrink:0;
 }
 .rot-ticker.cn{color:var(--text3);background:var(--bg3);border-color:var(--border)}
@@ -432,7 +434,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .nw-box{position:relative;display:block;height:1.75rem}
 #new-rot-ticker-top{display:block;background:#fff;color:#111;border:1px solid var(--border);outline:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #new-rot-ticker-top::placeholder{color:#5b5d62;opacity:1;font-weight:600}
-#new-rot-ticker-top:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,90,54,.35)}
+#new-rot-ticker-top:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(var(--brand-orange-rgb),.35)}
 .nw-list{position:absolute;z-index:40;top:calc(100% + 0.25rem);left:0;width:16rem;max-height:14rem;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:0.375rem;box-shadow:var(--shadow)}
 .nw-item,.nw-note{display:flex;gap:0.5rem;align-items:baseline;width:100%;text-align:left;background:none;border:0;padding:0.4rem 0.55rem;font-size:0.825rem;color:var(--text);cursor:pointer}
 .nw-item.on,.nw-item:hover{background:var(--bg3)}
@@ -707,7 +709,7 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .leap-bar{height:0.3125rem;background:var(--bg4);border-radius:0.1875rem;overflow:hidden;margin:0.625rem 0 0.25rem}.leap-bar>i{display:block;height:100%;background:var(--orange)}
 .leap-barl{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text3)}.leap-barl b{color:var(--text)}
 .leap-split{display:flex;height:1rem;border-radius:0.25rem;overflow:hidden;margin-top:0.625rem;font-size:0.675rem;font-weight:720;white-space:nowrap}
-.leap-split .in{background:rgba(255,90,54,.35);color:var(--orangeL);display:flex;align-items:center;padding-left:0.375rem;overflow:hidden}
+.leap-split .in{background:rgba(var(--brand-orange-rgb),.35);color:var(--orangeL);display:flex;align-items:center;padding-left:0.375rem;overflow:hidden}
 .leap-split .tv{background:rgba(251,191,36,.18);color:var(--yellow);display:flex;align-items:center;padding-left:0.375rem;flex:1;overflow:hidden}
 .leap-kv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-top:0.625rem}
 .leap-kv div{background:var(--bg3);border-radius:0.375rem;padding:0.375rem 0.5rem;min-width:0}.leap-kv b{display:block;font-size:0.8125rem;font-weight:720}.leap-kv span{font-size:0.75rem;color:var(--text3)}
@@ -779,7 +781,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tn-bot:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(17,15,21,.08)}
 .tn-bot:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 .tnb-av{position:relative;width:2.875rem;height:2.875rem;flex-shrink:0;margin:-0.5rem -0.25rem -0.5rem -0.375rem}
-.tnb-av::before{content:"";position:absolute;inset:-10%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,170,110,.55),rgba(255,170,110,0))}
+.tnb-av::before{content:"";position:absolute;inset:-10%;border-radius:50%;background:radial-gradient(closest-side,rgba(var(--brand-orange-rgb),.2),rgba(var(--brand-orange-rgb),0))}
+.tnb-av use{fill:var(--brand-orange)}
 .tnb-hop,.tnb-bob,.tnb-tilt{display:block;width:100%;height:100%}
 .tnb-hop{position:relative;z-index:1}
 .tnb-av svg{display:block;width:100%;height:100%;overflow:visible}
@@ -789,7 +792,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tnb-by{display:flex;align-items:center;gap:0.3125rem;font-size:0.625rem;font-weight:600;letter-spacing:0.02em;color:var(--text3)}
 .tnb-xai{display:block;height:13px;width:auto;color:var(--text)}
 .tnb-hl{font-weight:800;font-size:0.875rem;letter-spacing:-0.005em;color:var(--text)}
-.tnb-btn{display:inline-flex;align-items:center;gap:0.375rem;margin-left:1.25rem;color:#fff;font-weight:740;font-size:0.75rem;padding:0.5rem 0.8125rem;border-radius:6px;background:linear-gradient(135deg,#FF8A2E 0%,#FF6700 100%);box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 3px 10px rgba(255,103,0,.30)}
+.tnb-btn{display:inline-flex;align-items:center;gap:0.375rem;margin-left:1.25rem;color:#fff;font-weight:740;font-size:0.75rem;padding:0.5rem 0.8125rem;border-radius:6px;background:var(--brand-orange);box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 3px 10px rgba(var(--brand-orange-rgb),.28)}
+.tn-bot:hover .tnb-btn{background:var(--brand-orange-hover)}
 .tnb-btn svg{display:block}
 .tnb-bob{animation:tnb-bob 2.6s ease-in-out infinite}
 .tnb-hop{animation:tnb-hop 7s cubic-bezier(.3,.7,.4,1) infinite;transform-origin:50% 100%}
@@ -889,7 +893,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .ret-pop select{font-weight:480!important}
 .ret-pop .wl-wi-in label{white-space:nowrap}
 .ret-pop .wl-wi-in input,.ret-pop select{height:2.4rem;font-size:0.85rem!important;outline:none;transition:border-color .15s,box-shadow .15s}
-.ret-pop .wl-wi-in input:focus,.ret-pop select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,90,54,.25)}
+.ret-pop .wl-wi-in input:focus,.ret-pop select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(var(--brand-orange-rgb),.25)}
 .ret-pop .ret-dol input{text-align:left;padding-left:1.35rem!important}
 .ret-pop .ret-dol::before{left:0.55rem;transform:translateY(-50%);margin-top:0.125rem;color:var(--text)}
 .ret-pct{position:relative;display:block}.ret-pct::after{content:"%";position:absolute;right:0.6rem;top:50%;transform:translateY(-50%);margin-top:0.125rem;color:var(--text);font-size:0.85rem;pointer-events:none}
@@ -1074,7 +1078,7 @@ html .hk-back .hk-x{color:inherit;opacity:.72}
 #mSettings .btn{border-radius:0.625rem}
 .btn-ghost{background:var(--bg2);border:1px solid var(--border);color:var(--text)}.btn-ghost:hover{background:var(--bg3)}
 /* dark theme tune-up */
-[data-theme="dark"]{--bg:#111111;--bg2:#1C1C1E;--bg3:#26262a;--bg4:#313136;--border:#2c2c30;--border2:#3a3a40;--orange:#FF5A36;--orange2:#ff7a5c;--orangeL:rgba(255,90,54,.14);--orangeD:rgba(255,90,54,.12);--text:#F5F3EE;--text2:#c9c7c2;--text3:#9A9A9F;--green:#3DDC84;--red:#FF8A8A;--blue:#86aee0;--yellow:#d9a54d;--silver:#c8ccc8;--shadow:none}
+[data-theme="dark"]{--bg:#111111;--bg2:#1C1C1E;--bg3:#26262a;--bg4:#313136;--border:#2c2c30;--border2:#3a3a40;--orange:var(--brand-orange);--orange2:var(--brand-orange-hover);--orangeL:rgba(var(--brand-orange-rgb),.14);--orangeD:rgba(var(--brand-orange-rgb),.12);--text:#F5F3EE;--text2:#c9c7c2;--text3:#9A9A9F;--green:#3DDC84;--red:#FF8A8A;--blue:#86aee0;--yellow:#d9a54d;--silver:#c8ccc8;--shadow:none}
 [data-theme="dark"] .hb-w{background:#3d6b55}
 .btn-success,.btn-warn{background:var(--bg2);color:var(--text);border:1px solid var(--border)}
 .btn-danger{background:transparent;color:var(--red);border:1px solid color-mix(in srgb,var(--red) 35%,transparent)}
@@ -1111,7 +1115,7 @@ html .hk-back .hk-x{color:inherit;opacity:.72}
 .wc .rot-ticker{font-size:1.125rem!important;font-weight:720!important;letter-spacing:.01em}
 .wc .rot-logo,.wc .rot-num{box-shadow:0 0 0 1.5px rgba(255,255,255,.55);background-color:#fff}
 .wc .rot-num{color:#110f15;border-color:transparent}
-.wc .rot-badge{background:rgba(255,255,255,.95)!important;color:#a8300f!important;font-family:inherit}
+.wc .rot-badge{background:rgba(255,255,255,.95)!important;color:var(--brand-orange)!important;font-family:inherit}
 .wc .rot-badge.closed{color:#7a1f18!important}
 .wc .lc-lacts .btn,.wc .trade-body .btn{font-family:inherit;border-radius:6px}
 .wc>.rot-header .lc-lacts .btn,.wc.rot-mini-bar>.lc-h .lc-lacts .btn{background:#fff;border-color:#fff;color:#110f15;font-weight:720}
@@ -1182,12 +1186,12 @@ html .hk-back .hk-x{color:inherit;opacity:.72}
 
 /* ── OpTrack V2 (Michelle's handover): Urbanist, G1 heroes with T1s carbon, 12px cards, 6px buttons, AA greys ── */
 :root{--v2-carbon:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48ZyBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4xMCkiPjxyZWN0IHg9IjguMDAiIHk9IjAuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iMC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMDAiIHk9IjQuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iNC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMDAiIHk9IjguMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSI4LjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iNC4wMCIgeT0iMTIuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjwvZz48ZyBmaWxsPSJyZ2JhKDAsMCwwLC4xNCkiPjxyZWN0IHg9IjAuMDAiIHk9IjAuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSIwLjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iNC4wMCIgeT0iNC4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjguMDAiIHk9IjQuMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjAwIiB5PSI4LjAwIiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iMTIuMDAiIHk9IjguMDAiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIwLjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjEyLjAwIiB5PSIxMi4wMCIgd2lkdGg9IjQuMDAiIGhlaWdodD0iNC4wMCIvPjwvZz48ZyBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC4xNikiPjxyZWN0IHg9IjAuMzUiIHk9IjAuMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjQuMzUiIHk9IjAuMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjguMDAiIHk9IjAuMzUiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjAuNyIvPjxyZWN0IHg9IjEyLjAwIiB5PSIwLjM1IiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSIwLjciLz48cmVjdCB4PSIwLjAwIiB5PSI0LjM1IiB3aWR0aD0iNC4wMCIgaGVpZ2h0PSIwLjciLz48cmVjdCB4PSI0LjM1IiB5PSI0LjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI4LjM1IiB5PSI0LjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSIxMi4wMCIgeT0iNC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iMC4wMCIgeT0iOC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iNC4wMCIgeT0iOC4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iOC4zNSIgeT0iOC4wMCIgd2lkdGg9IjAuNyIgaGVpZ2h0PSI0LjAwIi8+PHJlY3QgeD0iMTIuMzUiIHk9IjguMDAiIHdpZHRoPSIwLjciIGhlaWdodD0iNC4wMCIvPjxyZWN0IHg9IjAuMzUiIHk9IjEyLjAwIiB3aWR0aD0iMC43IiBoZWlnaHQ9IjQuMDAiLz48cmVjdCB4PSI0LjAwIiB5PSIxMi4zNSIgd2lkdGg9IjQuMDAiIGhlaWdodD0iMC43Ii8+PHJlY3QgeD0iOC4wMCIgeT0iMTIuMzUiIHdpZHRoPSI0LjAwIiBoZWlnaHQ9IjAuNyIvPjxyZWN0IHg9IjEyLjM1IiB5PSIxMi4wMCIgd2lkdGg9IjAuNyIgaGVpZ2h0PSI0LjAwIi8+PC9nPjwvc3ZnPg==");--v2-fade:linear-gradient(90deg,#000 0%,#000 18%,rgba(0,0,0,.45) 38%,transparent 56%);
-  --v2-g1:radial-gradient(60% 120% at 92% 18%,rgba(255,90,54,.32) 0%,rgba(255,90,54,0) 70%),linear-gradient(104deg,#111111 0%,#1c0a0c 18%,#3a120e 42%,#6a1c10 70%,#a1290d 100%);
+  --v2-g1:radial-gradient(60% 120% at 92% 18%,rgba(var(--brand-orange-rgb),.32) 0%,rgba(var(--brand-orange-rgb),0) 70%),linear-gradient(104deg,#111111 0%,#1c0a0c 18%,#3a120e 42%,#6a1c10 70%,#a1290d 100%);
   --v2-mut-dark:rgba(255,255,255,.88);--v2-pos-dark:#b6f5d4;--v2-neg-dark:#ffd4ce}
 html:not([data-theme="dark"]) body{background:var(--bg)}
 .btn{border-radius:6px}
 .btn-primary{background:var(--orange-safe);border-color:var(--orange-safe);color:#fff}
-.btn-primary:hover{background:#a3321a;border-color:#a3321a}
+.btn-primary:hover{background:var(--brand-orange-hover);border-color:var(--brand-orange-hover)}
 .d-panel,.d-kpi,.leap-card,.a-chart-box,.a-stat,.chart-card,.rot-card,.astat,.hcard,.hk{border-radius:12px}
 .hk-wl b,.lc-pct,.mpl-table td.num{font-weight:480!important}
 #content{box-sizing:border-box;max-width:1280px;padding-left:28px!important;padding-right:28px!important}
@@ -1283,7 +1287,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .lcw .lc-mut{color:#fff}
 .lcw>.lc-hero .lc-pct{font-size:14.4px!important;margin-top:2px}
 .lcw>.lc-bar{height:3px;margin:-8px 22px 14px;background:rgba(255,255,255,.18)}
-.lcw>.lc-bar i{background:#FF5A36}
+.lcw>.lc-bar i{background:var(--brand-orange)}
 .lcw>.trade-body{background:var(--bg2);color:var(--text);border:1px solid rgba(17,15,21,.08);border-radius:12px;margin:0 18px 18px!important;box-shadow:0 2px 4px rgba(17,15,21,.05)}
 .lcw .trade-body .btn{border-radius:6px;font-family:inherit}
 @media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 8px 6px;flex-wrap:nowrap;align-items:flex-start;gap:0.4rem 0.35rem;min-width:0;box-sizing:border-box}.lcw>.lc-h>div:first-child{min-width:0;flex:1}.lcw>.lc-h .lc-h-right{flex-shrink:0;align-self:flex-start;margin-left:auto;margin-right:0}.lcw>.wl-top{padding:0 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}}
@@ -1326,7 +1330,7 @@ select,textarea,
   border-color: #4a4e56;
 }
 .v2-hero.v2-home .hk-grid > .hk.hk-need {
-  border-color: #FF5A36;
+  border-color: var(--brand-orange);
   box-shadow: none;
 }
 @media (hover:hover) {
@@ -1336,22 +1340,22 @@ select,textarea,
   .v2-hero.v2-home .hk-grid > .hk.hk-nx:focus-visible,
   .v2-hero.v2-home .hk-grid > .hk[role="button"]:focus-visible,
   .v2-hero.v2-home .hk-grid > .hk[onclick]:focus-visible {
-    border-color: #FF5A36;
+    border-color: var(--brand-orange);
   }
 }
 .v2-hero.v2-home .hk-grid > .hk.hk-nx:active,
 .v2-hero.v2-home .hk-grid > .hk[role="button"]:active,
 .v2-hero.v2-home .hk-grid > .hk[onclick]:active {
-  border-color: #FF5A36;
+  border-color: var(--brand-orange);
 }
 .v2-hero.v2-home .hk-grid > .hk.hk-nx,
 .v2-hero.v2-home .hk-grid > .hk.hk-need {
   cursor: pointer;
 }
 .hk-nx{cursor:pointer}
-.hk-nx:hover{background:rgba(255,90,54,.07)}
+.hk-nx:hover{background:rgba(var(--brand-orange-rgb),.07)}
 .hk-nx:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
-@keyframes nx-flash{0%{box-shadow:inset 0 0 0 2px var(--orange),0 0 0 6px rgba(255,90,54,.22)}100%{box-shadow:inset 0 0 0 2px transparent,0 0 0 0 transparent}}
+@keyframes nx-flash{0%{box-shadow:inset 0 0 0 2px var(--orange),0 0 0 6px rgba(var(--brand-orange-rgb),.22)}100%{box-shadow:inset 0 0 0 2px transparent,0 0 0 0 transparent}}
 .nx-flash{animation:nx-flash 1.5s ease-out}
 .pc-measure{-webkit-appearance:none;appearance:none;font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-weight:480;font-size:0.825rem;border:1px solid var(--border);border-radius:6px;background-color:var(--bg2);color:var(--text);padding:0.1875rem 32px 0.1875rem 0.5rem;cursor:pointer;margin:0;flex:0 0 auto;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 
@@ -1372,7 +1376,7 @@ select,textarea,
   border:1px solid rgba(255,255,255,.45);
   flex-shrink:0;
 }
-.lcw .rot-badge{background:rgba(255,255,255,.95)!important;color:#a8300f!important;font-family:inherit}
+.lcw .rot-badge{background:rgba(255,255,255,.95)!important;color:var(--brand-orange)!important;font-family:inherit}
 .lcw .rot-header-btn svg:not([fill="none"]){fill:#fff}
 .lcw .rot-header-btn svg[stroke]{stroke:#fff}
 .lcw>.lc-h .lc-h-right{display:flex;align-items:center;gap:0.5rem;margin-left:auto;padding-left:12px;flex-shrink:0}
@@ -1683,7 +1687,7 @@ select,textarea,
     transition:border-color .15s ease;
   }
   .v2-hero.v2-home .hk-grid>.hk.hk-need{
-    border-color:#FF5A36;
+    border-color:var(--brand-orange);
     box-shadow:none;
   }
   .v2-home .hk-l{
@@ -1917,8 +1921,8 @@ select,textarea,
 #auth-lead{color:var(--text2)!important;font-weight:480;margin:-.5rem 0 1rem!important}
 #auth-email,#auth-password{background:#fff!important;border:1px solid var(--border)!important;border-radius:8px!important;color:var(--text)!important;font-weight:480!important;font-family:inherit!important;font-size:.9375rem!important;width:100%;box-sizing:border-box}
 #auth-email::placeholder,#auth-password::placeholder{color:var(--text3)}
-#auth-forgot{color:#b83a1a!important;font-weight:720}
-#auth-submit-btn{background:#b83a1a!important;border-radius:8px!important;font-weight:720!important;font-size:.9375rem!important;padding:.8rem!important;font-family:inherit!important}
+#auth-forgot{color:var(--brand-orange)!important;font-weight:720}
+#auth-submit-btn{background:var(--brand-orange)!important;border-radius:8px!important;font-weight:720!important;font-size:.9375rem!important;padding:.8rem!important;font-family:inherit!important}
 #auth-overlay .au-or span{color:var(--text3)!important;font-weight:480}
 #auth-google-btn{background:#fff!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:8px!important;font-weight:720!important;font-family:inherit!important}
 #auth-legal{color:var(--text3)!important;font-weight:480;font-size:.8125rem!important}
@@ -2091,7 +2095,7 @@ select,textarea,
   <header id="topnav">
     <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg" alt=""><span class="tn-word"><span class="wm" data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span></div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheels</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
-    <div class="tn-bot-wrap"><a id="tn-optrack-bot" class="tn-bot" href="" target="_blank" rel="noopener" onclick="if(typeof otTrack==='function')otTrack('/optrack-bot')"><span class="tnb-av" aria-hidden="true"><span class="tnb-hop"><span class="tnb-bob"><span class="tnb-tilt"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" viewBox="0 0 122.67 122.67"><defs><path id="tnb-body" d="M18.65 74.87 18.66 73.27 18.73 71.66 18.86 70.06 19.04 68.46 19.28 66.86 19.58 65.26 19.93 63.68 20.33 62.1 20.8 60.54 21.31 58.98 21.88 57.44 22.5 55.92 23.17 54.42 23.9 52.93 24.67 51.46 25.5 50.02 26.37 48.6 27.29 47.21 28.26 45.84 29.27 44.51 30.33 43.2 31.43 41.92 32.58 40.68 33.76 39.47 34.98 38.3 36.25 37.16 37.54 36.07 38.87 35.01 40.24 33.99 41.63 33.01 43.05 32.08 44.5 31.19 45.97 30.34 47.47 29.54 48.98 28.79 50.52 28.08 52.08 27.43 53.64 26.82 55.23 26.26 56.83 25.75 58.44 25.29 60.05 24.88 61.69 24.52 63.33 24.22 64.98 23.97 66.65 23.77 68.29 23.62 69.93 23.53 71.58 23.49 73.22 23.5 74.87 23.56 76.51 23.68 78.18 23.85 79.84 24.07 81.47 24.35 83.12 24.68 84.74 25.06 86.36 25.49 87.96 25.97 89.57 26.5 91.14 27.08 92.71 27.72 94.26 28.39 95.79 29.12 97.3 29.9 98.78 30.71 100.25 31.58 101.69 32.49 103.1 33.44 104.48 34.43 105.83 35.47 107.14 36.55 108.42 37.66 109.66 38.81 110.87 40 112.04 41.22 113.16 42.48 114.24 43.77 115.28 45.09 116.27 46.43 117.22 47.81 118.11 49.21 118.96 50.64 119.76 52.09 120.51 53.57 121.21 55.06 121.86 56.57 122.46 58.1 123 59.64 123.49 61.2 123.92 62.77 124.3 64.35 124.62 65.94 124.89 67.53 125.1 69.13 125.26 70.73 125.35 72.34 125.39 73.94 125.37 75.54 125.29 77.14 125.15 78.73 124.96 80.31 124.7 81.89 124.39 83.45 124.01 85 123.58 86.54 123.09 88.06 122.54 89.57 121.92 91.05 121.25 92.52 120.52 93.96 119.74 95.38 118.89 96.77 117.99 98.14 117.02 99.47 116 100.78 114.93 102.05 113.8 103.3 112.62 104.51 111.38 105.68 110.09 106.82 108.74 107.91 107.35 108.97 105.92 109.99 104.44 110.97 102.92 111.9 101.37 112.79 99.77 113.64 98.15 114.44 96.5 115.2 94.84 115.9 93.16 116.56 91.46 117.17 89.75 117.73 88.03 118.25 86.32 118.71 84.58 119.11 82.83 119.47 81.12 119.78 79.37 120.03 77.61 120.23 75.88 120.38 74.15 120.47 72.42 120.51 70.69 120.5 68.97 120.44 67.23 120.32 65.47 120.15 63.72 119.93 62 119.65 60.24 119.33 58.5 118.95 56.78 118.52 55.05 118.04 53.33 117.51 51.62 116.93 49.93 116.3 48.26 115.62 46.6 114.89 44.96 114.12 43.35 113.3 41.78 112.44 40.24 111.53 38.75 110.58 37.3 109.58 35.89 108.55 34.52 107.47 33.21 106.36 31.96 105.21 30.75 104.02 29.6 102.8 28.5 101.54 27.46 100.25 26.47 98.93 25.55 97.58 24.68 96.21 23.87 94.8 23.11 93.37 22.42 91.92 21.78 90.45 21.2 88.95 20.68 87.44 20.22 85.91 19.82 84.37 19.48 82.81 19.2 81.24 18.97 79.66 18.81 78.07 18.7 76.47Z"/><mask id="tnb-inside" maskUnits="userSpaceOnUse" x="0" y="0" width="144" height="144"><use href="#tnb-body" fill="#fff"/></mask></defs><g transform="matrix(0.71 0 0 0.71 9.83 9.83)"><use href="#tnb-body" fill="#FF781C"/><g mask="url(#tnb-inside)"><g class="tnb-eyes"><path d="M52.53 86.19 52.52 85.43 52.52 84.67 52.51 83.91 52.5 83.14 52.5 82.38 52.49 81.62 52.48 80.86 52.48 80.09 52.47 79.33 52.46 78.57 52.46 77.81 52.45 77.05 52.44 76.28 52.44 75.52 52.43 74.76 52.42 74 52.42 73.23 52.41 72.47 52.4 71.71 52.4 70.95 52.67 68.97 53.5 67.18 54.82 65.75 56.51 64.83 58.4 64.5 60.32 64.8 62.08 65.69 63.49 67.09 64.4 68.87 64.73 70.84 64.74 71.6 64.75 72.36 64.76 73.13 64.76 73.89 64.77 74.65 64.78 75.41 64.78 76.18 64.79 76.94 64.79 77.7 64.8 78.46 64.8 79.22 64.81 79.99 64.81 80.75 64.82 81.51 64.82 82.27 64.83 83.04 64.83 83.8 64.83 84.56 64.84 85.32 64.84 86.09 64.54 88.06 63.65 89.85 62.26 91.28 60.52 92.2 58.61 92.53 56.72 92.24 55.04 91.34 53.7 89.94 52.84 88.17Z" fill="#fff"/><path d="M81.19 85.94 81.18 85.18 81.18 84.42 81.18 83.66 81.17 82.89 81.17 82.13 81.17 81.37 81.16 80.61 81.16 79.84 81.15 79.08 81.15 78.32 81.14 77.56 81.14 76.8 81.13 76.03 81.12 75.27 81.12 74.51 81.11 73.75 81.1 72.98 81.1 72.22 81.09 71.46 81.08 70.7 81.37 68.72 82.24 66.93 83.61 65.5 85.33 64.58 87.22 64.25 89.1 64.55 90.79 65.44 92.13 66.84 92.99 68.62 93.3 70.59 93.31 71.35 93.32 72.12 93.32 72.88 93.33 73.64 93.34 74.4 93.34 75.16 93.35 75.93 93.35 76.69 93.36 77.45 93.36 78.21 93.37 78.98 93.37 79.74 93.37 80.5 93.37 81.26 93.37 82.02 93.38 82.79 93.38 83.55 93.38 84.31 93.37 85.07 93.37 85.84 93.08 87.81 92.24 89.6 90.92 91.03 89.26 91.95 87.39 92.28 85.5 91.99 83.77 91.09 82.39 89.69 81.5 87.92Z" fill="#fff"/></g></g></g></svg></span></span></span><span class="tnb-shadow"></span></span><span class="tnb-tx"><span class="tnb-by">Brought to you by <svg class="tnb-xai" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="xAI" viewBox="0 0 526 578" fill="currentColor"><path d="M122 405 0 578 121 578 182 491ZM1 186 274 578 395 578 121 186ZM526 45 427 186 437 578 516 578ZM526 0 405 0 214 272 274 360Z"/></svg></span><span class="tnb-hl">Never enter a trade again.</span></span><span class="tnb-btn">Get OpTrack Bot<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></div>
+    <div class="tn-bot-wrap"><a id="tn-optrack-bot" class="tn-bot" href="" target="_blank" rel="noopener" onclick="if(typeof otTrack==='function')otTrack('/optrack-bot')"><span class="tnb-av" aria-hidden="true"><span class="tnb-hop"><span class="tnb-bob"><span class="tnb-tilt"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" viewBox="0 0 122.67 122.67"><defs><path id="tnb-body" d="M18.65 74.87 18.66 73.27 18.73 71.66 18.86 70.06 19.04 68.46 19.28 66.86 19.58 65.26 19.93 63.68 20.33 62.1 20.8 60.54 21.31 58.98 21.88 57.44 22.5 55.92 23.17 54.42 23.9 52.93 24.67 51.46 25.5 50.02 26.37 48.6 27.29 47.21 28.26 45.84 29.27 44.51 30.33 43.2 31.43 41.92 32.58 40.68 33.76 39.47 34.98 38.3 36.25 37.16 37.54 36.07 38.87 35.01 40.24 33.99 41.63 33.01 43.05 32.08 44.5 31.19 45.97 30.34 47.47 29.54 48.98 28.79 50.52 28.08 52.08 27.43 53.64 26.82 55.23 26.26 56.83 25.75 58.44 25.29 60.05 24.88 61.69 24.52 63.33 24.22 64.98 23.97 66.65 23.77 68.29 23.62 69.93 23.53 71.58 23.49 73.22 23.5 74.87 23.56 76.51 23.68 78.18 23.85 79.84 24.07 81.47 24.35 83.12 24.68 84.74 25.06 86.36 25.49 87.96 25.97 89.57 26.5 91.14 27.08 92.71 27.72 94.26 28.39 95.79 29.12 97.3 29.9 98.78 30.71 100.25 31.58 101.69 32.49 103.1 33.44 104.48 34.43 105.83 35.47 107.14 36.55 108.42 37.66 109.66 38.81 110.87 40 112.04 41.22 113.16 42.48 114.24 43.77 115.28 45.09 116.27 46.43 117.22 47.81 118.11 49.21 118.96 50.64 119.76 52.09 120.51 53.57 121.21 55.06 121.86 56.57 122.46 58.1 123 59.64 123.49 61.2 123.92 62.77 124.3 64.35 124.62 65.94 124.89 67.53 125.1 69.13 125.26 70.73 125.35 72.34 125.39 73.94 125.37 75.54 125.29 77.14 125.15 78.73 124.96 80.31 124.7 81.89 124.39 83.45 124.01 85 123.58 86.54 123.09 88.06 122.54 89.57 121.92 91.05 121.25 92.52 120.52 93.96 119.74 95.38 118.89 96.77 117.99 98.14 117.02 99.47 116 100.78 114.93 102.05 113.8 103.3 112.62 104.51 111.38 105.68 110.09 106.82 108.74 107.91 107.35 108.97 105.92 109.99 104.44 110.97 102.92 111.9 101.37 112.79 99.77 113.64 98.15 114.44 96.5 115.2 94.84 115.9 93.16 116.56 91.46 117.17 89.75 117.73 88.03 118.25 86.32 118.71 84.58 119.11 82.83 119.47 81.12 119.78 79.37 120.03 77.61 120.23 75.88 120.38 74.15 120.47 72.42 120.51 70.69 120.5 68.97 120.44 67.23 120.32 65.47 120.15 63.72 119.93 62 119.65 60.24 119.33 58.5 118.95 56.78 118.52 55.05 118.04 53.33 117.51 51.62 116.93 49.93 116.3 48.26 115.62 46.6 114.89 44.96 114.12 43.35 113.3 41.78 112.44 40.24 111.53 38.75 110.58 37.3 109.58 35.89 108.55 34.52 107.47 33.21 106.36 31.96 105.21 30.75 104.02 29.6 102.8 28.5 101.54 27.46 100.25 26.47 98.93 25.55 97.58 24.68 96.21 23.87 94.8 23.11 93.37 22.42 91.92 21.78 90.45 21.2 88.95 20.68 87.44 20.22 85.91 19.82 84.37 19.48 82.81 19.2 81.24 18.97 79.66 18.81 78.07 18.7 76.47Z"/><mask id="tnb-inside" maskUnits="userSpaceOnUse" x="0" y="0" width="144" height="144"><use href="#tnb-body" fill="#fff"/></mask></defs><g transform="matrix(0.71 0 0 0.71 9.83 9.83)"><use href="#tnb-body" fill="#b83a1a"/><g mask="url(#tnb-inside)"><g class="tnb-eyes"><path d="M52.53 86.19 52.52 85.43 52.52 84.67 52.51 83.91 52.5 83.14 52.5 82.38 52.49 81.62 52.48 80.86 52.48 80.09 52.47 79.33 52.46 78.57 52.46 77.81 52.45 77.05 52.44 76.28 52.44 75.52 52.43 74.76 52.42 74 52.42 73.23 52.41 72.47 52.4 71.71 52.4 70.95 52.67 68.97 53.5 67.18 54.82 65.75 56.51 64.83 58.4 64.5 60.32 64.8 62.08 65.69 63.49 67.09 64.4 68.87 64.73 70.84 64.74 71.6 64.75 72.36 64.76 73.13 64.76 73.89 64.77 74.65 64.78 75.41 64.78 76.18 64.79 76.94 64.79 77.7 64.8 78.46 64.8 79.22 64.81 79.99 64.81 80.75 64.82 81.51 64.82 82.27 64.83 83.04 64.83 83.8 64.83 84.56 64.84 85.32 64.84 86.09 64.54 88.06 63.65 89.85 62.26 91.28 60.52 92.2 58.61 92.53 56.72 92.24 55.04 91.34 53.7 89.94 52.84 88.17Z" fill="#fff"/><path d="M81.19 85.94 81.18 85.18 81.18 84.42 81.18 83.66 81.17 82.89 81.17 82.13 81.17 81.37 81.16 80.61 81.16 79.84 81.15 79.08 81.15 78.32 81.14 77.56 81.14 76.8 81.13 76.03 81.12 75.27 81.12 74.51 81.11 73.75 81.1 72.98 81.1 72.22 81.09 71.46 81.08 70.7 81.37 68.72 82.24 66.93 83.61 65.5 85.33 64.58 87.22 64.25 89.1 64.55 90.79 65.44 92.13 66.84 92.99 68.62 93.3 70.59 93.31 71.35 93.32 72.12 93.32 72.88 93.33 73.64 93.34 74.4 93.34 75.16 93.35 75.93 93.35 76.69 93.36 77.45 93.36 78.21 93.37 78.98 93.37 79.74 93.37 80.5 93.37 81.26 93.37 82.02 93.38 82.79 93.38 83.55 93.38 84.31 93.37 85.07 93.37 85.84 93.08 87.81 92.24 89.6 90.92 91.03 89.26 91.95 87.39 92.28 85.5 91.99 83.77 91.09 82.39 89.69 81.5 87.92Z" fill="#fff"/></g></g></g></svg></span></span></span><span class="tnb-shadow"></span></span><span class="tnb-tx"><span class="tnb-by">Brought to you by <svg class="tnb-xai" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="xAI" viewBox="0 0 526 578" fill="currentColor"><path d="M122 405 0 578 121 578 182 491ZM1 186 274 578 395 578 121 186ZM526 45 427 186 437 578 516 578ZM526 0 405 0 214 272 274 360Z"/></svg></span><span class="tnb-hl">Never enter a trade again.</span></span><span class="tnb-btn">Get OpTrack Bot<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></div>
     <div class="tn-right">
       <button class="tn-gear" onclick="openSettings()" title="Settings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button>
     </div>
@@ -2262,7 +2266,7 @@ select,textarea,
       <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mLeap')">Cancel</button><button class="btn btn-primary" onclick="leapRunScan()">SmartScan →</button></div>
     </div>
     <div id="lf-panel-manual">
-    <div id="lf-filled" style="display:none;background:rgba(255,90,54,.12);border:1px solid rgba(255,90,54,.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
+    <div id="lf-filled" style="display:none;background:rgba(var(--brand-orange-rgb),.12);border:1px solid rgba(var(--brand-orange-rgb),.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
       <div class="fld"><label>Ticker</label><input id="lf-und" type="text" placeholder="TSLA" style="text-transform:uppercase"></div>
       <div class="fld"><label>Strike ($)</label><input id="lf-strike" type="number" step="0.5"></div>
@@ -2338,7 +2342,7 @@ select,textarea,
     </div>
     <input type="hidden" id="pcc-side" value="sto">
     <div id="pcc-err" style="display:none;color:var(--red);font-size:0.75rem;margin-bottom:0.5rem"></div>
-    <div id="pcc-filled" style="display:none;background:rgba(255,90,54,.12);border:1px solid rgba(255,90,54,.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
+    <div id="pcc-filled" style="display:none;background:rgba(var(--brand-orange-rgb),.12);border:1px solid rgba(var(--brand-orange-rgb),.4);color:var(--orangeL);font-size:0.75rem;padding:0.4375rem 0.625rem;border-radius:0.4375rem;margin-bottom:0.5rem"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.375rem;margin-bottom:0.375rem">
       <div class="fld"><label>Ticker</label><input id="pcc-und" type="text" readonly style="opacity:.7"></div>
       <div class="fld"><label>Strike ($)</label><input id="pcc-strike" type="number" step="0.5"></div>
@@ -8950,7 +8954,7 @@ function renderAnalytics(){
   if(cumData.length>1){
     const pts=cumData.map((d,i)=>{const x=ePL+(i/(cumData.length-1))*ecW;return{x,y:eqY(d.val)};});
     eqLine=`<polyline points="${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')}" fill="none" stroke="var(--orange)" stroke-width="2"/>`;
-    eqArea=`<polygon points="${ePL},${eqY(0)} ${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')} ${pts[pts.length-1].x.toFixed(1)},${eqY(0)}" fill="rgba(255,90,54,0.08)"/>`;
+    eqArea=`<polygon points="${ePL},${eqY(0)} ${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')} ${pts[pts.length-1].x.toFixed(1)},${eqY(0)}" fill="rgba(184,58,26,0.08)"/>`;
     eqDots=pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${cumData[i].val>=0?'var(--orange)':'var(--red)'}" stroke="var(--bg2)" stroke-width="1.5"/>`).join('');
   }
   let eqYTicks='';
@@ -9575,7 +9579,7 @@ function showRollPreview(trades){
   const net=trades.reduce((s,t)=>s+(isCredit(t.action)?t.total:-t.total),0);
   document.getElementById('paste-preview').innerHTML=`
     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6875rem">
-      <span style="background:rgba(255,90,54,0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.75rem;font-weight:720;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">TWO TRADES</span>
+      <span style="background:rgba(var(--brand-orange-rgb),0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.75rem;font-weight:720;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">TWO TRADES</span>
       <span style="font-size:0.825rem;color:var(--text3)">Saved as a close and an open. Link them yourself if you want.</span>
       <span style="margin-left:auto;font-size:0.875rem;font-weight:720;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit: +':'Net debit: -'}$${Math.abs(net).toFixed(2)}</span>
     </div>
