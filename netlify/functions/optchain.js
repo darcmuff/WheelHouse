@@ -103,20 +103,23 @@ async function getMarks(sym, wanted, { fetchImpl = fetch, finnhubKey } = {}) {
   let cboe = await tryJson(cboeUrl, cboeOpts());
   if (!cboe) cboe = await tryJson(cboeUrl, cboeOpts()); // one retry on timeout / network / non-OK
   if (cboe) { const p = pick(cboe, wanted); Object.assign(out.contracts, p.contracts); out.asOf = p.asOf; out.spot = p.spot; if (Object.keys(p.contracts).length) out.sources.push('cboe'); }
-  let missing = wanted.filter(w => !out.contracts[w]);
+  // A Cboe row with no bid and no ask (pre-open snapshot) counts as not found, so a live fallback quote can replace it.
+  const quoted = c => c && (c.bid > 0 || c.ask > 0);
+  const keep = (p) => { for (const k in p.contracts) if (!out.contracts[k] || quoted(p.contracts[k])) out.contracts[k] = p.contracts[k]; };
+  let missing = wanted.filter(w => !quoted(out.contracts[w]));
   if (missing.length) {
     const nd = await tryJson(nasdaqUrl(sym), { headers: NASDAQ_HEADERS, signal: AbortSignal.timeout(8000) });
     if (nd) {
       const p = pickNasdaq(nd, missing);
-      Object.assign(out.contracts, p.contracts);
+      keep(p);
       if (out.spot == null) out.spot = p.spot;
       if (Object.keys(p.contracts).length) out.sources.push('nasdaq');
     }
-    missing = wanted.filter(w => !out.contracts[w]);
+    missing = wanted.filter(w => !quoted(out.contracts[w]));
   }
   if (missing.length && finnhubKey) {
     const fh = await tryJson(`https://finnhub.io/api/v1/stock/option-chain?symbol=${encodeURIComponent(sym)}&token=${finnhubKey}`, { signal: AbortSignal.timeout(8000) });
-    if (fh && !fh.error) { const p = pickFinnhub(fh, missing); Object.assign(out.contracts, p.contracts); if (out.spot == null) out.spot = p.spot; if (Object.keys(p.contracts).length) out.sources.push('finnhub'); }
+    if (fh && !fh.error) { const p = pickFinnhub(fh, missing); keep(p); if (out.spot == null) out.spot = p.spot; if (Object.keys(p.contracts).length) out.sources.push('finnhub'); }
   }
   if (!out.asOf) out.asOf = new Date().toISOString();
   return out;

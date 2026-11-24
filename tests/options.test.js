@@ -218,6 +218,11 @@ const _mk = async () => {
   check('marks: Finnhub {error} payload ignored', !r.contracts[B]);
   calls.length = 0; r = await getMarks('AAPL', [B], { fetchImpl: fake(u => u.includes('cboe') ? cboe : u.includes('nasdaq') ? none : fh) });
   check('marks: no key → Finnhub not called', calls.join() === 'cboe,nasdaq' && !r.contracts[B], { calls, r });
+  const pre = { timestamp: '2026-11-24 14:43:00', data: { current_price: 201, options: [{ option: A, bid: 0, ask: 0, last_trade_price: 5.9, delta: 0 }] } };
+  calls.length = 0; r = await getMarks('AAPL', [A], { fetchImpl: fake(u => u.includes('cboe') ? pre : u.includes('nasdaq') ? nd : null) });
+  check('marks: Cboe zero bid/ask → Nasdaq live quote used', r.contracts[A].src === 'nasdaq' && r.contracts[A].bid === 5.1 && calls.join() === 'cboe,nasdaq', { r, calls });
+  calls.length = 0; r = await getMarks('AAPL', [A], { fetchImpl: fake(u => u.includes('cboe') ? pre : u.includes('nasdaq') ? none : null) });
+  check('marks: Cboe zero bid/ask kept when no fallback quote', r.contracts[A].src === 'cboe' && r.contracts[A].last === 5.9, { r, calls });
   const gl = O.legGreeks(L({ mark: 4, markSrc: 'manual' }), 200, TODAY);
   check('fallback: manual mark → local Black-Scholes greeks', gl && gl.src === 'bs');
 };
