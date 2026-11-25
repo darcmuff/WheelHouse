@@ -13,8 +13,10 @@ function extractConst(name) {
   return m[0];
 }
 
-// Extract a `function name(...){...}` by brace-matching from the opening brace
-function extractFn(name) {
+const WHEEL_NORM_BUNDLE = ['walkLegPairs', 'normWheelShortStcClosers'];
+const WHEEL_NORM_FN = new Set(['realisedPremium', 'wheelSellOutcomes', 'wheelCloseSlices', 'wheelCapturedOnClose', 'wheelRemainLabel', 'wheelListCells']);
+
+function extractFnBody(name) {
   const i = SRC.indexOf(`function ${name}(`);
   if (i < 0) throw new Error(`function ${name} not found in app/index.html`);
   let j = SRC.indexOf('{', i), depth = 0, k = j;
@@ -25,6 +27,14 @@ function extractFn(name) {
     k++;
   }
   return SRC.slice(i, k + 1);
+}
+
+// Extract a `function name(...){...}` by brace-matching from the opening brace
+function extractFn(name) {
+  if (WHEEL_NORM_FN.has(name)) {
+    return WHEEL_NORM_BUNDLE.map(extractFnBody).join('\n') + '\n' + extractFnBody(name);
+  }
+  return extractFnBody(name);
 }
 
 // Build an isolated sandbox containing the requested pieces plus any stubs

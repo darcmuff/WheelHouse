@@ -3158,6 +3158,7 @@ function realisedPremium(trades,today){
   const events=[],open=[];
   Object.entries(groups).forEach(([k,list])=>{
     list=list.map((t,i)=>({...t,id:'r'+i})); // private ids: pairing must not depend on stored ids
+    list=normWheelShortStcClosers(list);
     const tkr=(list.find(t=>t.ticker)||{}).ticker||'';
     const {open:rest,pairs}=walkLegPairs(list);
     const byId={};list.forEach(t=>byId[t.id]=t);
@@ -5295,6 +5296,7 @@ function buildLastAction(trades){
 // whole legs, so partial assignments and partial closes leave the correct remainder open.
 // Returns {open, pairs}: open legs (with `_rem`) plus a map of closerId → [{legId, shares}]
 // recording exactly which opener legs each closer consumed — the raw material for roll chains.
+// Legacy STC-as-short-buy-back is normalised before walkLegPairs in premium/Captured paths; see normWheelShortStcClosers.
 function walkLegPairs(wheelTrades){
   const closing=a=>(a==='BTC'||a==='STC'||a==='IN'||a==='OUT')?1:0; // same-day: openers first
   const sorted=[...wheelTrades].sort((a,b)=>
@@ -5412,6 +5414,17 @@ function walkLegPairs(wheelTrades){
     }
   }
   return{open,pairs};
+}
+// Legacy imports sometimes logged a wheel short buy-back as STC; shallow copies that pair like BTC are treated as BTC for sums (stored trades unchanged).
+function normWheelShortStcClosers(trades){
+  if(!trades||!trades.length)return trades||[];
+  const stcIds=new Set(trades.filter(t=>t.action==='STC').map(t=>t.id));
+  if(!stcIds.size)return trades;
+  const probe=trades.map(t=>t.action==='STC'?{...t,action:'BTC'}:{...t});
+  const{pairs}=walkLegPairs(probe);
+  const flip=new Set(Object.keys(pairs).filter(cid=>stcIds.has(cid)));
+  if(!flip.size)return trades;
+  return trades.map(t=>flip.has(t.id)?{...t,action:'BTC'}:t);
 }
 
 function openOptionLegs(wheelTrades){
@@ -5877,6 +5890,7 @@ function ppdCellHtml(v,d){return v!=null&&d>0?`${fmtMoney(v)}<span>/d (${d}d)</s
 // Pure (READ-ONLY): closed wheel sells (CSP/STOC) → {kept %, realised net $, end date}. Open or part-closed sells are absent.
 // Bought back: net = sell total − buy-back total; expired / assigned / called away: whole premium kept.
 function wheelSellOutcomes(trades){
+  trades=normWheelShortStcClosers(trades||[]);
   const{pairs}=walkLegPairs(trades);const byId={};trades.forEach(t=>{byId[t.id]=t;});const acc={},out={};
   for(const[cid,ps]of Object.entries(pairs)){const c=byId[cid];if(!c)continue;
     ps.forEach(p=>{const s=byId[p.legId];if(!s||s.expiredWorthless)return;const o=acc[s.id]||(acc[s.id]={cost:0,pxSh:0,sh:0,end:''});
@@ -5915,7 +5929,8 @@ function closedCapturedHtml(o){
 // is only its own contracts; the rest stays open, or expires on its own for the remaining premium.
 function wheelCloseSlices(trades,today){
   today=today||new Date().toISOString().slice(0,10);
-  const{open,pairs}=walkLegPairs(trades||[]);const byId={};(trades||[]).forEach(t=>{byId[t.id]=t;});
+  const nt=normWheelShortStcClosers(trades||[]);
+  const{open,pairs}=walkLegPairs(nt);const byId={};nt.forEach(t=>{byId[t.id]=t;});
   const rem={};open.forEach(o=>{rem[o.id]=o._rem;});
   const byCloser={},consumed={};
   for(const[cid,ps]of Object.entries(pairs)){
@@ -5951,7 +5966,8 @@ function wheelRemainLabel(t,trades,today){
 // Which openers have a matched buy-to-close row. Display only: the outcome numbers stay on the sell.
 // Expiries and assignments have no BTC row, so they are not moved.
 function wheelCapturedOnClose(trades){
-  const{pairs}=walkLegPairs(trades||[]);const byId={};(trades||[]).forEach(t=>{byId[t.id]=t;});
+  const nt=normWheelShortStcClosers(trades||[]);
+  const{pairs}=walkLegPairs(nt);const byId={};nt.forEach(t=>{byId[t.id]=t;});
   const hide=new Set(),best={};
   for(const[cid,ps]of Object.entries(pairs)){
     const c=byId[cid];if(!c||c.action!=='BTC')continue;
