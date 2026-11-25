@@ -122,3 +122,42 @@ test('blank premium: wheelCurrentProfit is null even with openCredit', () => {
   assert.strictEqual(F.wheelCurrentProfit({ premium: 0, contracts: 4, openCredit: 100 }, 50), null);
   assert.strictEqual(F.wheelCurrentProfit({ premium: null, contracts: 4, openCredit: 100 }, 50), null);
 });
+test('peak capital: sequential expired CSPs do not stack ($10k, not $30k); overlapping puts still sum', () => {
+  const P = (id, entered, expiry, x = {}) => ({ id, wheelId: 'w5', action: 'CSP', entered, expiry, strike: 100, shares: 100, premium: 1, total: 100, ...x });
+  // Put 1 expires Fri 16 May → Put 2 opens Mon 19 May (expires 30 May) → Put 3 opens Mon 2 Jun
+  const seq = [P('p1', '2025-05-05', '2025-05-16'), P('p2', '2025-05-19', '2025-05-30'), P('p3', '2025-06-02', '2025-06-13')];
+  assert.strictEqual(F.wheelPeakCapital(seq), 10000);
+  // Same with the expiredWorthless flag set on the expired puts
+  assert.strictEqual(F.wheelPeakCapital(seq.map((t, i) => i < 2 ? { ...t, expiredWorthless: true } : t)), 10000);
+  // A put that expired worthless on the day the next one is sold is released first
+  assert.strictEqual(F.wheelPeakCapital([P('q1', '2025-05-05', '2025-05-16', { expiredWorthless: true }), P('q2', '2025-05-16', '2025-05-30')]), 10000);
+  // ...but without the flag a put expiring today is still live when the next one opens that day
+  assert.strictEqual(F.wheelPeakCapital([P('r1', '2025-05-05', '2025-05-16'), P('r2', '2025-05-16', '2025-05-30')]), 20000);
+  // Two genuinely overlapping puts on the same dates still sum
+  const overlap = [P('o1', '2025-05-05', '2025-06-20'), P('o2', '2025-05-19', '2025-05-30'), P('o3', '2025-06-02', '2025-06-13')];
+  assert.strictEqual(F.wheelPeakCapital(overlap), 20000);
+});
+
+test('peak capital: Friday put assigned by a Monday (or Saturday) IN beside a second open put is not triple-counted', () => {
+  const tr = (inDate) => [
+    { id: 'a', wheelId: 'w6', action: 'CSP', entered: '2025-05-05', expiry: '2025-05-16', strike: 100, shares: 100, premium: 1, total: 100 },
+    { id: 'b', wheelId: 'w6', action: 'CSP', entered: '2025-05-12', expiry: '2025-05-30', strike: 100, shares: 100, premium: 1, total: 100 },
+    { id: 'in', wheelId: 'w6', action: 'IN', entered: inDate, strike: 100, shares: 100, total: 10000 },
+  ];
+  for (const d of ['2025-05-19', '2025-05-17']) {
+    const t = tr(d);
+    // Before Friday: two puts $20k. After the Monday IN: $10k shares + put b $10k = $20k (not put a + shares + put b = $30k)
+    assert.strictEqual(F.wheelPeakCapital(t), 20000, d);
+    // Assignment matching is unchanged: the IN still consumes put a, put b stays open
+    const wheel = W('w6', 'open');
+    F.set({ trades: t, wheels: [wheel] });
+    const m = F.calcWheel(wheel);
+    assert.strictEqual(m.sharesHeld, 100, d);
+    // Put b alone after its own expiry passes with shares held: shares only
+    const later = t.concat([{ id: 'c', wheelId: 'w6', action: 'STOC', entered: '2025-06-02', expiry: '2025-06-13', strike: 105, shares: 100, premium: 1, total: 100 }]);
+    assert.strictEqual(F.wheelPeakCapital(later), 20000, d);
+  }
+  // Assigned put a + shares, then a fresh put after b expired: shares $10k + new put $10k, still $20k peak
+  const t2 = tr('2025-05-19').concat([{ id: 'd', wheelId: 'w6', action: 'CSP', entered: '2025-06-02', expiry: '2025-06-13', strike: 100, shares: 100, premium: 1, total: 100 }]);
+  assert.strictEqual(F.wheelPeakCapital(t2), 20000);
+});

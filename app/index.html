@@ -3046,9 +3046,16 @@ function wheelPeakCapital(trades){
     const c=csps.find(x=>x.id===legId);if(!c)return;
     c.rem-=sh||0;
   };
+  // A put whose expiry has passed (or expired worthless today) no longer holds collateral: release it before each
+  // trade so sequential puts don't stack. An assignment IN dated after a Friday expiry then finds no put to take
+  // and just adds the shares: the put's collateral becomes share capital once, never put + shares.
+  const releaseExpired=d=>{
+    for(let i=csps.length-1;i>=0;i--){const c=csps[i];if(c.expiry&&(c.expiry<d||(c.expiry===d&&c.expiredWorthless)))csps.splice(i,1);}
+  };
   for(const t of list){
+    releaseExpired(t.entered||'');
     if(t.action==='CSP'){
-      csps.push({id:t.id,strike:+t.strike||0,rem:+t.shares||0});
+      csps.push({id:t.id,strike:+t.strike||0,rem:+t.shares||0,expiry:t.expiry||'',expiredWorthless:!!t.expiredWorthless});
       bump();
     }else if(t.action==='BTC'){
       (pairs[t.id]||[]).forEach(p=>takeCsp(p.legId,p.shares));
