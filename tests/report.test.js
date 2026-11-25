@@ -90,7 +90,7 @@ test('sentences include period, averages, premium and months', () => {
 
 test('report figures come from calcMonthlyRealised rows: LEAPs in options P&L, not in short premium', () => {
   const X = new Function(
-    extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+    require('./extract').LEDGER_SRC + '\n' + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
     ['optsMonthly','monthlyExtraSources','calcMonthlyRealised','realisedPremium','shareRealisations','walkLegPairs','reportFigures','reportClosedLegPnLs'].map(extractFn).join('\n') +
     extractFn('returnBase') + extractFn('monthReturnPct') +
     '\nreturn {OPTS,monthlyExtraSources,calcMonthlyRealised,reportFigures,reportClosedLegPnLs};'

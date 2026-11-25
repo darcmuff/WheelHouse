@@ -125,7 +125,7 @@ test('report delta sold items keep the same win flag and amount as the Report', 
     const DeltaOpen = require(${JSON.stringify(path.join(__dirname, '../app/delta.js'))});
   `;
   const X = new Function('require', 'module', 'exports',
-    stubs +
+    stubs + require('./extract').LEDGER_SRC + '\n' +
     extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
     ['reportWinLossItems','reportDeltaSoldItems','reportDeltaLeapItems'].map(extractFn).join('\n') +
     '\nreturn {OPTS,reportWinLossItems,reportDeltaSoldItems,reportDeltaLeapItems};'

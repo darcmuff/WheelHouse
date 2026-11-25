@@ -6692,9 +6692,9 @@ function renderStatsOverview(){
   const today=new Date().toISOString().slice(0,10),scope=moreScope();
   const pyAll=calcProjectedYearly(db.trades,db.opts||[],today);
   const pyWheel=calcProjectedYearly(db.trades,[],today);
-  const py=scope==='wheel'?pyWheel:pyAll;
-  const monthly=calcMonthlyPnL();
-  const rowsAll=calcMonthlyRealised(db.trades,monthlyExtraSources(db.opts||[]));
+  const pyPmcc=calcProjectedYearly([],db.opts||[],today);
+  const py=scope==='wheel'?pyWheel:scope==='pmcc'?pyPmcc:pyAll;
+  const M=moreLedgerStats(scope,db.wheels,db.trades,db.opts||[],today);
   const openWheels=db.wheels.filter(w=>w.status==='open').sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
   const liveOpts=db.wheels.flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id))).sort((a,b)=>a.expiry.localeCompare(b.expiry));
   const recentTrades=[...db.trades].sort((a,b)=>b.entered.localeCompare(a.entered)).slice(0,8);
@@ -6724,19 +6724,6 @@ function renderStatsOverview(){
     </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades${(db.opts||[]).length?` and ${(db.opts||[]).length} option legs`:''} checked — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
   </div>`;
 
-  // Last month comparison
-  // Use the real calendar month (and the one before it), not just the last months that happen to have trades
-  const _now=new Date();
-  const _ymOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  const _thisYm=_ymOf(_now), _lastYm=_ymOf(new Date(_now.getFullYear(),_now.getMonth()-1,1));
-  const _zeroMo=ym=>({ym,credits:0,debits:0,net:0,pNet:0,pCr:0,pDb:0});
-  const thisMo=monthly.length?(monthly.find(m=>m.ym===_thisYm)||_zeroMo(_thisYm)):null;
-  const lastMo=monthly.length?(monthly.find(m=>m.ym===_lastYm)||_zeroMo(_lastYm)):null;
-  const moCompare=lastMo&&thisMo?(thisMo.pNet-lastMo.pNet):null;
-  const allMonth=rowsAll.length?homeFigures(rowsAll,today).month.total:null;
-  const allLast=rowsAll.length?homeFigures(rowsAll,_lastYm+'-15').month.total:null;
-  const moCompareAll=allMonth!=null&&allLast!=null?(allMonth-allLast):null;
-
   // Action count
 
 
@@ -6753,24 +6740,34 @@ function renderStatsOverview(){
     </div>`;
   }
 
-  const allDay=pyAll.days>0?pyAll.total/pyAll.days:null;
+  const scopeName=scope==='wheel'?'Wheel ':scope==='pmcc'?'LEAPs & PMCC ':'';
+  const allDay=pyAll.days>0?pyAll.total/pyAll.days:null,pmccDay=pyPmcc.yearly!=null&&pyPmcc.days>0?pyPmcc.total/pyPmcc.days:null;
   const k1=scope==='wheel'
     ?kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.')
+    :scope==='pmcc'
+    ?kpi('LEAPs & PMCC Realised P&L '+new Date().getFullYear(),fmtMoney(pyPmcc.total),pmccDay!=null?`${fmtMoney(pmccDay)}/day · ${fmtMoney(pmccDay*7)}/wk`:'no trades yet',pyPmcc.total>=0?'var(--green)':'var(--red)',true,'LEAPs & PMCC total realised this year: short-call option income and closed LEAPs. Per day and per week use the same days as Projected Yearly. Open positions are not included.')
     :kpi('Realised P&L '+new Date().getFullYear(),fmtMoney(pyAll.total),allDay!=null?`${fmtMoney(allDay)}/day · ${fmtMoney(allDay*7)}/wk`:'no trades yet',pyAll.total>=0?'var(--green)':'var(--red)',true,'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends. Open positions are not included.');
-  const k2=scope==='wheel'
-    ?kpi('Premium This Month',thisMo?fmtMoney(thisMo.pNet):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',thisMo&&thisMo.pNet>=0?'var(--green)':'var(--red)',false,'Net option premium collected this calendar month — credits from CSP and covered calls minus any buyback (BTC) costs.')
-    :kpi('Premium This Month',allMonth!=null?fmtMoney(allMonth):'—',moCompareAll!=null?`${moCompareAll>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompareAll))} vs last month`:'first month',allMonth!=null&&allMonth>=0?'var(--green)':'var(--red)',false,'Net realised option premium this calendar month across wheels and PMCC short calls — credits minus buybacks. Closed long LEAPs and share sales are not included.');
+  const moCompare=M.hasMonths?M.month-M.lastMonth:null;
+  const k2Tip=scope==='wheel'
+    ?'Wheel option income this calendar month: premium kept on wheel puts and calls that closed, expired or were assigned, minus buybacks.'
+    :scope==='pmcc'
+    ?'PMCC option income this calendar month: premium kept on short calls that closed or expired, minus buybacks. Closed LEAPs are not included.'
+    :'Option income this calendar month across wheels and PMCC short calls: premium kept minus buybacks. Same figure as Options P&L this month on Home. Closed LEAPs and share sales are not included.';
+  const k2=kpi('Option Income This Month',M.hasMonths?fmtMoney(M.month):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',M.hasMonths&&M.month<0?'var(--red)':'var(--green)',false,k2Tip);
   const pySub=py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`;
   const pyCol=py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)';
   const pyTip=scope==='wheel'
     ?'Wheel realised income this year — option premium, stock sales and dividends — scaled to 365 days from your first wheel trade this year, or from 1 January if you started earlier. PMCC short calls, closed LEAPs and open positions are not included.'
+    :scope==='pmcc'
+    ?'LEAPs & PMCC realised income this year — short-call premium and closed LEAPs — scaled to 365 days from your first LEAP or call this year, or from 1 January if you started earlier. Wheels and open positions are not included.'
     :'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.';
   const k3=kpi('Projected Yearly',py.yearly!=null?fmtMoney(py.yearly):'—',pySub,pyCol,false,pyTip);
 
-  // AROC trailing
-  const allAroc=openWheels.map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
-  const avgArocVal=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
-  const k5=kpi('AROC (Open)',avgArocVal!=null?avgArocVal.toFixed(1)+'%':'—',`${openWheels.length} open wheel${openWheels.length!==1?'s':''}`,avgArocVal!=null&&avgArocVal>=0?'var(--green)':'var(--red)',false,'Average annualised return on capital across your open wheels, realised only: (premium banked from closed, expired or assigned options ÷ capital at risk) × (365 ÷ days held). Premium on open options is not counted.');
+  // AROC on positions still open, weighted by capital × days held (OT_LEDGER.weightedAROC)
+  const pctS=v=>v==null?'—':v===Infinity?'∞':v.toFixed(1)+'%';
+  const k5Val=M.arocOpen[scope==='wheel'?'wheel':scope==='pmcc'?'pmcc':'all'];
+  const k5Sub=scope==='all'?`Wheel ${pctS(M.arocOpen.wheel)} · PMCC ${pctS(M.arocOpen.pmcc)}`:scope==='wheel'?`${M.openWheels} open wheel${M.openWheels!==1?'s':''}`:`${M.openLeaps} open LEAP${M.openLeaps!==1?'s':''}`;
+  const k5=kpi('AROC (Open)',pctS(k5Val),k5Sub,k5Val!=null&&k5Val<0?'var(--red)':'var(--green)',false,'Annualised return on capital, realised only, for positions still open: open wheels, and short calls written against LEAPs you still hold. Weighted by capital × days held, so a big position counts for more than a small one: Σ P&L ÷ Σ (capital × days) × 365. Premium on open options is not counted.');
 
 
   // ── Positions table ──
@@ -6841,7 +6838,7 @@ function renderStatsOverview(){
   return`<div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
 
     <!-- KPI Row -->
-    <div class="ms-kpis"><div class="ms-scope" role="group" aria-label="More data scope"><button type="button" class="pc-r${scope==='all'?' on':''}" aria-pressed="${scope==='all'?'true':'false'}" onclick="setMoreScope('all')">All</button><button type="button" class="pc-r${scope==='wheel'?' on':''}" aria-pressed="${scope==='wheel'?'true':'false'}" onclick="setMoreScope('wheel')">Wheel</button></div>
+    <div class="ms-kpis"><div class="ms-scope" role="group" aria-label="More data scope"><button type="button" class="pc-r${scope==='all'?' on':''}" aria-pressed="${scope==='all'?'true':'false'}" onclick="setMoreScope('all')">All</button><button type="button" class="pc-r${scope==='wheel'?' on':''}" aria-pressed="${scope==='wheel'?'true':'false'}" onclick="setMoreScope('wheel')">Wheels</button><button type="button" class="pc-r${scope==='pmcc'?' on':''}" aria-pressed="${scope==='pmcc'?'true':'false'}" onclick="setMoreScope('pmcc')">LEAPs &amp; PMCC</button></div>
     <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div></div>
 
     <!-- Alert strip -->
@@ -6965,7 +6962,9 @@ function calcMonthlyRealised(trades,extras,today){
     if(!t.entered)return;const ym=t.entered.slice(0,7),v=t.total||0;
     if(t.action==='DIV'){const r=row(ym);r.divs+=v;}
   });
-  realisedPremium(trades,today).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.premium+=e.amount;if(e.amount>=0)r.collected+=e.amount;else r.loss-=e.amount;});
+  // Wheel option income from OT_LEDGER (net per closed trade, same as Home and the chart). Gross credit and buyback kept as columns.
+  const _wh=typeof db!=='undefined'&&db&&db.wheels?db.wheels:[];
+  OT_LEDGER.buildLedger(_wh,trades,[],{today}).events.forEach(e=>{if(e.bucket!=='income'||!e.date)return;const r=row(e.date.slice(0,7));r.premium+=e.amount;r.collected+=e.grossIn||0;r.loss+=(e.grossIn||0)-e.amount;});
   shareRealisations(trades).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.shares+=e.pnl;if(e.pnl>=0)r.shareGain+=e.pnl;else r.shareLoss-=e.pnl;r.shareSales=(r.shareSales||0)+1;});
   extras.forEach(x=>Object.entries(x.byMonth||{}).forEach(([ym,v])=>{const r=row(ym);r.extra[x.key]=(r.extra[x.key]||0)+v;
     if(x.gain||x.loss){r.collected+=(x.gain||{})[ym]||0;r.loss+=(x.loss||{})[ym]||0;r.leapGain+=(x.lgain||{})[ym]||0;r.leapLoss+=(x.lloss||{})[ym]||0;}else if(v>=0)r.collected+=v;else r.loss-=v;}));
@@ -7201,52 +7200,18 @@ function paintOpenDeltaHints(){
 // Display-only: same close matching as reportWinLossItems, plus the opening trade
 // so a delta can be attached. Win flag and amount are unchanged.
 function reportDeltaSoldItems(wheels,trades,legs,spotOf){
-  const items=[];
-  (wheels||[]).forEach(wheel=>{
-    const closingAction=a=>(a==='BTC'||a==='STC')?1:0;
-    const list=(trades||[]).filter(t=>t.wheelId===wheel.id)
-      .sort((a,b)=>{const dc=a.entered.localeCompare(b.entered);if(dc!==0)return dc;return closingAction(a.action)-closingAction(b.action);});
-    const stack=[];
-    const popLastLive=()=>{for(let j=stack.length-1;j>=0;j--){if(!stack[j].expired)return stack.splice(j,1)[0];}return stack.pop();};
-    const pushItem=(open,date,win,amount)=>{
-      const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(open):null;
-      const spot=spotOf?spotOf(open.ticker,open.entered,filledAt):null;
-      const d=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveOpenDelta(open,spot&&spot.price):{absDelta:null};
-      items.push({date,win,amount,open,absDelta:d.absDelta,src:d.src,precision:spot&&spot.precision,bar:spot&&spot.bar});
-    };
-    for(const t of list){
-      if(t.action==='CSP'||t.action==='STOC'){
-        stack.push({total:t.total,expired:!!t.expiredWorthless,strike:t.strike,expiry:t.expiry||null,open:t});
-      }else if(t.action==='IN'){
-        if(stack.length>0){const o=popLastLive();pushItem(o.open,t.entered||'',true,o.total);}
-      }else if(t.action==='BTC'||t.action==='STC'){
-        if(stack.length>0){
-          const ks=Number(t.strike);
-          let i=stack.findIndex(o=>!o.expired&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-          if(i<0)i=stack.findIndex(o=>!o.expired&&Number(o.strike)===ks);
-          if(i<0)i=stack.findIndex(o=>Number(o.strike)===ks);
-          if(i<0&&(t.strike==null||t.strike==='')){const o=popLastLive();if(o){const net=o.total-t.total;pushItem(o.open,t.entered||'',o.total>=t.total,net);}continue;}
-          if(i>=0){const o=stack.splice(i,1)[0];pushItem(o.open,t.entered||'',o.total>=t.total,o.total-t.total);}
-        }
-      }else if(t.action==='OUT'){
-        if(stack.length>0){const o=popLastLive();pushItem(o.open,t.entered||'',true,o.total);}
-      }
-    }
-    while(stack.length>0){
-      const o=stack.pop();
-      if(o.expired)pushItem(o.open,o.expiry||'',true,o.total);
-    }
+  // Same closed sold options (and amounts) as reportWinLossItems, with the opening trade or leg for delta at open.
+  const tradeById={},legById={};
+  (trades||[]).forEach(t=>{if(t&&t.id)tradeById[t.id]=t;});(legs||[]).forEach(l=>{if(l&&l.id)legById[l.id]=l;});
+  return reportWinLossItems(wheels,trades,legs).map(it=>{
+    const e=it.ev,open=(e.strategy==='pmcc'?legById[e.legId]:tradeById[e.legId])||null;
+    if(!open)return{...it,open:null,absDelta:null,src:null,precision:null,bar:null};
+    const tk=e.strategy==='pmcc'?(open.underlying||open.ticker):open.ticker,on=e.strategy==='pmcc'?open.entryDate:open.entered;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(open):null;
+    const spot=spotOf?spotOf(tk,on,filledAt):null;
+    const d=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveOpenDelta(open,spot&&spot.price):{absDelta:null};
+    return{...it,open,absDelta:d.absDelta,src:d.src,precision:spot&&spot.precision,bar:spot&&spot.bar};
   });
-  (legs||[]).forEach(l=>{
-    if(!l||l.side!=='short'||l.demo)return;
-    if(l.status==='open')return;
-    const r=OPTS.legPnL(l).realized;
-    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(l):null;
-    const spot=spotOf?spotOf(l.underlying||l.ticker,l.entryDate,filledAt):null;
-    const d=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveOpenDelta(l,spot&&spot.price):{absDelta:null};
-    items.push({date:l.closeDate||l.expiry||'',win:r>=0,amount:r,open:l,absDelta:d.absDelta,src:d.src,precision:spot&&spot.precision,bar:spot&&spot.bar});
-  });
-  return items;
 }
 function reportDeltaLeapItems(legs,spotOf){
   return (legs||[]).filter(l=>l&&l.side==='long'&&(l.type==='C'||l.type==='call')&&!l.parentLeapId&&l.status!=='open'&&!l.demo).map(l=>{
@@ -7303,11 +7268,6 @@ function reportDeltaSection(){
 }
 function reportDeltaSectionHtml(){return reportDeltaSection().html;}
 function reportDeltaSectionLines(){return reportDeltaSection().lines;}
-function analyticsDeltaRoc(item){
-  const t=item&&item.open;
-  if(!t||typeof calcTradeROC!=='function')return null;
-  return calcTradeROC(t,item.amount,item.date);
-}
 function analyticsDeltaTable(title,items,tip){
   const money=n=>{
     if(n==null||isNaN(n))return'—';
@@ -7323,19 +7283,16 @@ function analyticsDeltaTable(title,items,tip){
     return html;
   }
   const B=typeof DeltaOpen!=='undefined'?DeltaOpen.bucketItems(items):{rows:[]};
-  const rocByKey={};
+  // AROC per bucket: OT_LEDGER.weightedAROC over the bucket's closed trades (capital × days weighted)
+  const evByKey={};
   items.forEach(it=>{
     const key=typeof DeltaOpen!=='undefined'?DeltaOpen.bucketKey(it.absDelta):'No delta';
-    const roc=analyticsDeltaRoc(it);
-    if(roc==null)return;
-    if(!rocByKey[key])rocByKey[key]={sum:0,n:0};
-    rocByKey[key].sum+=roc;rocByKey[key].n++;
+    if(it.ev)(evByKey[key]=evByKey[key]||[]).push(it.ev);
   });
   html+=`<div class="a-table-wrap"><table class="a-table a-table-nums stack-table"><thead><tr><th>Delta at open</th><th>Trades</th><th>Win rate</th><th>Total P&amp;L</th><th>Avg P&amp;L</th><th>Avg AROC</th></tr></thead><tbody>`;
   (B.rows||[]).forEach(b=>{
     const wr=b.wr!=null?b.wr+'%':'—';
-    const r=rocByKey[b.key];
-    const avgRoc=r&&r.n?r.sum/r.n:null;
+    const avgRoc=evByKey[b.key]?OT_LEDGER.weightedAROC(evByKey[b.key]):null;
     const nodelta=b.key==='No delta'?' class="nodelta"':'';
     html+=`<tr${nodelta}><td>${esc(b.label)}</td><td data-l="Trades">${b.count}</td><td data-l="Win rate">${wr}</td><td data-l="Total P&amp;L">${money(b.totalPnl)}</td><td data-l="Avg P&amp;L">${money(b.avgPnl)}</td><td data-l="Avg AROC">${rocStr(avgRoc)}</td></tr>`;
   });
@@ -7348,7 +7305,8 @@ function analyticsDeltaSectionHtml(){
   const wheelItems=sold.filter(it=>it.open&&(it.open.action==='CSP'||it.open.action==='STOC'));
   const leapShort=sold.filter(it=>it.open&&it.open.side==='short');
   const tip='Estimated from the fill premium and the stock price at fill time, unless you typed a delta.';
-  return`<div id="analytics-delta">${analyticsDeltaTable('Performance by Delta',wheelItems,tip)}${analyticsDeltaTable('LEAP short calls',leapShort)}</div>`;
+  const scope=typeof moreScope==='function'?moreScope():'all';
+  return`<div id="analytics-delta">${scope!=='pmcc'?analyticsDeltaTable('Performance by Delta',wheelItems,tip):''}${scope!=='wheel'?analyticsDeltaTable('LEAP short calls',leapShort):''}</div>`;
 }
 function refreshAnalyticsDelta(){
   const el=document.getElementById('analytics-delta');if(!el)return;
@@ -7359,11 +7317,21 @@ function refreshReportDelta(){refreshAnalyticsDelta();}
 
 // Report: display-only. Calls existing monthly/return functions and aggregates their outputs.
 // Does not change any financial formula, parser or business logic.
-function reportClosedLegPnLs(legs){
-  return (legs||[]).filter(l=>l&&l.status!=='open'&&!l.demo).map(l=>{
+function reportClosedLegPnLs(legs,wheels,trades){
+  const out=(legs||[]).filter(l=>l&&l.status!=='open'&&!l.demo).map(l=>{
     const p=OPTS.legPnL(l);
     return{ticker:l.underlying||l.und||l.ticker||'',side:l.side,type:l.type,strike:l.strike,date:l.closeDate||l.expiry||'',realized:p.realized};
   });
+  // Wheel puts and calls too: each closed slice from OT_LEDGER, so a losing wheel CSP is found as well as a LEAP.
+  if(trades&&trades.length){
+    const byId={};trades.forEach(t=>{if(t&&t.id)byId[t.id]=t;});
+    OT_LEDGER.buildLedger(wheels||[],trades,[],{}).events.forEach(e=>{
+      if(e.strategy!=='wheel'||e.bucket!=='income')return;
+      const o=byId[e.legId]||{};
+      out.push({ticker:e.ticker||o.ticker||'',side:'short',type:e.kind==='csp'?'P':'C',strike:o.strike,date:e.date||'',realized:Math.round(e.amount*100)/100,wheel:true});
+    });
+  }
+  return out;
 }
 // Pure: period, sums and averages of already-computed monthly rows (profit = wheel + PMCC short calls;
 // leapNet = closed long LEAPs). Complete months exclude the current calendar month. Return uses the
@@ -7381,7 +7349,7 @@ function reportFigures(rows,today,cawTotal,rs,closedLegs){
   while(y<endY||(y===endY&&m<=endM)){
     const ym=y+'-'+String(m).padStart(2,'0');
     const r=by[ym]||{ym,profit:0,leapNet:0};
-    months.push({ym,options:rd(optOf(r)),premium:rd(premOf(r))});
+    months.push({ym,options:rd(optOf(r)),premium:rd(premOf(r)),realised:rd(r.total!=null?r.total:optOf(r))});
     m++;if(m>12){m=1;y++;}
   }
   const n=months.length,sum=list=>list.reduce((a,r)=>a+r,0);
@@ -7394,13 +7362,19 @@ function reportFigures(rows,today,cawTotal,rs,closedLegs){
   let loser=null;
   (closedLegs||[]).forEach(l=>{if(l&&l.realized!=null&&l.realized<0&&(!loser||l.realized<loser.realized))loser=l;});
   const optionsEx=loser?rd(options-loser.realized):null;
+  // Total realised = option income + closed LEAPs + share sales + dividends (the row total); this month = option income so far
+  const realised=rd(sum(months.map(r=>r.realised))),realisedEx=loser?rd(realised-loser.realized):null;
+  const thisMonth=rd(premOf(by[todayYm]||{}));
+  const bestIncome=months.reduce((a,r)=>!a||r.premium>a.premium?r:a,null);
+  const worstIncome=months.reduce((a,r)=>!a||r.premium<a.premium?r:a,null);
   const cap=returnBase(rs,cawTotal);
   const avgForRet=complete.length?avg(premiumComplete,complete.length):avg(premium,n);
   const ret=monthReturnPct(avgForRet,cap,rs&&rs.target);
   return{empty:false,firstYm,lastYm,months:n,completeMonths:complete.length,
     options,optionsAvg:avg(options,n),optionsComplete,optionsCompleteAvg:avg(optionsComplete,complete.length),
     premium,premiumAvg:avg(premium,n),premiumComplete,premiumCompleteAvg:avg(premiumComplete,complete.length),
-    best,worst,loser,optionsEx,capital:cap,target:rs&&rs.target,ret,base:rs&&rs.base};
+    best,worst,loser,optionsEx,capital:cap,target:rs&&rs.target,ret,base:rs&&rs.base,
+    realised,realisedAvg:avg(realised,n),realisedEx,thisMonth,bestIncome,worstIncome};
 }
 // Display-only period bounds. Last month / last year are the previous full calendar month and year.
 function reportLastYm(today){
@@ -7444,10 +7418,13 @@ function reportPeriods(rows,today,winItems){
     const profit=rd(list.reduce((a,r)=>a+(r.profit||0),0));
     const leaps=rd(list.reduce((a,r)=>a+(r.leapNet||0),0));
     const collected=rd(list.reduce((a,r)=>a+(r.collected||0),0));
+    const wheelOnly=rd(list.reduce((a,r)=>a+(r.premium||0),0));
+    const realised=rd(list.reduce((a,r)=>a+(r.total!=null?r.total:(r.profit||0)+(r.leapNet||0)),0));
     const closedItems=(winItems||[]).filter(i=>reportDateInPeriod(i.date,k.key,today));
     const wins=closedItems.filter(i=>i.win).length,losses=closedItems.filter(i=>!i.win).length,closed=wins+losses;
     // wheel = short premium (wheel + covered calls), same as profit; wheel + LEAPs = options P&L
-    return{key:k.key,label:k.label,options:rd(profit+leaps),premium:profit,collected,wheel:profit,leaps,closed,wins,losses,wr:closed?((wins/closed)*100).toFixed(1):null};
+    return{key:k.key,label:k.label,options:rd(profit+leaps),premium:profit,collected,wheel:profit,leaps,closed,wins,losses,wr:closed?((wins/closed)*100).toFixed(1):null,
+      income:profit,wheelOnly,pmcc:rd(profit-wheelOnly),realised};
   });
 }
 function reportPeriodLine(p){
@@ -7462,43 +7439,9 @@ function reportPeriodLine(p){
 // Display-only: same closed sold-option outcomes as calcWinLoss, with the close date so periods can be bucketed.
 // Does not change calcWinLoss. Long LEAPs are excluded, matching Home.
 function reportWinLossItems(wheels,trades,legs){
-  const items=[];
-  (wheels||[]).forEach(wheel=>{
-    const closingAction=a=>(a==='BTC'||a==='STC')?1:0;
-    const list=(trades||[]).filter(t=>t.wheelId===wheel.id)
-      .sort((a,b)=>{const dc=a.entered.localeCompare(b.entered);if(dc!==0)return dc;return closingAction(a.action)-closingAction(b.action);});
-    const stack=[];
-    const popLastLive=()=>{for(let j=stack.length-1;j>=0;j--){if(!stack[j].expired)return stack.splice(j,1)[0];}return stack.pop();};
-    for(const t of list){
-      if(t.action==='CSP'||t.action==='STOC'){
-        stack.push({total:t.total,expired:!!t.expiredWorthless,strike:t.strike,expiry:t.expiry||null});
-      }else if(t.action==='IN'){
-        if(stack.length>0){const o=popLastLive();items.push({date:t.entered||'',win:true,amount:o.total});}
-      }else if(t.action==='BTC'||t.action==='STC'){
-        if(stack.length>0){
-          const ks=Number(t.strike);
-          let i=stack.findIndex(o=>!o.expired&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
-          if(i<0)i=stack.findIndex(o=>!o.expired&&Number(o.strike)===ks);
-          if(i<0)i=stack.findIndex(o=>Number(o.strike)===ks);
-          if(i<0&&(t.strike==null||t.strike==='')){const o=popLastLive();if(o){const net=o.total-t.total;items.push({date:t.entered||'',win:o.total>=t.total,amount:net});}continue;}
-          if(i>=0){const o=stack.splice(i,1)[0];items.push({date:t.entered||'',win:o.total>=t.total,amount:o.total-t.total});}
-        }
-      }else if(t.action==='OUT'){
-        if(stack.length>0){const o=popLastLive();items.push({date:t.entered||'',win:true,amount:o.total});}
-      }
-    }
-    while(stack.length>0){
-      const o=stack.pop();
-      if(o.expired)items.push({date:o.expiry||'',win:true,amount:o.total});
-    }
-  });
-  (legs||[]).forEach(l=>{
-    if(!l||l.side!=='short'||l.demo)return;
-    if(l.status==='open')return;
-    const r=OPTS.legPnL(l).realized;
-    items.push({date:l.closeDate||l.expiry||'',win:r>=0,amount:r});
-  });
-  return items;
+  // Closed sold options straight from OT_LEDGER (wheel puts/calls and PMCC short calls), same rule as calcWinLoss and Home.
+  return OT_LEDGER.buildLedger(wheels||[],trades||[],legs||[],{}).events.filter(e=>e.bucket==='income')
+    .map(e=>({date:String(e.date||'').slice(0,10),win:e.amount>=0,amount:e.amount,ev:e}));
 }
 function reportMoney(n){
   if(n==null||isNaN(n))return'—';
@@ -7557,7 +7500,8 @@ function renderReport(){
   const rows=calcMonthlyRealised(db.trades,monthlyExtraSources(legs),today);
   const caw=currentCapitalAtWork();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
-  const F=reportFigures(rows,today,caw.total,rs,reportClosedLegPnLs(legs));
+  // Wired to OT_LEDGER: rows (calcMonthlyRealised), closed-trade wins and the biggest loser (wheel trades and db.opts) all come from the ledger
+  const F=reportFigures(rows,today,caw.total,rs,reportClosedLegPnLs(legs,db.wheels,db.trades));
   const periods=reportPeriods(rows,today,reportWinLossItems(db.wheels,db.trades,legs));
   const periodLines=periods.map(reportPeriodLine);
   const sentences=reportSentences(F);
@@ -8894,19 +8838,100 @@ function calcProjectedYearly(trades,legs,today){
   const days=Math.max(1,Math.round((new Date(today+'T12:00:00')-new Date(paceStart+'T12:00:00'))/86400000)+1);
   return{total,days,since:paceStart,startedMidYear:first>yearStart,yearly:(total/days)*365};
 }
-// More data KPI scope: 'all' (default) or 'wheel'. Display only; persists in localStorage.
+// More data KPI scope: 'all' (default), 'wheel' or 'pmcc' (LEAPs & PMCC). Display only; persists in localStorage.
 function moreScope(){
-  try{if(localStorage.getItem('optrack-more-scope')==='wheel')return'wheel';}catch(e){}
+  try{const v=localStorage.getItem('optrack-more-scope');if(v==='wheel'||v==='pmcc')return v;}catch(e){}
   return'all';
 }
 function setMoreScope(k){
-  if(k!=='all'&&k!=='wheel')return;
+  if(k!=='all'&&k!=='wheel'&&k!=='pmcc')return;
   try{localStorage.setItem('optrack-more-scope',k);}catch(e){}
   if(typeof view!=='undefined'&&view==='analytics'&&typeof switchView==='function'){
     const y=typeof window!=='undefined'?window.scrollY:0;
     switchView('analytics');
     if(typeof window!=='undefined')window.scrollTo(0,y);
   }
+}
+// More data figures, all from one OT_LEDGER build filtered to the scope ('all' | 'wheel' | 'pmcc'). Pure: no db.
+// Option income = closed sold options (wheel puts/calls + PMCC and other short calls), net of buybacks.
+// Total realised = option income + share sales + dividends + closed LEAPs. AROC is capital×days weighted.
+function moreLedgerStats(scope,wheels,trades,legs,today){
+  today=String(today||new Date().toISOString().slice(0,10)).slice(0,10);
+  wheels=wheels||[];trades=trades||[];legs=(legs||[]).filter(l=>l&&!l.demo);
+  const L=OT_LEDGER,rd=n=>Math.round(n*100)/100,sum=(list,f)=>list.reduce((a,e)=>a+(f(e)||0),0);
+  const ledger=L.buildLedger(wheels,trades,legs,{today});
+  const events=scope==='wheel'||scope==='pmcc'?L.filterEvents(ledger.events,{strategy:scope}):ledger.events.slice();
+  const inc=events.filter(e=>e.bucket==='income');
+  const tradeById={},legById={};
+  trades.forEach(t=>{if(t&&t.id)tradeById[t.id]=t;});legs.forEach(l=>{if(l&&l.id)legById[l.id]=l;});
+  const openerOf=e=>(e.strategy==='pmcc'?legById[e.legId]:tradeById[e.legId])||null;
+  const dteOf=e=>{const o=openerOf(e);if(!o)return null;
+    if(e.strategy==='pmcc')return o.entryDate&&o.expiry?L.daysBetweenUTC(o.entryDate,o.expiry):null;
+    if(+o.days>0)return +o.days;
+    return o.entered&&o.expiry?L.daysBetweenUTC(o.entered,o.expiry):null;};
+  const parentOf=e=>{const l=e.strategy==='pmcc'?legById[e.legId]:null;return l&&l.parentLeapId?l.parentLeapId:null;};
+  const aroc=list=>L.weightedAROC(list);
+  const split=list=>({all:aroc(list),wheel:aroc(list.filter(e=>e.strategy==='wheel')),pmcc:aroc(list.filter(e=>e.strategy==='pmcc'))});
+  // Win / loss: same rule as calcWinLoss (every closed sold option, amount >= 0 is a win)
+  const S=L.summarizeIncome(inc),closed=S.wins+S.losses;
+  const wl={wins:S.wins,losses:S.losses,avgWin:S.avgWin,avgLoss:S.avgLoss,wr:closed>0?((S.wins/closed)*100).toFixed(1):null};
+  // AROC: all closed, and closed legs of positions still open (open wheels; short calls on an open LEAP)
+  const openWheel=new Set(wheels.filter(w=>w.status==='open').map(w=>w.id));
+  const isOpenPos=e=>{if(e.strategy==='wheel')return openWheel.has(e.wheelId);const p=parentOf(e);return!!(p&&legById[p]&&legById[p].status==='open');};
+  const incOpen=inc.filter(isOpenPos);
+  // Months of option income: event months for streaks / best / worst; calendar span (quiet months = 0) for Sortino and drawdown
+  const g=L.groupEventsByPeriod(inc,{gran:'Month'});
+  const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+  const eventMonths=g.buckets.map(b=>({ym:b.key,label:lbl(b.key),gain:b.gain,loss:b.loss,net:b.net}));
+  const months=[];
+  if(eventMonths.length){
+    const by={};eventMonths.forEach(m=>by[m.ym]=m);
+    let y=+eventMonths[0].ym.slice(0,4),m=+eventMonths[0].ym.slice(5,7);const last=eventMonths[eventMonths.length-1].ym;
+    for(let n=0;n<1200;n++){const ym=y+'-'+String(m).padStart(2,'0');if(ym>last)break;months.push(by[ym]||{ym,label:lbl(ym),gain:0,loss:0,net:0});m++;if(m>12){m=1;y++;}}
+  }
+  const sortino=L.calcSortino(months.map(m=>m.net));
+  let peak=0,cum=0,maxDD=0;months.forEach(m=>{cum+=m.net;if(cum>peak)peak=cum;if(peak-cum>maxDD)maxDD=peak-cum;});
+  let cur=0,maxStreak=0;eventMonths.forEach(m=>{if(m.net>=0){cur++;maxStreak=Math.max(maxStreak,cur);}else cur=0;});
+  const bestMonth=eventMonths.reduce((a,m)=>!a||m.net>a.net?m:a,null),worstMonth=eventMonths.reduce((a,m)=>!a||m.net<a.net?m:a,null);
+  const grossIn=sum(inc,e=>e.grossIn),grossOut=sum(inc,e=>e.grossOut);
+  const profitFactor=grossOut>0?grossIn/grossOut:grossIn>0?Infinity:0;
+  // This month and last month of option income (calendar months)
+  const ym=today.slice(0,7),y0=+today.slice(0,4),m0=+today.slice(5,7);
+  const lastYm=m0===1?(y0-1)+'-12':y0+'-'+String(m0-1).padStart(2,'0');
+  const monthNet=k=>{const b=g.buckets.find(x=>x.key===k);return b?b.net:0;};
+  // Records: best single closed trade, best per day held, biggest buyback
+  const best=inc.reduce((a,e)=>!a||e.amount>a.amount?e:a,null);
+  const bestPPD=inc.filter(e=>e.daysHeld>0).reduce((a,e)=>!a||e.amount/e.daysHeld>a.amount/a.daysHeld?e:a,null);
+  const biggestBuyback=inc.filter(e=>e.grossOut>0).reduce((a,e)=>!a||e.grossOut>a.grossOut?e:a,null);
+  // DTE at open buckets
+  const DTE=[['1-7d',1,7],['8-14d',8,14],['15-30d',15,30],['31-45d',31,45],['45d+',46,1e9]];
+  const ppd=list=>{const d=sum(list,e=>e.daysHeld);return d>0?sum(list,e=>e.amount)/d:null;};
+  const dte=DTE.map(([label,min,max])=>{const list=inc.filter(e=>{const d=dteOf(e);return d!=null&&d>=min&&d<=max;});
+    return list.length?{label,count:list.length,total:rd(sum(list,e=>e.amount)),ppd:ppd(list),aroc:aroc(list)}:null;}).filter(Boolean);
+  // Puts vs calls
+  const strat=isPut=>{const list=inc.filter(e=>isPut?e.kind==='csp':(e.kind==='cc'||e.kind==='pmcc_call'));const d=list.map(dteOf).filter(x=>x!=null);
+    return{count:list.length,total:rd(sum(list,e=>e.amount)),avgDte:d.length?d.reduce((a,x)=>a+x,0)/d.length:null,ppd:ppd(list),aroc:aroc(list)};};
+  // Ticker leaderboard
+  const tk={};
+  events.forEach(e=>{const t=String(e.ticker||'').toUpperCase();if(!t)return;const o=tk[t]=tk[t]||{ticker:t,premium:0,realised:0,trades:0,cyc:new Set(),inc:[]};
+    o.realised+=e.amount;o.cyc.add(e.strategy==='wheel'?'w:'+e.wheelId:'l:'+(parentOf(e)||e.legId));
+    if(e.bucket==='income'){o.premium+=e.amount;o.trades++;o.inc.push(e);}});
+  const tickers=Object.values(tk).map(o=>({ticker:o.ticker,premium:rd(o.premium),realised:rd(o.realised),trades:o.trades,cycles:o.cyc.size,aroc:aroc(o.inc)})).sort((a,b)=>b.premium-a.premium);
+  // Scoreboard: one row per wheel (wheel scope), one per long LEAP with its short calls (LEAPs & PMCC scope)
+  const board=[];
+  const fig=ev=>{const wi=ev.filter(e=>e.bucket==='income');return{gross:rd(sum(wi,e=>e.grossIn)),premium:rd(sum(wi,e=>e.amount)),realised:rd(sum(ev,e=>e.amount)),aroc:aroc(wi),closed:wi.length};};
+  if(scope!=='pmcc')wheels.slice().sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
+    board.push({kind:'wheel',id:w.id,wheel:w,...fig(events.filter(e=>e.strategy==='wheel'&&e.wheelId===w.id))});});
+  if(scope!=='wheel')legs.filter(l=>l.side==='long'&&!l.parentLeapId).forEach(l=>{
+    const kids=legs.filter(k=>k.parentLeapId===l.id),ids=new Set([l.id,...kids.map(k=>k.id)]);
+    board.push({kind:'leap',id:l.id,leg:l,legCount:1+kids.length,...fig(events.filter(e=>e.strategy==='pmcc'&&ids.has(e.legId)))});});
+  return{scope:scope==='wheel'||scope==='pmcc'?scope:'all',events,inc,wl,
+    realised:rd(sum(events,e=>e.amount)),premium:rd(S.total),grossIn:rd(grossIn),grossOut:rd(grossOut),profitFactor,
+    aroc:split(inc),arocOpen:split(incOpen),openWheels:openWheel.size,openLeaps:legs.filter(l=>l.side==='long'&&!l.parentLeapId&&l.status==='open').length,
+    eventMonths,months,sortino,maxDD,maxDDPct:peak>0?maxDD/peak*100:0,maxStreak,bestMonth,worstMonth,
+    month:monthNet(ym),lastMonth:monthNet(lastYm),hasMonths:eventMonths.length>0,
+    best,bestPPD,biggestBuyback,totalOptDays:sum(inc,e=>e.daysHeld),avgLeg:inc.length?grossIn/inc.length:0,
+    dte,csp:strat(true),cc:strat(false),tickers,board,dteOf,openerOf};
 }
 function pnlCurveHtml(){
   const today=new Date().toISOString().slice(0,10);
@@ -9029,62 +9054,31 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFu
 window.addEventListener('resize',()=>{_pnlRedraw();if((view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())switchView('dash');});
 
 function renderAnalytics(){
-  const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();
+  const s=calcOverall();
   const today=new Date().toISOString().slice(0,10),scope=moreScope();
-  const py=calcProjectedYearly(db.trades,scope==='wheel'?[]:(db.opts||[]),today);
-  const timing=calcTimingStats();const bw=calcBestWorst();const cap=calcCapitalStats();
-  const streaks=calcStreaks();const breakdown=calcTradeBreakdown();const monthly=calcMonthlyPnL();
-  const allAroc=db.wheels.filter(w=>w.status==='closed').map(w=>calcAROC(w,calcWheel(w))).filter(a=>a&&a.aroc!=null);
-  const avgAroc=allAroc.length?allAroc.reduce((a,b)=>a+b.aroc,0)/allAroc.length:null;
-  const avgRoc=allAroc.length?allAroc.reduce((a,b)=>a+b.roc,0)/allAroc.length:null;
-  const totalTrades=db.trades.length;
-  const avgTradeSize=totalTrades?s.premiumCredits/Math.max(1,(breakdown['CSP']?.count||0)+(breakdown['STOC']?.count||0)):0;
+  const py=calcProjectedYearly(scope==='pmcc'?[]:db.trades,scope==='wheel'?[]:(db.opts||[]),today);
+  const cap=calcCapitalStats();
+  // Every figure below comes from one OT_LEDGER build filtered to the More data scope
+  const M=moreLedgerStats(scope,db.wheels,db.trades,db.opts||[],today);
+  const wl=M.wl;
+  const scopeName=scope==='wheel'?'Wheel ':scope==='pmcc'?'LEAPs & PMCC ':'';
+  const pctS=v=>v==null?'—':v===Infinity?'∞':v.toFixed(1)+'%';
+  const evKind=e=>e.kind==='csp'?'CSP':e.kind==='pmcc_call'?'PMCC call':e.kind==='cc'?(e.strategy==='wheel'?'STOC':'Short call'):'Option';
+  const avgAroc=M.aroc[scope==='wheel'?'wheel':scope==='pmcc'?'pmcc':'all'];
+  const avgTradeSize=M.avgLeg;
 
-  // Profit factor
-  const profitFactor=s.premiumDebits>0?(s.premiumCredits/s.premiumDebits):s.premiumCredits>0?Infinity:0;
+  // Profit factor: credits ÷ buybacks on closed sold options
+  const profitFactor=M.profitFactor;
   const profitFactorStr=profitFactor===Infinity?'∞':profitFactor.toFixed(2);
 
-  // Sortino-like: use only negative monthly returns as downside
-  const moReturns=monthly.map(m=>m.pNet);
-  const avgMoReturn=moReturns.length?moReturns.reduce((a,b)=>a+b,0)/moReturns.length:0;
-  const downsideReturns=moReturns.filter(r=>r<0);
-  const downsideDev=downsideReturns.length>1?Math.sqrt(downsideReturns.reduce((s,r)=>s+Math.pow(r-avgMoReturn,2),0)/downsideReturns.length):0;
-  const sortinoRatio=downsideDev>0?(avgMoReturn/downsideDev):avgMoReturn>0?Infinity:0;
-  const sortinoStr=sortinoRatio===Infinity?'∞':sortinoRatio.toFixed(2);
+  // Sortino: mean monthly option income ÷ downside deviation of every month against 0 (OT_LEDGER.calcSortino; — under 3 months)
+  const sortinoStr=M.sortino==null?'—':M.sortino===Infinity?'∞':M.sortino.toFixed(2);
 
-  // Max drawdown on cumulative premium
-  let peak=0,maxDD=0,cumPnL=0;
-  monthly.forEach(m=>{cumPnL+=m.pNet;if(cumPnL>peak)peak=cumPnL;const dd=peak-cumPnL;if(dd>maxDD)maxDD=dd;});
-  const maxDDPct=peak>0?(maxDD/peak*100):0;
-
-  // Roll stats
-  const rollTrades=db.trades.filter(t=>t.rollId);
-  const rollIds=new Set(rollTrades.map(t=>t.rollId));
-  const rollCount=rollIds.size;
-  let rollCredits=0,rollDebits=0;
-  rollTrades.forEach(t=>{if(isCredit(t.action))rollCredits+=t.total;else rollDebits+=t.total;});
-  const rollNet=rollCredits-rollDebits;
-  const rollCreditPct=rollCount>0?(rollTrades.filter(t=>isCredit(t.action)&&t.total>0).length/Math.max(1,rollTrades.length)*100):0;
-
-  // CSP vs CC breakdown
-  const cspTrades=db.trades.filter(t=>t.action==='CSP');
-  const ccTrades=db.trades.filter(t=>t.action==='STOC');
-  const cspTotal=cspTrades.reduce((s,t)=>s+(t.total||0),0);
-  const ccTotal=ccTrades.reduce((s,t)=>s+(t.total||0),0);
-  const cspAvgDTE=cspTrades.filter(t=>t.days>0).length?cspTrades.filter(t=>t.days>0).reduce((s,t)=>s+t.days,0)/cspTrades.filter(t=>t.days>0).length:0;
-  const ccAvgDTE=ccTrades.filter(t=>t.days>0).length?ccTrades.filter(t=>t.days>0).reduce((s,t)=>s+t.days,0)/ccTrades.filter(t=>t.days>0).length:0;
+  // Max drawdown on cumulative option income
+  const maxDDPct=M.maxDDPct;
 
   // Ticker leaderboard
-  const tickerMap={};
-  db.wheels.forEach(w=>{
-    if(!tickerMap[w.ticker])tickerMap[w.ticker]={ticker:w.ticker,premium:0,cycles:0,trades:0,arocs:[]};
-    const m=calcWheel(w);const ar=calcAROC(w,m);
-    tickerMap[w.ticker].premium+=m.premiumRealised;
-    tickerMap[w.ticker].trades+=m.trades.length;
-    tickerMap[w.ticker].cycles++;
-    if(ar&&ar.aroc!=null)tickerMap[w.ticker].arocs.push(ar.aroc);
-  });
-  const tickerBoard=Object.values(tickerMap).sort((a,b)=>b.premium-a.premium);
+  const tickerBoard=M.tickers;
 
   // Concentration
   const totalPremium=tickerBoard.reduce((s,t)=>s+Math.abs(t.premium),0)||1;
@@ -9108,21 +9102,21 @@ function renderAnalytics(){
 
   // ── Section 1: Performance Overview ──
   const perfStats=`<div class="a-stat-grid">
-    ${stat(fmtMoney(s.totalRealised),'Wheel Realised P&L','all-time: premium + shares + dividends',s.totalRealised>=0?'var(--green)':'var(--red)','Everything earned from the wheel — option premiums, stock sales, and dividends. Open stock positions excluded.')}
-    ${stat(avgAroc!=null?avgAroc.toFixed(1)+'%':'—','Avg AROC','closed wheels','var(--orange)','Average annualised return on capital across closed wheels, realised only: (realised premium ÷ capital at risk) × (365 ÷ days held).')}
-    ${stat(sortinoStr,'Sortino Ratio','risk-adjusted','var(--text)','Risk-adjusted return using only downside volatility. Higher is better. Unlike Sharpe, it does not penalise upside variance — fairer for option-selling strategies.')}
+    ${stat(fmtMoney(M.realised),scopeName+'Total Realised',scope==='wheel'?'all-time: option income + shares + dividends':scope==='pmcc'?'all-time: option income + closed LEAPs':'all-time: option income + shares + dividends + LEAPs',M.realised>=0?'var(--green)':'var(--red)','Total realised, all-time: option income plus '+(scope==='wheel'?'share sales and dividends':scope==='pmcc'?'closed LEAPs':'share sales, dividends and closed LEAPs')+'. Open positions excluded.')}
+    ${stat(pctS(avgAroc),'AROC',scope==='all'?'Wheel '+pctS(M.aroc.wheel)+' · PMCC '+pctS(M.aroc.pmcc):'closed options, weighted','var(--orange)','Annualised return on capital across every closed sold option, realised only, weighted by capital × days held: Σ P&L ÷ Σ (capital × days) × 365. Wheel puts use the strike as capital, covered calls the share cost, PMCC calls the LEAP cost.')}
+    ${stat(sortinoStr,'Sortino Ratio',M.sortino==null?'needs 3+ months':'risk-adjusted','var(--text)','Average monthly option income ÷ downside deviation. Downside deviation is measured over every month (quiet months count as 0) against a target of 0, so only losing months add to it. Higher is better. Shown once there are 3 months.')}
     ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--text)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
   </div>
   <div class="a-stat-grid" style="margin-top:0.625rem">
     ${stat(profitFactorStr,'Profit Factor','gross credits ÷ debits',parseFloat(profitFactorStr)>=1.5?'var(--green)':'var(--text2)','Gross premium credits divided by total buyback debits. Above 1.0 means profitable overall. Above 2.0 is excellent.')}
-    ${stat(wl.wr?wl.wr+'%':'—','Win Rate',wl.wins+'W · '+wl.losses+'L',parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)','Percentage of option cycles that ended profitably — expired worthless or closed for a gain.')}
-    ${stat(fmtMoney(s.pNet),'Premium','all-time, net of buybacks',s.pNet>=0?'var(--green)':'var(--red)','Realised option premium, all-time: sells that were bought back, expired or assigned, net of buybacks. Open options not counted.')}
+    ${stat(wl.wr?wl.wr+'%':'—','Win Rate',wl.wins+'W · '+wl.losses+'L',parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)','Closed sold options only, same rule as Home: a win kept the premium or was bought back cheaper.')}
+    ${stat(fmtMoney(M.premium),'Option Income','all-time, net of buybacks',M.premium>=0?'var(--green)':'var(--red)','Realised option income, all-time: sold options that were bought back, expired or assigned, net of buybacks. Open options not counted.')}
     ${stat(py.yearly!=null?fmtMoney(py.yearly):'—','Annualised Projection',py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`,py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)',scope==='wheel'?'Wheel realised income this year — option premium, stock sales and dividends — scaled to 365 days from your first wheel trade this year, or from 1 January if you started earlier. PMCC short calls, closed LEAPs and open positions are not included.':'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.')}
   </div>`;
 
   // ── Equity curve (cumulative premium SVG) ──
   let cumData=[];let cum=0;
-  monthly.forEach(m=>{cum+=m.pNet;cumData.push({label:m.label,val:cum});});
+  M.months.forEach(m=>{cum+=m.net;cumData.push({label:m.label,val:cum});});
   const eqW=720,eqH=180,ePL=50,ePR=12,ePT=12,ePB=28;
   const ecW=eqW-ePL-ePR,ecH=eqH-ePT-ePB;
   const eqMax=Math.max(...cumData.map(d=>d.val),1);
@@ -9156,58 +9150,34 @@ function renderAnalytics(){
 
   // ── Section 2: Income Analysis (13-month chart reuse) ──
 
-  // ── Monthly P&L table ──
-  let runTotal=0;
-  const maxBar=monthly.length?Math.max(...monthly.map(m=>Math.abs(m.pNet)||1)):1;
 
   // ── Section 3: Trade Quality — DTE analysis ──
-  const dteBuckets={'1-7d':{min:1,max:7},'8-14d':{min:8,max:14},'15-30d':{min:15,max:30},'31-45d':{min:31,max:45},'45d+':{min:46,max:999}};
-  const dteAnalysis={};
-  const _sellOut={};db.wheels.forEach(w=>Object.assign(_sellOut,wheelSellOutcomes(db.trades.filter(t=>t.wheelId===w.id))));
-  const _net=t=>_sellOut[t.id]?_sellOut[t.id].net:null;
-  for(const[label,range] of Object.entries(dteBuckets)){
-    const trades=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.days>=range.min&&t.days<=range.max&&_net(t)!=null); // closed sells only
-    if(!trades.length)continue;
-    const totalPrem=trades.reduce((s,t)=>s+_net(t),0);
-    const avgPPD=trades.filter(t=>t.days>0).length?trades.filter(t=>t.days>0).reduce((s,t)=>s+(_net(t)/t.days),0)/trades.filter(t=>t.days>0).length:0;
-    const rocs=trades.map(t=>calcTradeROC(t,_net(t),_sellOut[t.id]?_sellOut[t.id].end:null)).filter(x=>x!=null);
-    const avgROC=rocs.length?rocs.reduce((a,b)=>a+b,0)/rocs.length:null;
-    dteAnalysis[label]={count:trades.length,totalPrem,avgPPD,avgROC};
-  }
-  const dteRows=Object.entries(dteAnalysis).map(([label,d])=>`<tr>
-    <td style="font-weight:720;color:var(--silver)">${label}</td>
+  const dteRows=M.dte.map(d=>`<tr>
+    <td style="font-weight:720;color:var(--silver)">${d.label}</td>
     <td data-l="Trades">${d.count}</td>
-    <td data-l="Total" class="g">${fmtMoney(d.totalPrem)}</td>
-    <td data-l="Avg PPD" style="color:var(--orange)">${fmtMoney(d.avgPPD)}/d</td>
-    <td data-l="Avg AROC" style="color:${d.avgROC!=null?(d.avgROC>=15?'var(--green)':d.avgROC>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${d.avgROC!=null?d.avgROC.toFixed(1)+'%':'—'}</td>
+    <td data-l="Total" class="${colorN(d.total)}">${fmtMoney(d.total)}</td>
+    <td data-l="Avg PPD" style="color:var(--orange)">${d.ppd!=null?fmtMoney(d.ppd)+'/d':'—'}</td>
+    <td data-l="Avg AROC" style="color:${d.aroc!=null?(d.aroc>=15?'var(--green)':d.aroc>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${pctS(d.aroc)}</td>
   </tr>`).join('');
 
   // ── Section 5: Strategy Comparison ──
-  const cspBTC=db.trades.filter(t=>t.action==='BTC').reduce((s,t)=>s+(t.total||0),0);
+  const stratBox=(title,c)=>`<div class="a-chart-box">
+      <div class="a-chart-title">${title}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem">
+        <div><span class="t3-xs">Closed</span><div class="fw5">${c.count}</div></div>
+        <div><span class="t3-xs">Option Income</span><div class="${colorN(c.total)} fw5">${fmtMoney(c.total)}</div></div>
+        <div><span class="t3-xs">Avg DTE</span><div class="fw5">${c.avgDte?c.avgDte.toFixed(0)+'d':'—'}</div></div>
+        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:720;color:var(--orange)">${c.ppd!=null?fmtMoney(c.ppd):'—'}</div></div>
+      </div>
+    </div>`;
   const stratTable=`<div class="d-grid d-grid-2" style="gap:0.75rem">
-    <div class="a-chart-box">
-      <div class="a-chart-title">Cash-Secured Puts</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem">
-        <div><span class="t3-xs">Trades</span><div class="fw5">${cspTrades.length}</div></div>
-        <div><span class="t3-xs">Total Premium</span><div class="g fw5">${fmtMoney(cspTotal)}</div></div>
-        <div><span class="t3-xs">Avg DTE</span><div class="fw5">${cspAvgDTE?cspAvgDTE.toFixed(0)+'d':'—'}</div></div>
-        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:720;color:var(--orange)">${fmtMoney(timing.avgCspPPD)}</div></div>
-      </div>
-    </div>
-    <div class="a-chart-box">
-      <div class="a-chart-title">Covered Calls</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem">
-        <div><span class="t3-xs">Trades</span><div class="fw5">${ccTrades.length}</div></div>
-        <div><span class="t3-xs">Total Premium</span><div class="g fw5">${fmtMoney(ccTotal)}</div></div>
-        <div><span class="t3-xs">Avg DTE</span><div class="fw5">${ccAvgDTE?ccAvgDTE.toFixed(0)+'d':'—'}</div></div>
-        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:720;color:var(--orange)">${fmtMoney(timing.avgStocPPD)}</div></div>
-      </div>
-    </div>
+    ${stratBox('Cash-Secured Puts',M.csp)}
+    ${stratBox(scope==='wheel'?'Covered Calls':'Covered &amp; PMCC Calls',M.cc)}
   </div>`;
 
   // Ticker leaderboard
   const tickerRows=tickerBoard.map(t=>{
-    const avgA=t.arocs.length?t.arocs.reduce((a,b)=>a+b,0)/t.arocs.length:null;
+    const avgA=t.aroc;
     const pct=(Math.abs(t.premium)/totalPremium*100);
     return`<tr>
       <td style="font-weight:720;color:var(--orange)">${esc(t.ticker)}</td>
@@ -9228,34 +9198,45 @@ function renderAnalytics(){
   </div>`;
 
   // ── Section 7: Wheel Scoreboard ──
-  const rotRows=db.wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).map(w=>{
-    const m=calcWheel(w);const ar=calcAROC(w,m);
-    const rotIn=m.trades.filter(t=>t.action==='IN').reduce((s,t)=>s+(t.total||0),0);
-    const rotOut=m.trades.filter(t=>t.action==='OUT').reduce((s,t)=>s+(t.total||0),0);
-    const stockReal=rotationShareStats(w,db.trades,null).realised;
-    const rotDiv=m.trades.filter(t=>t.action==='DIV').reduce((s,t)=>s+(t.total||0),0);
-    const rotRealised=m.premiumRealised+stockReal+rotDiv;
-    const cr=cycleReturn(w,m,rotationShareStats(w,db.trades,_priceOf),rotDiv);
+  const _w=new Map(db.wheels.map(w=>[w.id,w]));
+  const rotRows=M.board.map(r=>{
+    if(r.kind==='leap'){
+      const l=r.leg;
+      return`<tr>
+      <td style="color:var(--orange)">L</td>
+      <td>${esc((l.underlying||l.ticker||'')+' $'+(+l.strike||0)+' LEAP')}</td>
+      <td><span class="rot-badge ${l.status==='open'?'open':'closed'}" style="padding:2px 0.4375rem;border-radius:6px;font-size:0.675rem">${l.status==='open'?'● Open':'Closed'}</span></td>
+      <td class="num">${r.legCount}</td>
+      <td class="num g">${fmtMoney(r.gross)}</td>
+      <td class="num ${colorN(r.premium)}">${fmtMoney(r.premium)}</td>
+      <td class="num ${colorN(r.realised)}">${fmtMoney(r.realised)}</td>
+      <td class="num">${fmtMoney(OPTS.legPnL(l).costBasis)}</td>
+      <td class="num ${r.aroc!=null?colorN(r.aroc):'m'}">${pctS(r.aroc)}</td>
+      <td class="num m">—</td>
+    </tr>`;
+    }
+    const w=_w.get(r.id)||r.wheel;const m=calcWheel(w);
+    const cr=cycleReturn(w,m,rotationShareStats(w,db.trades,_priceOf),m.trades.filter(t=>t.action==='DIV').reduce((s,t)=>s+(t.total||0),0));
     return`<tr>
       <td style="color:var(--orange)">${w.sortOrder||'?'}</td>
       <td>${esc(wheelLabelDisplay(w.label,w)==='—'?(w.ticker||''):wheelLabelDisplay(w.label,w))}</td>
       <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:6px;font-size:0.675rem">${w.status==='open'?'● Open':'Closed'}</span></td>
       <td class="num">${m.trades.length}</td>
-      <td class="num g">${fmtMoney(m.premiumCredits)}</td>
-      <td class="num ${colorN(m.premiumRealised)}">${fmtMoney(m.premiumRealised)}</td>
-      <td class="num ${colorN(rotRealised)}">${fmtMoney(rotRealised)}</td>
+      <td class="num g">${fmtMoney(r.gross)}</td>
+      <td class="num ${colorN(r.premium)}">${fmtMoney(r.premium)}</td>
+      <td class="num ${colorN(r.realised)}">${fmtMoney(r.realised)}</td>
       <td class="num">${m.breakeven!=null?'$'+fmt2(m.breakeven):'—'}</td>
-      <td class="num ${ar&&ar.aroc!=null?colorN(ar.aroc):'m'}">${ar&&ar.aroc!=null?ar.aroc.toFixed(1)+'%':'—'}</td>
+      <td class="num ${r.aroc!=null?colorN(r.aroc):'m'}">${pctS(r.aroc)}</td>
       <td class="num ${cr?colorN(cr.raw):'m'}" title="${cr?(cr.ann==null?'Under 7 days: raw return, not annualised':'Raw '+cr.raw.toFixed(1)+'% over '+cr.days+'d'+(cr.incUnrealised?', incl. unrealised':'')):''}">${cr?(cr.ann!=null?cr.ann.toFixed(1)+'%':cr.raw.toFixed(1)+'%*'):'—'}</td>
     </tr>`;
   }).join('');
 
   // ── Section: Streaks & Records ──
   const recordStats=`<div class="a-stat-grid">
-    ${stat(streaks.maxStreak?streaks.maxStreak+' mo':'—','Win Streak','consecutive profitable months','var(--green)','Longest run of consecutive months with positive net option income.')}
-    ${stat(streaks.best?fmtMoney(streaks.best.pNet):'—','Best Month',streaks.best?streaks.best.label:'','var(--green)','Single best calendar month by net option premium.')}
-    ${stat(streaks.worst?fmtMoney(streaks.worst.pNet):'—','Worst Month',streaks.worst?streaks.worst.label:'','var(--red)','Worst calendar month by net option premium. Negative means buyback costs exceeded credits.')}
-    ${stat(bw.best?fmtMoney(bw.best.total):'—','Best Single Trade',bw.best?bw.best.action+' · '+fmtDate(bw.best.entered):'','var(--green)','Highest-premium single option trade by total credit received.')}
+    ${stat(M.maxStreak?M.maxStreak+' mo':'—','Win Streak','consecutive profitable months','var(--green)','Longest run of consecutive months with positive net option income.')}
+    ${stat(M.bestMonth?fmtMoney(M.bestMonth.net):'—','Best Month',M.bestMonth?M.bestMonth.label:'','var(--green)','Single best calendar month by option income.')}
+    ${stat(M.worstMonth?fmtMoney(M.worstMonth.net):'—','Worst Month',M.worstMonth?M.worstMonth.label:'',M.worstMonth&&M.worstMonth.net<0?'var(--red)':'var(--text2)','Worst calendar month by option income. Negative means buyback costs exceeded credits.')}
+    ${stat(M.best?fmtMoney(M.best.amount):'—','Best Single Trade',M.best?evKind(M.best)+' · '+fmtDate(M.best.date):'','var(--green)','Closed sold option with the most option income kept, net of any buyback.')}
   </div>`;
 
   // ═══ ASSEMBLE ═══
@@ -9274,24 +9255,24 @@ function renderAnalytics(){
         ${dteTable}
       </div>
       <div class="a-stat-grid" style="margin-top:0.75rem">
-        ${stat(timing.totalOptDays+'d','Total Option-Days','cumulative risk exposure','var(--text2)','Sum of DTE across every option opened. Your total time exposure to the market.')}
-        ${stat(fmtMoney(avgTradeSize),'Avg Leg Size','per option opened','var(--text2)','Average premium collected each time you open a new option position.')}
-        ${stat(bw.bestPPD?fmtMoney(bw.bestPPD.total/bw.bestPPD.days)+'/d':'—','Best PPD Trade',bw.bestPPD?bw.bestPPD.action+' · '+bw.bestPPD.days+'d':'','var(--green)','Single option trade with the highest Premium Per Day — your most capital-efficient trade.')}
-        ${stat(bw.biggestBTC?fmtMoney(bw.biggestBTC.total):'—','Biggest BTC',bw.biggestBTC?fmtDate(bw.biggestBTC.entered):'','var(--red)','Most expensive single buyback. Large BTCs eat into premium — track these to improve roll timing.')}
+        ${stat(M.totalOptDays+'d','Total Option-Days','closed options, days held','var(--text2)','Sum of days held across every closed sold option. Your total time exposure to the market.')}
+        ${stat(fmtMoney(avgTradeSize),'Avg Leg Size','per closed option','var(--text2)','Average premium collected per closed sold option, before any buyback.')}
+        ${stat(M.bestPPD?fmtMoney(M.bestPPD.amount/M.bestPPD.daysHeld)+'/d':'—','Best PPD Trade',M.bestPPD?evKind(M.bestPPD)+' · '+M.bestPPD.daysHeld+'d':'','var(--green)','Closed sold option with the most option income per day held — your most capital-efficient trade.')}
+        ${stat(M.biggestBuyback?fmtMoney(M.biggestBuyback.grossOut):'—','Biggest BTC',M.biggestBuyback?fmtDate(M.biggestBuyback.date):'',M.biggestBuyback?'var(--red)':'var(--text3)','Most expensive single buyback. Large BTCs eat into premium — track these to improve roll timing.')}
       </div>
     ${stratTable}
       <div class="a-chart-box" style="margin-top:0.75rem">
         <div class="a-chart-title">Ticker Leaderboard</div>
         ${tickerRows
-          ?`<div class="a-table-wrap"><table class="a-table a-table-nums"><thead><tr><th>Ticker</th><th>Cycles</th><th>Trades</th><th>Premium</th><th>Avg AROC</th><th>Share</th></tr></thead><tbody>${tickerRows}</tbody></table></div>`
-          :`<p class="a-empty">No wheels to rank yet.</p>`}
+          ?`<div class="a-table-wrap"><table class="a-table a-table-nums"><thead><tr><th>Ticker</th><th>Cycles</th><th>Closed</th><th>Option Income</th><th>Avg AROC</th><th>Share</th></tr></thead><tbody>${tickerRows}</tbody></table></div>`
+          :`<p class="a-empty">No closed options to rank yet.</p>`}
       </div>
     ${secEnd}</div>
 
     <div class="a-section">${sec('Risk & Exposure','Capital and fees')}${riskStats}${secEnd}</div>
 
-    <div class="a-section">${sec('Wheel Scoreboard','Per-wheel results')}
-      <div class="a-table-wrap"><table class="a-table"><thead><tr><th>#</th><th>Wheel</th><th>Status</th><th class="num">Trades</th><th class="num">Gross</th><th class="num">Premium</th><th class="num">Realised P&L</th><th class="num">Basis</th><th class="num">AROC</th><th class="num">Cycle /yr ${ii(`Realised only. AROC uses realised premium. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table></div>
+    <div class="a-section">${sec(scope==='pmcc'?'LEAP Scoreboard':scope==='wheel'?'Wheel Scoreboard':'Scoreboard',scope==='pmcc'?'Per-LEAP results':scope==='wheel'?'Per-wheel results':'Per-wheel and per-LEAP results')}
+      <div class="a-table-wrap"><table class="a-table"><thead><tr><th>#</th><th>${scope==='pmcc'?'LEAP':scope==='wheel'?'Wheel':'Wheel / LEAP'}</th><th>Status</th><th class="num">Trades</th><th class="num">Gross</th><th class="num">Option Income</th><th class="num">Total Realised</th><th class="num">Basis</th><th class="num">AROC</th><th class="num">Cycle /yr ${ii(`Realised only. Gross = premium collected on closed options; Option Income is net of buybacks; Total Realised adds share sales, dividends and closed LEAPs. AROC is weighted by capital × days held. LEAP rows: Trades counts the LEAP and its short calls, Basis is the LEAP cost. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table></div>
     ${secEnd}</div>
   </div>`;
 }

@@ -2,7 +2,7 @@
 // Realistic sample: calls sold since Sep; Home's November figure must equal the sum of the cards' November lines.
 const test=require('node:test');const assert=require('node:assert');const{extractFn}=require('./extract');
 const OPTS=new Function(extractFn('optionsLib')+'\nreturn optionsLib();')();
-const T=new Function('OPTS',['pmccShortsFor','pmccStats','optsMonthly','monthlyExtraSources','homeFigures','calcMonthlyRealised'].map(extractFn).join('\n')+
+const T=new Function('OPTS',require('./extract').LEDGER_SRC + '\n' + ['pmccShortsFor','pmccStats','optsMonthly','monthlyExtraSources','homeFigures','calcMonthlyRealised'].map(extractFn).join('\n')+
   '\nconst realisedPremium=()=>({events:[]}),shareRealisations=()=>({events:[]});return {pmccStats,optsMonthly,monthlyExtraSources,homeFigures,calcMonthlyRealised};')(OPTS);
 const today='2026-11-05';
 const L={id:'L1',underlying:'SOFI',type:'C',side:'long',strike:15,expiry:'2028-01-21',entryDate:'2026-08-01',qty:2,entryPrice:9,status:'open'};
