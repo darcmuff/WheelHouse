@@ -198,21 +198,22 @@
       list.forEach(t => {
         const sh = t.shares || 0, v = t.total || 0;
         if (t.action === 'IN') {
-          if (sh > 0) lots.push({ shares: sh, cps: v / sh, date: t.entered || '' });
+          if (sh > 0) lots.push({ shares: sh, cps: v / sh, fps: (+t.fees || 0) / sh, date: t.entered || '' });
           return;
         }
-        let left = sh, cost = 0, lotInDate = t.entered || '';
+        let left = sh, cost = 0, lotFees = 0, lotInDate = t.entered || '';
         const lotDates = [];
         while (left > 0 && lots.length) {
           const l = lots[0], take = Math.min(left, l.shares);
           cost += take * l.cps;
+          lotFees += take * (l.fps || 0);
           lotDates.push({ date: l.date, shares: take });
           l.shares -= take;
           left -= take;
           if (l.shares <= 1e-9) lots.shift();
         }
         if (lotDates.length) lotInDate = lotDates[0].date;
-        events.push({ wheelId: k, date: t.entered || '', shares: sh, proceeds: v, cost, pnl: v - cost, lotInDate, ticker: t.ticker });
+        events.push({ wheelId: k, date: t.entered || '', shares: sh, proceeds: v, cost, pnl: v - cost, lotInDate, ticker: t.ticker, fees: (+t.fees || 0) + lotFees });
       });
       open[k] = { shares: lots.reduce((a, l) => a + l.shares, 0), cost: lots.reduce((a, l) => a + l.shares * l.cps, 0), lots: lots.slice() };
     });
@@ -228,6 +229,8 @@
     const isBuyBack = closer && (closer.action === 'BTC' || closer.action === 'STC');
     const grossOut = isBuyBack ? proRata(closer.total, shares, closer.shares) : 0;
     const amount = grossIn - grossOut;
+    // Fees logged on the opener (and a buy-back / sell-to-close closer), pro rata. Info only: totals are already net of fees.
+    const fees = proRata(o.fees, shares, o.shares) + (isBuyBack ? proRata(closer.fees, shares, closer.shares) : 0);
     const closeDate = closer ? (closer.entered || o.expiry || '') : (o.expiry || '');
     const openDate = o.entered || '';
     const resolvedShares = Number(shares) || Number(o.shares) || 0;
@@ -246,7 +249,7 @@
       amount,
       grossIn,
       grossOut,
-      fees: 0,
+      fees,
       capital,
       daysHeld: daysBetweenUTC(openDate, closeDate || o.expiry || openDate),
       isWin: amount >= 0,
@@ -327,7 +330,7 @@
             amount: -v,
             grossIn: 0,
             grossOut: v,
-            fees: 0,
+            fees: +t.fees || 0,
             capital: (+t.strike || 0) * (Number(t.shares) || 0),
             daysHeld: 1,
             isWin: false,
@@ -346,7 +349,7 @@
             amount: v,
             grossIn: v,
             grossOut: 0,
-            fees: 0,
+            fees: +t.fees || 0,
             capital: 0,
             daysHeld: 1,
             isWin: v >= 0,
@@ -365,7 +368,7 @@
             amount: v,
             grossIn: v >= 0 ? v : 0,
             grossOut: v < 0 ? -v : 0,
-            fees: 0,
+            fees: +t.fees || 0,
             capital: 0,
             daysHeld: 1,
             isWin: v >= 0,
@@ -408,7 +411,7 @@
             amount: amt,
             grossIn: amt,
             grossOut: 0,
-            fees: 0,
+            fees: proRata(o.fees, rem, o.shares),
             capital: (+o.strike || 0) * rem,
             daysHeld: daysBetweenUTC(o.entered, o.entered),
             isWin: amt >= 0,
@@ -430,7 +433,7 @@
           amount: e.pnl,
           grossIn: e.pnl >= 0 ? e.pnl : 0,
           grossOut: e.pnl < 0 ? -e.pnl : 0,
-          fees: 0,
+          fees: e.fees || 0,
           capital: e.cost,
           daysHeld: daysBetweenUTC(e.lotInDate, e.date),
           isWin: e.pnl >= 0,

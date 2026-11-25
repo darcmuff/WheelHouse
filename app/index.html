@@ -8900,15 +8900,13 @@ function openLeapPositions(legs,today){
   const other=shorts.filter(s=>!s.parentLeapId||!ids.has(s.parentLeapId)).map(row).sort(byExp);
   return{leaps:rows,other,shortCount:shorts.length,cost:Math.round(rows.reduce((a,r)=>a+r.cost,0)*100)/100};
 }
-// Risk & Exposure inputs by source: wheel trades vs LEAP / short-call legs. Pure (OPTS only).
+// Risk & Exposure peak commitments: biggest CSP notional and biggest LEAP cost. Pure (OPTS only).
 function moreRiskFigures(trades,legs){
   trades=trades||[];legs=(legs||[]).filter(l=>l&&!l.demo);
   const rd=n=>Math.round(n*100)/100;
-  const wheelFees=rd(trades.reduce((a,t)=>a+(+t.fees||0),0));
-  const legFees=rd(legs.reduce((a,l)=>a+(+l.fees||0)+(+l.closeFees||0),0));
   const peakCsp=trades.filter(t=>t.action==='CSP'&&t.strike&&t.shares).reduce((a,t)=>Math.max(a,t.strike*t.shares),0);
   const peakLeap=rd(legs.filter(l=>l.side==='long'&&!l.parentLeapId).reduce((a,l)=>Math.max(a,OPTS.legPnL(l).costBasis),0));
-  return{wheelFees,legFees,peakCsp,peakLeap};
+  return{peakCsp,peakLeap};
 }
 function moreLedgerStats(scope,wheels,trades,legs,today){
   today=String(today||new Date().toISOString().slice(0,10)).slice(0,10);
@@ -8981,7 +8979,7 @@ function moreLedgerStats(scope,wheels,trades,legs,today){
     const kids=legs.filter(k=>k.parentLeapId===l.id),ids=new Set([l.id,...kids.map(k=>k.id)]);
     board.push({kind:'leap',id:l.id,leg:l,legCount:1+kids.length,...fig(events.filter(e=>e.strategy==='pmcc'&&ids.has(e.legId)))});});
   return{scope:scope==='wheel'||scope==='pmcc'?scope:'all',events,inc,wl,
-    realised:rd(sum(events,e=>e.amount)),premium:rd(S.total),grossIn:rd(grossIn),grossOut:rd(grossOut),profitFactor,
+    realised:rd(sum(events,e=>e.amount)),premium:rd(S.total),grossIn:rd(grossIn),grossOut:rd(grossOut),profitFactor,fees:rd(sum(events,e=>e.fees)),
     aroc:split(inc),arocOpen:split(incOpen),openWheels:openWheel.size,openLeaps:legs.filter(l=>l.side==='long'&&!l.parentLeapId&&l.status==='open').length,
     eventMonths,months,sortino,maxDD,maxDDPct:peak>0?maxDD/peak*100:0,maxStreak,bestMonth,worstMonth,
     month:monthNet(ym),lastMonth:monthNet(lastYm),hasMonths:eventMonths.length>0,
@@ -9249,7 +9247,8 @@ function renderAnalytics(){
   // Risk & Exposure follows the scope: wheel trades, LEAP / short-call legs, or both
   const R=moreRiskFigures(db.trades,db.opts||[]),OL=openLeapPositions(db.opts||[],today);
   const k$=n=>fmtMoney(n).replace(/\.\d\d$/,'');
-  const feeAmt=scope==='wheel'?R.wheelFees:scope==='pmcc'?R.legFees:R.wheelFees+R.legFees;
+  // Fees and fee % both from the closed, scoped OT_LEDGER events: open trades' fees count once they close
+  const feeAmt=M.fees;
   // Same denominator in every scope: gross premium on closed trades in the scope (OT_LEDGER income events), never open credits
   const feeBase=M.grossIn;
   const feePct=feeBase>0?feeAmt/feeBase*100:0;
@@ -9261,7 +9260,7 @@ function renderAnalytics(){
       ?stat(fmtMoney(c.leaps),'Current Exposure',OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),'var(--text)','Capital at work in LEAPs, same as Home: what you paid for open LEAPs. Short calls written against them need no extra capital.')
       :stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),'var(--text)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
     ${stat(fmtMoney(peak),'Peak Exposure',scope==='wheel'?'highest single CSP':scope==='pmcc'?'highest single LEAP':'highest single CSP or LEAP','var(--text2)',scope==='wheel'?'Largest single cash-secured put notional ever opened. Your peak capital requirement.':scope==='pmcc'?'Most you have paid for a single LEAP, open or closed. Your peak capital requirement.':'Largest single commitment ever: a cash-secured put notional or what you paid for one LEAP, whichever is bigger.')}
-    ${stat(fmtMoney(feeAmt),'Total Fees',feePct.toFixed(1)+'% of closed premium','var(--text2)',(scope==='wheel'?'Commissions and regulatory fees logged on wheel trades.':scope==='pmcc'?'Commissions and regulatory fees logged on LEAPs and short calls, opening and closing.':'Commissions and regulatory fees logged on every wheel trade, LEAP and short call.')+' The % is fees ÷ gross premium collected on closed trades in this view.')}
+    ${stat(fmtMoney(feeAmt),'Total Fees',feePct.toFixed(1)+'% of closed premium','var(--text2)','Commissions and regulatory fees across closed trades')}
     ${scope==='pmcc'
       ?stat(String(OL.shortCount),'Open Short Calls','against '+OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),OL.shortCount>0?'var(--orange)':'var(--text3)','Short calls still open, written against your LEAPs (and any short options not tied to a LEAP).')
       :stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}

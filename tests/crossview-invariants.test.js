@@ -253,8 +253,6 @@ test('Open LEAPs & short calls: each open LEAP with its open calls; closed legs 
   assert.strictEqual(P.shortCount, 2);
   assert.strictEqual(P.cost, 400);
   const R = S.moreRiskFigures(fixture().trades.map(t => ({ ...t, fees: 1 })), legs);
-  assert.strictEqual(R.wheelFees, 8);
-  assert.strictEqual(R.legFees, 0.65);
   assert.strictEqual(R.peakCsp, 5000);
   assert.strictEqual(R.peakLeap, 500);
 });
@@ -273,7 +271,7 @@ test('Risk & Exposure and Open Positions follow the scope; no unexplained wheel-
   assert.match(analytics, /stat\(fmtMoney\(c\.wheel\),'Current Exposure','Puts '/);
   assert.match(analytics, /stat\(fmtMoney\(c\.leaps\),'Current Exposure'/);
   assert.match(analytics, /scope==='pmcc'\?'highest single LEAP'/);
-  assert.match(analytics, /const feeAmt=scope==='wheel'\?R\.wheelFees:scope==='pmcc'\?R\.legFees:R\.wheelFees\+R\.legFees;/);
+  assert.match(analytics, /const feeAmt=M\.fees;/);
   assert.match(analytics, /'Open Short Calls'/);
   assert.doesNotMatch(analytics, /cap\.totalFees|cap\.maxCap/);
 });
@@ -321,4 +319,33 @@ test('Fee %: one ledger denominator (gross premium on closed trades in the scope
   assert.strictEqual(base('wheel'), 500 + 120 + 200 + 150);
   assert.strictEqual(base('pmcc'), 100 + 80 + 120);
   assert.strictEqual(base('all'), base('wheel') + base('pmcc'));
+});
+
+test('Total Fees and Fee %: closed scoped ledger events only; an open trade with fees moves neither, in any scope', () => {
+  const analytics = extractFn('renderAnalytics');
+  assert.match(analytics, /const feeAmt=M\.fees;/);
+  assert.match(analytics, /const feeBase=M\.grossIn;/);
+  assert.match(analytics, /'Total Fees',feePct\.toFixed\(1\)\+'% of closed premium','var\(--text2\)','Commissions and regulatory fees across closed trades'\)/);
+  const withFees = () => {
+    const db = fixture();
+    const f = { a: 0.65, b: 0.65, c: 0.65, d: 0.65, e: 1, g: 0.65, h: 1 };
+    db.trades.forEach(t => { if (f[t.id] != null) t.fees = f[t.id]; });
+    db.opts.forEach(l => { l.fees = 0.65; if (l.status !== 'open') l.closeFees = l.status === 'closed' ? 0.65 : 0; });
+    return db;
+  };
+  const figs = db => Object.fromEntries(['all', 'wheel', 'pmcc'].map(sc => {
+    const M = sandbox(db).moreLedgerStats(sc, db.wheels, db.trades, db.opts, TODAY);
+    return [sc, { fees: M.fees, pct: M.grossIn > 0 ? M.fees / M.grossIn * 100 : 0 }];
+  }));
+  const base = figs(withFees());
+  // Wheel: CSP a + BTC b, CSP c, CSP d (assigned), STOC g (called away), shares: IN e + OUT h
+  assert.strictEqual(base.wheel.fees, 5.25);
+  // LEAPs & PMCC: closed L1 (0.65 + 0.65), C1 (0.65), C2 (1.30), C3 (1.30); open L2 not counted
+  assert.strictEqual(base.pmcc.fees, 4.55);
+  assert.strictEqual(base.all.fees, Math.round((base.wheel.fees + base.pmcc.fees) * 100) / 100);
+  // Add an open wheel CSP and an open short call, both with fees
+  const db = withFees();
+  db.trades.push(T('o1', 'w1', 'SOFI', 'CSP', '2026-11-15', 999, { strike: 14, expiry: '2026-12-19', fees: 9.99 }));
+  db.opts.push({ id: 'C9', parentLeapId: 'L2', side: 'short', type: 'C', underlying: 'SOFI', strike: 25, qty: 1, entryPrice: 7.77, entryDate: '2026-11-15', expiry: '2026-12-19', status: 'open', fees: 9.99, closeFees: 0 });
+  assert.deepStrictEqual(figs(db), base);
 });
