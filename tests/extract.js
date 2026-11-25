@@ -15,6 +15,14 @@ function extractConst(name) {
 
 const WHEEL_NORM_BUNDLE = ['walkLegPairs', 'normWheelShortStcClosers'];
 const WHEEL_NORM_FN = new Set(['realisedPremium', 'wheelSellOutcomes', 'wheelCloseSlices', 'wheelCapturedOnClose', 'wheelRemainLabel', 'wheelListCells']);
+const WHEEL_AROC_BUNDLE = [
+  'walkLegPairs',
+  'normWheelShortStcClosers',
+  'daysBetweenUTC',
+  'wheelPeakCapital',
+  'wheelCycleEndDate',
+];
+const WHEEL_AROC_FN = new Set(['calcAROC', 'cycleReturn', 'calcTradeROC']);
 
 function extractFnBody(name) {
   const i = SRC.indexOf(`function ${name}(`);
@@ -33,6 +41,9 @@ function extractFnBody(name) {
 function extractFn(name) {
   if (WHEEL_NORM_FN.has(name)) {
     return WHEEL_NORM_BUNDLE.map(extractFnBody).join('\n') + '\n' + extractFnBody(name);
+  }
+  if (WHEEL_AROC_FN.has(name)) {
+    return WHEEL_AROC_BUNDLE.map(extractFnBody).join('\n') + '\n' + extractFnBody(name);
   }
   return extractFnBody(name);
 }
