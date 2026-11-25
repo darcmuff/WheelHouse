@@ -72,7 +72,7 @@ test('Home: Capital at work card shows the same figure Return this month divides
   assert.ok(home.includes("caw.pct!=null?'Account size':'Capital at work'"), 'title switches when an account size is set');
   assert.ok(home.includes('fmtMoney(caw.total)'), 'capital at work still shown');
   assert.ok(home.includes('Wheel ${fmtMoney(caw.wheel)') && home.includes('LEAPs ${fmtMoney(caw.leaps)'), 'split shown');
-  assert.ok(H.includes('returnBase(rs,caw.total)'), 'return divides by caw.total (or the account size when chosen)');
+  assert.ok(H.includes('monthReturnCapital(rs,today.slice(0,7),monthlyCap)'), 'Auto return divides by this month\'s peak deployed capital (Manual still uses the account size)');
   const c = L.capitalAtWork(10000, 20000, [{ status: 'open', side: 'long', entryPrice: 50, qty: 1 }], null);
   assert.strictEqual(c.total, c.wheel + c.leaps);
 });

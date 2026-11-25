@@ -716,6 +716,176 @@
     return r2(avg / downsideDev);
   }
 
+  const OPEN_END = '9999-12-31';
+
+  function isISODate(s) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+  }
+
+  function isoDay(s) {
+    return String(s || '').slice(0, 10);
+  }
+
+  function monthEndUTC(ym) {
+    const y = +ym.slice(0, 4), m = +ym.slice(5, 7);
+    return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  }
+
+  function nextYm(ym) {
+    let y = +ym.slice(0, 4), m = +ym.slice(5, 7);
+    m++;
+    if (m > 12) { m = 1; y++; }
+    return y + '-' + String(m).padStart(2, '0');
+  }
+
+  function earliestTradeYm(trades, opts) {
+    let d = '';
+    const consider = x => {
+      const s = isoDay(x);
+      if (isISODate(s) && (!d || s < d)) d = s;
+    };
+    (trades || []).forEach(t => consider(t.entered));
+    (opts || []).forEach(l => { if (!l.demo) consider(l.entryDate); });
+    return d ? d.slice(0, 7) : '';
+  }
+
+  function positionEndForOpenCsp(o, today) {
+    const exp = isoDay(o.expiry);
+    if (exp && (exp < today || (o.expiredWorthless && exp <= today))) return exp;
+    if (o.expiredWorthless && !exp) return isoDay(o.entered) || today;
+    return OPEN_END;
+  }
+
+  function positionEndForOpt(l, today) {
+    const close = isoDay(l.closeDate);
+    const exp = isoDay(l.expiry);
+    if (l.status === 'open') {
+      if (exp && exp < today) return exp;
+      return OPEN_END;
+    }
+    return (isISODate(close) ? close : '') || (isISODate(exp) ? exp : '') || isoDay(l.entryDate);
+  }
+
+  // Capital-consuming intervals { start, end, capital } as YYYY-MM-DD.
+  // Still-open positions use end = 9999-12-31. Covered calls and PMCC short calls are omitted ($0).
+  function buildCapitalIntervals(wheels, trades, opts, ctx) {
+    ctx = ctx || {};
+    const today = isoDay(ctx.today) || todayUTC();
+    const tradesAll = trades || [];
+    const optsAll = (opts || []).filter(l => !l.demo);
+    const intervals = [];
+    const push = (start, end, capital, kind, ticker) => {
+      const s = isoDay(start), e = isoDay(end);
+      const cap = +capital || 0;
+      if (!isISODate(s) || !isISODate(e) || e < s || cap <= 0) return;
+      intervals.push({ start: s, end: e, capital: cap, kind, ticker: ticker || '' });
+    };
+
+    const groups = {};
+    tradesAll.forEach(t => {
+      const k = t.wheelId || ('tk:' + (t.ticker || ''));
+      (groups[k] = groups[k] || []).push(t);
+    });
+
+    Object.entries(groups).forEach(([, rawList]) => {
+      let list = normWheelShortStcClosers(rawList.map((t, i) => ({ ...t, id: t.id || ('CI' + i) })));
+      const byId = {};
+      list.forEach(t => { byId[t.id] = t; });
+      const { open, pairs } = walkLegPairs(list);
+
+      Object.entries(pairs).forEach(([cid, ps]) => {
+        const c = byId[cid];
+        if (!c) return;
+        ps.forEach(p => {
+          const o = byId[p.legId];
+          if (!o || o.action !== 'CSP') return;
+          const shares = p.shares || 0;
+          push(o.entered, c.entered, (+o.strike || 0) * shares, 'csp', o.ticker || c.ticker);
+        });
+      });
+
+      open.forEach(o => {
+        if (o.action !== 'CSP') return;
+        const rem = o._rem > 0 ? o._rem : (Number(o.shares) || 0);
+        if (rem <= 0) return;
+        push(o.entered, positionEndForOpenCsp(o, today), (+o.strike || 0) * rem, 'csp', o.ticker);
+      });
+
+      // FIFO share lots, including open-market buys and standalone (non-wheel) lots.
+      const lots = [];
+      const flow = list.filter(t => t.action === 'IN' || t.action === 'OUT')
+        .slice()
+        .sort((a, b) => (a.entered || '').localeCompare(b.entered || '') || (a.action === b.action ? 0 : a.action === 'IN' ? -1 : 1));
+      flow.forEach(t => {
+        const sh = t.shares || 0, v = t.total || 0;
+        if (t.action === 'IN') {
+          if (sh > 0) lots.push({ shares: sh, cps: v / sh, date: t.entered || '', ticker: t.ticker });
+          return;
+        }
+        let left = sh;
+        while (left > 0 && lots.length) {
+          const l = lots[0], take = Math.min(left, l.shares);
+          push(l.date, t.entered, take * l.cps, 'shares', l.ticker || t.ticker);
+          l.shares -= take;
+          left -= take;
+          if (l.shares <= 1e-9) lots.shift();
+        }
+      });
+      lots.forEach(l => {
+        if (l.shares > 1e-9) push(l.date, OPEN_END, l.shares * l.cps, 'shares', l.ticker);
+      });
+    });
+
+    optsAll.forEach(l => {
+      const start = l.entryDate;
+      const ticker = l.underlying || '';
+      if (l.side === 'long') {
+        push(start, positionEndForOpt(l, today), optCostBasis(l), 'leap', ticker);
+        return;
+      }
+      if (l.side === 'short' && l.type === 'P' && !l.parentLeapId) {
+        push(start, positionEndForOpt(l, today), (+l.strike || 0) * MULT * (+l.qty || 0), 'csp', ticker);
+      }
+      // Covered calls and PMCC short calls: $0 additional collateral, omitted.
+    });
+
+    return intervals;
+  }
+
+  function dayDeployedCapital(intervals, d) {
+    let morning = 0, afternoon = 0;
+    (intervals || []).forEach(p => {
+      if (p.start < d && p.end >= d) morning += p.capital;
+      if (p.start <= d && (p.end > d || (p.start === d && p.end === d))) afternoon += p.capital;
+    });
+    return Math.max(morning, afternoon);
+  }
+
+  // Monthly peak simultaneous capital for Auto mode. Returns { 'YYYY-MM': peak } from the
+  // first trade month through the current month (the current month stops at `today`).
+  function monthlyDeployedCapital(wheels, trades, opts, ctx) {
+    ctx = ctx || {};
+    const today = isoDay(ctx.today) || todayUTC();
+    if (!isISODate(today)) return {};
+    const todayYm = today.slice(0, 7);
+    const intervals = buildCapitalIntervals(wheels, trades, opts, { today });
+    const firstYm = earliestTradeYm(trades, opts);
+    if (!firstYm || firstYm > todayYm) return {};
+    const out = {};
+    for (let ym = firstYm; ym <= todayYm; ym = nextYm(ym)) {
+      const last = ym === todayYm ? today : monthEndUTC(ym);
+      const start = ym + '-01';
+      let peak = 0;
+      if (isISODate(start) && isISODate(last) && last >= start) {
+        for (let d = start; d <= last; d = new Date(Date.parse(d + 'T00:00:00Z') + DAY).toISOString().slice(0, 10)) {
+          peak = Math.max(peak, dayDeployedCapital(intervals, d));
+        }
+      }
+      out[ym] = r2(peak);
+    }
+    return out;
+  }
+
   const Ledger = {
     daysBetweenUTC,
     buildLedger,
@@ -723,7 +893,9 @@
     summarizeIncome,
     groupEventsByPeriod,
     weightedAROC,
-    calcSortino
+    calcSortino,
+    buildCapitalIntervals,
+    monthlyDeployedCapital
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Ledger;

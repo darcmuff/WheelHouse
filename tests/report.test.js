@@ -15,8 +15,9 @@ function monthReturnPct(profit,capital,target){
   const pct=(profit||0)/capital*100;return{pct,ok:target>0?pct>=target:null};
 }
 `;
-const Fns = new Function(stubs + ['reportFigures','reportMoney','reportMonthName','reportLegKind','reportSentences','reportLastYm','reportMonthEnd','reportYmInPeriod','reportDateInPeriod','reportPeriods','reportPeriodLine'].map(extractFn).join('\n') +
-  '\nreturn {reportFigures,reportMoney,reportMonthName,reportLegKind,reportSentences,reportLastYm,reportMonthEnd,reportYmInPeriod,reportDateInPeriod,reportPeriods,reportPeriodLine};')();
+const Fns = new Function(stubs + ['monthReturnCapital','averageAutoMonthReturn','reportFigures','reportMoney','reportMonthName','reportLegKind','reportSentences','reportLastYm','reportMonthEnd','reportYmInPeriod','reportDateInPeriod','reportPeriods','reportPeriodLine'].map(extractFn).join('\n') +
+  '\nreturn {monthReturnCapital,averageAutoMonthReturn,reportFigures,reportMoney,reportMonthName,reportLegKind,reportSentences,reportLastYm,reportMonthEnd,reportYmInPeriod,reportDateInPeriod,reportPeriods,reportPeriodLine};')();
+const EVEN_CAP = {'2026-04':10000,'2026-05':10000,'2026-06':10000};
 
 test('empty rows produce an empty report', () => {
   assert.deepStrictEqual(Fns.reportFigures([], '2026-11-23', 10000, {base:'caw',target:2}, []), {empty:true});
@@ -46,14 +47,14 @@ test('sums and averages fill the calendar span, including a quiet month', () => 
   assert.strictEqual(F.worst.options, 0);
 });
 
-test('return uses short-premium complete-month average against capital at work', () => {
+test('return in Auto mode is the mean of complete-month % against each month\'s peak deployed capital', () => {
   const rows = [
     {ym:'2026-04', profit:200, leapNet:-1000},
     {ym:'2026-05', profit:200, leapNet:0},
     {ym:'2026-06', profit:50, leapNet:0},
   ];
-  const F = Fns.reportFigures(rows, '2026-06-15', 10000, {base:'caw',target:2}, []);
-  // complete months Apr-May premium avg = 200; 200/10000 = 2%
+  const F = Fns.reportFigures(rows, '2026-06-15', 10000, {base:'caw',target:2}, [], EVEN_CAP);
+  // complete months Apr-May each 200/10000 = 2%; mean is 2%
   assert.strictEqual(F.premiumCompleteAvg, 200);
   assert.ok(F.ret);
   assert.strictEqual(+F.ret.pct.toFixed(4), 2);
@@ -76,7 +77,7 @@ test('sentences include period, averages, premium and months', () => {
     {ym:'2026-04', profit:200, leapNet:0},
     {ym:'2026-05', profit:-20, leapNet:0},
   ];
-  const F = Fns.reportFigures(rows, '2026-05-20', 10000, {base:'caw',target:2}, []);
+  const F = Fns.reportFigures(rows, '2026-05-20', 10000, {base:'caw',target:2}, [], EVEN_CAP);
   const s = Fns.reportSentences(F).join(' ');
   assert.match(s, /2 months, April 2026 to May 2026/);
   assert.match(s, /Realised only\. Option income is wheel and PMCC short premium net of buybacks; total realised adds closed LEAPs, share sales and dividends\./);
@@ -84,8 +85,8 @@ test('sentences include period, averages, premium and months', () => {
   assert.match(s, /Total realised: \+\$180\.00/);
   assert.match(s, /Best month for option income was April 2026/);
   assert.match(s, /Worst was May 2026/);
-  assert.match(s, /Average monthly return on option income over 1 complete month is \+2\.00% of \$10,000\.00 current capital at work, meeting your 2% target\./);
-  assert.match(s, /capital at work/);
+  assert.match(s, /Average monthly return on option income over 1 complete month is \+2\.00% of each month's peak deployed capital, meeting your 2% target\./);
+  assert.match(s, /peak deployed capital/);
   assert.match(s, /2% target/);
 });
 
@@ -95,9 +96,9 @@ test('report sentences use Average monthly return wording for plural complete mo
     {ym:'2026-05', profit:200, leapNet:0},
     {ym:'2026-06', profit:50, leapNet:0},
   ];
-  const F = Fns.reportFigures(rows, '2026-06-15', 10000, {base:'caw',target:2}, []);
+  const F = Fns.reportFigures(rows, '2026-06-15', 10000, {base:'caw',target:2}, [], EVEN_CAP);
   const s = Fns.reportSentences(F).join(' ');
-  assert.match(s, /Average monthly return on option income over 2 complete months is \+2\.00% of \$10,000\.00 current capital at work, meeting your 2% target\./);
+  assert.match(s, /Average monthly return on option income over 2 complete months is \+2\.00% of each month's peak deployed capital, meeting your 2% target\./);
 });
 
 test('a losing incomplete current month does not change the average monthly return', () => {
@@ -106,9 +107,9 @@ test('a losing incomplete current month does not change the average monthly retu
     {ym:'2026-05', profit:100, leapNet:0},
   ];
   const rs = {base:'caw',target:2};
-  const quiet = Fns.reportFigures(complete.concat([{ym:'2026-06', profit:0, leapNet:0}]), '2026-06-15', 10000, rs, []);
-  const loss = Fns.reportFigures(complete.concat([{ym:'2026-06', profit:-5000, leapNet:0}]), '2026-06-15', 10000, rs, []);
-  const gain = Fns.reportFigures(complete.concat([{ym:'2026-06', profit:9999, leapNet:0}]), '2026-06-15', 10000, rs, []);
+  const quiet = Fns.reportFigures(complete.concat([{ym:'2026-06', profit:0, leapNet:0}]), '2026-06-15', 10000, rs, [], EVEN_CAP);
+  const loss = Fns.reportFigures(complete.concat([{ym:'2026-06', profit:-5000, leapNet:0}]), '2026-06-15', 10000, rs, [], EVEN_CAP);
+  const gain = Fns.reportFigures(complete.concat([{ym:'2026-06', profit:9999, leapNet:0}]), '2026-06-15', 10000, rs, [], EVEN_CAP);
   assert.strictEqual(quiet.completeMonths, 2);
   assert.strictEqual(loss.completeMonths, 2);
   assert.strictEqual(gain.completeMonths, 2);
@@ -117,13 +118,13 @@ test('a losing incomplete current month does not change the average monthly retu
   assert.strictEqual(gain.ret.pct, quiet.ret.pct);
   const s = Fns.reportSentences(loss).join(' ');
   assert.match(s, /Option income this month so far: -\$5,000\.00/);
-  assert.match(s, /Average monthly return on option income over 2 complete months is \+1\.00% of \$10,000\.00 current capital at work, against your 2% target\./);
+  assert.match(s, /Average monthly return on option income over 2 complete months is \+1\.00% of each month's peak deployed capital, against your 2% target\./);
 });
 
 test('report figures come from calcMonthlyRealised rows: LEAPs in options P&L, not in short premium', () => {
   const X = new Function(
     require('./extract').LEDGER_SRC + '\n' + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
-    ['optsMonthly','monthlyExtraSources','calcMonthlyRealised','realisedPremium','shareRealisations','walkLegPairs','reportFigures','reportClosedLegPnLs'].map(extractFn).join('\n') +
+    ['optsMonthly','monthlyExtraSources','calcMonthlyRealised','realisedPremium','shareRealisations','walkLegPairs','monthReturnCapital','averageAutoMonthReturn','reportFigures','reportClosedLegPnLs'].map(extractFn).join('\n') +
     extractFn('returnBase') + extractFn('monthReturnPct') +
     '\nreturn {OPTS,monthlyExtraSources,calcMonthlyRealised,reportFigures,reportClosedLegPnLs};'
   )();

@@ -1480,8 +1480,11 @@ select,textarea,
   .mpl-table tr::after{content:'';flex-basis:100%;order:3;height:0;overflow:hidden}
   .mpl-table td{border:0;padding:0;white-space:normal;min-width:0}
   .mpl-table td.mpl-month{order:1;flex:1 1 auto;font-weight:720;min-width:0}
-  .mpl-table td:last-child{order:2;flex:0 0 auto;text-align:right;font-weight:720}
-  .mpl-table td:not(.mpl-month):not(:last-child){order:4;flex:0 1 auto;color:var(--text3);font-size:0.75rem}
+  .mpl-table td.mpl-net{order:2;flex:0 0 auto;text-align:right;font-weight:720}
+  .mpl-table td:not(.mpl-month):not(.mpl-net){order:4;flex:0 1 auto;color:var(--text3);font-size:0.75rem}
+  .mpl-table td.mpl-pct{font-weight:720}
+  .mpl-table td.mpl-pct.g{color:var(--green)}
+  .mpl-table td.mpl-pct.r{color:var(--red)}
   .mpl-table td[data-lbl]::before{content:attr(data-lbl) " ";font-weight:480;color:var(--text3)}
   .mpl-table .mpl-sum td.mpl-month{font-weight:720}
 
@@ -3228,6 +3231,29 @@ function returnBase(rs,cawTotal){return rs&&rs.base==='account'&&rs.account>0?rs
 function monthReturnPct(profit,capital,target){
   if(!(capital>0))return null;
   const pct=(profit||0)/capital*100;return{pct,ok:target>0?pct>=target:null};
+}
+// Pure: capital to divide a given month's P&L by.
+// Manual (account) mode: the user-entered size, every month. Auto (caw): that month's peak deployed capital (0 if none).
+function monthReturnCapital(rs,ym,monthlyCap){
+  if(rs&&rs.base==='account'&&rs.account>0)return rs.account;
+  const cap=monthlyCap&&ym?+monthlyCap[ym]:0;
+  return cap>0?cap:0;
+}
+// Pure: mean of individual monthly return % over complete months with deployed capital > 0. Auto mode only.
+function averageAutoMonthReturn(months,todayYm,monthlyCap,profitOf,target){
+  const pcts=[];
+  (months||[]).forEach(r=>{
+    if(!r||!r.ym||!todayYm||r.ym>=todayYm)return;
+    const cap=monthReturnCapital({base:'caw'},r.ym,monthlyCap);
+    const mr=monthReturnPct(profitOf?profitOf(r):(r.premium||0),cap,null);
+    if(mr)pcts.push(mr.pct);
+  });
+  if(!pcts.length)return null;
+  const pct=pcts.reduce((a,x)=>a+x,0)/pcts.length;
+  return{pct,ok:target>0?pct>=target:null,n:pcts.length};
+}
+function capitalTipMoney(n){
+  return String(typeof fmtMoney==='function'?fmtMoney(n):n).replace(/^[+-]/,'').replace(/\.00$/,'');
 }
 // Monthly P&L — group all trades by YYYY-MM
 function calcMonthlyPnL(){
@@ -6693,7 +6719,8 @@ function renderHome(){
   const wl=calcWinLoss();
   const caw=currentCapitalAtWork();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
-  const rBase=returnBase(rs,caw.total),mr=monthReturnPct(F.month.total,rBase,rs.target);
+  const monthlyCap=OT_LEDGER.monthlyDeployedCapital(db.wheels,db.trades,legs,{today});
+  const rBase=monthReturnCapital(rs,today.slice(0,7),monthlyCap),mr=monthReturnPct(F.month.total,rBase,rs.target);
   const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
@@ -6704,13 +6731,13 @@ function renderHome(){
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">This year ${ii(`Same as this month, since 1 January. Realised options only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · PMCC calls ${sgn(F.year.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price, plus mark-to-market P&L on open wheel options (premium minus buy-back cost), not gross premium collected.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s hk-s3"><span class="hk-nw">Shares ${sgn(un.shares)}</span> · <span class="hk-nw">Wheel options ${sgn(un.premium)}</span> · <span class="hk-nw">LEAPs ${sgn(un.leaps)}</span>${un.unpriced>0?` · <span class="hk-nw">${un.unpriced} unpriced</span>`:''}</div></div>
-    <div class="hk hk-rel"><button type="button" class="hk-cog" aria-label="Return settings" title="Account size and monthly target" onclick="event.stopPropagation();openRetCfg(this)"><svg width="16" height="16" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button><div class="hk-l">${caw.pct!=null?'Account size':'Capital at work'} ${ii(caw.pct!=null?`The account size you set here. The line below shows how much of it is tied up in open puts, shares and LEAPs.`:`Open put collateral, open shares and open LEAP cost. Return this month uses this figure.`)}</div><div class="hk-v">${caw.pct!=null?fmtMoney(rs.account).replace(/\.\d\d$/,''):fmtMoney(caw.total).replace(/\.\d\d$/,'')}</div><div class="hk-s">${caw.pct!=null?`${fmtMoney(caw.total).replace(/\.\d\d$/,'')} at work (${caw.pct.toFixed(0)}%) · Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`:`Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`}</div></div>
+    <div class="hk hk-rel"><button type="button" class="hk-cog" aria-label="Return settings" title="Account size and monthly target" onclick="event.stopPropagation();openRetCfg(this)"><svg width="16" height="16" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button><div class="hk-l">${caw.pct!=null?'Account size':'Capital at work'} ${ii(caw.pct!=null?`The account size you set here. The line below shows how much of it is tied up in open puts, shares and LEAPs.`:`Open put collateral, open shares and open LEAP cost.`)}</div><div class="hk-v">${caw.pct!=null?fmtMoney(rs.account).replace(/\.\d\d$/,''):fmtMoney(caw.total).replace(/\.\d\d$/,'')}</div><div class="hk-s">${caw.pct!=null?`${fmtMoney(caw.total).replace(/\.\d\d$/,'')} at work (${caw.pct.toFixed(0)}%) · Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`:`Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`}</div></div>
     <div class="hk"><div class="hk-l">Win rate ${ii(`Closed sold options only, incl. PMCC calls. A win kept the premium or was bought back cheaper. Open options don’t count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
     <div class="hk${nx?' hk-nx':''}"${nx?` role="button" tabindex="0" aria-label="Go to next expiry, ${esc(nx.ticker+' '+nx.what)}" data-kind="${esc(nx.kind||'')}" data-id="${esc(nx.id||'')}" data-wid="${esc(nx.wheelId||'')}" data-pid="${esc(nx.parentLeapId||'')}" onclick="goToNextExpiry(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToNextExpiry(this)}"`:''}><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
   </div>
   <div class="hk-grid hk-row2">
     <div class="hk${(health.length||_pend.length)?' hk-need':''}" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p){p.hidden=!p.hidden;_nyOpen=!p.hidden}"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':_pend.length?'':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):_pend.length?_pend.length+' pending':'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':'')+(_pend.length?` · ${_pend.length} pending`:''):_pend.length?'dismissed, not fixed yet':'nothing to do'}</div></div>
-    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's options P&L as a % of ${rs.base==='account'?'your account size':'money at work'}.${rs.target?` Target ${rs.target}%.`:''} Change this with the cog.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':(mr.pct<0?'neg':'')):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'at work'}${rs.target?` · target ${rs.target}%`:''}</div></div>
+    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's options P&L as a % of ${rs.base==='account'?'your account size':'this month\'s peak deployed capital'}.${rs.target?` Target ${rs.target}%.`:''} Change this with the cog.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':(mr.pct<0?'neg':'')):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">${rBase>0?`of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'deployed'}`:''}${rBase>0&&rs.target?` · target ${rs.target}%`:rs.target?`target ${rs.target}%`:''}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
   </div></section>
@@ -7104,8 +7131,9 @@ function reportClosedLegPnLs(legs,wheels,trades){
 }
 // Pure: period, sums and averages of already-computed monthly rows (profit = wheel + PMCC short calls;
 // leapNet = closed long LEAPs). Complete months exclude the current calendar month. Return uses the
-// same numerator as Home (short premium), passed to monthReturnPct against capital at work.
-function reportFigures(rows,today,cawTotal,rs,closedLegs){
+// same numerator as Home (short premium). Manual mode divides the average by the entered account size;
+// Auto mode averages each complete month's % against that month's peak deployed capital.
+function reportFigures(rows,today,cawTotal,rs,closedLegs,monthlyCap){
   const rd=n=>Math.round(n*100)/100;
   const optOf=r=>(r.profit||0)+(r.leapNet||0),premOf=r=>r.profit||0;
   const sorted=[...(rows||[])].filter(r=>r&&r.ym).sort((a,b)=>a.ym.localeCompare(b.ym));
@@ -7137,12 +7165,20 @@ function reportFigures(rows,today,cawTotal,rs,closedLegs){
   const bestIncome=months.reduce((a,r)=>!a||r.premium>a.premium?r:a,null);
   const worstIncome=months.reduce((a,r)=>!a||r.premium<a.premium?r:a,null);
   const cap=returnBase(rs,cawTotal);
-  const avgForRet=complete.length?avg(premiumComplete,complete.length):avg(premium,n);
-  const ret=monthReturnPct(avgForRet,cap,rs&&rs.target);
+  const manual=rs&&rs.base==='account'&&rs.account>0;
+  let ret=null,retMonths=0;
+  if(manual){
+    const avgForRet=complete.length?avg(premiumComplete,complete.length):avg(premium,n);
+    ret=monthReturnPct(avgForRet,cap,rs&&rs.target);
+    retMonths=complete.length||n;
+  }else{
+    const auto=averageAutoMonthReturn(months,todayYm,monthlyCap,r=>r.premium,rs&&rs.target);
+    if(auto){ret={pct:auto.pct,ok:auto.ok};retMonths=auto.n;}
+  }
   return{empty:false,firstYm,lastYm,months:n,completeMonths:complete.length,
     options,optionsAvg:avg(options,n),optionsComplete,optionsCompleteAvg:avg(optionsComplete,complete.length),
     premium,premiumAvg:avg(premium,n),premiumComplete,premiumCompleteAvg:avg(premiumComplete,complete.length),
-    best,worst,loser,optionsEx,capital:cap,target:rs&&rs.target,ret,base:rs&&rs.base,
+    best,worst,loser,optionsEx,capital:cap,target:rs&&rs.target,ret,base:rs&&rs.base,retMonths,
     realised,realisedAvg:avg(realised,n),realisedEx,thisMonth,bestIncome,worstIncome};
 }
 // Display-only period bounds. Last month / last year are the previous full calendar month and year.
@@ -7245,8 +7281,8 @@ function reportSentences(F){
   out.push(`Option income this month so far: ${reportMoney(F.thisMonth)}.`);
   if(F.ret){
     const pct=(F.ret.pct>=0?'+':'−')+Math.abs(F.ret.pct).toFixed(2)+'%';
-    const of=F.base==='account'?'your account size':(reportMoney(F.capital).replace(/^[+-]/,'')+' current capital at work');
-    const n=F.completeMonths||0;
+    const of=F.base==='account'?'your account size':'each month\'s peak deployed capital';
+    const n=F.base==='account'?(F.completeMonths||0):(F.retMonths||0);
     const over=n>0?` over ${n} complete month${n===1?'':'s'}`:'';
     let s=`Average monthly return on option income${over} is ${pct} of ${of}`;
     if(F.target>0)s+=F.ret.ok?`, meeting your ${F.target}% target`:`, against your ${F.target}% target`;
@@ -7274,8 +7310,9 @@ function renderReport(){
   const rows=calcMonthlyRealised(db.trades,monthlyExtraSources(legs),today);
   const caw=currentCapitalAtWork();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
+  const monthlyCap=OT_LEDGER.monthlyDeployedCapital(db.wheels,db.trades,legs,{today});
   // Wired to OT_LEDGER: rows (calcMonthlyRealised), closed-trade wins and the biggest loser (wheel trades and db.opts) all come from the ledger
-  const F=reportFigures(rows,today,caw.total,rs,reportClosedLegPnLs(legs,db.wheels,db.trades));
+  const F=reportFigures(rows,today,caw.total,rs,reportClosedLegPnLs(legs,db.wheels,db.trades),monthlyCap);
   const periods=reportPeriods(rows,today,reportWinLossItems(db.wheels,db.trades,legs));
   const periodLines=periods.map(reportPeriodLine);
   const sentences=reportSentences(F);
@@ -8513,11 +8550,14 @@ function renderMonthlyForMeasure(measure){
   const label=(PNL_MEASURES.find(m=>m[0]===measure)||[measure,measure])[1];
   const isSh=measure==='shares'||measure==='all';
   const yr=today.slice(0,4);
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]);
+  const monthlyCap=OT_LEDGER.monthlyDeployedCapital(db.wheels,db.trades,db.opts||[],{today});
+  const manual=rs.base==='account'&&rs.account>0;
   const sum=(list,keys)=>{const o={};keys.forEach(k=>o[k]=Math.round(list.reduce((a,r)=>a+(r[k]||0),0)*100)/100);return o;};
   const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
   const cell=(v,cls,lab)=>`<td class="num ${v?cls:'m'}"${lab?` data-lbl="${lab}"`:''}>${v?fmtMoney(v):'—'}</td>`;
-  const pcell=(v,lab)=>`<td class="num ${v?colorN(v):'m'}" style="font-weight:720"${lab?` data-lbl="${lab}"`:''}>${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
-  const heads=isSh?['Gains','Losses','Net']:['Premium collected','Loss','Profit'];
+  const pcell=(v,lab)=>`<td class="num mpl-net ${v?colorN(v):'m'}" style="font-weight:720"${lab?` data-lbl="${lab}"`:''}>${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
+  const heads=isSh?['Gains','Losses','Net','%']:['Premium collected','Loss','Profit','%'];
   const keys=isSh?['collected','loss','net']:['collected','loss','profit'];
   const tips={
     all:'Everything realised in that month: wheel options, PMCC short calls, share sales, dividends and closed LEAPs. Figures match the Total Realised bars above. Open options are not included.',
@@ -8526,14 +8566,25 @@ function renderMonthlyForMeasure(measure){
     pmcc:'PMCC short calls only: realised premium and buybacks. Figures match the PMCC calls bars above. Closed long LEAPs stay in Shares & LEAPs P&L.',
     shares:'The same realised figures as the Shares & LEAPs P&L bars above: share sales (first in, first out), dividends, and closed long LEAPs. Open shares and LEAPs are not included.'
   };
-  const line=(l,r,c)=>`<tr class="${c||''}"><td class="mpl-month">${l}</td>${isSh?cell(r.collected,'g','Gains')+cell(r.loss?-r.loss:0,'r','Losses')+pcell(r.net,'Net'):cell(r.collected,'g','Collected')+cell(r.loss?-r.loss:0,'r','Loss')+pcell(r.profit,'Profit')}</tr>`;
+  const pctCell=(r,isSum)=>{
+    if(isSum)return `<td class="num m mpl-pct" data-lbl="Return">—</td>`;
+    const cap=monthReturnCapital(rs,r.ym,monthlyCap);
+    const pnl=isSh?(r.net||0):(r.profit||0);
+    const mr=monthReturnPct(pnl,cap,null);
+    const tip=cap>0?` title="${esc('Based on '+capitalTipMoney(cap)+(manual?' manual capital':' peak deployed capital'))}"`:'';
+    if(!mr)return `<td class="num m mpl-pct" data-lbl="Return"${tip}>—</td>`;
+    const cls=mr.pct>0?'g':mr.pct<0?'r':'';
+    const txt=(mr.pct>0?'+':mr.pct<0?'−':'')+Math.abs(mr.pct).toFixed(2)+'%';
+    return `<td class="num mpl-pct ${cls}" data-lbl="Return"${tip} style="font-weight:480">${txt}</td>`;
+  };
+  const line=(l,r,c,isSum)=>`<tr class="${c||''}"><td class="mpl-month">${l}</td>${isSh?cell(r.collected,'g','Gains')+cell(r.loss?-r.loss:0,'r','Losses')+pcell(r.net,'Net'):cell(r.collected,'g','Collected')+cell(r.loss?-r.loss:0,'r','Loss')+pcell(r.profit,'Profit')}${pctCell(r,isSum)}</tr>`;
   return`<div class="d-panel">
       <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L · ${label} ${ii(tips[measure]||tips.all)}</span></div>
       <div class="d-panel-body">
         <table class="a-table mpl-table"><thead><tr><th>Month</th>${heads.map(h=>`<th class="num">${h}</th>`).join('')}</tr></thead>
         <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
-        ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr)),keys),'mpl-sum')}
-        ${line('All time',sum(rows,keys),'mpl-sum')}</tbody></table>
+        ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr)),keys),'mpl-sum',true)}
+        ${line('All time',sum(rows,keys),'mpl-sum',true)}</tbody></table>
       </div>
     </div>`;
 }

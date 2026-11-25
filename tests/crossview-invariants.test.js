@@ -8,7 +8,7 @@ const NAMES = ['feePctLabel',
   'shareRealisations', 'optsMonthly', 'monthlyExtraSources', 'calcMonthlyRealised', 'homeFigures',
   'realisedDaily', 'sharesLeapsDaily', 'mergePnlDaily', 'pnlDailyForMeasure', 'calcMonthlyForMeasure',
   'earliestTradeDate', 'calcProjectedYearly', 'calcWinLoss', 'moreLedgerStats',
-  'returnBase', 'monthReturnPct', 'reportMoney', 'reportMonthName', 'reportLegKind', 'reportFigures', 'reportSentences',
+  'returnBase', 'monthReturnPct', 'monthReturnCapital', 'averageAutoMonthReturn', 'reportMoney', 'reportMonthName', 'reportLegKind', 'reportFigures', 'reportSentences',
   'reportLastYm', 'reportMonthEnd', 'reportYmInPeriod', 'reportDateInPeriod', 'reportPeriods', 'reportPeriodLine',
   'reportWinLossItems', 'reportClosedLegPnLs',
 ];
