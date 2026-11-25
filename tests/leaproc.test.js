@@ -1,10 +1,10 @@
 // Monthly return rule: LEAP cost only in the denominator; numerator = realised short-call premium (+ wheel). LEAP-leg P&L never counts.
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractFn } = require('./extract');
-const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+const { extractFn, withLedger } = require('./extract');
+const S = new Function(withLedger(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
   ['optsMonthly', 'walkLegPairs', 'realisedPremium', 'shareRealisations', 'calcMonthlyRealised', 'monthlyExtraSources', 'homeFigures', 'capitalAtWork', 'returnBase', 'monthReturnPct', 'realisedDaily', 'allOptionsByMonth'].map(extractFn).join('\n') +
-  '\nreturn {calcMonthlyRealised,monthlyExtraSources,homeFigures,capitalAtWork,returnBase,monthReturnPct,realisedDaily,allOptionsByMonth};')();
+  '\nreturn {calcMonthlyRealised,monthlyExtraSources,homeFigures,capitalAtWork,returnBase,monthReturnPct,realisedDaily,allOptionsByMonth};'))();
 const TODAY = '2026-10-23';
 const leapSold = { id: 'L', side: 'long', type: 'C', qty: 1, entryPrice: 40, fees: 0, status: 'closed', closePrice: 90, closeDate: '2026-10-05', closeFees: 0 };
 const leapOpen = { id: 'L2', side: 'long', type: 'C', qty: 1, entryPrice: 50, fees: 0, status: 'open', mark: 80 };

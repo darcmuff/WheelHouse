@@ -79,10 +79,10 @@ test('sentences include period, averages, premium and months', () => {
   const F = Fns.reportFigures(rows, '2026-05-20', 10000, {base:'caw',target:2}, []);
   const s = Fns.reportSentences(F).join(' ');
   assert.match(s, /2 months, April 2026 to May 2026/);
-  assert.match(s, /Realised options P&L, wheels and LEAPs/);
-  assert.match(s, /Options P&L: \+\$180\.00/);
-  assert.match(s, /Short premium alone came to/);
-  assert.match(s, /Best month was April 2026/);
+  assert.match(s, /Realised only\. Option income is wheel and PMCC short premium net of buybacks; total realised adds closed LEAPs, share sales and dividends\./);
+  assert.match(s, /Option income: \+\$180\.00/);
+  assert.match(s, /Total realised: \+\$180\.00/);
+  assert.match(s, /Best month for option income was April 2026/);
   assert.match(s, /Worst was May 2026/);
   assert.match(s, /capital at work/);
   assert.match(s, /2% target/);
@@ -90,7 +90,7 @@ test('sentences include period, averages, premium and months', () => {
 
 test('report figures come from calcMonthlyRealised rows: LEAPs in options P&L, not in short premium', () => {
   const X = new Function(
-    extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+    require('./extract').LEDGER_SRC + '\n' + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
     ['optsMonthly','monthlyExtraSources','calcMonthlyRealised','realisedPremium','shareRealisations','walkLegPairs','reportFigures','reportClosedLegPnLs'].map(extractFn).join('\n') +
     extractFn('returnBase') + extractFn('monthReturnPct') +
     '\nreturn {OPTS,monthlyExtraSources,calcMonthlyRealised,reportFigures,reportClosedLegPnLs};'
@@ -206,7 +206,7 @@ test('period wheel + LEAPs equals options P&L when covered-call premium is in pr
   assert.strictEqual(by.lastMonth.leaps, -1201.30);
   assert.strictEqual(by.total.options, 1402.12);
   P.forEach(p => assert.strictEqual(p.options, Math.round((p.wheel + p.leaps) * 100) / 100, p.key));
-  assert.match(Fns.reportPeriodLine(by.lastMonth), /wheel \+\$2,103\.42, LEAPs -\$1,201\.30/);
+  assert.match(Fns.reportPeriodLine(by.lastMonth), /\+\$2,103\.42 option income \(wheel \+\$1,374\.72, PMCC calls \+\$728\.70\), \+\$902\.12 total realised/);
 });
 
 test('a period with no trades is $0 and No closed trades, not blank', () => {
@@ -221,7 +221,7 @@ test('a period with no trades is $0 and No closed trades, not blank', () => {
   assert.strictEqual(Fns.reportPeriodLine(lastYear), 'Last year (2025): $0. No closed trades.');
   assert.match(Fns.reportPeriodLine(lastMonth), /Last month \(October 2026\): \$0\. No closed trades\./);
   const ytd = P.find(p => p.key === 'ytd');
-  assert.match(Fns.reportPeriodLine(ytd), /Year to date: \+\$25\.00 options P&L \(wheel \+\$25\.00/);
+  assert.match(Fns.reportPeriodLine(ytd), /Year to date: \+\$25\.00 option income \(wheel \+\$25\.00, PMCC calls \+\$0\.00\), \+\$25\.00 total realised/);
   assert.match(Fns.reportPeriodLine(ytd), /1 closed trade, win rate 100\.0%/);
   assert.match(Fns.reportPeriodLine(ytd), /premium collected \+\$25\.00/);
   const none = Fns.reportPeriods([], '2026-11-23', []);
@@ -235,11 +235,12 @@ test('reportWinLossItems totals match calcWinLoss, and dates bucket into last mo
     '\nreturn {calcWinLoss,reportWinLossItems,set(db){this.db=db;}};'
   );
   // extractFn calcWinLoss reads db; build a sandbox with a mutable db
-  const S = new Function(
+  const { withLedger } = require('./extract');
+  const S = new Function(withLedger(
     extractFn('optionsLib') + '\nconst OPTS=optionsLib();\nlet db={wheels:[],trades:[],opts:[]};\n' +
     extractFn('calcWinLoss') + '\n' + extractFn('reportWinLossItems') +
     '\nreturn {set(o){db.wheels=o.wheels||[];db.trades=o.trades||[];db.opts=o.opts||[];},calcWinLoss,items:()=>reportWinLossItems(db.wheels,db.trades,db.opts)};'
-  )();
+  ))();
   const db = { wheels: [{ id: 'w', status: 'open' }], trades: [
     { wheelId: 'w', action: 'CSP', strike: 300, total: 500, entered: '2026-01-01', expiredWorthless: true, expiry: '2026-01-17' },
     { wheelId: 'w', action: 'CSP', strike: 290, total: 400, entered: '2026-10-01' },

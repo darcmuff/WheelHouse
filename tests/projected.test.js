@@ -1,13 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractFn, extractConst } = require('./extract');
+const { extractFn, extractConst, withLedger } = require('./extract');
+const W = [{ id: 'w1', status: 'open', ticker: 'PEP' }];
 
-const S = new Function(
+const S = new Function(withLedger(
   extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
   extractConst('PNL_RANGES') + extractConst('PNL_DEFAULT_GRAN') + extractConst('_iso') +
   ['walkLegPairs', 'realisedPremium', 'shareRealisations', 'realisedDaily', 'sharesLeapsDaily', 'mergePnlDaily', 'pnlDailyForMeasure', 'earliestTradeDate', 'calcProjectedYearly', 'optsMonthly', 'monthlyExtraSources', 'calcMonthlyRealised', 'homeFigures'].map(extractFn).join('\n') +
   '\nreturn {OPTS, calcProjectedYearly, pnlDailyForMeasure, earliestTradeDate, realisedDaily, sharesLeapsDaily, monthlyExtraSources, calcMonthlyRealised, homeFigures};'
-)();
+))();
 
 const TODAY = '2026-11-23';
 const ytdSum = (rows, today = TODAY) =>
@@ -47,7 +48,7 @@ test('includes wheel premium, PMCC short-call profit, and closed long LEAPs or c
     closePrice: 0, closeDate: '2026-09-19'
   });
   const r = S.calcProjectedYearly(trades, [closedLeap, shortCall], TODAY);
-  const all = ytdSum(S.pnlDailyForMeasure('all', trades, [closedLeap, shortCall], TODAY));
+  const all = ytdSum(S.pnlDailyForMeasure('all', trades, [closedLeap, shortCall], TODAY, W));
   assert.strictEqual(r.total, all);
 
   const withoutLeap = S.calcProjectedYearly(trades, [shortCall], TODAY);
@@ -56,12 +57,12 @@ test('includes wheel premium, PMCC short-call profit, and closed long LEAPs or c
   assert.ok(leapPnL > 0, 'fixture long LEAP is a realised gain');
   assert.ok(shortPnL > 0, 'fixture short call is a realised gain');
   assert.ok(Math.abs((r.total - withoutLeap.total) - leapPnL) < 1e-9, 'closed long LEAP is in the total');
-  const wheelOnly = ytdSum(S.pnlDailyForMeasure('wheel', trades, [closedLeap, shortCall], TODAY));
+  const wheelOnly = ytdSum(S.pnlDailyForMeasure('wheel', trades, [closedLeap, shortCall], TODAY, W));
   assert.ok(r.total > wheelOnly, 'PMCC short calls and closed LEAPs add to wheel premium');
-  const sharesOnly = ytdSum(S.pnlDailyForMeasure('shares', trades, [closedLeap, shortCall], TODAY));
+  const sharesOnly = ytdSum(S.pnlDailyForMeasure('shares', trades, [closedLeap, shortCall], TODAY, W));
   // shares measure includes share sales, dividends AND closed long LEAPs
   assert.ok(sharesOnly > 0);
-  assert.ok(Math.abs(r.total - (wheelOnly + ytdSum(S.pnlDailyForMeasure('pmcc', trades, [closedLeap, shortCall], TODAY)) + sharesOnly)) < 1e-6);
+  assert.ok(Math.abs(r.total - (wheelOnly + ytdSum(S.pnlDailyForMeasure('pmcc', trades, [closedLeap, shortCall], TODAY, W)) + sharesOnly)) < 1e-6);
 });
 
 test('mid-year first trade paces from that date, not 1 January', () => {
@@ -120,8 +121,10 @@ test('More data KPI and Annualised Projection both use calcProjectedYearly, not 
   assert.ok(!overview.includes('fmtMoney(ytd.yearly)'));
   assert.ok(analytics.includes("stat(py.yearly!=null?fmtMoney(py.yearly):'—','Annualised Projection'"));
   assert.ok(!analytics.includes('fmtMoney(ytd.yearly)'));
-  assert.ok(overview.includes("kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net)"));
-  assert.ok(overview.includes("kpi('Realised P&L '+new Date().getFullYear(),fmtMoney(pyAll.total)"));
+  // Audit Step 7 (approved): k1 uses the same total and days as k3 in every scope, not calcYTD's days since 1 Jan
+  assert.ok(overview.includes("kpi(scopeName+'Realised P&L '+new Date().getFullYear(),fmtMoney(py.total)"));
+  assert.ok(overview.includes('const pyDay=py.yearly!=null&&py.days>0?py.total/py.days:null;'));
+  assert.ok(!overview.includes('fmtMoney(ytd.net)'));
   assert.ok(overview.includes("setMoreScope('all')") && overview.includes("setMoreScope('wheel')"));
   assert.ok(analytics.includes("scope==='wheel'?[]:(db.opts||[])"));
 });
@@ -180,8 +183,8 @@ test('calcProjectedYearly with no legs is wheel-only; with legs includes all opt
   const leapPnL = S.OPTS.legPnL(closedLeap).realized;
   const shortPnL = S.OPTS.legPnL(shortCall).realized;
   assert.ok(Math.abs(all.total - wheelOnly.total - leapPnL - shortPnL) < 1e-9);
-  const allDaily = ytdSum(S.pnlDailyForMeasure('all', trades, [closedLeap, shortCall], TODAY));
-  const wheelDaily = ytdSum(S.pnlDailyForMeasure('all', trades, [], TODAY));
+  const allDaily = ytdSum(S.pnlDailyForMeasure('all', trades, [closedLeap, shortCall], TODAY, W));
+  const wheelDaily = ytdSum(S.pnlDailyForMeasure('all', trades, [], TODAY, W));
   assert.strictEqual(all.total, allDaily);
   assert.strictEqual(wheelOnly.total, wheelDaily);
 });

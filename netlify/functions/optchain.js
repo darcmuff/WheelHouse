@@ -48,7 +48,7 @@ function pickFinnhub(raw, wanted) {
     for (const side of ['CALL', 'PUT']) for (const o of ((exp.options || {})[side]) || []) list.push(o);
   }
   const contracts = take(list, want, o => o.contractName, o => {
-    let iv = o.impliedVolatility; if (iv > 3) iv = iv / 100; // Finnhub reports IV in percent
+    let iv = o.impliedVolatility; if (iv > 0) iv = iv / 100; // Finnhub IV is percent (2.5 → 0.025)
     return { src: 'finnhub', bid: o.bid, ask: o.ask, last: o.lastPrice, prevClose: o.previousClose > 0 ? o.previousClose : null, iv, delta: o.delta, gamma: o.gamma, theta: o.theta, vega: o.vega, oi: o.openInterest, volume: o.volume };
   });
   return { spot: raw && raw.lastTradePrice || null, contracts };
@@ -82,7 +82,7 @@ function nasdaqUrl(sym) {
 // Cboe moved the file to cdn-api.cboe.com and Cloudflare 403s requests that have no www.cboe.com Referer
 // (the old UA-only fetch followed the 307 and got an empty challenge page).
 const CBOE_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 WheelHouse',
+  'User-Agent': 'Mozilla/5.0 OpTrack',
   'Accept': 'application/json,text/plain,*/*',
   'Accept-Language': 'en-US,en;q=0.9',
   'Referer': 'https://www.cboe.com/'

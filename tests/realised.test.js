@@ -1,10 +1,10 @@
 // Realised-only monthly P&L: option premium banks when the option ends, never while open.
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractFn } = require('./extract');
-const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+const { extractFn, withLedger } = require('./extract');
+const S = new Function(withLedger(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
   ['walkLegPairs', 'realisedPremium', 'optsMonthly', 'shareRealisations', 'calcMonthlyRealised', 'rotationShareStats', 'calcUnrealised', 'calcAllUnrealised', 'homeFigures'].map(extractFn).join('\n') +
-  '\nreturn {calcMonthlyRealised,calcAllUnrealised,homeFigures};')();
+  '\nreturn {calcMonthlyRealised,calcAllUnrealised,homeFigures};'))();
 const TODAY = '2026-10-23';
 const T = (action, entered, total, o = {}) => ({ wheelId: 'w', ticker: 'TSLA', action, entered, total, shares: 100, strike: 100, ...o });
 const mo = (rows, ym) => rows.find(r => r.ym === ym) || { premium: 0, total: 0 };
@@ -15,7 +15,7 @@ test('open CSP sold in October is excluded from October and shows in Unrealised'
   assert.strictEqual(mo(rows, '2026-10').premium, 0);
   assert.strictEqual(S.homeFigures(rows, TODAY).month.total, 0);
   const u = S.calcAllUnrealised([{ id: 'w', status: 'open' }], tr, () => null, []);
-  assert.strictEqual(u.premium, 300); assert.strictEqual(u.value, 300);
+  assert.strictEqual(u.premium, 0); assert.strictEqual(u.value, 0); assert.strictEqual(u.unpriced, 1);
 });
 test('CSP sold in October that expires in November counts in November', () => {
   const tr = [T('CSP', '2026-10-05', 300, { expiry: '2026-11-20' })];
@@ -42,5 +42,5 @@ test('roll: closed leg realises in the roll month, new leg stays open', () => {
   const rows = S.calcMonthlyRealised(tr, [], TODAY);
   assert.strictEqual(mo(rows, '2026-10').premium, 180);
   const u = S.calcAllUnrealised([{ id: 'w', status: 'open' }], tr, () => null, []);
-  assert.strictEqual(u.premium, 350);
+  assert.strictEqual(u.premium, 0);
 });

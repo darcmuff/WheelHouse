@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractFn } = require('./extract');
-const run = db => new Function('db', extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + extractFn('calcWinLoss') + '\nreturn calcWinLoss();')(db);
+const { extractFn, withLedger } = require('./extract');
+const run = db => new Function('db', withLedger(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + extractFn('calcWinLoss') + '\nreturn calcWinLoss();'))(db);
 const base = { wheels: [], trades: [] };
 const leap = { id: 'L', side: 'long', type: 'C', status: 'closed', entryPrice: 30, closePrice: 10, qty: 1 };
 test('PMCC call sold 1.67×3, bought back 0.54 = win of the net', () => {

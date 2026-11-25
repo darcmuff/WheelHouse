@@ -16,7 +16,7 @@ test('a month with no activity shows zero, not last month', () => {
   assert.strictEqual(S.homeFigures(rows, '2026-11-02').month.total, 0);
 });
 test('tiles equal Monthly P&L options profit and exclude a closed LEAP', () => {
-  const X = new Function(require('./extract').extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+  const X = new Function(require('./extract').LEDGER_SRC + '\n' + require('./extract').extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
     ['optsMonthly', 'monthlyExtraSources', 'calcMonthlyRealised', 'realisedPremium', 'shareRealisations', 'homeFigures'].map(require('./extract').extractFn).join('\n') +
     '\nreturn {optsMonthly,monthlyExtraSources,calcMonthlyRealised,homeFigures};')();
   const legs = [

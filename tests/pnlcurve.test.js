@@ -1,9 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractFn, extractConst } = require('./extract');
-const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + extractConst('PNL_RANGES') + extractConst('PNL_DEFAULT_GRAN') + extractConst('_iso') +
+const { extractFn, extractConst, withLedger } = require('./extract');
+const W = [{ id: 'w1', status: 'open', ticker: 'SOFI' }];
+const S = new Function(withLedger(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + extractConst('PNL_RANGES') + extractConst('PNL_DEFAULT_GRAN') + extractConst('_iso') +
   ['walkLegPairs', 'realisedPremium', 'shareRealisations', 'optsMonthly', 'calcMonthlyRealised', 'realisedDaily', '_bucketKey', 'pnlBuckets'].map(extractFn).join('\n') +
-  '\nreturn {calcMonthlyRealised,optsMonthly,realisedDaily,pnlBuckets};')();
+  '\nreturn {calcMonthlyRealised,optsMonthly,realisedDaily,pnlBuckets};'))();
 const T = (action, entered, total, shares = 0, x = {}) => ({ wheelId: 'w1', action, entered, total, shares, strike: 50, ...x });
 const TODAY = '2026-10-27';
 const tr = [
@@ -22,16 +23,16 @@ const legs = [
 test('options chart: All-time net equals Monthly P&L all-time Profit (wheel + PMCC; no shares/LEAP/divs)', () => {
   const O = S.optsMonthly(legs);
   const all = S.calcMonthlyRealised(tr, [{ key: 'leaps', byMonth: O.byMonth, gain: O.gain, loss: O.loss, lgain: O.lgain, lloss: O.lloss }], TODAY).reduce((a, r) => a + r.profit, 0);
-  const B = S.pnlBuckets(S.realisedDaily(tr, legs, TODAY), 'All', null, TODAY);
+  const B = S.pnlBuckets(S.realisedDaily(tr, legs, TODAY, W), 'All', null, TODAY);
   assert.strictEqual(B.gran, 'Month');
   assert.ok(Math.abs(B.net - all) < 1e-6, B.net + ' vs ' + all);
   const oct = B.buckets.find(b => b.key === '2026-10-01');
-  assert.strictEqual(Math.round(oct.loss), 150); // PMCC buyback only; share loss is Positions P&L
-  assert.ok(!S.realisedDaily(tr, legs, TODAY).some(d => d.gain === 150));
+  assert.strictEqual(Math.round(oct.loss), 50); // PMCC buyback net per closed trade; share loss is Positions P&L
+  assert.ok(!S.realisedDaily(tr, legs, TODAY, W).some(d => d.gain === 150));
 });
 
 test('granularity defaults per range, override works, empty buckets kept', () => {
-  const D = S.realisedDaily(tr, legs, TODAY);
+  const D = S.realisedDaily(tr, legs, TODAY, W);
   const w = S.pnlBuckets(D, '1W', null, TODAY);
   assert.strictEqual(w.gran, 'Day');
   assert.strictEqual(w.buckets.length, 7);

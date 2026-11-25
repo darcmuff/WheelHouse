@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
-const { extractFn } = require('./extract');
+const { extractFn, withLedger } = require('./extract');
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
-const mk = db => new Function('db', extractFn('calcWinLoss') + '\nreturn calcWinLoss();');
+const mk = db => new Function('db', withLedger(extractFn('calcWinLoss') + '\nreturn calcWinLoss();'));
 const run = db => mk()(db);
 test('win rate counts closed option trades only (same rule as the old panel)', () => {
   const db = { wheels: [{ id: 'w', status: 'open' }], trades: [

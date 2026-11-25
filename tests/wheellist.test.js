@@ -71,6 +71,13 @@ test('partial buy-back: each BTC keeps its own contracts, the rest expires on th
   const prem = F.realisedPremium([tr('cc', 'STOC', '2026-10-01', '2026-10-17', 50, 1, 300, 300), tr('stc', 'STC', '2026-10-10', '2026-10-17', 50, 0.4, 200, 80)], '2026-11-12');
   assert.ok(prem.events.some(e => e.amount === -80), JSON.stringify(prem.events));
 });
+test('STOC + STC buy-back realises the same debit as BTC', () => {
+  const stc = [tr('cc', 'STOC', '2026-10-01', '2026-10-17', 50, 1, 300, 300), tr('stc', 'STC', '2026-10-10', '2026-10-17', 50, 0.4, 200, 80)];
+  const btc = [tr('cc', 'STOC', '2026-10-01', '2026-10-17', 50, 1, 300, 300), tr('b', 'BTC', '2026-10-10', '2026-10-17', 50, 0.4, 200, 80)];
+  const ps = F.realisedPremium(stc, '2026-11-12');
+  const pb = F.realisedPremium(btc, '2026-11-12');
+  assert.deepStrictEqual(ps.events.map(e => e.amount).sort((a, b) => a - b), pb.events.map(e => e.amount).sort((a, b) => a - b));
+});
 test('expiry and assignment keep Captured on the opener', () => {
   const T = [tr('a', 'CSP', '2026-01-02', '2026-01-16', 52, 1, 400, 398.92, { expiredWorthless: true }),
     tr('c', 'CSP', '2026-01-20', '2026-02-20', 46, 1, 400, 398.92), tr('d', 'IN', '2026-02-20', null, 46, 46, 400, 18400)];

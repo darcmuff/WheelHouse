@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn } = require('./extract');
-const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+const S = new Function(require('./extract').LEDGER_SRC + '\n' + extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
   ['walkLegPairs', 'realisedPremium', 'shareRealisations', 'optsMonthly', 'calcMonthlyRealised'].map(extractFn).join('\n') +
   '\nreturn {calcMonthlyRealised,optsMonthly};')();
 const T = (action, entered, total, shares = 0, x = {}) => ({ wheelId: 'w1', action, entered, total, shares, strike: 50, ...x });

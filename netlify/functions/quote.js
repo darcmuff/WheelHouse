@@ -1,3 +1,6 @@
+// Valid quotes: Netlify-CDN-Cache-Control shared cache; zero prints: no-store (quote-cache.js).
+const { headersForQuote } = require('../lib/quote-cache');
+
 const _handler = async (event) => {
   const sym = event.queryStringParameters?.symbol;
   if (!sym) {
@@ -20,7 +23,7 @@ const _handler = async (event) => {
     const data = await res.json();
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=20', 'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=30' }, // shared CDN cache: one Finnhub call per ticker per 30s, however many users
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', ...headersForQuote(data) },
       body: JSON.stringify(data)
     };
   } catch (e) {
@@ -28,4 +31,5 @@ const _handler = async (event) => {
   }
 };
 
+exports._handler = _handler;
 exports.handler = require('../lib/origin').guard(_handler);

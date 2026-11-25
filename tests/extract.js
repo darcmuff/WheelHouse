@@ -13,8 +13,18 @@ function extractConst(name) {
   return m[0];
 }
 
-// Extract a `function name(...){...}` by brace-matching from the opening brace
-function extractFn(name) {
+const WHEEL_NORM_BUNDLE = ['walkLegPairs', 'normWheelShortStcClosers'];
+const WHEEL_NORM_FN = new Set(['realisedPremium', 'wheelSellOutcomes', 'wheelCloseSlices', 'wheelCapturedOnClose', 'wheelRemainLabel', 'wheelListCells']);
+const WHEEL_AROC_BUNDLE = [
+  'walkLegPairs',
+  'normWheelShortStcClosers',
+  'daysBetweenUTC',
+  'wheelPeakCapital',
+  'wheelCycleEndDate',
+];
+const WHEEL_AROC_FN = new Set(['calcAROC', 'cycleReturn', 'calcTradeROC']);
+
+function extractFnBody(name) {
   const i = SRC.indexOf(`function ${name}(`);
   if (i < 0) throw new Error(`function ${name} not found in app/index.html`);
   let j = SRC.indexOf('{', i), depth = 0, k = j;
@@ -27,14 +37,31 @@ function extractFn(name) {
   return SRC.slice(i, k + 1);
 }
 
+// Extract a `function name(...){...}` by brace-matching from the opening brace
+function extractFn(name) {
+  if (WHEEL_NORM_FN.has(name)) {
+    return WHEEL_NORM_BUNDLE.map(extractFnBody).join('\n') + '\n' + extractFnBody(name);
+  }
+  if (WHEEL_AROC_FN.has(name)) {
+    return WHEEL_AROC_BUNDLE.map(extractFnBody).join('\n') + '\n' + extractFnBody(name);
+  }
+  return extractFnBody(name);
+}
+
+const LEDGER_SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'ledger.js'), 'utf8');
+
 // Build an isolated sandbox containing the requested pieces plus any stubs
 function load(pieces, stubs = '') {
-  const code = stubs + '\n' + pieces.map(p =>
+  const code = stubs + '\n' + LEDGER_SRC + '\n' + pieces.map(p =>
     p.kind === 'const' ? extractConst(p.name) : extractFn(p.name)
   ).join('\n');
   const exportNames = pieces.filter(p => p.kind === 'fn').map(p => p.name);
-  const factory = new Function(code + `\nreturn {${exportNames.join(',')}};`);
+  const factory = new Function(code + `\nreturn {${exportNames.join(',')},OT_LEDGER};`);
   return factory();
 }
 
-module.exports = { load, extractFn, extractConst };
+function withLedger(src) {
+  return LEDGER_SRC + '\n' + src;
+}
+
+module.exports = { load, extractFn, extractConst, withLedger, LEDGER_SRC };
