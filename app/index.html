@@ -4317,7 +4317,7 @@ function renderLeapCard(l,spot,today){
   <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div>${(()=>{if(l.mark==null)return'';if(!(l.markWhy==='none'||(l.markSrc==='manual'&&!isSameMarkDay(l.markAt))))return'';const t=l.markAt?`saved ${cpDate(l.markAt)}`:'saved price';return`<div class="lc-saved">${esc(t)}</div>`;})()}</div>
     <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
     <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.825rem;font-weight:720">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
-    <div><div class="lc-k">Breakeven ${ii(`Strike plus your net cost per share after LEAP fees and closed or expired short calls (original breakeven $${S.be.toFixed(2)}). Open short calls count once closed.`)}</div><div class="lc-v sm">$${P.adjBe.toFixed(2)}</div>${Math.abs(P.adjBe-S.be)>=0.005?`<div class="lc-be-orig">orig $${S.be.toFixed(2)}</div>`:''}</div></div>
+    <div><div class="lc-k">Breakeven ${ii(`Strike plus your net cost per share after LEAP fees and closed or expired short calls (original breakeven $${S.be.toFixed(2)}). Open short calls count once closed.`)}</div><div class="lc-v sm">$${P.adjBe.toFixed(2)}</div>${P.net!==0&&Math.abs(P.adjBe-S.be)>=0.005?`<div class="lc-be-orig">orig $${S.be.toFixed(2)}</div>`:''}</div></div>
   ${leapBarHtml(pb,P.cost,P.net,!open)}
   <div class="wl-memo" onclick="event.stopPropagation()"><button type="button" class="wl-wi-btn" onclick="event.stopPropagation();wlWhatIf('${esc(l.id)}')">What if?</button></div><div class="wl-wi" id="wi-${esc(l.id)}" hidden onclick="event.stopPropagation()" data-kind="leap" data-cost="${P.cost}" data-net="${P.net}" data-strike="${+l.strike||0}" data-qty="${S.q}"><button type="button" class="wl-wi-x" aria-label="Close" onclick="event.stopPropagation();wlWhatIfClose('${esc(l.id)}')">×</button><div class="wl-wi-in"><label>Strike<input data-wi="k" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 260" oninput="wlWhatIfCalc('${esc(l.id)}')"></label><label>Premium / share<input data-wi="p" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.00" oninput="wlWhatIfCalc('${esc(l.id)}')"></label></div><div data-wi="out"><div class="wl-wi-r"><span>New net cost</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div></div><div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();wlWhatIfLog('${esc(l.id)}')">Log this trade</button></div></div>
   ${renderPmcc(l,today,spot,true)}
@@ -8906,10 +8906,9 @@ function moreRiskFigures(trades,legs){
   const rd=n=>Math.round(n*100)/100;
   const wheelFees=rd(trades.reduce((a,t)=>a+(+t.fees||0),0));
   const legFees=rd(legs.reduce((a,l)=>a+(+l.fees||0)+(+l.closeFees||0),0));
-  const legCredits=rd(legs.filter(l=>l.side==='short').reduce((a,l)=>a+(+l.entryPrice||0)*100*(+l.qty||0),0));
   const peakCsp=trades.filter(t=>t.action==='CSP'&&t.strike&&t.shares).reduce((a,t)=>Math.max(a,t.strike*t.shares),0);
   const peakLeap=rd(legs.filter(l=>l.side==='long'&&!l.parentLeapId).reduce((a,l)=>Math.max(a,OPTS.legPnL(l).costBasis),0));
-  return{wheelFees,legFees,legCredits,peakCsp,peakLeap};
+  return{wheelFees,legFees,peakCsp,peakLeap};
 }
 function moreLedgerStats(scope,wheels,trades,legs,today){
   today=String(today||new Date().toISOString().slice(0,10)).slice(0,10);
@@ -9251,7 +9250,8 @@ function renderAnalytics(){
   const R=moreRiskFigures(db.trades,db.opts||[]),OL=openLeapPositions(db.opts||[],today);
   const k$=n=>fmtMoney(n).replace(/\.\d\d$/,'');
   const feeAmt=scope==='wheel'?R.wheelFees:scope==='pmcc'?R.legFees:R.wheelFees+R.legFees;
-  const feeBase=scope==='wheel'?s.premiumCredits:scope==='pmcc'?R.legCredits:s.premiumCredits+R.legCredits;
+  // Same denominator in every scope: gross premium on closed trades in the scope (OT_LEDGER income events), never open credits
+  const feeBase=M.grossIn;
   const feePct=feeBase>0?feeAmt/feeBase*100:0;
   const peak=scope==='wheel'?R.peakCsp:scope==='pmcc'?R.peakLeap:Math.max(R.peakCsp,R.peakLeap);
   const riskStats=`<div class="a-stat-grid">
@@ -9261,7 +9261,7 @@ function renderAnalytics(){
       ?stat(fmtMoney(c.leaps),'Current Exposure',OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),'var(--text)','Capital at work in LEAPs, same as Home: what you paid for open LEAPs. Short calls written against them need no extra capital.')
       :stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),'var(--text)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
     ${stat(fmtMoney(peak),'Peak Exposure',scope==='wheel'?'highest single CSP':scope==='pmcc'?'highest single LEAP':'highest single CSP or LEAP','var(--text2)',scope==='wheel'?'Largest single cash-secured put notional ever opened. Your peak capital requirement.':scope==='pmcc'?'Most you have paid for a single LEAP, open or closed. Your peak capital requirement.':'Largest single commitment ever: a cash-secured put notional or what you paid for one LEAP, whichever is bigger.')}
-    ${stat(fmtMoney(feeAmt),'Total Fees',feePct.toFixed(1)+'% of gross premium','var(--text2)',scope==='wheel'?'Commissions and regulatory fees logged on wheel trades.':scope==='pmcc'?'Commissions and regulatory fees logged on LEAPs and short calls, opening and closing.':'Commissions and regulatory fees logged on every wheel trade, LEAP and short call.')}
+    ${stat(fmtMoney(feeAmt),'Total Fees',feePct.toFixed(1)+'% of closed premium','var(--text2)',(scope==='wheel'?'Commissions and regulatory fees logged on wheel trades.':scope==='pmcc'?'Commissions and regulatory fees logged on LEAPs and short calls, opening and closing.':'Commissions and regulatory fees logged on every wheel trade, LEAP and short call.')+' The % is fees ÷ gross premium collected on closed trades in this view.')}
     ${scope==='pmcc'
       ?stat(String(OL.shortCount),'Open Short Calls','against '+OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),OL.shortCount>0?'var(--orange)':'var(--text3)','Short calls still open, written against your LEAPs (and any short options not tied to a LEAP).')
       :stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
@@ -9326,7 +9326,7 @@ function renderAnalytics(){
       </div>
       <div class="a-stat-grid" style="margin-top:0.75rem">
         ${stat(M.totalOptDays+'d','Total Option-Days','closed trades, days held','var(--text2)','Closed trades only: the sum of days held across every sold option that was bought back, expired or assigned. Options still open are not counted.')}
-        ${stat(fmtMoney(avgTradeSize),'Avg Leg Size','per closed trade, net','var(--text2)','Closed trades, net of buybacks: average option income kept per sold option that was bought back, expired or assigned. Not the gross credit of options opened.')}
+        ${stat(fmtMoney(avgTradeSize),'Avg Trade P&L','per closed trade, net','var(--text2)','Closed trades, net of buybacks: average option income kept per sold option that was bought back, expired or assigned. Not the gross credit of options opened.')}
         ${stat(M.bestPPD?fmtMoney(M.bestPPD.amount/M.bestPPD.daysHeld)+'/d':'—','Best PPD Trade',M.bestPPD?evKind(M.bestPPD)+' · '+M.bestPPD.daysHeld+'d':'','var(--green)','Closed sold option with the most option income per day held — your most capital-efficient trade.')}
         ${stat(M.biggestBuyback?fmtMoney(M.biggestBuyback.grossOut):'—','Biggest BTC',M.biggestBuyback?fmtDate(M.biggestBuyback.date):'',M.biggestBuyback?'var(--red)':'var(--text3)','Most expensive single buyback. Large BTCs eat into premium — track these to improve roll timing.')}
       </div>

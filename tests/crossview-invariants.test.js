@@ -257,7 +257,6 @@ test('Open LEAPs & short calls: each open LEAP with its open calls; closed legs 
   assert.strictEqual(R.legFees, 0.65);
   assert.strictEqual(R.peakCsp, 5000);
   assert.strictEqual(R.peakLeap, 500);
-  assert.strictEqual(R.legCredits, 100 + 80 + 120 + 90 + 110);
 });
 
 test('Risk & Exposure and Open Positions follow the scope; no unexplained wheel-only table in LEAPs & PMCC', () => {
@@ -284,13 +283,42 @@ test('Closed-trade tooltips say closed trades, net of buybacks — not gross cre
   const overview = extractFn('renderStatsOverview');
   const tip = (src, label) => { const m = src.match(new RegExp("'" + label + "'[^\\n]*")); assert.ok(m, label); return m[0]; };
   assert.match(tip(analytics, 'Total Option-Days'), /Closed trades only/);
-  assert.match(tip(analytics, 'Avg Leg Size'), /Closed trades, net of buybacks/);
+  assert.match(tip(analytics, 'Avg Trade P&L'), /Closed trades, net of buybacks/);
   assert.match(tip(analytics, 'Best Single Trade'), /Closed trades, net of buybacks/);
   assert.match(analytics, /const stratTip='Closed trades, net of buybacks/);
   assert.match(analytics, /\$\{title\} \$\{ii\(stratTip\)\}/);
   const k2 = overview.slice(overview.indexOf('const k2Tip='), overview.indexOf('const k2=kpi('));
   assert.strictEqual((k2.match(/Closed trades, net of buybacks/g) || []).length, 3);
   assert.doesNotMatch(analytics, /before any buyback/);
-  // Avg Leg Size value is net too: option income ÷ closed trades
+  // Avg Trade P&L value is net too: option income ÷ closed trades
   assert.match(extractFn('moreLedgerStats'), /avgLeg:inc\.length\?S\.total\/inc\.length:0/);
+});
+
+test('Avg Trade P&L: renamed from Avg Leg Size; net option income per closed trade', () => {
+  const analytics = extractFn('renderAnalytics');
+  assert.doesNotMatch(analytics, /Avg Leg Size/);
+  assert.match(analytics, /stat\(fmtMoney\(avgTradeSize\),'Avg Trade P&L','per closed trade, net'/);
+  const db = fixture();
+  const S = sandbox(db);
+  const all = S.moreLedgerStats('all', db.wheels, db.trades, db.opts, TODAY);
+  // 7 closed sold options, -780 option income in total (the -1,500 buyback pulls it below zero; gross credits would say +$167)
+  assert.strictEqual(all.inc.length, 7);
+  assert.strictEqual(all.avgLeg, -780 / 7);
+  assert.notStrictEqual(all.avgLeg, all.grossIn / 7);
+});
+
+test('Fee %: one ledger denominator (gross premium on closed trades in the scope) for All, Wheels and LEAPs & PMCC', () => {
+  const analytics = extractFn('renderAnalytics');
+  assert.match(analytics, /const feeBase=M\.grossIn;/);
+  assert.doesNotMatch(analytics, /s\.premiumCredits|legCredits/);
+  assert.match(analytics, /% of closed premium/);
+  const db = fixture();
+  // An open CSP and an open short call must not change any scope's denominator
+  db.trades.push(T('o1', 'w1', 'SOFI', 'CSP', '2026-11-15', 999, { strike: 14, expiry: '2026-12-19' }));
+  db.opts.push({ id: 'C9', parentLeapId: 'L2', side: 'short', type: 'C', underlying: 'SOFI', strike: 25, qty: 1, entryPrice: 7.77, entryDate: '2026-11-15', expiry: '2026-12-19', status: 'open', fees: 0, closeFees: 0 });
+  const S = sandbox(db);
+  const base = sc => S.moreLedgerStats(sc, db.wheels, db.trades, db.opts, TODAY).grossIn;
+  assert.strictEqual(base('wheel'), 500 + 120 + 200 + 150);
+  assert.strictEqual(base('pmcc'), 100 + 80 + 120);
+  assert.strictEqual(base('all'), base('wheel') + base('pmcc'));
 });

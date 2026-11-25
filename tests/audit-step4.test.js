@@ -144,3 +144,17 @@ test('parseRollTrades $0.05 total fees → leg fees [0.03, 0.02] and totals reco
   const feeSum = t.reduce((s, x) => s + x.fees, 0);
   assert.strictEqual(Math.round(feeSum * 100) / 100, 0.05);
 });
+test('renderLeapCard: no orig line when only opening fees moved breakeven (no closed short calls)', () => {
+  // Brand-new LEAP, fees only: adjusted breakeven $222.01 vs orig $222.00 -> show $222.01 with the ii tooltip, no orig line
+  cardFn.setOpts([leap]);
+  const html = cardFn.renderLeapCard(leap, 200, today);
+  assert.match(html, /lc-k">Breakeven <button[^>]*>ⓘ<\/button><\/div><div class="lc-v sm">\$222\.01<\/div>/);
+  assert.doesNotMatch(html, /lc-be-orig/);
+  assert.doesNotMatch(html, /orig \$222\.00/);
+  // An open short call alone does not count either
+  assert.strictEqual(pmccBundle.pmccStats(leap, [leap, openShort], today).net, 0);
+  assert.match(extractFn('renderLeapCard'), /\$\{P\.net!==0&&Math\.abs\(P\.adjBe-S\.be\)>=0\.005\?`<div class="lc-be-orig">/);
+  // A closed short call does: orig line is back
+  cardFn.setOpts([leap, closedShort]);
+  assert.match(cardFn.renderLeapCard(leap, 200, today), /lc-be-orig">orig \$222\.00/);
+});
