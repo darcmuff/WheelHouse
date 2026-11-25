@@ -1885,6 +1885,9 @@ select,textarea,
   /* Live badge stays on desktop; phone uses .live-phone (quote status) */
   .live-desk{display:none}
   .live-phone{display:inline}
+  .wc.rot-mini-bar>.lc-h .live-phone .demo-sample-badge,
+  .wc>.rot-header .live-phone .demo-sample-badge{letter-spacing:0.15px;padding:2px 0.4rem;font-size:0.625rem!important}
+  .wc.rot-mini-bar>.lc-h .live-phone{flex:0 0 auto}
 
   /* Compact the existing measure dropdown in the chart header */
   .home-chart .pc-measure{
@@ -6008,13 +6011,14 @@ function isUsMarketOpen(){
     return mins>=570&&mins<960;
   }catch(e){return true;}
 }
-function demoSamplePriceBadge(){
-  return`<span class="rot-badge closed" style="color:var(--text3);border-color:rgba(91,93,98,.35);background:rgba(91,93,98,.1)">Sample prices</span>`;
+function demoSamplePriceBadge(short){
+  const label=short?'Sample':'Sample prices';
+  return`<span class="rot-badge closed demo-sample-badge" style="color:var(--text3);border-color:rgba(91,93,98,.35);background:rgba(91,93,98,.1)">${label}</span>`;
 }
 function quoteLiveBadge(sym,open){
   // Presentation only: hide the Live pill when a non-delayed quote is present; show a status when not live.
   if(!open)return`<span class="rot-badge closed">Closed</span>`;
-  if(APP_DEMO&&!isUsMarketOpen())return demoSamplePriceBadge();
+  if(APP_DEMO&&!isUsMarketOpen())return demoSamplePriceBadge(isPhoneLayout());
   const q=typeof quotes!=='undefined'?quotes[sym]:null;
   if(q&&q.price>0&&q.state!=='DELAYED')return '';
   if(typeof isPricePending==='function'&&isPricePending(sym))return '';
@@ -6024,8 +6028,7 @@ function quoteLiveBadge(sym,open){
 function liveBadgeHtml(sym,open){
   if(!open)return`<span class="rot-badge closed">Closed</span>`;
   if(APP_DEMO&&!isUsMarketOpen()){
-    const b=demoSamplePriceBadge();
-    return`<span class="live-desk">${b}</span><span class="live-phone">${b}</span>`;
+    return`<span class="live-desk">${demoSamplePriceBadge(false)}</span><span class="live-phone">${demoSamplePriceBadge(true)}</span>`;
   }
   return`<span class="rot-badge open live-desk">● Live</span><span class="live-phone">${quoteLiveBadge(sym,true)}</span>`;
 }
