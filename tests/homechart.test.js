@@ -13,12 +13,12 @@ test('no Day/Week/Month toggle: granularity is automatic from the range', () => 
   assert.ok(!src.includes("'Day','Week','Month'") && !src.includes('setPnlGran'));
 });
 
-test('chart dropdown is All / All options / Wheel P&L / PMCC calls / Shares & LEAPs P&L and is the title', () => {
+test('chart dropdown is Total Realised / All options / Wheel P&L / PMCC calls / Shares & LEAPs P&L, default All options', () => {
   const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
   const load = extractFn('_loadPnlMeasure');
   const daily = extractFn('pnlDailyForMeasure');
   const html = extractFn('pnlCurveHtml');
-  assert.ok(H.includes("['all','All']") && H.includes("['options','All options']") && H.includes("['wheel','Wheel P&L']") && H.includes("['pmcc','PMCC calls']") && H.includes("['shares','Shares & LEAPs P&L']"));
+  assert.ok(H.includes("['all','Total Realised']") && H.includes("['options','All options']") && H.includes("['wheel','Wheel P&L']") && H.includes("['pmcc','PMCC calls']") && H.includes("['shares','Shares & LEAPs P&L']"));
   assert.ok(!H.includes("['leaps','LEAPs P&L']") && !H.includes("['pnl','Options P&L']") && !H.includes("['premium','Premium collected']") && !H.includes("['closed','Closed P&L']"));
   assert.ok(!html.includes('a-chart-title') && html.includes('pc-measure') && html.includes('${ii('));
   assert.ok(daily.includes("realisedDaily(trades,[],today,wheels)") && daily.includes("realisedDaily([],legs||[],today,wheels)") && daily.includes("realisedDaily(trades,legs||[],today,wheels)"));
@@ -30,7 +30,7 @@ test('chart dropdown is All / All options / Wheel P&L / PMCC calls / Shares & LE
   assert.ok(!extractFn('pnlBuckets').includes('pnlMeasure'));
   const css = H.match(/\.pc-measure\{[^}]+/)[0];
   assert.ok(css.includes('padding:0.1875rem 32px') && css.includes('background-position:right 12px') && css.includes('font-weight:480') && css.includes('border-radius:6px'));
-  assert.ok(load.includes("return 'all'"));
+  assert.ok(load.includes("return 'options'") && !load.includes("return 'all'"));
   assert.ok(extractFn('setPnlMeasure').includes("localStorage.setItem('optrack-pnl-measure'"));
 });
 test('Wheel and PMCC calls split the options series; All = options + shares/LEAPs series', () => {
@@ -108,7 +108,7 @@ test('P&L chart tip is one persistent element, pointer-events none, transform-po
   assert.ok(extractFn('pnlTipShow').includes('translate3d') && extractFn('pnlTipShow').includes('el.dataset.br'));
   assert.ok(extractFn('bindPnlTip').includes('pointerup') && extractFn('bindPnlTip').includes('pointerover'));
 });
-test('P&L chart tip shows only the selected measure: All is In and Out', () => {
+test('P&L chart tip shows only the selected measure: Total Realised is In and Out', () => {
   const { extractFn } = require('./extract');
   const S = new Function(
     extractFn('fmtMoney') + extractFn('pnlTipHtml') +

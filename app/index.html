@@ -8461,8 +8461,8 @@ function pnlBuckets(daily,range,gran,today,fromDate){
   return{start,end:today,gran,buckets,gain:Math.round(tot.gain*100)/100,loss:Math.round(tot.loss*100)/100,net:Math.round((tot.gain-tot.loss)*100)/100};
 }
 let pnlRange='All',pnlFull=false;
-const PNL_MEASURES=[['all','All'],['options','All options'],['wheel','Wheel P&L'],['pmcc','PMCC calls'],['shares','Shares & LEAPs P&L']];
-function _loadPnlMeasure(){try{let v=localStorage.getItem('optrack-pnl-measure');if(v==='leaps')v='pmcc';if(PNL_MEASURES.some(m=>m[0]===v)){if(localStorage.getItem('optrack-pnl-measure')!==v)localStorage.setItem('optrack-pnl-measure',v);return v;}if(v)localStorage.setItem('optrack-pnl-measure','all');}catch(e){}return 'all';}
+const PNL_MEASURES=[['all','Total Realised'],['options','All options'],['wheel','Wheel P&L'],['pmcc','PMCC calls'],['shares','Shares & LEAPs P&L']];
+function _loadPnlMeasure(){try{let v=localStorage.getItem('optrack-pnl-measure');if(v==='leaps')v='pmcc';if(PNL_MEASURES.some(m=>m[0]===v)){if(localStorage.getItem('optrack-pnl-measure')!==v)localStorage.setItem('optrack-pnl-measure',v);return v;}if(v)localStorage.setItem('optrack-pnl-measure','options');}catch(e){}return 'options';}
 let pnlMeasure=_loadPnlMeasure();
 function setPnlMeasure(k){if(!PNL_MEASURES.some(m=>m[0]===k))return;pnlMeasure=k;try{localStorage.setItem('optrack-pnl-measure',k);}catch(e){}_pnlRedraw();const mo=document.getElementById('home-monthly');if(mo)mo.innerHTML=renderMonthlyForMeasure(k);}
 // Chart-only: dated events already used by the Shares & LEAPs P&L table (FIFO share sales, dividends, closed long LEAPs). No new P&L math.
@@ -8482,7 +8482,7 @@ function mergePnlDaily(a,b){
   return Object.values(d).sort((x,y)=>x.date.localeCompare(y.date)).map(o=>({date:o.date,gain:Math.round(o.gain*100)/100,loss:Math.round(o.loss*100)/100,amount:Math.round((o.gain-o.loss)*100)/100}));
 }
 // Chart-only: feed existing realisedDaily / sharesLeapsDaily. No new P&L math.
-// All measure = every trade type: options plus shares, dividends and closed LEAPs.
+// Total Realised (measure key 'all') = every trade type: options plus shares, dividends and closed LEAPs.
 function pnlDailyForMeasure(measure,trades,legs,today,wheels){
   wheels=wheels||(typeof db!=='undefined'?db.wheels:[]);
   if(measure==='wheel')return realisedDaily(trades,[],today,wheels);
@@ -8506,7 +8506,7 @@ function calcMonthlyForMeasure(measure,trades,legs,today,wheels){
 }
 // Home table under the P&L graph: same measure as the dropdown, all months, not the chart range.
 function renderMonthlyForMeasure(measure){
-  measure=measure||(typeof pnlMeasure!=='undefined'&&pnlMeasure)||'all';
+  measure=measure||(typeof pnlMeasure!=='undefined'&&pnlMeasure)||'options';
   const today=new Date().toISOString().slice(0,10);
   const rows=calcMonthlyForMeasure(measure,db.trades,db.opts||[],today,db.wheels).filter(r=>r.collected||r.loss);
   if(!rows.length)return '';
@@ -8520,7 +8520,7 @@ function renderMonthlyForMeasure(measure){
   const heads=isSh?['Gains','Losses','Net']:['Premium collected','Loss','Profit'];
   const keys=isSh?['collected','loss','net']:['collected','loss','profit'];
   const tips={
-    all:'Everything realised in that month: wheel options, PMCC short calls, share sales, dividends and closed LEAPs. Figures match the All bars above. Open options are not included.',
+    all:'Everything realised in that month: wheel options, PMCC short calls, share sales, dividends and closed LEAPs. Figures match the Total Realised bars above. Open options are not included.',
     options:'Options only: realised premium and buybacks on wheel puts and calls and PMCC short calls, combined. Figures match the All options bars above. Share sales, dividends and closed LEAPs are not included.',
     wheel:'Wheel options only: realised premium and buybacks on wheel puts and calls. Figures match the Wheel P&L bars above. PMCC short calls are not included.',
     pmcc:'PMCC short calls only: realised premium and buybacks. Figures match the PMCC calls bars above. Closed long LEAPs stay in Shares & LEAPs P&L.',
@@ -8674,7 +8674,7 @@ function moreLedgerStats(scope,wheels,trades,legs,today){
 }
 function pnlCurveHtml(){
   const today=new Date().toISOString().slice(0,10);
-  const _m=pnlMeasure||'all';
+  const _m=pnlMeasure||'options';
   const _from=typeof earliestTradeDate==='function'?earliestTradeDate(db.trades,db.opts||[]):null;
   const B=pnlBuckets(pnlDailyForMeasure(_m,db.trades,db.opts||[],today,db.wheels),pnlRange,null,today,_from); // granularity follows the range
   const el=typeof document!=='undefined'&&document.getElementById('pnl-curve');
@@ -8722,7 +8722,7 @@ function pnlTipHide(){clearTimeout(_pnlTipHideT);_pnlTipEl=null;const t=document
 function pnlTipShow(el){
   const t=document.getElementById('pc-tip');if(!t||!el)return;
   clearTimeout(_pnlTipHideT);
-  const html=pnlTipHtml(pnlMeasure||'all',el.dataset.l,+el.dataset.g,+el.dataset.s,+el.dataset.n);
+  const html=pnlTipHtml(pnlMeasure||'options',el.dataset.l,+el.dataset.g,+el.dataset.s,+el.dataset.n);
   if(t._html!==html){t.innerHTML=html;t._html=html;}
   _pnlTipEl=el;
   const host=t.parentElement,svg=host&&host.querySelector('svg');if(!host||!svg)return;
