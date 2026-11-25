@@ -7241,9 +7241,11 @@ function reportSentences(F){
   out.push(`Option income this month so far: ${reportMoney(F.thisMonth)}.`);
   if(F.ret){
     const pct=(F.ret.pct>=0?'+':'−')+Math.abs(F.ret.pct).toFixed(2)+'%';
-    const of=F.base==='account'?'your account size':(reportMoney(F.capital).replace(/^[+-]/,'')+' capital at work');
-    let s=`Monthly return on option income is ${pct} of ${of}`;
-    if(F.target>0)s+=F.ret.ok?`, meeting your ${F.target}% target`:` against your ${F.target}% target`;
+    const of=F.base==='account'?'your account size':(reportMoney(F.capital).replace(/^[+-]/,'')+' current capital at work');
+    const n=F.completeMonths||0;
+    const over=n>0?` over ${n} complete month${n===1?'':'s'}`:'';
+    let s=`Average monthly return on option income${over} is ${pct} of ${of}`;
+    if(F.target>0)s+=F.ret.ok?`, meeting your ${F.target}% target`:`, against your ${F.target}% target`;
     s+='.';
     out.push(s);
   }else{
