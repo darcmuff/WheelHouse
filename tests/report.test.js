@@ -235,11 +235,12 @@ test('reportWinLossItems totals match calcWinLoss, and dates bucket into last mo
     '\nreturn {calcWinLoss,reportWinLossItems,set(db){this.db=db;}};'
   );
   // extractFn calcWinLoss reads db; build a sandbox with a mutable db
-  const S = new Function(
+  const { withLedger } = require('./extract');
+  const S = new Function(withLedger(
     extractFn('optionsLib') + '\nconst OPTS=optionsLib();\nlet db={wheels:[],trades:[],opts:[]};\n' +
     extractFn('calcWinLoss') + '\n' + extractFn('reportWinLossItems') +
     '\nreturn {set(o){db.wheels=o.wheels||[];db.trades=o.trades||[];db.opts=o.opts||[];},calcWinLoss,items:()=>reportWinLossItems(db.wheels,db.trades,db.opts)};'
-  )();
+  ))();
   const db = { wheels: [{ id: 'w', status: 'open' }], trades: [
     { wheelId: 'w', action: 'CSP', strike: 300, total: 500, entered: '2026-01-01', expiredWorthless: true, expiry: '2026-01-17' },
     { wheelId: 'w', action: 'CSP', strike: 290, total: 400, entered: '2026-10-01' },

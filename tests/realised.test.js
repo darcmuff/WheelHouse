@@ -1,10 +1,10 @@
 // Realised-only monthly P&L: option premium banks when the option ends, never while open.
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractFn } = require('./extract');
-const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+const { extractFn, withLedger } = require('./extract');
+const S = new Function(withLedger(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
   ['walkLegPairs', 'realisedPremium', 'optsMonthly', 'shareRealisations', 'calcMonthlyRealised', 'rotationShareStats', 'calcUnrealised', 'calcAllUnrealised', 'homeFigures'].map(extractFn).join('\n') +
-  '\nreturn {calcMonthlyRealised,calcAllUnrealised,homeFigures};')();
+  '\nreturn {calcMonthlyRealised,calcAllUnrealised,homeFigures};'))();
 const TODAY = '2026-10-23';
 const T = (action, entered, total, o = {}) => ({ wheelId: 'w', ticker: 'TSLA', action, entered, total, shares: 100, strike: 100, ...o });
 const mo = (rows, ym) => rows.find(r => r.ym === ym) || { premium: 0, total: 0 };

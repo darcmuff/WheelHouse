@@ -48,14 +48,20 @@ function extractFn(name) {
   return extractFnBody(name);
 }
 
+const LEDGER_SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'ledger.js'), 'utf8');
+
 // Build an isolated sandbox containing the requested pieces plus any stubs
 function load(pieces, stubs = '') {
-  const code = stubs + '\n' + pieces.map(p =>
+  const code = stubs + '\n' + LEDGER_SRC + '\n' + pieces.map(p =>
     p.kind === 'const' ? extractConst(p.name) : extractFn(p.name)
   ).join('\n');
   const exportNames = pieces.filter(p => p.kind === 'fn').map(p => p.name);
-  const factory = new Function(code + `\nreturn {${exportNames.join(',')}};`);
+  const factory = new Function(code + `\nreturn {${exportNames.join(',')},OT_LEDGER};`);
   return factory();
 }
 
-module.exports = { load, extractFn, extractConst };
+function withLedger(src) {
+  return LEDGER_SRC + '\n' + src;
+}
+
+module.exports = { load, extractFn, extractConst, withLedger, LEDGER_SRC };

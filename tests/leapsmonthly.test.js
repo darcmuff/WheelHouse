@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractFn } = require('./extract');
-const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
+const { extractFn, withLedger } = require('./extract');
+const S = new Function(withLedger(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' +
   ['optsMonthly', 'walkLegPairs', 'realisedPremium', 'shareRealisations', 'calcMonthlyRealised', 'monthlyExtraSources', 'rotationShareStats', 'calcUnrealised', 'calcAllUnrealised'].map(extractFn).join('\n') +
-  '\nreturn {optsMonthly,calcMonthlyRealised,monthlyExtraSources,calcAllUnrealised};')();
+  '\nreturn {optsMonthly,calcMonthlyRealised,monthlyExtraSources,calcAllUnrealised};'))();
 const legs = [
   { id: 'L', side: 'long', type: 'C', qty: 1, entryPrice: 40, fees: 0, status: 'closed', closePrice: 55, closeDate: '2026-10-05', closeFees: 0 },
   { id: 's1', side: 'short', type: 'C', qty: 1, entryPrice: 5, fees: 0, status: 'expired', closePrice: 0, expiry: '2026-09-18', closeFees: 0 },
