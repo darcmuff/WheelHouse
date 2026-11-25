@@ -543,11 +543,6 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .d-phase-cc{background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.25)}
 .d-phase-hold{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.25)}
 .d-phase-idle{background:rgba(100,116,139,.08);color:#94a3b8;border:1px solid rgba(100,116,139,.2)}
-.d-mini-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:0.675rem;text-align:center}
-.d-mini-cal-hdr{color:var(--text3);font-weight:720;padding:2px 0}
-.d-mini-cal-day{padding:0.1875rem 0;border-radius:0.1875rem;color:var(--text3);position:relative}
-.d-mini-cal-day.today{color:var(--text);font-weight:720;background:var(--bg4)}
-.d-mini-cal-dot{width:0.25rem;height:0.25rem;border-radius:50%;position:absolute;bottom:1px;left:50%;transform:translateX(-50%)}
 .d-pct-bar{height:0.375rem;border-radius:0.1875rem;background:var(--bg4);overflow:hidden}
 .d-pct-fill{height:100%;border-radius:0.1875rem;transition:width .3s ease}
 
@@ -821,7 +816,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 @media(max-width:1280px){.hk-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .hk{background:var(--bg2);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.125rem;box-shadow:var(--shadow)}
 .hk-l{color:var(--text3);font-size:0.825rem}.hk-v{font-size:1.375rem;font-weight:480;margin-top:0.25rem;letter-spacing:0}.hk.big .hk-v{font-size:2.125rem}
-.hk-s{color:var(--text2);font-size:0.78rem;margin-top:0.125rem}.hk-how{color:var(--text3);font-size:0.69rem;margin-top:0.5rem;line-height:1.4}
+.hk-s{color:var(--text2);font-size:0.78rem;margin-top:0.125rem}.hk-nw{white-space:nowrap}.hk-how{color:var(--text3);font-size:0.69rem;margin-top:0.5rem;line-height:1.4}
 .hk-wl{margin-top:0.375rem;display:flex;flex-direction:column;gap:0.125rem}.hk-wl>div{display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;white-space:nowrap}.hk-wl span{color:var(--text2);font-size:0.825rem}.hk-wl b{font-size:1.0625rem;font-weight:720;letter-spacing:-0.01em}
 .pc-empty{padding:2rem;text-align:center;color:var(--text3);font-size:0.84rem}.rot-earn{font-size:0.72rem;font-weight:480;border:1px solid var(--border);border-radius:2px;padding:0.1rem 0.5rem;color:var(--text2);white-space:nowrap}.rot-earn-slot{margin-left:auto;display:inline-flex;justify-content:flex-end;align-items:center;flex-shrink:0}.lc-lacts-wrap{display:flex;flex-direction:column;align-items:flex-end;margin-left:auto;padding-left:0.5rem;gap:0.2rem}.lc-lacts-wrap .lc-lacts{margin-left:0;padding-left:0}.row-tag{font-size:0.72rem;font-weight:480;border:1px solid var(--border);border-radius:1rem;padding:0.1rem 0.45rem;color:var(--text2);white-space:nowrap;font-variant-numeric:tabular-nums lining-nums}.row-tag-risk{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
 .pos{color:var(--green)}.neg{color:var(--red)}
@@ -1774,6 +1769,7 @@ select,textarea,
     -webkit-line-clamp:2;
     overflow:hidden;
   }
+  .v2-home .hk-s.hk-s3{-webkit-line-clamp:3} /* Unrealised: Shares · Wheel options · LEAPs · N unpriced needs a third line at 390px */
   .v2-home .hk-wl b{font-size:18px;line-height:1.2}
   .v2-home .hk-wl span{font-size:11px}
 
@@ -3499,7 +3495,6 @@ let dateFmt=localStorage.getItem('wh-dateFmt')||'uk'; // uk | us
 function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function colorN(n){return n==null?'m':n>=0?'g':'r';}
-function dteCls(dte){return dte<=3?'r':dte<=14?'o':'g';}
 
 // ── Metric explain tooltip ──
 function showXpop(badge){
@@ -5246,31 +5241,6 @@ function wheelLabelDisplay(label,wheel){
 }
 
 
-function buildLastAction(trades){
-  if(!trades||!trades.length)return'—';
-  const sorted=[...trades].sort((a,b)=>b.entered.localeCompare(a.entered));
-  const t=sorted[0];
-  const cx=t.shares?Math.round(t.shares/100)+'x':'';
-  if(t.action==='CSP'){
-    const exp=t.expiry?fmtDateShort(t.expiry):'—';
-    return`${cx} ${exp} @ $${fmt2(t.strike)} Sell Put`;
-  }
-  if(t.action==='STOC'){
-    const exp=t.expiry?fmtDateShort(t.expiry):'—';
-    return`${cx} ${exp} @ $${fmt2(t.strike)} Sell Call`;
-  }
-  if(t.action==='BTC'||t.action==='STC'){
-    return`Buy to Close${t.strike?' $'+fmt2(t.strike):''}`;
-  }
-  if(t.action==='IN'){
-    return`Assigned ${t.shares||''} @ $${fmt2(t.premium)}`;
-  }
-  if(t.action==='OUT'){
-    return`Called Away ${t.shares||''} @ $${fmt2(t.premium)}`;
-  }
-  return t.action;
-}
-
 // ── Single source of truth for open option legs ──
 // Share-aware lifecycle walk — mirrors runDataHealth's pairing exactly, minus the issue
 // detection. Legs carry `_rem` (remaining shares); BTC/STC/IN/OUT consume shares, not
@@ -6528,36 +6498,6 @@ function getWheelPhase(wheel){
 }
 
 
-function buildMiniCal(){
-  const today=new Date();const y=today.getFullYear(),m=today.getMonth();
-  const daysInMonth=new Date(y,m+1,0).getDate();
-  const firstDay=new Date(y,m,1).getDay();// 0=Sun
-  const startIdx=firstDay===0?6:firstDay-1;// Mon=0
-  const expiryDates={};const expiryTargets={};
-  db.wheels.forEach(wh=>{
-    openOptionLegs(db.trades.filter(t=>t.wheelId===wh.id)).forEach(t=>{
-    const dte=dteDays(t.expiry);if(dte===null||dte<0)return;
-    const d=parseInt(t.expiry.split('-')[2],10);
-    const price=(quotes[t.ticker]?.price)||(wh.lastPrice)||null;
-    const itm=price!=null&&t.strike!=null?(t.action==='CSP'?price<t.strike:price>t.strike):false;
-    if(t.expiry.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)){
-      expiryDates[d]=itm?'var(--red)':dte<=7?'var(--yellow)':'var(--green)';
-      if(!expiryTargets[d])expiryTargets[d]={wheelId:wh.id,tradeId:t.id}; // first expiring leg that day
-    }
-    });
-  });
-  const dayNames=['M','T','W','T','F','S','S'];
-  let cells=dayNames.map(d=>`<div class="d-mini-cal-hdr">${d}</div>`).join('');
-  for(let i=0;i<startIdx;i++)cells+=`<div class="d-mini-cal-day"></div>`;
-  for(let d=1;d<=daysInMonth;d++){
-    const isToday=d===today.getDate();
-    const dotCol=expiryDates[d]||null;
-    const tgt=expiryTargets[d];
-    cells+=`<div class="d-mini-cal-day${isToday?' today':''}"${tgt?` onclick="goToTrade('${tgt.wheelId}','${tgt.tradeId}')" style="cursor:pointer" title="Go to expiring position"`:''}>${d}${dotCol?`<div class="d-mini-cal-dot" style="background:${dotCol}"></div>`:''}</div>`;
-  }
-  return cells;
-}
-
 function renderStatsOverview(){
   const today=new Date().toISOString().slice(0,10),scope=moreScope();
   const pyAll=calcProjectedYearly(db.trades,db.opts||[],today);
@@ -6759,7 +6699,7 @@ function renderHome(){
     <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Premium kept minus buyback losses on wheel and PMCC calls closed in ${mName}. Realised only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
       <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
     <div class="hk"><div class="hk-l">This year ${ii(`Same as this month, since 1 January. Realised options only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · PMCC calls ${sgn(F.year.pmcc)}</div></div>
-    <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price, plus mark-to-market P&L on open wheel options (premium minus buy-back cost), not gross premium collected.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s">Shares ${sgn(un.shares)} · Wheel options ${sgn(un.premium)} · LEAPs ${sgn(un.leaps)}${un.unpriced>0?` · ${un.unpriced} unpriced`:''}</div></div>
+    <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price, plus mark-to-market P&L on open wheel options (premium minus buy-back cost), not gross premium collected.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s hk-s3"><span class="hk-nw">Shares ${sgn(un.shares)}</span> · <span class="hk-nw">Wheel options ${sgn(un.premium)}</span> · <span class="hk-nw">LEAPs ${sgn(un.leaps)}</span>${un.unpriced>0?` · <span class="hk-nw">${un.unpriced} unpriced</span>`:''}</div></div>
     <div class="hk hk-rel"><button type="button" class="hk-cog" aria-label="Return settings" title="Account size and monthly target" onclick="event.stopPropagation();openRetCfg(this)"><svg width="16" height="16" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button><div class="hk-l">${caw.pct!=null?'Account size':'Capital at work'} ${ii(caw.pct!=null?`The account size you set here. The line below shows how much of it is tied up in open puts, shares and LEAPs.`:`Open put collateral, open shares and open LEAP cost. Return this month uses this figure.`)}</div><div class="hk-v">${caw.pct!=null?fmtMoney(rs.account).replace(/\.\d\d$/,''):fmtMoney(caw.total).replace(/\.\d\d$/,'')}</div><div class="hk-s">${caw.pct!=null?`${fmtMoney(caw.total).replace(/\.\d\d$/,'')} at work (${caw.pct.toFixed(0)}%) · Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`:`Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`}</div></div>
     <div class="hk"><div class="hk-l">Win rate ${ii(`Closed sold options only, incl. PMCC calls. A win kept the premium or was bought back cheaper. Open options don’t count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
     <div class="hk${nx?' hk-nx':''}"${nx?` role="button" tabindex="0" aria-label="Go to next expiry, ${esc(nx.ticker+' '+nx.what)}" data-kind="${esc(nx.kind||'')}" data-id="${esc(nx.id||'')}" data-wid="${esc(nx.wheelId||'')}" data-pid="${esc(nx.parentLeapId||'')}" onclick="goToNextExpiry(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToNextExpiry(this)}"`:''}><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
