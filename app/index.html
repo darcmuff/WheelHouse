@@ -3167,7 +3167,7 @@ function realisedPremium(trades,today){
       if(f<=0)return;used[o.id]=(used[o.id]||0)+f;events.push({key:k,ticker:o.ticker||tkr,date:c.entered||'',amount:(o.total||0)*f});});});
     list.forEach(t=>{const v=t.total||0;
       if(t.action==='BTC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:-v});
-      else if(t.action==='STC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:(pairs[t.id]&&pairs[t.id].length)?-v:v});
+      else if(t.action==='STC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:v});
       else if(t.action==='DIV')return;});
     rest.forEach(o=>{const f=1-(used[o.id]||0);if(f<=1e-9)return;const amt=(o.total||0)*f;
       if(o.expiry&&(o.expiry<today||o.expiredWorthless&&o.expiry<=today))events.push({key:k,ticker:o.ticker||tkr,date:o.expiry,amount:amt});
@@ -5305,7 +5305,7 @@ function walkLegPairs(wheelTrades){
   for(const t of sorted){
     if(t.action==='CSP'||t.action==='STOC'){
       open.push({...t,_rem:Number(t.shares)||0});
-    }else if(t.action==='BTC'||t.action==='STC'){
+    }else if(t.action==='BTC'){
       const ks=Number(t.strike);
       const live=o=>!o.expiry||o.expiry>=t.entered; // a leg can only be closed while it still exists
       const nk=o=>!(t.rollId&&o.rollId===t.rollId); // a roll closer never consumes its own replacement opener
@@ -5334,6 +5334,7 @@ function walkLegPairs(wheelTrades){
         }
       }
     }else if(t.action==='IN'){
+      if(t.openMarket)continue; // open-market share buy (IN_MKT) — not assignment; never closes a CSP
       // Assignment consumes the CSP behind it — settles at strike × shares
       let ks=Number(t.strike);
       if((!ks||isNaN(ks))&&t.shares&&t.total)ks=Math.round((Number(t.total)/Number(t.shares))*100)/100;
@@ -5880,7 +5881,7 @@ function wheelSellOutcomes(trades){
   for(const[cid,ps]of Object.entries(pairs)){const c=byId[cid];if(!c)continue;
     ps.forEach(p=>{const s=byId[p.legId];if(!s||s.expiredWorthless)return;const o=acc[s.id]||(acc[s.id]={cost:0,pxSh:0,sh:0,end:''});
       const frac=+c.shares>0?p.shares/(+c.shares):1;
-      if(c.action==='BTC'||c.action==='STC'){o.cost+=(+c.total||0)*frac;o.pxSh+=(+c.premium||0)*(p.shares||0);o.saw=1;}
+      if(c.action==='BTC'){o.cost+=(+c.total||0)*frac;o.pxSh+=(+c.premium||0)*(p.shares||0);o.saw=1;}
       o.sh+=p.shares||0;if((c.entered||'')>o.end)o.end=c.entered||'';});}
   trades.forEach(s=>{
     if(s.action!=='CSP'&&s.action!=='STOC')return;const prem=+s.premium||0;
@@ -5918,7 +5919,7 @@ function wheelCloseSlices(trades,today){
   const rem={};open.forEach(o=>{rem[o.id]=o._rem;});
   const byCloser={},consumed={};
   for(const[cid,ps]of Object.entries(pairs)){
-    const c=byId[cid];if(!c||(c.action!=='BTC'&&c.action!=='STC'))continue;
+    const c=byId[cid];if(!c||c.action!=='BTC')continue;
     ps.forEach(p=>{
       const s=byId[p.legId];if(!s||(s.action!=='CSP'&&s.action!=='STOC'))return;
       const sh=+p.shares||0,S=+s.shares||0;if(!(sh>0)||!(S>0))return;
@@ -6196,8 +6197,10 @@ function actHeldValue(rows,priceOf,legs,shortMarkOf){
     if(px==null){unpriced.push({ticker,type});return;}
     const v=px*left;closeCost+=v;if(ticker)addShort(ticker,type,v);
   });
+  const shortLegIds=new Set((rows||[]).filter(t=>t.opt&&t.legId).map(t=>t.legId));
   (legs||[]).forEach(l=>{
     if(!l||l.status!=='open'||l.side!=='short')return;
+    if(!shortLegIds.has(l.id))return;
     const px=priced(l.mark)?+l.mark:null;
     const ticker=String(l.underlying||'').toUpperCase(),type=l.type==='P'?'P':'C';
     if(px==null){unpriced.push({ticker,type});return;}

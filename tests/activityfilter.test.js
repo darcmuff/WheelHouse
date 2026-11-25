@@ -92,6 +92,25 @@ test('wheel shorts use a live mark, else the typed currentPrice, and skip a shor
   assert.deepStrictEqual(held.unpriced,[{ticker:'KO',type:'P'}]);
 });
 
+test('filtering Activity to SOFI excludes open TSLA PMCC shorts from held value',()=>{
+  const sofiPut={id:'p',ticker:'SOFI',action:'CSP',strike:15,expiry:'2027-01-15',entered:'2026-11-01',shares:100,total:34,fees:0.5};
+  const rows=F.actAnnotate([sofiPut]);
+  const legs=[
+    {id:'S-sofi',status:'open',side:'short',type:'C',qty:1,mark:0.5,underlying:'SOFI'},
+    {id:'S-tsla',status:'open',side:'short',type:'C',qty:1,mark:2.5,underlying:'TSLA'},
+  ];
+  const allRows=F.actAnnotate([
+    sofiPut,
+    {id:'S:o',opt:true,legId:'S-sofi',side:'short',type:'C',action:'STO',total:50,fees:0.5,ticker:'SOFI'},
+    {id:'T:o',opt:true,legId:'S-tsla',side:'short',type:'C',action:'STO',total:200,fees:0.65,ticker:'TSLA'},
+  ]);
+  const heldAll=F.actHeldValue(allRows,()=>null,legs,()=>0.4);
+  assert.strictEqual(heldAll.closeCost,40+50+250);
+  const heldSofi=F.actHeldValue(rows,()=>null,legs,()=>0.4);
+  assert.strictEqual(heldSofi.closeCost,40);
+  assert.deepStrictEqual(heldSofi.shortParts.map(p=>({ticker:p.ticker,value:p.value})),[{ticker:'SOFI',value:40}]);
+});
+
 test('the return note is one general line, never naming the user\'s own positions',()=>{
   assert.strictEqual(F.actReturnNote({shareParts:[],leapParts:[],shortParts:[],unpriced:[]}),
     'Nothing open, so total return equals net cash flow.');

@@ -182,5 +182,28 @@ check('ladder: BTC $25 leaves $26 untouched',
   ]),
   [{ strike: 26, _rem: 400 }]);
 
+// 19. Open-market share buy must not close an open CSP (pairing integrity)
+check('IN with openMarket leaves CSP open and collateral intact',
+  openOptionLegs([
+    T('CSP', { strike: 26, shares: 400, expiry: FUTURE, entered: PAST }),
+    T('IN', { strike: 26, shares: 400, openMarket: true, entered: RECENT }),
+  ]),
+  [{ strike: 26, _rem: 400 }]);
+
+// 20. Wheel shorts close only via BTC — STC does not consume CSP/STOC
+check('STC does not close wheel short; BTC does',
+  openOptionLegs([
+    T('CSP', { strike: 26, shares: 400, expiry: FUTURE, entered: PAST }),
+    T('STC', { strike: 26, shares: 400, expiry: FUTURE, entered: RECENT }),
+  ]),
+  [{ strike: 26, _rem: 400 }]);
+check('BTC closes wheel short after STC left it open',
+  openOptionLegs([
+    T('CSP', { strike: 26, shares: 400, expiry: FUTURE, entered: PAST }),
+    T('STC', { strike: 26, shares: 400, expiry: FUTURE, entered: RECENT }),
+    T('BTC', { strike: 26, shares: 400, entered: TODAY }),
+  ]),
+  0);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
