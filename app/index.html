@@ -5607,7 +5607,9 @@ function wheelCurrentOption(ticker,trades){
   let t=legs[0];legs.forEach(x=>{if(String(x.entered||'')>=String(t.entered||''))t=x;});
   const type=t.action==='CSP'?'P':'C';
   const baseSh=+t.shares||0,openSh=t._rem>0?t._rem:baseSh,contracts=openSh/100;
-  const openCredit=baseSh>0?Math.round((+t.total||0)*(openSh/baseSh)*100)/100:null;
+  const gross=(+t.premium)*openSh,proFees=(+t.fees||0)*(baseSh?openSh/baseSh:1);
+  let openCredit=null;
+  if(baseSh>0){const tot=t.total;if(tot!=null&&tot!==''&&!isNaN(+tot)&&((+tot)>0||proFees>=gross))openCredit=Math.round((+tot)*(openSh/baseSh)*100)/100;else openCredit=Math.round((gross-proFees)*100)/100;}
   const occ=`${String(ticker||'').toUpperCase()}${String(t.expiry).replace(/-/g,'').slice(2)}${type}${String(Math.round((+t.strike)*1000)).padStart(8,'0')}`; // same as wheelLegOcc
   return{id:t.id,action:t.action,type,strike:t.strike,expiry:t.expiry,contracts,occ,premium:+t.premium||null,openCredit,openSh,baseSh};
 }
@@ -5615,7 +5617,7 @@ function wheelCurrentOption(ticker,trades){
 function wheelCurrentValue(opt,mid){return opt&&mid!=null&&mid>=0?Math.round(mid*100*opt.contracts*100)/100:null;}
 // Pure: % of the sold premium still kept = (premium received − current value) ÷ premium received × 100. + = cheaper to buy back.
 // Pure: open-option profit now = premium received − live buy-back cost; null without premium or quote.
-function wheelCurrentProfit(opt,curVal){if(!opt||curVal==null)return null;if(opt.openCredit!=null)return Math.round((opt.openCredit-curVal)*100)/100;if(!(opt.premium>0))return null;return Math.round((opt.premium*100*opt.contracts-curVal)*100)/100;}
+function wheelCurrentProfit(opt,curVal){if(!opt||curVal==null)return null;if(!(opt.premium>0))return null;if(opt.openCredit!=null)return Math.round((opt.openCredit-curVal)*100)/100;return Math.round((opt.premium*100*opt.contracts-curVal)*100)/100;}
 // Pure: chain-aware Profit. When the open leg tips a roll chain: chain net − live buy-back;
 // % = that ÷ every sell-to-open premium received across the chain. Null when the leg is not in a chain.
 function wheelChainProfit(trades,opt,curVal){
@@ -6072,7 +6074,7 @@ function wheelListCells(t,L){
     const typedFresh=hasTyped&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);
     if(hasTyped&&prem>0&&(typedFresh||mark==null)){const px=+t.currentPrice;const cv=Math.round(px*openSh*100)/100;const pf=Math.round((prem-px)*openSh*100)/100;const pct=Math.round((prem-px)/prem*100);const c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${px.toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;return r;}
     if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
-    if(mark!=null&&prem>0){const openCredit=baseSh>0?Math.round((+t.total||0)*(openSh/baseSh)*100)/100:null;const opt={id:t.id,premium:prem,contracts:openSh/100,openCredit};const cv=wheelCurrentValue(opt,mark);
+    if(mark!=null&&prem>0){const gross=prem*openSh,proFees=(+t.fees||0)*(baseSh?openSh/baseSh:1);let openCredit=null;if(baseSh>0){const tot=t.total;if(tot!=null&&tot!==''&&!isNaN(+tot)&&((+tot)>0||proFees>=gross))openCredit=Math.round((+tot)*(openSh/baseSh)*100)/100;else openCredit=Math.round((gross-proFees)*100)/100;}const opt={id:t.id,premium:prem,contracts:openSh/100,openCredit};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
       const pct=Math.round((prem-mark)/prem*100),c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap" title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'')}">${pct}% <span class="cap-at">· at $${(+mark).toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;}
     return r;

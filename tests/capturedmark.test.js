@@ -15,9 +15,10 @@ test('screenshot: Captured and the buy-back are the adjusted $1.32, not -$316 at
   const opt={premium:1.74,contracts:4};
   const val=L.wheelCurrentValue(opt,mark);
   assert.strictEqual(val,528);
-  assert.strictEqual(L.wheelCurrentProfit(opt,val),168);
+  const optWithCredit={...opt,openCredit:693.84};
+  assert.strictEqual(L.wheelCurrentProfit(optWithCredit,val),165.84);
   const cap=cells({[occ]:mark},141.03).cap;
-  assert.ok(cap.includes('24%')&&cap.includes('<span class="g">+$168.00</span>')&&cap.includes('· at $1.32'),cap);
+  assert.ok(cap.includes('24%')&&cap.includes('<span class="g">+$165.84</span>')&&cap.includes('· at $1.32'),cap);
   assert.ok(cap.includes('at $1.32'),cap);
   assert.ok(!cap.includes('-$316')&&!cap.includes('$2.53'));
 });

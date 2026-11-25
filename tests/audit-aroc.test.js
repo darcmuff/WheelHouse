@@ -26,7 +26,7 @@ const FN = [
 const F = new Function(
   'let db;\n' +
     FN.map(extractFn).join('\n') +
-    '\nreturn {set:d=>{db=d;},calcWheel,calcAROC,cycleReturn,calcTradeROC,wheelPeakCapital,wheelSellOutcomes,calledAwayProfit,wheelCurrentProfit,pmccShortProfit,daysBetweenUTC};'
+    '\nreturn {set:d=>{db=d;},calcWheel,calcAROC,cycleReturn,calcTradeROC,wheelPeakCapital,wheelSellOutcomes,calledAwayProfit,wheelCurrentOption,wheelCurrentProfit,pmccShortProfit,daysBetweenUTC};'
 )();
 
 const W = (id, status) => ({ id, status, ticker: 'X' });
@@ -99,4 +99,26 @@ test('calledAwayProfit with dividends; opening fees on live profits', () => {
   const opt = { premium: 0.5, contracts: 4, openCredit: 180 };
   assert.strictEqual(F.wheelCurrentProfit(opt, 88), 92);
   assert.strictEqual(F.pmccShortProfit({ entryPrice: 2, qty: 1, fees: 5 }, 1, 0), 95);
+});
+
+test('openCredit without total: premium×shares − fees (SPCX capturedmark case)', () => {
+  const tr = [
+    {
+      id: 'p',
+      action: 'CSP',
+      entered: '2026-10-26',
+      expiry: '2027-11-13',
+      strike: 130,
+      premium: 1.74,
+      shares: 400,
+      fees: 2.16,
+    },
+  ];
+  const opt = F.wheelCurrentOption('SPCX', tr);
+  assert.strictEqual(opt.openCredit, 693.84);
+});
+
+test('blank premium: wheelCurrentProfit is null even with openCredit', () => {
+  assert.strictEqual(F.wheelCurrentProfit({ premium: 0, contracts: 4, openCredit: 100 }, 50), null);
+  assert.strictEqual(F.wheelCurrentProfit({ premium: null, contracts: 4, openCredit: 100 }, 50), null);
 });
