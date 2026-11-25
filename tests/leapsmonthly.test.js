@@ -18,5 +18,5 @@ test('LEAP realised P&L lands in the Monthly P&L table and total', () => {
 test('no legs, no extra column', () => assert.deepStrictEqual(S.monthlyExtraSources([]), []));
 test('Unrealised adds open LEAP/short marks to open shares', () => {
   const u = S.calcAllUnrealised([{ id: 'a', status: 'open', lastPrice: 172 }], [{ wheelId: 'a', action: 'IN', total: 18000, shares: 100, entered: '2026-08-01' }], w => w.lastPrice, legs);
-  assert.strictEqual(u.shares, -800); assert.strictEqual(u.leaps, 400); assert.strictEqual(u.value, -400);
+  assert.strictEqual(u.shares, -800); assert.strictEqual(u.leaps, 0); assert.strictEqual(u.premium, 400); assert.strictEqual(u.value, -400);
 });

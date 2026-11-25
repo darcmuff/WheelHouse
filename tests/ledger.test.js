@@ -136,6 +136,17 @@ test('9. Sortino: finite with 1 losing month of 4; null under 3 months', () => {
   assert.strictEqual(Ledger.calcSortino([1, 1, 1, 1, 1]), Infinity);
 });
 
+test('open STOC with no expiry stays in open and unpriced', () => {
+  const tr = [
+    { id: 'cc', wheelId: 'w0', ticker: 'X', action: 'STOC', entered: '2026-04-01', strike: 50, shares: 100, total: 200 }
+  ];
+  const r = Ledger.buildLedger([W('w0', 'open')], tr, [], { today: '2026-06-01' });
+  const leg = r.open.find(o => o.kind === 'cc');
+  assert.ok(leg, 'open wheel short');
+  assert.strictEqual(leg.priced, false);
+  assert.strictEqual(r.unpricedCount, 1);
+});
+
 test('10. IEEE guard: bucket net exactly 0', () => {
   const events = [
     { date: '2026-01-01', amount: 0.1 },

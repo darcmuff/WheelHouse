@@ -27,7 +27,7 @@ test('options chart: All-time net equals Monthly P&L all-time Profit (wheel + PM
   assert.strictEqual(B.gran, 'Month');
   assert.ok(Math.abs(B.net - all) < 1e-6, B.net + ' vs ' + all);
   const oct = B.buckets.find(b => b.key === '2026-10-01');
-  assert.strictEqual(Math.round(oct.loss), 150); // PMCC buyback only; share loss is Positions P&L
+  assert.strictEqual(Math.round(oct.loss), 50); // PMCC buyback net per closed trade; share loss is Positions P&L
   assert.ok(!S.realisedDaily(tr, legs, TODAY, W).some(d => d.gain === 150));
 });
 

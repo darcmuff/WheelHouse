@@ -508,7 +508,7 @@
       let list = normWheelShortStcClosers(rawList.map((t, i) => ({ ...t, id: t.id || ('L' + i) })));
       const tkr = (list.find(t => t.ticker) || wheelMap[wheelId] || {}).ticker || '';
       const liveOpen = walkLegPairs(list).open.filter(o =>
-        !o.expiredWorthless && o.expiry && o.expiry >= today && (o._rem > 0 || !Number(o.shares)));
+        !o.expiredWorthless && (!o.expiry || o.expiry >= today) && (o._rem > 0 || !Number(o.shares)));
       liveOpen.forEach(o => {
         if (o.action !== 'CSP' && o.action !== 'STOC') return;
         const rem = o._rem > 0 ? o._rem : (Number(o.shares) || 0);

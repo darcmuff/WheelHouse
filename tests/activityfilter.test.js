@@ -111,12 +111,17 @@ test('filtering Activity to SOFI excludes open TSLA PMCC shorts from held value'
   assert.deepStrictEqual(heldSofi.shortParts.map(p=>({ticker:p.ticker,value:p.value})),[{ticker:'SOFI',value:40}]);
 });
 
-test('the return note is one general line, never naming the user\'s own positions',()=>{
+test('the return note is one general sentence, with plain-English caveats when quotes are missing',()=>{
   assert.strictEqual(F.actReturnNote({shareParts:[],leapParts:[],shortParts:[],unpriced:[]}),
     'Nothing open, so total return equals net cash flow.');
   const G="Total return adds shares and LEAPs you still hold at today's value, and takes off what it would cost to buy back options you've sold.";
-  assert.strictEqual(F.actReturnNote({leapParts:[{ticker:'SPCX',value:15300}],shortParts:[{ticker:'SPCX',type:'C',value:339}],shareParts:[],unpriced:[]}),G);
-  assert.strictEqual(F.actReturnNote({shareParts:[{ticker:'PEP',value:14520}],leapParts:[],shortParts:[],unpriced:[]}),G);
-  assert.strictEqual(F.actReturnNote({shareParts:[],leapParts:[],shortParts:[],unpriced:[{ticker:'SOFI',type:'P'}]}),G);
-  assert.ok(!/SPCX|PEP|SOFI|\$/.test(G));
+  assert.strictEqual(F.actReturnNote({leapParts:[{ticker:'SPCX',value:15300}],shortParts:[{ticker:'SPCX',type:'C',value:339}],shareParts:[],unpriced:[],atCost:[],leapPlain:0}),G);
+  assert.strictEqual(F.actReturnNote({shareParts:[{ticker:'PEP',value:14520}],leapParts:[],shortParts:[],unpriced:[],atCost:[],leapPlain:0}),G);
+  const unpricedShort=G+' unpriced short options excluded from buy-back cost.';
+  assert.strictEqual(F.actReturnNote({shareParts:[],leapParts:[],shortParts:[],unpriced:[{ticker:'SOFI',type:'P'}],atCost:[],leapPlain:0}),unpricedShort);
+  const atCost=G+' shares valued at cost for PEP.';
+  assert.strictEqual(F.actReturnNote({shareParts:[{ticker:'PEP',value:14520}],leapParts:[],shortParts:[],unpriced:[],atCost:['PEP'],leapPlain:0}),atCost);
+  const leapPlain=G+' One LEAP is unmarked and excluded from market value.';
+  assert.strictEqual(F.actReturnNote({shareParts:[],leapParts:[{ticker:'GX',value:0}],shortParts:[],unpriced:[],atCost:[],leapPlain:1}),leapPlain);
+  assert.ok(!/SPCX|SOFI|\$/.test(unpricedShort));
 });
