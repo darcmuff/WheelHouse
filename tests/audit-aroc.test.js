@@ -49,24 +49,24 @@ test('same-day BTC: closed wheel and trade AROC 1460%', () => {
 
 test('full 45-day wheel: cycle 113.6%, premium AROC 73%', () => {
   const tr = [
-    { id: '1', wheelId: 'w2', action: 'CSP', entered: '2026-01-01', expiry: '2026-02-15', strike: 20, shares: 100, premium: 0.8, total: 80, days: 45 },
-    { id: '2', wheelId: 'w2', action: 'BTC', entered: '2026-02-10', expiry: '2026-02-15', strike: 20, shares: 100, total: 40, rollId: 'r' },
-    { id: '3', wheelId: 'w2', action: 'CSP', entered: '2026-02-10', expiry: '2026-03-01', strike: 20, shares: 100, premium: 0.4, total: 40, days: 19, rollId: 'r' },
-    { id: '4', wheelId: 'w2', action: 'IN', entered: '2026-03-01', strike: 20, shares: 100, total: 2000 },
-    { id: '5', wheelId: 'w2', action: 'STOC', entered: '2026-03-02', expiry: '2026-04-15', strike: 21, shares: 100, premium: 0.6, total: 60, days: 44 },
-    { id: '6', wheelId: 'w2', action: 'OUT', entered: '2026-04-15', strike: 21, shares: 100, total: 2100 },
+    { id: '1', wheelId: 'w2', action: 'CSP', entered: '2026-01-01', expiry: '2026-01-16', strike: 20, shares: 100, premium: 0.8, total: 80, days: 15 },
+    { id: '2', wheelId: 'w2', action: 'BTC', entered: '2026-01-10', expiry: '2026-01-16', strike: 20, shares: 100, premium: 0.4, total: 40, rollId: 'r' },
+    { id: '3', wheelId: 'w2', action: 'CSP', entered: '2026-01-10', expiry: '2026-01-23', strike: 20, shares: 100, premium: 0.8, total: 80, days: 13, rollId: 'r' },
+    { id: '4', wheelId: 'w2', action: 'IN', entered: '2026-01-23', strike: 20, shares: 100, total: 2000 },
+    { id: '5', wheelId: 'w2', action: 'STOC', entered: '2026-01-26', expiry: '2026-02-15', strike: 21, shares: 100, premium: 0.6, total: 60, days: 20 },
+    { id: '6', wheelId: 'w2', action: 'OUT', entered: '2026-02-15', strike: 21, shares: 100, total: 2100 },
   ];
   const wheel = W('w2', 'closed');
   F.set({ trades: tr, wheels: [wheel] });
   const m = F.calcWheel(wheel);
-  // Premium $140 (80−40+40+60) + share $100 (called away) = $240 realised; target $280 assumed roll net $40 on top of $240.
-  assert.ok(Math.abs(m.realisedPnL - 240) < 0.01, `realisedPnL ${m.realisedPnL}`);
+  // Premium $180 (80 - 40 + 80 + 60, roll nets +$40) + share $100 (called away at $21) = $280 realised
+  assert.ok(Math.abs(m.realisedPnL - 280) < 0.01, `realisedPnL ${m.realisedPnL}`);
   assert.strictEqual(F.wheelPeakCapital(tr), 2000);
-  const cr = F.cycleReturn(wheel, m, { realised: 0, openShares: 0 }, 0, '2026-04-15');
-  assert.strictEqual(cr.days, 104);
-  assert.ok(Math.abs(cr.ann - 42.12) < 0.15, `cycle ann ${cr.ann}`);
-  const a = F.calcAROC(wheel, m, '2026-04-15');
-  assert.ok(Math.abs(a.aroc - 24.57) < 0.15, `premium aroc ${a.aroc}`);
+  const cr = F.cycleReturn(wheel, m, { realised: 0, openShares: 0 }, 0, '2026-02-15');
+  assert.strictEqual(cr.days, 45);
+  assert.ok(Math.abs(cr.ann - 113.6) < 0.1, `cycle ann ${cr.ann}`);
+  const a = F.calcAROC(wheel, m, '2026-02-15');
+  assert.ok(Math.abs(a.aroc - 73.0) < 0.1, `premium aroc ${a.aroc}`);
 });
 
 test('share-started wheel with negative breakeven still has positive AROC', () => {
