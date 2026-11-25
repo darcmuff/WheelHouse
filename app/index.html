@@ -4579,6 +4579,7 @@ function pmccBuyBack(f,leap,legs){
 function pmccRollScan(text,today){
   if(!detectRollPaste(text||''))return null;
   const t=parseRollTrades(String(text).trim(),today);if(!t)return null;
+  if(t.error)return{error:t.error};
   if(t.some(x=>x.optType==='put'))return{error:'This is a put roll — add it on the wheel card.'};
   if(t.some(x=>x.optType!=='call'))return{error:'This roll isn\'t two call trades — it can\'t be added to a LEAP.'};
   const leg=x=>({ticker:x.ticker,action:x.action,strike:x.strike,expiry:x.expiry,qty:x.contracts,price:x.premium,date:x.entered,fees:x.fees});
@@ -8153,10 +8154,12 @@ function brokerCSVLib(){
     const n=parseFloat(s);return isNaN(n)?NaN:(neg?-n:n);
   }
   // Pull the first date out of "01/10/2025 as of 01/09/2025", "2025-01-10, 10:32", "20250110;103211", ISO times
-  function pickDate(s){
+  // dmy (optional): true = day-first, false = month-first for this call; omitted = the file's sniffed setting
+  function pickDate(s,dmy){
     s=String(s||'').trim();if(!s)return'';
+    const D=typeof dmy==='boolean'?dmy:_dmy;
     let m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
-    m=/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/.exec(s);if(m){let a=+m[1],b=+m[2];if(a>12||(_dmy&&b<=12)){const t=a;a=b;b=t;}return`${yr(m[3])}-${pad(a)}-${pad(b)}`;}
+    m=/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/.exec(s);if(m){let a=+m[1],b=+m[2];if(a>12||(D&&b<=12)){const t=a;a=b;b=t;}return`${yr(m[3])}-${pad(a)}-${pad(b)}`;}
     m=/^(\d{4})(\d{2})(\d{2})\b/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
     const d=normDate(s.split(/[,;T]/)[0]);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
   }
@@ -8386,13 +8389,15 @@ function brokerCSVLib(){
       if(act.startsWith('SKIP:')){skip.push({line:i+1,raw,reason:act.slice(5)});continue;}
       if(!act){bad.push({line:i+1,raw,reason:'could not tell the trade type'});continue;}
       if(!entered){bad.push({line:i+1,raw,reason:'no trade date'});continue;}
-      const contracts=Math.abs(qtyRaw)||1;
+      // never invent a quantity: a row we can't size is listed, not imported as 1 contract
+      if(isNaN(qtyRaw)||qtyRaw===0){bad.push({line:i+1,raw,reason:C.qty>-1&&g(C.qty)?"couldn't read the quantity":'no quantity'});continue;}
+      const contracts=Math.abs(qtyRaw);
       const shares=Math.round(contracts*100);
       let fees=0;C.fees.forEach(c=>{const f=num(g(c));if(!isNaN(f))fees+=Math.abs(f);});
       fees=Math.round(fees*100)/100;
       const amt=Math.abs(num(g(C.amount)));
       let premium,total;
-      if((act==='IN'||act==='OUT')){premium=opt.strike;fees=0;total=computeTotal(act,premium,shares,0);}
+      if((act==='IN'||act==='OUT')){premium=opt.strike;total=computeTotal(act,premium,shares,fees);} // assignment fees kept
       else if(act==='EXP'){premium=0;fees=0;total=0;}
       else{
         premium=Math.abs(num(g(C.price)));
@@ -8487,9 +8492,10 @@ function brokerCSVLib(){
       const act=classify(rest,f.opt,qi>-1?nums[qi]:NaN,src==='Interactive Brokers'?'Interactive Brokers':'Statement');
       if(!act||act.startsWith('SKIP:')){bad.push({line:i+1,raw:L,reason:'could not tell the trade type'});continue;}
       if(!entered){bad.push({line:i+1,raw:L,reason:'no trade date'});continue;}
-      const contracts=qi>-1?Math.abs(nums[qi]):1,shares=contracts*100;
+      if(qi<0){bad.push({line:i+1,raw:L,reason:'no quantity'});continue;}
+      const contracts=Math.abs(nums[qi]),shares=contracts*100;
       const opt=f.opt;let premium=0,total=0,fees=0;
-      if(act==='IN'||act==='OUT'){premium=opt.strike;total=computeTotal(act,premium,shares,0);}
+      if(act==='IN'||act==='OUT'){premium=opt.strike;const fl=/(?:fees?|comm(?:ission)?s?)[:\s]*\(?-?[$£€]?(\d+(?:\.\d+)?)\)?/i.exec(rest);fees=fl?Math.round(+fl[1]*100)/100:0;total=computeTotal(act,premium,shares,fees);} // assignment fees kept
       else if(act!=='EXP'){
         const after=nums.slice(qi+1).map(Math.abs);
         // premium = first plausible per-share price; total = a later number ≈ premium×shares (± fees)
@@ -8524,7 +8530,8 @@ function brokerCSVLib(){
         const fl=/(?:filled|executed|trade\s*date|date)[:\s]+(?:on\s+)?([A-Za-z0-9\/.,\- ]{6,20})/i.exec(rest);
         const entered=(fl&&stmtDate(fl[1]))||stmtDate(rest.replace(/\$[\d.,]+/g,' '));
         const cm=/(\d+)\s+contracts?\b|contracts?[:\s]+(\d+)/i.exec(rest);
-        const contracts=cm?+(cm[1]||cm[2]):(sm.shares?sm.shares/100:1),shares=contracts*100;
+        const contracts=cm?+(cm[1]||cm[2]):(sm.shares?sm.shares/100:0),shares=contracts*100;
+        if(act&&entered&&!(contracts>0))return splitLongs({broker:src+' confirmation',rows:[],unrecognised:[{line:1,raw:flat.slice(0,160),reason:'no quantity'}],skipped:[]});
         const pm=/(?:average|avg\.?|fill|limit)?\s*price[:\s]+\$?([\d.]+)/i.exec(rest);
         const premium=pm?+pm[1]:(sm.premium||0);
         const fm=/(?:fees?|commissions?)[^$\d]{0,20}\$?([\d.]+)/i.exec(rest);const fees=fm?+fm[1]:(sm.fees||0);
@@ -8538,7 +8545,7 @@ function brokerCSVLib(){
     }
     return splitLongs({broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')});
   }
-  return{splitLongs,parseRobinhood,parseCSVText,num,pickDate,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
+  return{splitLongs,parseRobinhood,parseCSVText,num,pickDate,sniffDMY,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
 }
 const BCSV=brokerCSVLib();
 let _importParsed=null;
@@ -8582,12 +8589,15 @@ function rhPlan(ev,opts,trades,mkId){
     const r={ticker:e.ticker,action,entered:e.date,expiry:o.expiry||null,strike:o.strike||null,premium,fees,shares,total:r2(o.total!=null?o.total:computeTotal(action,premium,shares,fees)),days:(action==='CSP'||action==='STOC')&&o.expiry?Math.max(0,D(o.expiry,e.date)):0,verified:false,comment:'Imported from Robinhood'};
     if(action==='IN')held[e.ticker]=(held[e.ticker]||0)+shares;if(action==='OUT')held[e.ticker]=(held[e.ticker]||0)-shares;
     wheeled.add(e.ticker);
-    if(wheelDup(r)){dupes++;return;}
-    wheelRows.push(r);};
+    if(wheelDup(r)){dupes++;return null;}
+    wheelRows.push(r);return r;};
   for(const e of E){
     if(e.kind==='shares'){
       const pi=pend.findIndex(p=>p.ticker===e.ticker&&p.side===e.code&&p.shares===e.qty&&e.date>=p.date&&D(e.date,p.date)<=4&&(Math.abs(e.price-p.strike)<0.005||e.assign));
-      if(pi>-1){pend.splice(pi,1);skip.push({line:e.line,raw:e.raw,reason:'shares from the assignment, already counted'});continue;}
+      if(pi>-1){const pr=pend.splice(pi,1)[0];
+        // the assignment's fee sits on this share row — keep it on the IN/OUT trade instead of dropping it
+        if(pr.row&&e.fees>0){pr.row.fees=r2((+pr.row.fees||0)+e.fees);pr.row.total=r2(computeTotal(pr.row.action,pr.row.premium,pr.row.shares,pr.row.fees));}
+        skip.push({line:e.line,raw:e.raw,reason:'shares from the assignment, already counted'+(pr.row&&e.fees>0?` (fee $${e.fees.toFixed(2)} kept on the assignment)`:'')});continue;}
       if(!wheeled.has(e.ticker)){skip.push({line:e.line,raw:e.raw,reason:"share trade on a stock you don't wheel"});continue;}
       addWheel(e,e.code==='BUY'?'IN':'OUT',{shares:e.qty,premium:e.price,fees:e.fees});continue;
     }
@@ -8621,7 +8631,7 @@ function rhPlan(ev,opts,trades,mkId){
     else if(e.code==='BTC')addWheel(e,'BTC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
     else if(e.code==='STC')addWheel(e,'STC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
     else if(e.code==='OEXP')addWheel(e,'EXP',{...opt,shares:sh,premium:0,fees:0,total:0});
-    else if(e.code==='OASGN'){const put=e.pc==='P';addWheel(e,put?'IN':'OUT',{strike:e.strike,expiry:e.expiry,shares:sh,premium:+e.strike,fees:0});pend.push({ticker:e.ticker,date:e.date,side:put?'BUY':'SELL',shares:sh,strike:+e.strike});}
+    else if(e.code==='OASGN'){const put=e.pc==='P';const row=addWheel(e,put?'IN':'OUT',{strike:e.strike,expiry:e.expiry,shares:sh,premium:+e.strike,fees:e.fees||0});pend.push({ticker:e.ticker,date:e.date,side:put?'BUY':'SELL',shares:sh,strike:+e.strike,row});}
   }
   return{wheelRows,newLegs,changedLegs:legs.filter(l=>changed.has(l.id)),lines,dupes,unrecognised:bad,skipped:skip};
 }
@@ -9529,7 +9539,7 @@ function fillLeapRollSelect(leap){
 // ── SmartScan — broker-agnostic pattern hunter ──
 // Handles: Robinhood, Tastytrade, IBKR, Schwab, TD Ameritrade, E*Trade,
 //          Fidelity, Webull, eToro, Trading 212, and anything else
-function parseSmartText(raw){
+function parseSmartText(raw,todayISO){
   const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
   const full=text;
   const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
@@ -9547,14 +9557,26 @@ function parseSmartText(raw){
   // Normalise a candidate ticker — uppercase, strip noise
   const cleanTick=t=>t?t.toUpperCase().trim():null;
   const okTick=t=>t&&!NOISE.has(t)&&t.length>=2;
+  // 1-letter tickers (F, T, V, C, O, U…): only from an explicit signal, never the prose words A / I
+  const ONE_NOISE=new Set(['A','I']);
+  const popRows=(typeof window!=='undefined'&&window.POPULAR&&window.POPULAR.rows)||[];
+  const isPopular=t=>popRows.some(r=>String(r&&r[0]).toUpperCase()===t);
+  const ok1=(raw1,explicit)=>/^[A-Z]$/.test(raw1||'')&&(explicit?true:!ONE_NOISE.has(raw1));
 
   // Labelled ticker fields (IBKR, Fidelity, E*Trade, Schwab)
   const labelTick=/(?:symbol|ticker|security|underlying)[:\s]+([A-Za-z]{1,5})\b/i.exec(full);
   // Right before a $strike or Put/Call: "SOFI $15 Put", "SOFI 15 Call", "SOFI Put"
   const strikeTick=/\b([A-Za-z]{1,5})\s+(?:\$\s?\d+(?:\.\d+)?\s*(?:put|call)s?\b|\$\s?\d+(?:\.\d+)?\b|\d+(?:\.\d+)?\s+(?:put|call)s?\b|(?:put|call)s?\b)/ig;
-  let t0=null;for(const m of full.matchAll(strikeTick)){const c=cleanTick(m[1]);if(okTick(c)){t0=c;break;}}
+  // A 1-letter word only counts when it sits right before "$12 Put" / "12 Call" (strike + type), as written in capitals
+  const strike1=/^\s+(?:\$\s?\d+(?:\.\d+)?\s*|\d+(?:\.\d+)?\s+)(?:put|call)s?\b/i;
+  let t0=null;for(const m of full.matchAll(strikeTick)){const c=cleanTick(m[1]);if(okTick(c)){t0=c;break;}if(ok1(m[1],false)&&strike1.test(m[0].slice(m[1].length))){t0=c;break;}}
+  // "Symbol: F" / "Ticker: F" (explicit label, capital letter) and OCC "F 261218P00012000"
+  const label1=/(?:symbol|ticker)\s*:\s*([A-Z])\b(?![.'’])/i.exec(full);
+  const occ1=/(?:^|[\s\-.])([A-Z])\s*\d{6}[CP]\d{8}\b/.exec(full);
   // Adjacent to action verb (Robinhood, Tastytrade, Webull)
   const adjTick=/(?:buy|sell|bought|sold|open|executed)\s+\d*\s*([A-Za-z]{2,5})\b/i.exec(full);
+  // "Sold 5 F …" — a capital 1-letter symbol next to the verb, only when it is a known ticker (POPULAR.rows)
+  const adj1=/(?:buy|sell|bought|sold|executed)\s+(?:\d+\s+)?([A-Z])\b(?![.'’])/i.exec(full);
   // Pipe-delimited: "| sofi |" or "| SOFI |"  (garbled / copy-paste formats)
   const pipeTick=/\|\s*([A-Za-z]{2,5})\s*\|/.exec(full);
   // eToro / Trading 212 style: "SOFI - SoFi Technologies"
@@ -9563,8 +9585,11 @@ function parseSmartText(raw){
   const t1=cleanTick(labelTick?.[1]),t2=cleanTick(adjTick?.[1]),
         t3=cleanTick(pipeTick?.[1]),t4=cleanTick(dashTick?.[1]);
   if(okTick(t1))r.ticker=t1;
+  else if(label1&&ok1(label1[1],true))r.ticker=label1[1];
+  else if(occ1&&ok1(occ1[1],true))r.ticker=occ1[1];
   else if(t0)r.ticker=t0;
   else if(okTick(t2))r.ticker=t2;
+  else if(adj1&&ok1(adj1[1],false)&&isPopular(adj1[1]))r.ticker=adj1[1];
   else if(okTick(t3))r.ticker=t3;
   else if(okTick(t4))r.ticker=t4;
   else{
@@ -9581,7 +9606,12 @@ function parseSmartText(raw){
   // Weight explicit phrases higher: "sell to open" > bare "sell"
   const sellPhrases=(full.match(/\b(sell\s+to\s+open|sell\s+to\s+close|sold|sell)\b/gi)||[]).length;
   const buyPhrases=(full.match(/\b(buy\s+to\s+open|buy\s+to\s+close|bought|buy)\b/gi)||[]).length;
-  const direction=sellPhrases>=buyPhrases?'sell':'buy';
+  let direction=sellPhrases>buyPhrases?'sell':buyPhrases>sellPhrases?'buy':null;
+  if(!direction){
+    // Tie (or no buy/sell words): only an explicit code decides — STO/STC/SLD (IBKR) vs BTO/BTC/BOT. Never guess 'sell'.
+    const sx=/\b(?:STO|STC|SLD)\b/.test(full),bx=/\b(?:BTO|BTC|BOT)\b/.test(full);
+    if(sx&&!bx)direction='sell';else if(bx&&!sx)direction='buy';
+  }
 
   // ── OPTION TYPE ──
   const callScore=(full.match(/\bcall(s)?\b/gi)||[]).length;
@@ -9613,8 +9643,8 @@ function parseSmartText(raw){
   for(const p of strikePats){const sm=p.exec(full);if(sm){r.strike=parseFloat(sm[1]);break;}}
 
   // ── DATES ──
-  const today=new Date();today.setHours(0,0,0,0);
-  const allDates=[];
+  const today=todayISO&&/^\d{4}-\d{2}-\d{2}$/.test(todayISO)?new Date(+todayISO.slice(0,4),+todayISO.slice(5,7)-1,+todayISO.slice(8,10)):new Date();today.setHours(0,0,0,0);
+  const allDates=[];const yearless=new Set(); // indexes of dates written without a year (filled in with this year)
   let m;
   // "20 Mar" / "20 Mar 2026" / "20 March 2026"
   const rx1=new RegExp(`(?<![\\d.$])(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?\\b`,'gi');
@@ -9622,22 +9652,25 @@ function parseSmartText(raw){
     const monAbbr=m[2].slice(0,3).toLowerCase();
     const mon=MON_MAP[monAbbr];if(!mon)continue;
     const yr=m[3]?parseInt(m[3]):today.getFullYear();
-    allDates.push(new Date(yr,mon-1,parseInt(m[1])));
+    const d1=new Date(yr,mon-1,parseInt(m[1]));allDates.push(d1);if(!m[3])yearless.add(allDates.length-1);
   }
   // "Mar 20 2026" / "March 20, 2026"
   const rx2=new RegExp(`(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2}),?\\s+(\\d{4})`,'gi');
   while((m=rx2.exec(full))!==null){const monAbbr=m[1].slice(0,3).toLowerCase();const mon=MON_MAP[monAbbr];if(!mon)continue;allDates.push(new Date(parseInt(m[3]),mon-1,parseInt(m[2])));}
   // "Jul 2" / "Jun 29" (month-first, NO year — Robinhood US confirmations). Skip if a year follows (rx2 owns those) or if the number is a contract/share count.
   const rx2b=new RegExp(`(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2})\\b(?!\\s*,?\\s*\\d{4})(?!\\s+(?:contracts?|shares?|put|call)\\b)`,'gi');
-  while((m=rx2b.exec(full))!==null){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(!mon)continue;allDates.push(new Date(today.getFullYear(),mon-1,parseInt(m[2])));}
-  // MM/DD/YYYY or MM/DD/YY (US format — Schwab, E*Trade, Fidelity)
-  const rx3=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g;
-  while((m=rx3.exec(full))!==null){const yr=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);allDates.push(new Date(yr,parseInt(m[1])-1,parseInt(m[2])));}
-  // DD/MM/YYYY (UK format — eToro, Trading 212)
-  const rx3uk=/(\d{2})\/(\d{2})\/(\d{4})/g;
-  while((m=rx3uk.exec(full))!==null){
-    const d=parseInt(m[1]),mo=parseInt(m[2]),yr=parseInt(m[3]);
-    if(mo<=12&&d<=31)allDates.push(new Date(yr,mo-1,d));
+  while((m=rx2b.exec(full))!==null){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(!mon)continue;const d2=new Date(today.getFullYear(),mon-1,parseInt(m[2]));allDates.push(d2);yearless.add(allDates.length-1);}
+  // Slash dates, ONE pass: US (MM/DD) or UK (DD/MM) decided once for the whole paste by BCSV.sniffDMY, read by BCSV.pickDate
+  const _B=typeof BCSV!=='undefined'&&BCSV&&BCSV.sniffDMY&&BCSV.pickDate?BCSV:null;
+  const slashDMY=_B?_B.sniffDMY(full):(()=>{let dm=false,md=false;for(const x of full.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/g)){if(+x[1]>12)dm=true;if(+x[2]>12)md=true;}return dm&&!md?true:md?false:/trading ?212|etoro|\bgbp\b|£/i.test(full);})();
+  const rx3=/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/g;
+  while((m=rx3.exec(full))!==null){
+    let isoD;
+    if(_B)isoD=_B.pickDate(m[0],slashDMY);
+    else{let a=+m[1],b=+m[2];if(a>12||(slashDMY&&b<=12)){const t=a;a=b;b=t;}const y=+m[3]<100?2000+(+m[3]):+m[3];isoD=`${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`;}
+    const pm=/^(\d{4})-(\d{2})-(\d{2})$/.exec(isoD||'');if(!pm)continue;
+    const mo=+pm[2],dd=+pm[3];if(mo<1||mo>12||dd<1||dd>31)continue;
+    allDates.push(new Date(+pm[1],mo-1,dd));
   }
   // YYYY-MM-DD (ISO — IBKR, Trading 212)
   const rx4=/(\d{4})-(\d{2})-(\d{2})/g;
@@ -9646,6 +9679,11 @@ function parseSmartText(raw){
   const rx5=new RegExp(`(\\d{1,2})(${MON_PAT})(\\d{4})`,'gi');
   while((m=rx5.exec(full))!==null){const mon=MON_MAP[m[2].toLowerCase()];if(!mon)continue;allDates.push(new Date(parseInt(m[3]),mon-1,parseInt(m[1])));}
 
+  // Dec→Jan rollover: a yearless date (e.g. "Jan 15") that lands well before the fill date (e.g. "Dec 18") is next year's expiry
+  {const past0=allDates.filter(d=>d<=today).sort((a,b)=>b-a);const fillRef=past0[0];
+    if(fillRef)for(let i=0;i<allDates.length;i++){const d=allDates[i];
+      if(!yearless.has(i)||!(d<fillRef)||(today-d)<=45*86400000)continue;
+      const nd=new Date(d.getFullYear()+1,d.getMonth(),d.getDate());if(nd>=fillRef)allDates[i]=nd;}}
   // Deduplicate and classify
   const uniq=[...new Map(allDates.map(d=>[d.getTime(),d])).values()];
   const futureDates=uniq.filter(d=>d>today).sort((a,b)=>a-b);
@@ -9656,20 +9694,25 @@ function parseSmartText(raw){
   r.entered=pastDates.length?toISOS(pastDates[0]):toISOS(today);
 
   // ── CONTRACTS / SHARES ──
-  const conAt=/(\d+)\s+contracts?\s+at\s+\$?([\d.]+)/i.exec(full);   // Robinhood
-  const shAt=/(\d+)\s+shares?\s+at\s+\$?([\d.]+)/i.exec(full);
-  const conFill=/filled\s+(?:quantity\s*)?\n?\s*(\d+)\s+contracts?\s+at\s+\$?([\d.]+)/i.exec(full);
-  const conAlone=/(\d+)\s+contracts?/i.exec(full);
-  const shAlone=/(\d+(?:,\d+)?)\s+shares?/i.exec(full);
-  const qtyLabel=/(?:qty|quantity|contracts?|shares?|size)[:\s]+(\d+)/i.exec(full); // IBKR/Schwab/Fidelity
+  // Quantities: thousands commas ("1,000") and signed broker quantities ("-5") read as plain counts
+  const QN='(-?\\d{1,3}(?:,\\d{3})+|-?\\d+)';
+  const qn=s=>Math.abs(parseInt(String(s).replace(/,/g,''),10));
+  const lastOf=rx=>{let last=null;for(const x of full.matchAll(rx))last=x;return last;};
+  // Last "N contracts at $X" = the execution line (an earlier one is usually the order / limit line)
+  const conAt=lastOf(new RegExp(QN+'\\s+contracts?\\s+at\\s+\\$?([\\d.]+)','gi'));   // Robinhood
+  const shAt=lastOf(new RegExp(QN+'\\s+shares?\\s+at\\s+\\$?([\\d.]+)','gi'));
+  const conFill=lastOf(new RegExp('filled\\s+(?:quantity\\s*)?\\n?\\s*'+QN+'\\s+contracts?\\s+at\\s+\\$?([\\d.]+)','gi'));
+  const conAlone=new RegExp(QN+'\\s+contracts?','i').exec(full);
+  const shAlone=new RegExp(QN+'\\s+shares?','i').exec(full);
+  const qtyLabel=new RegExp('(?:qty|quantity|contracts?|shares?|size)[:\\s]+'+QN,'i').exec(full); // IBKR/Schwab/Fidelity
   let contracts=null,shareCount=null;
-  if(conFill){contracts=parseInt(conFill[1]);r.premium=parseFloat(conFill[2]);}
-  else if(conAt){contracts=parseInt(conAt[1]);r.premium=parseFloat(conAt[2]);}
-  else if(shAt){shareCount=parseInt(shAt[1].replace(/,/g,''));r.premium=parseFloat(shAt[2]);}
-  else if(conAlone)contracts=parseInt(conAlone[1]);
-  else if(qtyLabel&&optType)contracts=parseInt(qtyLabel[1]);
-  else if(shAlone)shareCount=parseInt(shAlone[1].replace(/,/g,''));
-  else if(qtyLabel)shareCount=parseInt(qtyLabel[1]);
+  if(conFill){contracts=qn(conFill[1]);r.premium=parseFloat(conFill[2]);}
+  else if(conAt){contracts=qn(conAt[1]);r.premium=parseFloat(conAt[2]);}
+  else if(shAt){shareCount=qn(shAt[1]);r.premium=parseFloat(shAt[2]);}
+  else if(conAlone)contracts=qn(conAlone[1]);
+  else if(qtyLabel&&optType)contracts=qn(qtyLabel[1]);
+  else if(shAlone)shareCount=qn(shAlone[1]);
+  else if(qtyLabel)shareCount=qn(qtyLabel[1]);
   r.shares=contracts?contracts*100:shareCount||null;
 
   // ── PREMIUM — priority order covers all major brokers ──
@@ -9686,12 +9729,21 @@ function parseSmartText(raw){
   }
 
   // ── FEES — sum all fee-related amounts ──
+  // Broker fees may be shown negative ("-$1.30") or in brackets ("($0.65)") — always a positive cost here
+  const FAMT='(\\(?\\s*-?\\s*[$£€]?\\s*-?\\d[\\d,]*(?:\\.\\d+)?\\s*\\)?|\\(?\\s*-?\\s*[$£€]?\\s*-?\\.\\d+\\s*\\)?)';
+  const feeAmt=s=>{const n=parseFloat(String(s).replace(/[(),$£€\s-]/g,''));return isNaN(n)?0:Math.abs(n);};
   let fees=0;
-  const feeRx=/(?:regulatory\s+fee|sec\s+fee|taf\s+fee|contract\s+fee|options?\s+fee|commission|brokerage\s+fee|transaction\s+fee|platform\s+fee)[s:\s]*\n?\s*\$?([\d.]+)/gi;
-  while((m=feeRx.exec(full))!==null)fees+=parseFloat(m[1]);
-  // Fidelity/Schwab combined "Commissions/Fees: $2.16"
-  if(!fees){const cfM=/commissions?\/fees?[:\s]+\$?([\d.]+)/i.exec(full);if(cfM)fees=parseFloat(cfM[1]);}
-  r.fees=fees;
+  const feeRx=new RegExp('(?:regulatory\\s+fee|sec\\s+fee|taf\\s+fee|contract\\s+fee|options?\\s+fee|commission|brokerage\\s+fee|transaction\\s+fee|platform\\s+fee)[s:\\s]*\\n?\\s*'+FAMT,'gi');
+  while((m=feeRx.exec(full))!==null){
+    const lineStart=full.lastIndexOf('\n',m.index)+1;
+    if(/\btotal\b/i.test(full.slice(lineStart,m.index)))continue; // "Total commissions …" is a summary, not an item
+    fees+=feeAmt(m[1]);
+  }
+  // Summary fee line ("Total fees", "Commissions/Fees", "Fees & commissions"): the broker's own total wins, so
+  // itemised lines plus their total are never added together
+  const feeSum=new RegExp('(?:total\\s+(?:commissions?\\s*(?:and|&|\\/)\\s*)?fees?(?:\\s*(?:and|&|\\/)\\s*commissions?)?|commissions?\\s*(?:and|&|\\/)\\s*fees?|fees?\\s*(?:and|&|\\/)\\s*commissions?)[s:\\s]*\\n?\\s*'+FAMT,'i').exec(full);
+  if(feeSum)fees=feeAmt(feeSum[1]);
+  r.fees=Math.round(fees*100)/100;
 
   // ── TOTAL ──
   const totalPats=[
@@ -9701,23 +9753,33 @@ function parseSmartText(raw){
     /(?:net\s+p(?:remium|roceeds))[:\s]+\$?([\d,.]+)/i,                 // Trading 212
     /(?:total|net)[:\s]+\$?([\d,.]+)/i
   ];
-  for(const p of totalPats){const tm=p.exec(full);if(tm){r.total=parseFloat(tm[1].replace(/,/g,''));break;}}
-  // ── ACTION ── (must come before total sanity check)
+  let scraped=null;
+  for(const p of totalPats){const tm=p.exec(full);if(tm){const v=parseFloat(tm[1].replace(/,/g,''));if(!isNaN(v))scraped=v;break;}}
+  // ── ACTION ── no silent flips: a bought-to-open option, a buy/sell tie, or a sold-to-close put is an error, not a guess
+  r.optType=optType;
+  const explicitBTO=optType&&(/\bBTO\b/.test(full)||(buyToOpen&&!buyToClose)||(direction==='buy'&&posLabel&&posLabel[1].toLowerCase()==='open'));
+  if(explicitBTO){r.error='This is a bought option — add it on the LEAPs tab';return r;}
+  if(!direction){r.error="Couldn't tell if this was a buy or a sell — the paste mentions both equally. Check you copied the whole confirmation.";return r;}
   if(optType==='call'){
     if(direction==='sell'&&posEffect==='open')r.action='STOC';
     else if(direction==='sell'&&posEffect==='close')r.action='STC';
     else r.action='BTC';
   }else if(optType==='put'){
-    r.action=direction==='sell'?'CSP':'BTC';
+    if(posEffect==='close'){
+      // closing a put on the wheel = buying back the short put; an explicit SELL to close is a bought (long) put
+      if(direction==='sell'&&(sellToClose||posLabel)&&!buyToClose){r.error='This sells a bought put to close it — add it on the LEAPs tab';return r;}
+      r.action='BTC';
+    }else r.action=direction==='sell'?'CSP':'BTC';
   }else{
     r.action=direction==='buy'?'IN':'OUT';
     r.expiry=null;r.strike=null;
   }
 
-  // Sanity-check total against computed value (action now known)
-  if(r.premium&&r.shares){
-    const computed=computeTotal(r.action,r.premium,r.shares,r.fees);
-    if(!r.total||Math.abs(r.total-computed)>computed*0.15)r.total=computed;
+  // Total: premium × shares ± fees is the truth; a broker total that disagrees by more than $0.05 is flagged, never kept
+  r.total=computeTotal(r.action,r.premium,r.shares,r.fees);
+  if(scraped!=null){
+    r.scrapedTotal=scraped;
+    if(Math.abs(scraped-r.total)>0.05)r.totalWarning=`The paste shows a total of $${scraped.toFixed(2)}, but premium × shares ${(typeof isCredit==="function"?isCredit(r.action):/^(CSP|STOC|STO|STC|OUT)$/.test(r.action))?'−':'+'} fees comes to $${(+r.total||0).toFixed(2)}. Check the premium, quantity and fees before saving.`;
   }
 
   // ── DTE / PPD ──
@@ -9752,15 +9814,17 @@ function parseRollTrades(raw,todayISO){
   // Extract ticker from first line
   const firstLine=(raw.split('\n')[0]||'').trim();
   const tickM=/\b([A-Z]{2,5})\b/.exec(firstLine);
-  const ticker=tickM?tickM[1]:null;
+  // 1-letter tickers (F, T…): only when a leg line names them right before the strike ("Buy F $12 Put …")
+  const leg1=tickM?null:/(?:^|\n)\s*(?:Buy|Sell)\s+([A-Z])\s+\$\d/.exec(raw);
+  const ticker=tickM?tickM[1]:leg1&&leg1[1]!=='A'&&leg1[1]!=='I'?leg1[1]:null;
   if(!ticker)return null;
   // Find leg blocks by Buy/Sell TICKER pattern
   const legRx=new RegExp(`(Buy|Sell)\\s+${ticker}\\b`,'gi');
   const legMatches=[...raw.matchAll(legRx)];
   if(legMatches.length<2)return null;
   // Split fees equally
-  const feeRx=/(?:est\.?\s*regulatory\s+fees?|contract\s+fee|commission)[:\s]*\n?\s*\$?([\d.]+)/gi;
-  let totalFees=0;let fm;while((fm=feeRx.exec(raw))!==null)totalFees+=parseFloat(fm[1]);
+  const feeRx=/(?:est\.?\s*regulatory\s+fees?|contract\s+fee|commission)[s:\s]*\n?\s*\(?\s*-?\s*\$?\s*-?(\d[\d,]*(?:\.\d+)?|\.\d+)\s*\)?/gi; // "-$1.30" / "($0.65)" = a positive fee
+  let totalFees=0;let fm;while((fm=feeRx.exec(raw))!==null)totalFees+=parseFloat(fm[1].replace(/,/g,''));
   const legFees=splitFeesCents(totalFees,2);
   const trades=[];
   for(let i=0;i<2;i++){
@@ -9783,7 +9847,9 @@ function parseRollTrades(raw,todayISO){
     // Filled quantity
     const fqIdx=bLines.findIndex(l=>/^filled quantity$/i.test(l));
     let contracts=0,premium=0;
-    if(fqIdx>=0){const fq=bLines[fqIdx+1]||'';const cM=/(\d+)\s+contracts?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(fq);if(cM){contracts=parseInt(cM[1]);premium=parseFloat(cM[2]);}}
+    if(fqIdx>=0){const fq=bLines[fqIdx+1]||'';const cM=/(-?\d{1,3}(?:,\d{3})+|-?\d+)\s+contracts?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(fq);if(cM){contracts=Math.abs(parseInt(cM[1].replace(/,/g,''),10));premium=parseFloat(cM[2]);}}
+    // never save a leg with no size: tell the caller instead of a $0, 0-share trade
+    if(!(contracts>0))return{error:`Couldn't read the filled quantity on the ${direction} leg — check you copied the whole roll.`};
     const shares=contracts*100;
     // Entered date
     let entered=T;
@@ -9852,10 +9918,12 @@ function parsePaste(){
     // ── Roll detection first ──
     if(detectRollPaste(raw)){
       const rollTrades=parseRollTrades(raw);
+      if(rollTrades&&rollTrades.error){errEl.textContent=rollTrades.error;errEl.style.display='block';return;}
       if(rollTrades&&rollTrades.some(t=>t.action==='BTO')){errEl.textContent='This is a roll of a bought call — add it on the LEAP card.';errEl.style.display='block';return;}
       if(rollTrades){parsedTradeData=rollTrades;showRollPreview(rollTrades);return;}
     }
     let p=parseSmartText(raw);
+    if(p.error){errEl.textContent=p.error;errEl.style.display='block';return;}
     if(!p.ticker){errEl.textContent='Could not find ticker symbol. Make sure you copied the full confirmation.';errEl.style.display='block';return;}
     if(!p.action){errEl.textContent='Could not determine trade type (Buy/Sell, Call/Put, Open/Close).';errEl.style.display='block';return;}
     parsedTradeData=p;
@@ -9869,12 +9937,13 @@ function showPastePreview(p){
   const wheelHtml=`<div class="wh-pick"><input type="hidden" id="paste-wheel-sel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div>`;
   const totalCol=isCredit(p.action)?'var(--green)':'var(--red)';
   const totalSign=isCredit(p.action)?'+':'-';
-  document.getElementById('paste-preview').innerHTML=`
+  const warnHtml=p.totalWarning?`<div class="ss-total-warn" role="alert" style="background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.55);color:var(--yellow);border-radius:6px;padding:0.625rem 0.75rem;margin-bottom:0.75rem;font-family:'Urbanist',sans-serif;font-size:0.8125rem;line-height:1.4"><div style="font-weight:720;margin-bottom:0.25rem">Totals don't match</div><div>Broker total: <b>$${(+p.scrapedTotal||0).toFixed(2)}</b> · Calculated: <b>$${(+p.total||0).toFixed(2)}</b></div><div style="margin-top:0.25rem;color:var(--text2)">${esc(p.totalWarning)}</div></div>`:'';
+  document.getElementById('paste-preview').innerHTML=`${warnHtml}
     <div style="background:var(--bg3);border:1px solid var(--border);border-left:0.1875rem solid var(--orange);border-radius:0.5rem;padding:0.875rem;margin-bottom:0.875rem">
       <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.875rem">
         <span class="ab ab-${p.action}">${p.action}</span>
         <span style="font-weight:720;font-size:1rem;color:var(--silver)">${esc(p.ticker)}</span>
-        ${p.strike?`<span style="color:var(--text2);font-size:0.8125rem">$${p.strike} ${p.action==='CSP'?'Put':'Call'}</span>`:''}
+        ${p.strike?`<span style="color:var(--text2);font-size:0.8125rem">$${p.strike} ${p.optType==='put'||(!p.optType&&p.action==='CSP')?'Put':'Call'}</span>`:''}
         <span style="margin-left:auto;font-size:1.125rem;font-weight:720;color:${totalCol}">${totalSign}$${(p.total||0).toFixed(2)}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.625rem">
