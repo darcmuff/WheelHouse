@@ -3495,6 +3495,10 @@ let dateFmt=localStorage.getItem('wh-dateFmt')||'uk'; // uk | us
 function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function colorN(n){return n==null?'m':n>=0?'g':'r';}
+// Colour for AROC-style percentages: high stays green, mid/low stay unsigned text (never brand orange).
+function arocColor(roc){if(roc==null)return'var(--text3)';if(roc>=15)return'var(--green)';if(roc>=8)return'var(--text)';return'var(--text2)';}
+// Colour for unsigned money/count figures: minus goes red, otherwise normal text — never orange.
+function unsignedValueColor(n){if(n==null||isNaN(n))return'var(--text3)';if(n<0)return'var(--red)';return'var(--text)';}
 
 // ── Metric explain tooltip ──
 function showXpop(badge){
@@ -5955,7 +5959,7 @@ function renderTradeRow(t,wheelTrades,opts){
   const _o=wheelTrades?wheelSellOutcomes(wheelTrades)[t.id]:null;
   const roc=calcTradeROC(t,_o?_o.net:null,_o?_o.end:null);
   const rocDisplay=opts.rocHtml!=null?opts.rocHtml:(roc!==null?roc.toFixed(1)+'%':'—');
-  const rocColor=opts.rocColor!=null?opts.rocColor:(roc!==null?(roc>=15?'var(--green)':roc>=8?'var(--orange)':'var(--text2)'):'var(--text3)');
+  const rocColor=opts.rocColor!=null?opts.rocColor:arocColor(roc);
   // PPD — income velocity: net dollars per day. Credit opens (incl. PMCC STO).
   const isOpenLeg=t.action==='CSP'||t.action==='STOC'||t.action==='STO';
   const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
@@ -8837,7 +8841,7 @@ function renderAnalytics(){
   // ── Section 1: Performance Overview ──
   const perfStats=`<div class="a-stat-grid">
     ${stat(fmtMoney(M.realised),scopeName+'Total Realised',scope==='wheel'?'all-time: option income + shares + dividends':scope==='pmcc'?'all-time: option income + closed LEAPs':'all-time: option income + shares + dividends + LEAPs',M.realised>=0?'var(--green)':'var(--red)','Total realised, all-time: option income plus '+(scope==='wheel'?'share sales and dividends':scope==='pmcc'?'closed LEAPs':'share sales, dividends and closed LEAPs')+'. Open positions excluded.')}
-    ${stat(pctS(avgAroc),'AROC',scope==='all'?'Wheel '+pctS(M.aroc.wheel)+' · PMCC '+pctS(M.aroc.pmcc):'closed options, weighted','var(--orange)','Annualised return on capital across every closed sold option, realised only, weighted by capital × days held: Σ P&L ÷ Σ (capital × days) × 365. Wheel puts use the strike as capital, covered calls the share cost, PMCC calls the LEAP cost.')}
+    ${stat(pctS(avgAroc),'AROC',scope==='all'?'Wheel '+pctS(M.aroc.wheel)+' · PMCC '+pctS(M.aroc.pmcc):'closed options, weighted',unsignedValueColor(avgAroc),'Annualised return on capital across every closed sold option, realised only, weighted by capital × days held: Σ P&L ÷ Σ (capital × days) × 365. Wheel puts use the strike as capital, covered calls the share cost, PMCC calls the LEAP cost.')}
     ${stat(sortinoStr,'Sortino Ratio',M.sortino==null?'needs 3+ months':'risk-adjusted','var(--text)','Average monthly option income ÷ downside deviation. Downside deviation is measured over every month (quiet months count as 0) against a target of 0, so only losing months add to it. Higher is better. Shown once there are 3 months.')}
     ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--text)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
   </div>
@@ -8856,8 +8860,8 @@ function renderAnalytics(){
     <td style="font-weight:720;color:var(--silver)">${d.label}</td>
     <td data-l="Trades">${d.count}</td>
     <td data-l="Total" class="${colorN(d.total)}">${fmtMoney(d.total)}</td>
-    <td data-l="Avg PPD" style="color:var(--orange)">${d.ppd!=null?fmtMoney(d.ppd)+'/d':'—'}</td>
-    <td data-l="Avg AROC" style="color:${d.aroc!=null?(d.aroc>=15?'var(--green)':d.aroc>=8?'var(--orange)':'var(--text2)'):'var(--text3)'}">${pctS(d.aroc)}</td>
+    <td data-l="Avg PPD" style="color:${unsignedValueColor(d.ppd)}">${d.ppd!=null?fmtMoney(d.ppd)+'/d':'—'}</td>
+    <td data-l="Avg AROC" style="color:${arocColor(d.aroc)}">${pctS(d.aroc)}</td>
   </tr>`).join('');
 
   // ── Section 5: Strategy Comparison ──
@@ -8868,7 +8872,7 @@ function renderAnalytics(){
         <div><span class="t3-xs">Closed</span><div class="fw5">${c.count}</div></div>
         <div><span class="t3-xs">Option Income</span><div class="${colorN(c.total)} fw5">${fmtMoney(c.total)}</div></div>
         <div><span class="t3-xs">Avg DTE</span><div class="fw5">${c.avgDte?c.avgDte.toFixed(0)+'d':'—'}</div></div>
-        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:720;color:var(--orange)">${c.ppd!=null?fmtMoney(c.ppd):'—'}</div></div>
+        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:720;color:${unsignedValueColor(c.ppd)}">${c.ppd!=null?fmtMoney(c.ppd):'—'}</div></div>
       </div>
     </div>`;
   const stratTable=`<div class="d-grid d-grid-2" style="gap:0.75rem">
@@ -8908,8 +8912,8 @@ function renderAnalytics(){
     ${stat(fmtMoney(peak),'Peak Exposure',scope==='wheel'?'highest single CSP':scope==='pmcc'?'highest single LEAP':'highest single CSP or LEAP','var(--text2)',scope==='wheel'?'Largest single cash-secured put notional ever opened. Your peak capital requirement.':scope==='pmcc'?'Most you have paid for a single LEAP, open or closed. Your peak capital requirement.':'Largest single commitment ever: a cash-secured put notional or what you paid for one LEAP, whichever is bigger.')}
     ${stat(fmtMoney(feeAmt),'Total Fees',feePctLabel(feeAmt,feeBase)+' of closed premium','var(--text2)','Commissions and regulatory fees across closed trades')}
     ${scope==='pmcc'
-      ?stat(String(OL.shortCount),'Open Short Calls','against '+OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),OL.shortCount>0?'var(--orange)':'var(--text3)','Short calls still open, written against your LEAPs (and any short options not tied to a LEAP).')
-      :stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
+      ?stat(String(OL.shortCount),'Open Short Calls','against '+OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),OL.shortCount>0?'var(--text)':'var(--text3)','Short calls still open, written against your LEAPs (and any short options not tied to a LEAP).')
+      :stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--text)':'var(--text3)','Total shares currently held as a result of put assignment.')}
   </div>`;
 
   // ── Section 7: Wheel Scoreboard ──
@@ -8933,7 +8937,7 @@ function renderAnalytics(){
     const w=_w.get(r.id)||r.wheel;const m=calcWheel(w);
     const cr=cycleReturn(w,m,rotationShareStats(w,db.trades,_priceOf),m.trades.filter(t=>t.action==='DIV').reduce((s,t)=>s+(t.total||0),0));
     return`<tr>
-      <td style="color:var(--orange)">${w.sortOrder||'?'}</td>
+      <td style="color:var(--text)">${w.sortOrder||'?'}</td>
       <td>${esc(wheelLabelDisplay(w.label,w)==='—'?(w.ticker||''):wheelLabelDisplay(w.label,w))}</td>
       <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:6px;font-size:0.675rem">${w.status==='open'?'● Open':'Closed'}</span></td>
       <td class="num">${m.trades.length}</td>
