@@ -82,7 +82,7 @@ function nasdaqUrl(sym) {
 // Cboe moved the file to cdn-api.cboe.com and Cloudflare 403s requests that have no www.cboe.com Referer
 // (the old UA-only fetch followed the 307 and got an empty challenge page).
 const CBOE_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 WheelHouse',
+  'User-Agent': 'Mozilla/5.0 OpTrack',
   'Accept': 'application/json,text/plain,*/*',
   'Accept-Language': 'en-US,en;q=0.9',
   'Referer': 'https://www.cboe.com/'

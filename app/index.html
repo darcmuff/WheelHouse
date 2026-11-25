@@ -155,14 +155,6 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 #layout{min-height:100vh}
 
 /* ── SIDEBAR ── */
-#sidebar{
-  width:12.5rem;min-width:12.5rem;background:var(--bg2);
-  border-right:1px solid var(--border);display:flex;
-  flex-direction:column;position:fixed;top:0;left:0;
-  height:100vh;z-index:50;transition:transform .2s;
-}
-#sidebar.collapsed{transform:translateX(-200px)}
-#sidebar .sb-spacer{display:none}
 .sb-toggle{
   position:fixed;top:0.5rem;left:0.5rem;z-index:51;
   width:1.5rem;height:1.5rem;border:none;background:var(--bg2);
@@ -171,8 +163,6 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
   border:1px solid var(--border);
 }
 .sb-toggle svg{width:1rem;height:1rem;fill:var(--orange)}
-#sidebar.collapsed ~ .sb-toggle{display:flex}
-#sidebar.collapsed ~ #content{margin-left:0}
 #content{margin-left:12.5rem;transition:margin-left .2s}
 #sb-brand{padding:0.5rem 0.75rem 0.4375rem;border-bottom:1px solid var(--border)}
 #sb-brand-name{
@@ -2220,16 +2210,6 @@ select,textarea,
   </div>
 </div>
 
-<!-- MODAL: Price -->
-<div class="mb" id="mPrice">
-  <div class="mbox sm">
-    <div class="mtitle"><span id="mPriceTitle">Update Price</span><span class="mx" onclick="closeModal('mPrice')">✕</span></div>
-    <div class="fld"><label>Market Price ($)</label><input id="pf-price" type="number" step="0.01"></div>
-    <input type="hidden" id="pf-wheelId">
-    <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPrice')">Cancel</button><button class="btn btn-primary" onclick="savePrice()">Update</button></div>
-  </div>
-</div>
-
 <!-- MODAL: Paste Trade -->
 <div class="mb" id="mPaste">
   <div class="mbox" style="width:37.5rem">
@@ -2638,62 +2618,28 @@ const SEED_DATA = {
   opts:[]
 };
 
-function autoMarkExpiredTrades(){
-  // Sort: by entered date; on same date closings (BTC/STC) always before openings (CSP/STOC)
-  const closingAction=a=>(a==='BTC'||a==='STC')?0:1;
-  const changedIds=new Set(); // save only the trades whose flags actually changed
-  db.wheels.forEach(w=>{
-    const wTrades=db.trades.filter(t=>t.wheelId===w.id)
-      .sort((a,b)=>{
-        const dc=a.entered.localeCompare(b.entered);
-        if(dc!==0)return dc;
-        const ac=closingAction(a.action),bc=closingAction(b.action);
-        if(ac!==bc)return ac-bc;
-        return db.trades.indexOf(a)-db.trades.indexOf(b);
-      });
-    let openId=null;
-    wTrades.forEach(t=>{
-      if(t.action==='CSP'||t.action==='STOC'){
-        if(openId){
-          // Previous open had no BTC — mark expired
-          const prev=db.trades.find(x=>x.id===openId);
-          if(prev&&!prev.expiredWorthless){prev.expiredWorthless=true;changedIds.add(prev.id);}
-        }
-        // Current trade is a fresh open — only clear stale expired flag if expiry is still in the future
-        if(t.expiredWorthless&&t.expiry&&new Date(t.expiry)>=new Date(new Date().toISOString().slice(0,10))){t.expiredWorthless=false;changedIds.add(t.id);}
-        openId=t.id;
-      } else if(t.action==='BTC'||t.action==='STC'){
-        // A buy-back of every share closes the sale. A partial buy-back leaves the rest open, so it must not wipe an expiry.
-        if(openId){const prev=db.trades.find(x=>x.id===openId);const covers=!prev||!(+prev.shares)||(+t.shares||0)>=+prev.shares;if(covers){if(prev&&prev.expiredWorthless){prev.expiredWorthless=false;changedIds.add(prev.id);}openId=null;}}
-      }
-    });
-    // Last open trade: only clear expired flag if expiry is still in the future (i.e. genuinely still active)
-    if(openId){const last=db.trades.find(x=>x.id===openId);if(last&&last.expiredWorthless&&last.expiry&&new Date(last.expiry)>=new Date(new Date().toISOString().slice(0,10))){last.expiredWorthless=false;changedIds.add(last.id);}}
-  });
-  if(changedIds.size){db.trades.forEach(t=>{if(changedIds.has(t.id))_saveTrade(t);});}
-}
 function loadDB(){
   // Auth-gated — real load happens in loadDBFromFirestore after sign-in
   db = JSON.parse(JSON.stringify(SEED_DATA));
   window._db = db;
 }
 
-// One server snapshot, then the listener stays open. getDocsFromServer is itself a
-// listen that is cancelled as soon as the rows arrive, and that cancel is what makes
-// the browser log Listen/channel 404 and 400. Held until releaseFirestore().
+// One-shot server read: wait for the first snapshot that came from the server (a
+// cache-only snapshot is ignored), then stop listening. Nothing reads later snapshots,
+// so a listener left open only cost reads and a live channel for no UI change.
+// A listener still waiting is in _fsUnsubs so releaseFirestore() can stop it.
 function listenServer(q,ms){
   return new Promise((resolve,reject)=>{
-    let settled=false;
-    const done=(fn,arg)=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);fn(arg);};
-    const unsub=onSnapshot(q,{includeMetadataChanges:true},snap=>{
+    let settled=false,unsub=null,timer=null;
+    const stop=()=>{if(!unsub)return;const u=unsub;unsub=null;const i=_fsUnsubs.indexOf(u);if(i>=0)_fsUnsubs.splice(i,1);try{u();}catch(e){}};
+    const done=(fn,arg)=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);stop();fn(arg);};
+    unsub=onSnapshot(q,{includeMetadataChanges:true},snap=>{
       if(snap.metadata.fromCache)return;
       done(resolve,snap);
-    },err=>{
-      try{unsub();}catch(e){}
-      done(reject,err);
-    });
+    },err=>done(reject,err));
+    if(settled){stop();return;}
     _fsUnsubs.push(unsub);
-    const timer=setTimeout(()=>done(reject,new Error('Timed out waiting for your data')),ms||15000);
+    timer=setTimeout(()=>done(reject,new Error('Timed out waiting for your data')),ms||15000);
   });
 }
 function fsUnsubAll(){
@@ -3445,14 +3391,12 @@ function calcYTD(){
   db.trades.forEach(t=>{
     if(!t.entered||t.entered<start)return;
     const v=t.total||0;
-    if(t.action==='CSP'||t.action==='STOC'||t.action==='STC')sc+=v;
-    else if(t.action==='BTC')sd+=v;
-    else if(t.action==='OUT')stockOut+=v;
+    if(t.action==='OUT')stockOut+=v;
     else if(t.action==='IN')stockIn+=v;
     else if(t.action==='DIV')divs+=v;
   });
   // realised only: premium banked this year (bought back / expired / assigned), never open sells
-  sc=0;sd=0;realisedPremium(db.trades).events.forEach(e=>{if(!e.date||e.date<start)return;if(e.amount>=0)sc+=e.amount;else sd-=e.amount;});
+  realisedPremium(db.trades).events.forEach(e=>{if(!e.date||e.date<start)return;if(e.amount>=0)sc+=e.amount;else sd-=e.amount;});
   const optNet=sc-sd;
   // Share Realised P&L this year: each sale this year against its own wheel's FIFO cost (may be negative)
   const stockIncome=shareRealisations(db.trades).events.filter(e=>e.date>=start).reduce((a,e)=>a+e.pnl,0);
@@ -3526,17 +3470,6 @@ function calcCapitalStats(){
   return{maxCap,atRisk,totalFees,feesPct};
 }
 
-function calcAssignmentIntel(){
-  return db.wheels.filter(w=>w.status==='open').map(w=>{
-    const m=calcWheel(w);if(m.sharesHeld<=0)return null;
-    const stocs=m.trades.filter(t=>t.action==='STOC'&&t.total>0);
-    const avgCallIncome=stocs.length?stocs.reduce((s,t)=>s+(t.total||0),0)/stocs.length:0;
-    // calls-to-breakeven based on option income only (premium net, not capital deployed)
-    const callsNeeded=avgCallIncome>0&&m.premiumNet<0?Math.ceil(-m.premiumNet/avgCallIncome):0;
-    const basisReduction=m.shareCost>0?(m.premiumNet/m.shareCost*100):0; // % of what the shares cost, paid back by premium
-    return{wheel:w,m,avgCallIncome,callsNeeded,basisReduction};
-  }).filter(Boolean);
-}
 
 function calcStreaks(){
   // Month-over-month: find best streak of profitable premium months
@@ -3972,7 +3905,7 @@ function optsToCSV(legs){
 }
 function exportOptsCSV(){
   const blob=new Blob([optsToCSV(db.opts||[])],{type:'text/csv'});const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);a.download=`wheelhouse-options-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  a.href=URL.createObjectURL(blob);a.download=`optrack-options-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 // ── LEAPs view: one card per long call; everything else listed under "Other options" ──
 function toggleShowClosedLeaps(val){showClosedLeaps=!!val;render();}
@@ -5774,44 +5707,11 @@ function renderRotationWindow(wheel){
     ?`<span class="rot-dte-badge" style="color:${_dteColor};border-color:${_dteColor}">${activeDTEExpiry?fmtDateShort(activeDTEExpiry):''} (${activeDTE}d)</span>`
     :'';
 
-  // AROC
-  const aroc=calcAROC(wheel,m);
-
-  // 6-column metrics bar (always identical structure)
-  const lastAct=buildLastAction(m.trades);
-  const breakeven=m.sharesHeld>0&&m.breakeven!=null?'$'+fmt2(m.breakeven):'N/A';
   const openCSP=buildOpenPosition(m.trades);
   const cspCollateral=(m.sharesHeld===0&&openCSP&&openCSP.action==='CSP'&&openCSP.strike&&openCSP.shares)?openCSP.strike*openCSP.shares:null;
-  const unrealisedHtml=m.unrealised!=null
-    ?`<div class="rmb-sub">Unrealised: <span class="${colorN(m.unrealised)}">${fmtMoney(m.unrealised)}</span></div>`
-    :'';
-
-  // PPD — net premium divided by total option-days traded
-  const optLegs=m.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&(t.days||0)>0);
-  const totalOptDays=optLegs.reduce((s,t)=>s+(t.days||0),0);
-  const rotPPD=totalOptDays>0?m.premiumRealised/totalOptDays:null;
-  const ppdHtml=rotPPD!=null
-    ?`<span class="${colorN(rotPPD)}">${rotPPD>=0?'$'+fmt2(rotPPD):'-$'+fmt2(Math.abs(rotPPD))}</span>`
-    :`<span class="m">—</span>`;
 
   // Open position — currently live leg
   const openPos=buildOpenPosition(m.trades);
-  const _opDteCl=openPos?dteCls(openPos.dte):'g';
-  const _opDteColor=_opDteCl==='r'?'var(--red)':_opDteCl==='o'?'var(--yellow)':'var(--green)';
-  const openPosHtml=openPos
-    ?`<div class="rmb-val" style="font-size:0.75rem;font-weight:480;color:${openPos.action==='CSP'?'var(--green)':'var(--blue)'}">
-        ${openPos.action} $${fmt2(openPos.strike)}
-      </div>
-      <div class="rmb-sub">exp <span style="color:${_opDteColor};font-weight:480;padding:1px 0.375rem;border:1px solid ${_opDteColor};border-radius:0.625rem;font-size:0.75rem">${fmtDateShort(openPos.expiry)} (${openPos.dte}d)</span></div>
-      <div class="rmb-sub">${openPos.shares||0} shares</div>`
-    :`<div class="rmb-val m fs-sm">No open leg</div>
-      <div class="rmb-sub">${isOpen?'Waiting for entry':'Strategy closed'}</div>`;
-
-  // Per-wheel capital deployed (net stock cash still in play)
-  const rotStockIN=m.trades.filter(t=>t.action==='IN').reduce((s,t)=>s+(t.total||0),0);
-  const rotStockOUT=m.trades.filter(t=>t.action==='OUT').reduce((s,t)=>s+(t.total||0),0);
-  const rotCapDeployed=m.sharesHeld>0?Math.max(0,rotStockIN-rotStockOUT):0;
-
   const _rss=rotationShareStats(wheel,db.trades,_priceOf);
   const _stage=wheelStage(m.sharesHeld,openPos?openPos.action:null,m.trades.some(t=>t.action==='OUT'));
   const _stepNames=['Put','Assigned','Call','Called away'];
@@ -5837,7 +5737,6 @@ function renderRotationWindow(wheel){
   const _cyRoc=_cr&&(isOpen&&_cr.days<14?_cr.raw:_cr.ann!=null?_cr.ann:_cr.raw);
   const _fAroc=_cr?_fact(isOpen&&_cr.days<14?'ROC':(_cr.ann!=null?'AROC':'Cycle return'),(_cyRoc!=null?_cyRoc:_cr.raw).toFixed(1)+'%',colorN(_cr.raw)):'';
   const _memo=_cs.held?`<div class="wl-memo">Sell calls above <b>$${fmt2(_cs.sellAbove)}</b> ${ii(`Your breakeven after all premium and dividends. Calls struck above this lock in a profit if called away.`)}<button type="button" class="wl-wi-btn" onclick="event.stopPropagation();wlWhatIf('${wheel.id}')">What if?</button></div><div class="wl-wi" id="wi-${wheel.id}" hidden onclick="event.stopPropagation()" data-be="${m.breakeven}" data-shares="${m.sharesHeld}" data-oshares="${_rss.openShares}" data-ocost="${_rss.openCost}" data-prem="${m.premiumNet}" data-real="${_rss.realised||0}" data-divs="${_divs}"><button type="button" class="wl-wi-x" aria-label="Close" onclick="event.stopPropagation();wlWhatIfClose('${wheel.id}')">×</button><div class="wl-wi-in"><label>Strike<input data-wi="k" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 190" oninput="wlWhatIfCalc('${wheel.id}')"></label><label>Premium / share<input data-wi="p" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.00" oninput="wlWhatIfCalc('${wheel.id}')"></label></div><div data-wi="out"><div class="wl-wi-r"><span>New cost basis</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>If called away</span><span class="wl-wi-v">—</span></div></div><div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();wlWhatIfLog('${wheel.id}')">Log this trade</button></div></div>`:'';
-  const _fRet=_cr?_fact(_cr.ann!=null?'Cycle return / yr'+(_cr.incUnrealised?' (incl. unrealised)':''):'Cycle return ('+_cr.days+'d)',(_cr.ann!=null?_cr.ann:_cr.raw).toFixed(1)+'%',colorN(_cr.raw)):'';
   const _cap=(m.sharesHeld>0&&openPos&&openPos.action==='STOC'&&_rss.openShares>0)?calledAwayProfit(openPos.strike,_rss.openShares,_rss.openCost,m.premiumNet,_rss.realised,_divs):null;
   const _fCall=_cap!=null?_fact('Profit if called',(_cap>=0?'+':'')+fmtMoney(_cap).replace(/\.00$/,''),colorN(_cap)):'';
   const _fPrem=_fact('Realised premium',fmtMoney(m.premiumRealised).replace(/\.00$/,''),colorN(m.premiumRealised)); // realised only; was gross 'Premium collected' incl. open sells
@@ -5849,42 +5748,6 @@ function renderRotationWindow(wheel){
     ${_steps}${_memo}
     <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
   </div>`;
-  const metricsBar=`<div class="rot-metrics-bar">
-    <div class="rmb-col">
-      <div class="rmb-lbl">Last Action</div>
-      <div class="rmb-val" style="color:var(--orange2);font-size:0.825rem;font-weight:480">${lastAct}</div>
-      <div class="rmb-sub">${m.trades.length} trade${m.trades.length!==1?'s':''}</div>
-    </div>
-    <div class="rmb-col">
-      <div class="rmb-lbl">Realised premium</div>
-      <div class="rmb-val ${colorN(m.premiumRealised)}">${fmtMoney(m.premiumRealised)}</div>
-      <div class="rmb-sub">Shares P&amp;L: <span class="${colorN(_rss.realised)}">${_rss.realised?fmtMoney(_rss.realised):'—'}</span></div>
-      <div class="rmb-sub">Unrealised: ${_rss.unrealised==null?'<span class="m">no price</span>':`<span class="${colorN(_rss.unrealised)}">${_rss.openShares>0?fmtMoney(_rss.unrealised):'—'}</span>`}</div>
-      ${aroc?`<div class="rmb-sub">${aroc.aroc!=null?`AROC: <span class="${colorN(aroc.aroc)}">${aroc.aroc.toFixed(1)}%</span> &middot; `:''}ROC: <span class="${colorN(aroc.roc)}">${aroc.roc.toFixed(1)}%</span>${aroc.aroc==null?` <span class="t3">(too early to annualise)</span>`:''}</div>`:''}
-    </div>
-    <div class="rmb-col">
-      <div class="rmb-lbl">${cspCollateral?'Collateral':'Breakeven'}</div>
-      <div class="rmb-val ${cspCollateral?'o':m.sharesHeld>0?'o':'m'}">${cspCollateral?fmtMoney(cspCollateral):breakeven}</div>
-      ${cspCollateral?`<div class="rmb-sub" style="color:var(--silver)">strike × shares</div>`:m.sharesHeld>0?`<div class="rmb-sub">${m.sharesHeld} shares held</div>`:unrealisedHtml}
-    </div>
-    <div class="rmb-col">
-      <div class="rmb-lbl">Credits / Debits</div>
-      <div class="rmb-val g">${fmtMoney(m.premiumCredits)}</div>
-      <div class="rmb-sub r fs-sm">${fmtMoney(m.premiumDebits)}</div>
-      ${rotCapDeployed>0?`<div class="rmb-sub" style="font-size:0.825rem;color:var(--silver);margin-top:0.1875rem">Deployed: <span style="color:var(--orange)">${fmtMoney(rotCapDeployed)}</span></div>`:''}
-    </div>
-    <div class="rmb-col">
-      <div class="rmb-lbl">Avg PPD</div>
-      <div class="rmb-val">${ppdHtml}</div>
-      <div class="rmb-sub">${totalOptDays} option-days</div>
-      ${rotPPD!=null?`<div class="rmb-sub" style="font-size:0.825rem;color:var(--silver);margin-top:0.1875rem">Per week: <span style="color:var(--orange)">${rotPPD>=0?'$'+fmt2(rotPPD*7):'-$'+fmt2(Math.abs(rotPPD*7))}</span></div>`:''}
-    </div>
-    <div class="rmb-col">
-      <div class="rmb-lbl">Open Leg</div>
-      ${openPosHtml}
-    </div>
-  </div>`;
-
   // Expanded trade table
   let expandedHtml='';
   if(exp){
@@ -6696,7 +6559,6 @@ function buildMiniCal(){
 }
 
 function renderStatsOverview(){
-  const s=calcOverall();const wl=calcWinLoss();const ytd=calcYTD();const cap=calcCapitalStats();
   const today=new Date().toISOString().slice(0,10),scope=moreScope();
   const pyAll=calcProjectedYearly(db.trades,db.opts||[],today);
   const pyWheel=calcProjectedYearly(db.trades,[],today);
@@ -6704,8 +6566,6 @@ function renderStatsOverview(){
   const py=scope==='wheel'?pyWheel:scope==='pmcc'?pyPmcc:pyAll;
   const M=moreLedgerStats(scope,db.wheels,db.trades,db.opts||[],today);
   const openWheels=db.wheels.filter(w=>w.status==='open').sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
-  const liveOpts=db.wheels.flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id))).sort((a,b)=>a.expiry.localeCompare(b.expiry));
-  const recentTrades=[...db.trades].sort((a,b)=>b.entered.localeCompare(a.entered)).slice(0,8);
 
   // ── Data Health panel ──
   const health=openHealth();const _pendH=pendingHealth();
@@ -6830,44 +6690,6 @@ function renderStatsOverview(){
         <span class="d-panel-count">${OL.leaps.length} LEAP${OL.leaps.length!==1?'s':''} · ${OL.shortCount} short call${OL.shortCount!==1?'s':''}</span>
       </div>
       <div class="d-panel-body">${leapRows?leapHdr+leapRows:`<div style="padding:2rem 1rem;text-align:center;color:var(--text3);font-size:0.75rem">No open LEAPs or short calls.</div>`}</div>
-    </div>`;
-
-  // ── Recent activity ──
-  const recCols='minmax(4.6875rem,0.9fr) minmax(4.0625rem,0.7fr) minmax(3.25rem,0.5fr) minmax(4.0625rem,0.7fr) minmax(4.6875rem,0.9fr) minmax(5.625rem,1.2fr) minmax(4.375rem,0.8fr)';
-  const recHdr=`<div class="d-table-hdr" style="grid-template-columns:${recCols};gap:0.75rem">
-    <span>Date</span><span>Ticker</span><span>Action</span><span>Strike</span><span>Expiry</span><span>Wheel</span><span style="text-align:right">Amount</span>
-  </div>`;
-  const recRows=recentTrades.map(t=>{
-    const w=db.wheels.find(x=>x.id===t.wheelId);
-    return`<div class="d-table-row" style="grid-template-columns:${recCols};gap:0.75rem;cursor:pointer" onclick="goToTrade('${t.wheelId}','${t.id}')" title="Go to trade">
-    <span style="color:var(--text3);font-size:0.825rem;white-space:nowrap">${fmtDateFull(t.entered)}</span>
-    <span style="font-weight:720;color:var(--orange)">${esc(t.ticker)}</span>
-    <span><span class="ab ab-${t.action}" style="font-size:0.675rem;padding:2px 0.3125rem">${t.action}</span></span>
-    <span class="t2-nw">${t.strike?'$'+fmt2(t.strike):'—'}</span>
-    <span class="t2-nw">${t.expiry?fmtDateFull(t.expiry):'—'}</span>
-    <span style="color:var(--text3);font-size:0.825rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w?wheelLabelDisplay(w.label,w):'—'}</span>
-    <span class="${isCredit(t.action)?'g':'r'}" style="text-align:right;font-weight:720;white-space:nowrap">${fmtMoney(t.total)}</span>
-  </div>`;}).join('')||`<div style="padding:1.5rem 1rem;text-align:center;color:var(--text3);font-size:0.75rem">No trades yet</div>`;
-
-  // ── Monthly P&L mini chart ──
-  // Monthly chart rendered via renderDashChart() after DOM insert
-
-  // ── Mini calendar ──
-  const calCells=buildMiniCal();
-  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const calTitle=monthNames[new Date().getMonth()]+' '+new Date().getFullYear();
-
-  // ── YTD sidebar summary ──
-  const ytdSummary=`
-    <div style="padding:0.75rem 1rem;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box">
-      <div style="width:100%;max-width:16.25rem">
-        <div class="row-sb"><span class="t3-s">Option Income</span><span class="${colorN(ytd.optNet)}" style="font-size:0.825rem;font-weight:720;text-align:center;min-width:5rem">${fmtMoney(ytd.optNet)}</span></div>
-        ${ytd.stockIncome!==0?`<div class="row-sb"><span class="t3-s">Shares Realised P&amp;L</span><span class="${colorN(ytd.stockIncome)}" style="font-size:0.825rem;font-weight:720;text-align:center;min-width:5rem">${fmtMoney(ytd.stockIncome)}</span></div>`:''}
-        ${ytd.divs>0?`<div class="row-sb"><span class="t3-s">Dividends</span><span class="g" style="font-size:0.825rem;font-weight:720;text-align:center;min-width:5rem">${fmtMoney(ytd.divs)}</span></div>`:''}
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:0.375rem 0;margin-top:0.25rem;border-top:1px solid var(--border)"><span style="color:var(--text2);font-size:0.825rem;font-weight:720">Total Realised</span><span class="${colorN(s.totalRealised)}" style="font-size:0.75rem;font-weight:720;text-align:center;min-width:5rem">${fmtMoney(s.totalRealised)}</span></div>
-        <div class="row-sb"><span class="t3-s">Win Rate</span><span style="font-size:0.825rem;font-weight:720;text-align:center;min-width:5rem;color:${parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)'}">${wl.wr?wl.wr+'%':'—'} <span style="color:var(--text3);font-weight:480">(${wl.wins}W/${wl.losses}L)</span></span></div>
-        <div class="row-sb"><span class="t3-s">Projected Yearly</span><span class="${colorN(py.yearly)}" style="font-size:0.825rem;font-weight:720;text-align:center;min-width:5rem">${py.yearly!=null?fmtMoney(py.yearly):'—'}</span></div>
-      </div>
     </div>`;
 
   return`<div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
@@ -7012,37 +6834,6 @@ function calcMonthlyRealised(trades,extras,today){
   });
 }
 
-function renderMonthlyRealised(){
-  const extras=monthlyExtraSources();
-  const all=calcMonthlyRealised(db.trades,extras);
-  if(!all.length)return '';
-  const yr=String(new Date().getFullYear());
-  const sum=(list,keys)=>{const o={};keys.forEach(k=>o[k]=list.reduce((a,r)=>a+(r[k]||0),0));return o;};
-  const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
-  const cell=(v,cls,lab)=>`<td class="num ${v?cls:'m'}"${lab?` data-lbl="${lab}"`:''}>${v?fmtMoney(v):'—'}</td>`;
-  const pcell=(v,lab)=>`<td class="num ${v?colorN(v):'m'}" style="font-weight:720"${lab?` data-lbl="${lab}"`:''}>${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
-  const panel=(title,tip,heads,rows,keys,line)=>`<div class="d-panel">
-      <div class="d-panel-hdr"><span class="d-panel-title">${title} ${ii(tip)}</span></div>
-      <div class="d-panel-body">
-        <table class="a-table mpl-table"><thead><tr><th>Month</th>${heads.map(h=>`<th class="num">${h}</th>`).join('')}</tr></thead>
-        <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
-        ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr)),keys),'mpl-sum')}
-        ${line('All time',sum(rows,keys),'mpl-sum')}</tbody></table>
-      </div>
-    </div>`;
-  const tr=(label,cls,cells)=>`<tr class="${cls||''}"><td class="mpl-month">${label}</td>${cells}</tr>`;
-  const opt=all.filter(r=>r.collected||r.loss);
-  let html=opt.length?panel('Monthly P&amp;L',`Options only, realised: booked in the month an option closed, expired or was assigned/called away; open options are excluded. Premium collected = credits of wheel puts and calls that ended that month, sell-to-close credits and credits of PMCC short calls. Loss = buyback costs on wheel options and PMCC calls. Profit = Premium collected minus Loss. Share sales and closed LEAPs are in Shares & LEAPs P&L below.`,
-    ['Premium collected','Loss','Profit'],opt,['collected','loss','profit'],(l,r,c)=>tr(l,c,cell(r.collected,'g','Collected')+cell(r.loss?-r.loss:0,'r','Loss')+pcell(r.profit,'Profit'))):'';
-  // Positions: FIFO share sales + closed long LEAPs (+ dividends), one table
-  const sh=all.filter(r=>r.shareSales||r.divs||r.leapGain||r.leapLoss);
-  const showDiv=sh.some(r=>r.divs);
-  const pg=r=>(r.shareGain||0)+(r.leapGain||0),pl=r=>(r.shareLoss||0)+(r.leapLoss||0);
-  const posRows=sh.map(r=>({...r,posGain:pg(r),posLoss:pl(r),posNet:(r.shares||0)+(r.leapNet||0)+(r.divs||0)}));
-  if(sh.length)html+=panel('Shares &amp; LEAPs P&amp;L',`Realised only, covering shares and LEAPs. Each share sale (called away or sold) is matched against what those shares cost in the same wheel, first in, first out; each long LEAP counts when it is sold or expires. Booked in the month it closed. Gains = closed above cost, Losses = closed below cost.${showDiv?' Dividends have their own column and are included in Net.':''} Shares and LEAPs still held are in Unrealised. PMCC short calls are in Monthly P&L above.`,
-    ['Gains','Losses',...(showDiv?['Dividends']:[]),'Net'],posRows,['posGain','posLoss','divs','posNet'],(l,r,c)=>tr(l,c,cell(r.posGain,'g','Gains')+cell(r.posLoss?-r.posLoss:0,'r','Losses')+(showDiv?cell(r.divs,'g','Dividends'):'')+pcell(r.posNet,'Net')));
-  return html;
-}
 
 
 // ════════════════════════════════════════════════════════
@@ -7302,8 +7093,6 @@ function reportDeltaSection(){
   const html=`<div class="rep-delta" id="report-delta">${soldBlock.html}${leapBlock.html}</div>`;
   return{html,lines:soldBlock.lines.concat(leapBlock.lines||[])};
 }
-function reportDeltaSectionHtml(){return reportDeltaSection().html;}
-function reportDeltaSectionLines(){return reportDeltaSection().lines;}
 function analyticsDeltaTable(title,items,tip){
   const money=n=>{
     if(n==null||isNaN(n))return'—';
@@ -7565,65 +7354,6 @@ function copyReport(){
   else fallback();
 }
 
-function renderDashChart(){
-  const monthly=calcMonthlyPnL();
-  const raw=monthly.slice(-12).map(m=>({l:m.label.replace(/ \d{4}/,''),c:m.pCr,d:m.pDb||0}));
-  if(!raw||!raw.length)return;
-  const S=(parseFloat(getComputedStyle(document.documentElement).fontSize)||16)/16;
-  function dpr(c,w,h){const r=(window.devicePixelRatio||1)*S;c.width=w*r;c.height=h*r;c.style.width=w*S+'px';c.style.height=h*S+'px';const x=c.getContext('2d');x.scale(r,r);return x;}
-  const el=document.getElementById('dash-bar-canvas');if(!el)return;
-  const W=el.parentElement.clientWidth/S-8,H=180;
-  const ctx=dpr(el,W,H);
-  const PL=44,PR=10,PT=12,PB=26,cw=W-PL-PR,ch=H-PT-PB;
-  const maxA=Math.max(...raw.map(m=>Math.max(m.c,m.d)),1);
-  const slotW=cw/raw.length;
-  const barGap=3;
-  const singleW=Math.max(6,Math.min(18,(slotW-barGap*3)/2));
-  // Y grid lines
-  const nTicks=3;const tickStep=Math.ceil(maxA/nTicks/50)*50||50;
-  for(let v=tickStep;v<=maxA*1.05;v+=tickStep){
-    const y=PT+ch-(v/maxA)*ch;
-    if(y<PT)break;
-    ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+cw,y);ctx.stroke();
-  }
-  // Bars
-  raw.forEach((m,i)=>{
-    const cx=PL+i*slotW+slotW/2;
-    const fv=v=>v>=1000?'$'+(v/1000).toFixed(1)+'k':'$'+Math.round(v);
-    // Credit bar (left)
-    if(m.c>0){
-      const h=Math.max(2,(m.c/maxA)*ch);
-      const x=cx-singleW-barGap/2;
-      const y=PT+ch-h;
-      ctx.fillStyle='rgba(34,197,94,0.65)';
-      ctx.beginPath();ctx.roundRect(x,y,singleW,h,2);ctx.fill();
-      if(h>16){ctx.fillStyle='#22c55e';ctx.font='400 9.6px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fv(m.c),x+singleW/2,y-2);}
-    }
-    // Debit bar (right)
-    if(m.d>0){
-      const h=Math.max(2,(m.d/maxA)*ch);
-      const x=cx+barGap/2;
-      const y=PT+ch-h;
-      ctx.fillStyle='rgba(239,68,68,0.55)';
-      ctx.beginPath();ctx.roundRect(x,y,singleW,h,2);ctx.fill();
-      if(h>16){ctx.fillStyle='#ef4444';ctx.font='400 9.6px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fv(m.d),x+singleW/2,y-2);}
-    }
-  });
-  // Y axis
-  ctx.strokeStyle='#2a2d33';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+ch);ctx.stroke();
-  // Baseline
-  ctx.beginPath();ctx.moveTo(PL,PT+ch);ctx.lineTo(PL+cw,PT+ch);ctx.stroke();
-  // Y labels
-  ctx.fillStyle='#6b7280';ctx.font='400 10.8px -apple-system,sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
-  ctx.fillText('$'+(maxA>=1000?(maxA/1000).toFixed(0)+'k':Math.round(maxA)),PL-5,PT+4);
-  ctx.fillText('$0',PL-5,PT+ch);
-  // X labels
-  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#6b7280';
-  ctx.font='400 10.8px -apple-system,sans-serif';
-  raw.forEach((m,i)=>{ctx.fillText(m.l,PL+i*slotW+slotW/2,PT+ch+7);});
-}
 
 // ════════════════════════════════════════════════════════
 // INTERACTIONS
@@ -8062,19 +7792,6 @@ function saveTrade(){
 function deleteTrade(id){if(!confirm('Delete this trade?'))return;_clearFocus(id);_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);render();}
 function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;if(!id)return;if(!confirm('Delete this trade?'))return;_clearFocus(id);_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);closeModal('mTrade');render();}
 
-function openUpdatePrice(id){
-  const w=db.wheels.find(x=>x.id===id);if(!w)return;
-  document.getElementById('pf-wheelId').value=id;
-  document.getElementById('pf-price').value=w.lastPrice||'';
-  document.getElementById('mPriceTitle').textContent='Update Price: '+(wheelLabelDisplay(w.label,w)||w.ticker);
-  openModal('mPrice');setTimeout(()=>document.getElementById('pf-price').focus(),100);
-}
-function savePrice(){
-  const id=document.getElementById('pf-wheelId').value;
-  const w=db.wheels.find(x=>x.id===id);if(!w)return;
-  w.lastPrice=parseFloat(document.getElementById('pf-price').value)||null;
-  _saveWheel(w);closeModal('mPrice');render();
-}
 
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -9133,7 +8850,6 @@ function renderAnalytics(){
   const s=calcOverall();
   const today=new Date().toISOString().slice(0,10),scope=moreScope();
   const py=calcProjectedYearly(scope==='pmcc'?[]:db.trades,scope==='wheel'?[]:(db.opts||[]),today);
-  const cap=calcCapitalStats();
   // Every figure below comes from one OT_LEDGER build filtered to the More data scope
   const M=moreLedgerStats(scope,db.wheels,db.trades,db.opts||[],today);
   const wl=M.wl;
@@ -9189,40 +8905,6 @@ function renderAnalytics(){
     ${stat(fmtMoney(M.premium),'Option Income','all-time, net of buybacks',M.premium>=0?'var(--green)':'var(--red)','Realised option income, all-time: sold options that were bought back, expired or assigned, net of buybacks. Open options not counted.')}
     ${stat(py.yearly!=null?fmtMoney(py.yearly):'—','Annualised Projection',py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`,py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)',scope==='wheel'?'Wheel realised income this year — option premium, stock sales and dividends — scaled to 365 days from your first wheel trade this year, or from 1 January if you started earlier. PMCC short calls, closed LEAPs and open positions are not included.':'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.')}
   </div>`;
-
-  // ── Equity curve (cumulative premium SVG) ──
-  let cumData=[];let cum=0;
-  M.months.forEach(m=>{cum+=m.net;cumData.push({label:m.label,val:cum});});
-  const eqW=720,eqH=180,ePL=50,ePR=12,ePT=12,ePB=28;
-  const ecW=eqW-ePL-ePR,ecH=eqH-ePT-ePB;
-  const eqMax=Math.max(...cumData.map(d=>d.val),1);
-  const eqMin=Math.min(...cumData.map(d=>d.val),0);
-  const eqRange=Math.max(eqMax-eqMin,1);
-  const eqY=v=>ePT+ecH-(v-eqMin)/eqRange*ecH;
-  let eqLine='',eqArea='',eqDots='';
-  if(cumData.length>1){
-    const pts=cumData.map((d,i)=>{const x=ePL+(i/(cumData.length-1))*ecW;return{x,y:eqY(d.val)};});
-    eqLine=`<polyline points="${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')}" fill="none" stroke="var(--orange)" stroke-width="2"/>`;
-    eqArea=`<polygon points="${ePL},${eqY(0)} ${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')} ${pts[pts.length-1].x.toFixed(1)},${eqY(0)}" fill="rgba(255,90,54,0.08)"/>`;
-    eqDots=pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${cumData[i].val>=0?'var(--orange)':'var(--red)'}" stroke="var(--bg2)" stroke-width="1.5"/>`).join('');
-  }
-  let eqYTicks='';
-  const eqTickStep=Math.ceil(eqRange/4/100)*100||100;
-  for(let v=Math.floor(eqMin/eqTickStep)*eqTickStep;v<=eqMax;v+=eqTickStep){
-    const y=eqY(v);if(y<ePT||y>ePT+ecH)continue;
-    eqYTicks+=`<line x1="${ePL}" x2="${eqW-ePR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;
-    eqYTicks+=`<text x="${ePL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" fill="var(--text3)" font-size="10.8">$${v>=1000?(v/1000).toFixed(1)+'k':v}</text>`;
-  }
-  let eqXLabels='';
-  cumData.forEach((d,i)=>{
-    if(cumData.length>8&&i%2!==0&&i!==cumData.length-1)return;
-    const x=ePL+(i/(Math.max(1,cumData.length-1)))*ecW;
-    eqXLabels+=`<text x="${x.toFixed(1)}" y="${(ePT+ecH+14).toFixed(1)}" text-anchor="middle" fill="var(--text3)" font-size="9.6">${d.label}</text>`;
-  });
-  const eqSvg=`<svg width="100%" viewBox="0 0 ${eqW} ${eqH}" xmlns="http://www.w3.org/2000/svg" style="display:block">${eqYTicks}${eqArea}${eqLine}${eqDots}${eqXLabels}
-    <line x1="${ePL}" x2="${ePL}" y1="${ePT}" y2="${ePT+ecH}" stroke="#2a2d33" stroke-width="1"/>
-    <line x1="${ePL}" x2="${eqW-ePR}" y1="${eqY(0).toFixed(1)}" y2="${eqY(0).toFixed(1)}" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3 3"/>
-  </svg>`;
 
   // ── Section 2: Income Analysis (13-month chart reuse) ──
 
@@ -9411,7 +9093,7 @@ function exportCSV(){
   const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?wheelLabelDisplay(w.label,w):'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||''].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
   const csv=[hdr.join(','),...rows].join('\n');
   const suffix=q?`-${q}`:'';
-  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`wheelhouse${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`optrack${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
   a.click();URL.revokeObjectURL(a.href);
 }
 
@@ -9524,12 +9206,6 @@ function fillRollSelect(selId,wheelId,excludeId){
   const sel=document.getElementById(selId);if(!sel)return;
   const rows=(db.trades||[]).filter(t=>t&&t.wheelId===wheelId&&t.id!==excludeId).sort((a,b)=>String(b.entered||'').localeCompare(String(a.entered||'')));
   sel.innerHTML='<option value="">Choose a trade</option>'+rows.map(t=>{const k=t.strike?` $${fmt2(t.strike).replace(/\.00$/,'')}`:'';const when=t.entered?` · ${fmtDateShort(t.entered)}`:'';return `<option value="${esc(t.id)}">${esc((t.action||'')+k+when)}</option>`;}).join('');
-}
-function linkWheelRoll(trade,fromId){
-  const from=(db.trades||[]).find(t=>t.id===fromId);if(!from||from.id===trade.id)return;
-  const rid=from.rollId||('roll_'+uid());
-  trade.rollId=rid;
-  if(from.rollId!==rid){from.rollId=rid;_saveTrade(from);}
 }
 function fillLeapRollSelect(leap){
   const sel=document.getElementById('pcc-roll-from');if(!sel||!leap)return;
@@ -10585,7 +10261,6 @@ window.deleteTrade = deleteTrade;
 window.deleteTradeFromModal = deleteTradeFromModal;
 window.markExpiredFromModal = markExpiredFromModal;
 window.saveTrade = saveTrade;
-window.savePrice = savePrice;
 window.switchPasteTab = switchPasteTab;window.fillRollSelect = fillRollSelect;
 window.toggleWheelPick = toggleWheelPick;window.chooseWheelPick = chooseWheelPick;
 window.parsePaste = parsePaste;
