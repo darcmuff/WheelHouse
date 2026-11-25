@@ -21,7 +21,7 @@ const S = new Function(withLedger(
   extractConst('PNL_RANGES') + extractConst('PNL_DEFAULT_GRAN') + extractConst('_iso') +
   ['walkLegPairs','realisedPremium','shareRealisations','optsMonthly','monthlyExtraSources','calcMonthlyRealised',
    'realisedDaily','_bucketKey','pnlBuckets','sharesLeapsDaily','mergePnlDaily','pnlDailyForMeasure','calcMonthlyForMeasure',
-   'reportFigures'].map(extractFn).join('\n') +
+   'monthReturnCapital','averageAutoMonthReturn','reportFigures'].map(extractFn).join('\n') +
   '\nreturn {OPTS,pnlDailyForMeasure,calcMonthlyForMeasure,calcMonthlyRealised,monthlyExtraSources,reportFigures};'
 ))();
 
