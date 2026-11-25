@@ -5111,7 +5111,7 @@ async function fetchOptionMarks(force, onlyId){
     try{
       const r=await fetchOptchain(u,ls.map(OPTS.occ).join(','));
       const j=await r.json();
-      if(j.spot>0)quotes[u]=quotes[u]||{price:j.spot,prev:j.spot,change:0,pct:0,state:'DELAYED'};
+      if(j.spot>0)quotes[u]=quotes[u]||{price:j.spot,prev:j.spot,change:null,pct:null,state:'DELAYED'};
       ls.forEach(l=>{
         // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
         const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
@@ -5234,7 +5234,7 @@ function renderRotationMini(wheel){
     detail='Waiting for a put';
   }
   const priceH=rawP!=null
-    ?`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${rawP.toFixed(2)}${chg!=null?` <span style="color:${chgColor}">${chg>=0?'▲':'▼'}${Math.abs(chgPct).toFixed(2)}%</span> <span class="lc-nw" style="color:var(--text3);font-weight:480">today</span>`:''}</span>`
+    ?`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${rawP.toFixed(2)}${quoteChangeReady(chg,chgPct)?` <span style="color:${chgColor}">${chg>=0?'▲':'▼'}${Math.abs(chgPct).toFixed(2)}%</span> <span class="lc-nw" style="color:var(--text3);font-weight:480">today</span>`:''}</span>`
     :pricePendingHtml(wheel.ticker,'lc-spot');
   const pnlH=`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span class="${colorN(m.realisedPnL)}">${fmtMoney(m.realisedPnL)}</span> <span style="color:var(--text3);font-weight:480">realised</span></span>`;
   return`<div class="rotation-window wc rot-mini-bar ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" data-ticker="${esc(wheel.ticker||'')}" style="--wc-bg:${wcBg(wheel.ticker)};${isHidden?'opacity:.5':''}">
@@ -5690,7 +5690,7 @@ function renderRotationWindow(wheel){
   const headerPriceHtml=rawP!=null
     ?`<span class="rot-header-price" style="flex-direction:row;align-items:baseline;gap:0.375rem">
         <span style="color:var(--silver);font-size:0.8125rem;font-weight:480">$${rawP.toFixed(2)}</span>
-        ${chg!=null?`<span style="color:${chgColor};font-size:0.825rem;font-weight:480">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
+        ${quoteChangeReady(chg,chgPct)?`<span style="color:${chgColor};font-size:0.825rem;font-weight:480">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
       </span>`
     :pricePendingHtml(wheel.ticker);
   const shares=(m.sharesHeld>0?m.sharesHeld:0)+' shares';
@@ -6011,6 +6011,7 @@ function isUsMarketOpen(){
     return mins>=570&&mins<960;
   }catch(e){return true;}
 }
+function quoteChangeReady(chg,chgPct){return chg!=null&&chgPct!=null;}
 function demoSamplePriceBadge(short){
   const label=short?'Sample':'Sample prices';
   return`<span class="rot-badge closed demo-sample-badge" style="color:var(--text3);border-color:rgba(91,93,98,.35);background:rgba(91,93,98,.1)">${label}</span>`;
@@ -6030,7 +6031,8 @@ function liveBadgeHtml(sym,open){
   if(APP_DEMO&&!isUsMarketOpen()){
     return`<span class="live-desk">${demoSamplePriceBadge(false)}</span><span class="live-phone">${demoSamplePriceBadge(true)}</span>`;
   }
-  return`<span class="rot-badge open live-desk">● Live</span><span class="live-phone">${quoteLiveBadge(sym,true)}</span>`;
+  const badge=quoteLiveBadge(sym,open);
+  return`<span class="live-desk">${badge}</span><span class="live-phone">${badge}</span>`;
 }
 function tradeRowPhoneCard(p){
   const mid=xs=>xs.filter(Boolean).join('<span class="tr-dot">·</span>');
@@ -10162,31 +10164,6 @@ async function doSignOut(){
 // ════════════════════════════════════════════════════════
 // MASTER SWITCH — nothing runs until Firebase confirms auth
 // ════════════════════════════════════════════════════════
-async function migrateLocalStorage(userId) {
-  try {
-    const raw = localStorage.getItem('wheel_tracker_v7');
-    if (!raw) return;
-    const blob = JSON.parse(raw);
-    if (!blob || (!blob.wheels && !blob.trades)) return;
-    console.log('Migrating localStorage data to Firestore...');
-    const writes = [];
-    (blob.wheels || []).forEach(w => {
-      if (w && w.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'wheels', w.id), w));
-    });
-    (blob.trades || []).forEach(t => {
-      if (t && t.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'trades', t.id), t));
-    });
-    (blob.opts || []).forEach(l => {
-      if (l && l.id) writes.push(setDoc(doc(_fsDb, 'users', userId, 'optlegs', l.id), l));
-    });
-    await Promise.all(writes);
-    localStorage.removeItem('wheel_tracker_v7');
-    console.log('Migration complete — localStorage cleared.');
-  } catch(e) {
-    console.error('Migration failed:', e);
-  }
-}
-
 // ── Demo boot: made-up trades from demo.js, Pro features on, prices made up locally (no API calls). ──
 function demoBoot(){
   window._authResolved=true;_confirmedUid=null;
@@ -10269,6 +10246,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
         const oldDb=JSON.parse(localData);
         for(const w of (oldDb.wheels||[])){if(w&&w.id)await setDoc(doc(_fsDb,'users',user.uid,'wheels',w.id),w);}
         for(const t of (oldDb.trades||[])){if(t&&t.id)await setDoc(doc(_fsDb,'users',user.uid,'trades',t.id),t);}
+        for(const l of (oldDb.opts||[])){if(l&&l.id)await setDoc(doc(_fsDb,'users',user.uid,'optlegs',l.id),l);}
         localStorage.removeItem('wheel_tracker_v7');
         console.log('Migration successful. localStorage cleared.');
       }catch(err){console.error('Migration failed:',err);}
