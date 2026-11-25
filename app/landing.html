@@ -144,6 +144,8 @@ table{width:100%;border-collapse:collapse;background:var(--card);border:1px soli
 .price{background:var(--card);border:0;border-radius:12px;padding:1.5rem;box-shadow:var(--shadow)}.price .amt{font-size:2rem;font-weight:840}.price .amt span{font-size:1rem;color:var(--text3);font-weight:480}.price.v2a .small{color:rgba(255,255,255,.88)}.price.v2a .amt,.price.v2a .amt span{color:#fff}.price.v2a .amt span{opacity:.88}.price.v2a .btn.g{background:#fff}
 .bot{margin:3.5rem 0 0;background:var(--card);border:1px solid #FF5A36;border-radius:12px;padding:1.35rem 1.5rem;scroll-margin-top:1.25rem;box-shadow:none}
 .bot .k{font-size:.75rem;font-weight:840;color:var(--brand-orange);text-transform:uppercase;letter-spacing:.08em}
+.bot-get{display:inline-block;margin-top:1.25rem;border-radius:6px;font-family:Urbanist,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--brand-orange);color:#fff}
+.bot-get:hover{background:var(--brand-orange-hover)}
 .bot h2{font-size:1.45rem;line-height:1.25;margin:.35rem 0 .5rem;letter-spacing:-.01em;font-weight:840}
 .bot p{margin:0;color:var(--text2);max-width:46rem}
 .nfa{background:#FFF8E6;border:1px solid #F0D58A;border-radius:12px;padding:1rem 1.25rem;font-size:.95rem;color:#5c4a12;margin-top:4rem}.nfa a{color:#7a2a12}
@@ -166,8 +168,8 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
 
   <section class="hero">
     <div class="hero-copy">
-      <h1>An option wheel tracker that tells you the truth.</h1>
-      <p>Track the wheel and LEAPs without linking your broker. <span data-brand="name">OpTrack</span> only counts money you've actually banked, so the numbers you see are the numbers you made.</p>
+      <h1>Stop typing your trades in.</h1>
+      <p>OpTrack Bot reads your broker emails and enters your trades for you, every weekday, while <span data-brand="name">OpTrack</span> tracks your wheel and LEAPs honestly.</p>
       <div class="cta" id="ways-in"><a class="btn p" href="/app/?signup=1" id="start-free" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/demo" id="try-demo" onclick="otCount('/demo')">Try the demo<small>No sign-up</small></a><a class="btn g" href="/app/?signup=1&checkout=monthly" id="go-pro" onclick="otCount('/go-pro')">Go Pro<small>Paid plan</small></a></div>
       <div class="small" id="ways-note">Start free creates an account. No card. The demo needs no sign-up. Nothing to download: it runs in your web browser.</div>
     </div>
@@ -198,7 +200,8 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
   <section class="bot" id="grokbot">
     <div class="k">Hands-free entry</div>
     <h2>Automatic trade inputs with Grok Bot, no brokerage link needed.</h2>
-    <p>Set this up in your own Grok Bot. Once a week it reads your new broker trades, through the Plaid connection you linked yourself, and types them into OpTrack the same way you would. OpTrack never receives your broker credentials.</p>
+    <p>Set this up in your own Grok Bot. Every weekday it reads your new broker trades, through the Plaid connection you linked yourself, and types them into OpTrack the same way you would. OpTrack never receives your broker credentials.</p>
+    <a class="btn p bot-get" href="https://x.ai/bot/o3uycIpqy16pM04-Yh1AW" target="_blank" rel="noopener">Get OpTrack Bot</a>
   </section>
 
   <h2>And the rest</h2>

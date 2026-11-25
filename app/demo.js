@@ -123,7 +123,7 @@
     var c5=L({g:6,underlying:'MSFT',side:'short',parentLeapId:msft.id,strike:480,expiry:fri(-62),entryPrice:3.80,entryDate:add(-90),status:'closed',closePrice:1.10,closeDate:add(-70),closeFees:0.65});
     var c6=L({g:7,underlying:'MSFT',side:'short',parentLeapId:msft.id,strike:485,expiry:fri(-28),entryPrice:4.10,entryDate:add(-50),status:'expired',closePrice:0,closeDate:fri(-28)});
     var c7=L({g:8,underlying:'MSFT',side:'short',parentLeapId:msft.id,strike:490,expiry:fri(9),entryPrice:4.30,entryDate:add(-20),status:'closed',closePrice:1.25,closeDate:add(0),closeFees:0.65});
-    var tsla=L({g:10,underlying:'TSLA',strike:250,expiry:third(-8),entryPrice:48.00,entryDate:add(-220),status:'closed',closePrice:36.00,closeDate:add(-40),closeFees:0.65});
+    var tsla=L({g:10,underlying:'TSLA',strike:250,expiry:third(-8),entryPrice:48.00,entryDate:add(-400),status:'closed',closePrice:36.00,closeDate:add(-300),closeFees:0.65});
     if(/^dev--/.test(location.hostname)){
       wheels.push({id:'dw-nvda',ticker:'NVDA',label:'',company:'Nvidia',status:'open',lastPrice:null,notes:'Test wheel (dev only)',createdAt:add(-150),sortOrder:0});
       var n1=fri(-136),n2=fri(-115),n3=fri(-94),n4=fri(-80),n5=fri(-59),n6=fri(-38),n7=fri(-17);
