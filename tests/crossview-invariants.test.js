@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn, LEDGER_SRC } = require('./extract');
 
-const NAMES = [
+const NAMES = ['feePctLabel',
   'shareRealisations', 'optsMonthly', 'monthlyExtraSources', 'calcMonthlyRealised', 'homeFigures',
   'realisedDaily', 'sharesLeapsDaily', 'mergePnlDaily', 'pnlDailyForMeasure', 'calcMonthlyForMeasure',
   'earliestTradeDate', 'calcProjectedYearly', 'calcWinLoss', 'moreLedgerStats',
@@ -309,7 +309,7 @@ test('Fee %: one ledger denominator (gross premium on closed trades in the scope
   const analytics = extractFn('renderAnalytics');
   assert.match(analytics, /const feeBase=M\.grossIn;/);
   assert.doesNotMatch(analytics, /s\.premiumCredits|legCredits/);
-  assert.match(analytics, /% of closed premium/);
+  assert.match(analytics, /feePctLabel\(feeAmt,feeBase\)\+' of closed premium'/);
   const db = fixture();
   // An open CSP and an open short call must not change any scope's denominator
   db.trades.push(T('o1', 'w1', 'SOFI', 'CSP', '2026-11-15', 999, { strike: 14, expiry: '2026-12-19' }));
@@ -325,7 +325,7 @@ test('Total Fees and Fee %: closed scoped ledger events only; an open trade with
   const analytics = extractFn('renderAnalytics');
   assert.match(analytics, /const feeAmt=M\.fees;/);
   assert.match(analytics, /const feeBase=M\.grossIn;/);
-  assert.match(analytics, /'Total Fees',feePct\.toFixed\(1\)\+'% of closed premium','var\(--text2\)','Commissions and regulatory fees across closed trades'\)/);
+  assert.match(analytics, /'Total Fees',feePctLabel\(feeAmt,feeBase\)\+' of closed premium','var\(--text2\)','Commissions and regulatory fees across closed trades'\)/);
   const withFees = () => {
     const db = fixture();
     const f = { a: 0.65, b: 0.65, c: 0.65, d: 0.65, e: 1, g: 0.65, h: 1 };
@@ -348,4 +348,39 @@ test('Total Fees and Fee %: closed scoped ledger events only; an open trade with
   db.trades.push(T('o1', 'w1', 'SOFI', 'CSP', '2026-11-15', 999, { strike: 14, expiry: '2026-12-19', fees: 9.99 }));
   db.opts.push({ id: 'C9', parentLeapId: 'L2', side: 'short', type: 'C', underlying: 'SOFI', strike: 25, qty: 1, entryPrice: 7.77, entryDate: '2026-11-15', expiry: '2026-12-19', status: 'open', fees: 9.99, closeFees: 0 });
   assert.deepStrictEqual(figs(db), base);
+});
+
+test('Fee %: $0 closed option premium renders "—", never NaN / Infinity, in every scope', () => {
+  const analytics = extractFn('renderAnalytics');
+  assert.match(analytics, /feePctLabel\(feeAmt,feeBase\)\+' of closed premium'/);
+  assert.doesNotMatch(analytics, /feePct\.toFixed/);
+  const S0 = sandbox({ wheels: [], trades: [], opts: [] });
+  assert.strictEqual(S0.feePctLabel(0, 0), '—');
+  assert.strictEqual(S0.feePctLabel(5, 0), '—');
+  assert.strictEqual(S0.feePctLabel(5, -10), '—');
+  assert.strictEqual(S0.feePctLabel(5, NaN), '—');
+  assert.strictEqual(S0.feePctLabel(5, Infinity), '—');
+  assert.strictEqual(S0.feePctLabel(NaN, 100), '—');
+  assert.strictEqual(S0.feePctLabel(undefined, 100), '0.0%');
+  assert.strictEqual(S0.feePctLabel(1.3, 250), '0.5%');
+  // Books with fees but no closed option premium: empty, open trades only, and a closed LEAP with no calls (fees, no premium)
+  const books = [
+    { wheels: [], trades: [], opts: [] },
+    { wheels: [{ id: 'w1', ticker: 'SOFI', status: 'open' }],
+      trades: [T('o1', 'w1', 'SOFI', 'CSP', '2026-11-15', 120, { strike: 14, expiry: '2026-12-19', fees: 0.65 })],
+      opts: [{ id: 'C9', side: 'short', type: 'C', underlying: 'SOFI', strike: 25, qty: 1, entryPrice: 1, entryDate: '2026-11-15', expiry: '2026-12-19', status: 'open', fees: 0.65, closeFees: 0 }] },
+    { wheels: [], trades: [],
+      opts: [{ id: 'L9', side: 'long', type: 'C', underlying: 'SOFI', strike: 10, qty: 1, entryPrice: 5, entryDate: '2026-03-02', expiry: '2028-01-21', status: 'closed', closePrice: 6, closeDate: '2026-11-05', fees: 0.65, closeFees: 0.65 }] },
+  ];
+  books.forEach((db, i) => ['all', 'wheel', 'pmcc'].forEach(sc => {
+    const S = sandbox(db), M = S.moreLedgerStats(sc, db.wheels, db.trades, db.opts, TODAY);
+    assert.strictEqual(M.grossIn, 0, `book ${i} ${sc}`);
+    assert.ok(Number.isFinite(M.fees), `book ${i} ${sc}`);
+    const label = S.feePctLabel(M.fees, M.grossIn);
+    assert.strictEqual(label, '—', `book ${i} ${sc}`);
+    assert.doesNotMatch(label, /NaN|Infinity/);
+  }));
+  // The closed LEAP's fees still count in Total Fees (all closed trades), just with no % to show
+  const S = sandbox(books[2]);
+  assert.strictEqual(S.moreLedgerStats('pmcc', [], [], books[2].opts, TODAY).fees, 1.3);
 });

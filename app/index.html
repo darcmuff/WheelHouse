@@ -8908,6 +8908,12 @@ function moreRiskFigures(trades,legs){
   const peakLeap=rd(legs.filter(l=>l.side==='long'&&!l.parentLeapId).reduce((a,l)=>Math.max(a,OPTS.legPnL(l).costBasis),0));
   return{peakCsp,peakLeap};
 }
+// Fee % label: fees ÷ closed option premium, '—' when there is no closed premium (never NaN / Infinity)
+function feePctLabel(fees,base){
+  const f=fees==null?0:+fees,b=+base;
+  if(!(b>0)||!isFinite(b)||!isFinite(f))return'—';
+  return(f/b*100).toFixed(1)+'%';
+}
 function moreLedgerStats(scope,wheels,trades,legs,today){
   today=String(today||new Date().toISOString().slice(0,10)).slice(0,10);
   wheels=wheels||[];trades=trades||[];legs=(legs||[]).filter(l=>l&&!l.demo);
@@ -9251,7 +9257,6 @@ function renderAnalytics(){
   const feeAmt=M.fees;
   // Same denominator in every scope: gross premium on closed trades in the scope (OT_LEDGER income events), never open credits
   const feeBase=M.grossIn;
-  const feePct=feeBase>0?feeAmt/feeBase*100:0;
   const peak=scope==='wheel'?R.peakCsp:scope==='pmcc'?R.peakLeap:Math.max(R.peakCsp,R.peakLeap);
   const riskStats=`<div class="a-stat-grid">
     ${(c=>scope==='wheel'
@@ -9260,7 +9265,7 @@ function renderAnalytics(){
       ?stat(fmtMoney(c.leaps),'Current Exposure',OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),'var(--text)','Capital at work in LEAPs, same as Home: what you paid for open LEAPs. Short calls written against them need no extra capital.')
       :stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),'var(--text)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
     ${stat(fmtMoney(peak),'Peak Exposure',scope==='wheel'?'highest single CSP':scope==='pmcc'?'highest single LEAP':'highest single CSP or LEAP','var(--text2)',scope==='wheel'?'Largest single cash-secured put notional ever opened. Your peak capital requirement.':scope==='pmcc'?'Most you have paid for a single LEAP, open or closed. Your peak capital requirement.':'Largest single commitment ever: a cash-secured put notional or what you paid for one LEAP, whichever is bigger.')}
-    ${stat(fmtMoney(feeAmt),'Total Fees',feePct.toFixed(1)+'% of closed premium','var(--text2)','Commissions and regulatory fees across closed trades')}
+    ${stat(fmtMoney(feeAmt),'Total Fees',feePctLabel(feeAmt,feeBase)+' of closed premium','var(--text2)','Commissions and regulatory fees across closed trades')}
     ${scope==='pmcc'
       ?stat(String(OL.shortCount),'Open Short Calls','against '+OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),OL.shortCount>0?'var(--orange)':'var(--text3)','Short calls still open, written against your LEAPs (and any short options not tied to a LEAP).')
       :stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
