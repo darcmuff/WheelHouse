@@ -6740,19 +6740,21 @@ function renderStatsOverview(){
     </div>`;
   }
 
+  // k1 and k3 share one total and one day count (from the first trade this year, or 1 January)
   const scopeName=scope==='wheel'?'Wheel ':scope==='pmcc'?'LEAPs & PMCC ':'';
-  const allDay=pyAll.days>0?pyAll.total/pyAll.days:null,pmccDay=pyPmcc.yearly!=null&&pyPmcc.days>0?pyPmcc.total/pyPmcc.days:null;
-  const k1=scope==='wheel'
-    ?kpi('Wheel Realised P&L '+new Date().getFullYear(),fmtMoney(ytd.net),`${fmtMoney(ytd.daily)}/day · ${fmtMoney(ytd.weekly)}/wk`,ytd.net>=0?'var(--green)':'var(--red)',true,'Total realised income from 1st January this year. Includes option premium, stock sales, and dividends. Does not include unrealised gains on open stock positions.')
+  const pyDay=py.yearly!=null&&py.days>0?py.total/py.days:null;
+  const k1Tip=scope==='wheel'
+    ?'Wheel total realised this year: option income, share sales and dividends. Per day and per week use the same days as Projected Yearly. Open positions are not included.'
     :scope==='pmcc'
-    ?kpi('LEAPs & PMCC Realised P&L '+new Date().getFullYear(),fmtMoney(pyPmcc.total),pmccDay!=null?`${fmtMoney(pmccDay)}/day · ${fmtMoney(pmccDay*7)}/wk`:'no trades yet',pyPmcc.total>=0?'var(--green)':'var(--red)',true,'LEAPs & PMCC total realised this year: short-call option income and closed LEAPs. Per day and per week use the same days as Projected Yearly. Open positions are not included.')
-    :kpi('Realised P&L '+new Date().getFullYear(),fmtMoney(pyAll.total),allDay!=null?`${fmtMoney(allDay)}/day · ${fmtMoney(allDay*7)}/wk`:'no trades yet',pyAll.total>=0?'var(--green)':'var(--red)',true,'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends. Open positions are not included.');
+    ?'LEAPs & PMCC total realised this year: short-call option income and closed LEAPs. Per day and per week use the same days as Projected Yearly. Open positions are not included.'
+    :'Total realised this year: option income from wheels and PMCC short calls, share sales, dividends and closed LEAPs. Per day and per week use the same days as Projected Yearly. Open positions are not included.';
+  const k1=kpi(scopeName+'Realised P&L '+new Date().getFullYear(),fmtMoney(py.total),pyDay!=null?`${fmtMoney(pyDay)}/day · ${fmtMoney(pyDay*7)}/wk`:'no trades yet',py.total>=0?'var(--green)':'var(--red)',true,k1Tip);
   const moCompare=M.hasMonths?M.month-M.lastMonth:null;
   const k2Tip=scope==='wheel'
-    ?'Wheel option income this calendar month: premium kept on wheel puts and calls that closed, expired or were assigned, minus buybacks.'
+    ?'Closed trades, net of buybacks: wheel option income this calendar month from puts and calls that were bought back, expired or assigned. Not gross credits opened.'
     :scope==='pmcc'
-    ?'PMCC option income this calendar month: premium kept on short calls that closed or expired, minus buybacks. Closed LEAPs are not included.'
-    :'Option income this calendar month across wheels and PMCC short calls: premium kept minus buybacks. Same figure as Options P&L this month on Home. Closed LEAPs and share sales are not included.';
+    ?'Closed trades, net of buybacks: PMCC option income this calendar month from short calls that were bought back or expired. Not gross credits opened. Closed LEAPs are not included.'
+    :'Closed trades, net of buybacks: option income this calendar month across wheels and PMCC short calls. Not gross credits opened. Same figure as Options P&L this month on Home. Closed LEAPs and share sales are not included.';
   const k2=kpi('Option Income This Month',M.hasMonths?fmtMoney(M.month):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',M.hasMonths&&M.month<0?'var(--red)':'var(--green)',false,k2Tip);
   const pySub=py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`;
   const pyCol=py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)';
@@ -6796,6 +6798,31 @@ function renderStatsOverview(){
       ${(()=>{const u=rotationShareStats(w,db.trades,_priceOf).unrealised;return`<span style="text-align:right;white-space:nowrap" class="${u==null?'m':colorN(u)}">${u==null?'no price':u===0&&m.sharesHeld<=0?'—':fmtMoney(u)}</span>`;})()}
     </div>`;
   }).join('')||`<div style="padding:2rem 1rem;text-align:center;color:var(--text3);font-size:0.75rem">No open positions</div>`;
+
+  // ── Open LEAPs & short calls (LEAPs & PMCC scope, and All) ──
+  const OL=openLeapPositions(db.opts||[],today);
+  const leapCols='minmax(4.375rem,0.8fr) minmax(7.5rem,1.3fr) minmax(6.875rem,1.2fr) minmax(5.625rem,1fr) minmax(5rem,1fr)';
+  const leapHdr=`<div class="d-table-hdr" style="grid-template-columns:${leapCols};gap:0.75rem">
+    <span>Ticker</span><span>Position</span><span>Strike / DTE</span><span>Cost / Credit</span><span style="text-align:right">Unrealised</span>
+  </div>`;
+  const leapLine=(r,what,sub)=>{
+    const dCol=r.dte===null?'var(--text3)':r.dte<=3?'var(--red)':'var(--text3)';
+    return`<div class="d-table-row${sub?' ol-sub':''}" style="grid-template-columns:${leapCols};gap:0.75rem;cursor:pointer" onclick="goToLeap('${esc(sub&&r.leg.parentLeapId?r.leg.parentLeapId:r.id)}')" title="Go to LEAP">
+      <span style="font-weight:720;color:var(--orange)">${sub?'':esc(r.ticker)}</span>
+      <span${sub?' style="color:var(--text3)"':''}>${sub?'↳ ':''}${what}</span>
+      <span class="t2-nw">$${fmt2(r.strike)}${r.dte!==null?`<span style="color:${dCol};font-weight:720;margin-left:0.375rem">/ ${r.dte}d</span>`:''}</span>
+      <span class="t2-nw">${fmtMoney(r.cost)}</span>
+      <span style="text-align:right;white-space:nowrap" class="${r.unrealised==null?'m':colorN(r.unrealised)}">${r.unrealised==null?'no mark':fmtMoney(r.unrealised)}</span>
+    </div>`;};
+  const leapRows=OL.leaps.map(r=>leapLine(r,'LEAP call'+(r.shorts.length?` · ${r.shorts.length} short call${r.shorts.length!==1?'s':''}`:''),false)+r.shorts.map(x=>leapLine(x,'short call',true)).join('')).join('')
+    +OL.other.map(x=>leapLine(x,'short '+(x.type==='P'||x.type==='put'?'put':'call')+' (no LEAP)',false)).join('');
+  const leapPanel=`<div class="d-panel">
+      <div class="d-panel-hdr">
+        <span class="d-panel-title">Open LEAPs &amp; Short Calls</span>
+        <span class="d-panel-count">${OL.leaps.length} LEAP${OL.leaps.length!==1?'s':''} · ${OL.shortCount} short call${OL.shortCount!==1?'s':''}</span>
+      </div>
+      <div class="d-panel-body">${leapRows?leapHdr+leapRows:`<div style="padding:2rem 1rem;text-align:center;color:var(--text3);font-size:0.75rem">No open LEAPs or short calls.</div>`}</div>
+    </div>`;
 
   // ── Recent activity ──
   const recCols='minmax(4.6875rem,0.9fr) minmax(4.0625rem,0.7fr) minmax(3.25rem,0.5fr) minmax(4.0625rem,0.7fr) minmax(4.6875rem,0.9fr) minmax(5.625rem,1.2fr) minmax(4.375rem,0.8fr)';
@@ -6846,14 +6873,15 @@ function renderStatsOverview(){
     <!-- Data Health -->
     ${healthPanel}
 
-    <!-- Open Positions — full width -->
-    <div class="d-panel">
+    <!-- Open Positions — full width; follows the scope (wheels, LEAPs & short calls, or both) -->
+    ${scope!=='pmcc'?`<div class="d-panel">
       <div class="d-panel-hdr">
-        <span class="d-panel-title">Open Positions</span>
+        <span class="d-panel-title">${scope==='wheel'?'Open Positions':'Open Wheels'}</span>
         <span class="d-panel-count">${openWheels.length} active</span>
       </div>
       <div class="d-panel-body">${posHdr}${posRows}</div>
-    </div>
+    </div>`:''}
+    ${scope!=='wheel'?leapPanel:''}
 
   </div>`;
 }
@@ -7428,14 +7456,17 @@ function reportPeriods(rows,today,winItems){
   });
 }
 function reportPeriodLine(p){
-  const empty=!p.closed&&!p.options&&!p.collected&&!p.wheel&&!p.leaps;
+  const realised=p.realised!=null?p.realised:p.options;
+  const empty=!p.closed&&!p.options&&!p.collected&&!p.wheel&&!p.leaps&&!realised;
   if(empty)return p.label+': $0. No closed trades.';
   const trades=p.closed?p.closed+' closed trade'+(p.closed===1?'':'s')+', win rate '+p.wr+'%':'No closed trades';
-  const split=(p.wheel||p.leaps)?' (wheel '+reportMoney(p.wheel)+', LEAPs '+reportMoney(p.leaps)+')':'';
-  const pnl=p.options?reportMoney(p.options):'$0';
+  const inc=p.income!=null?p.income:p.premium;
+  const wheel=p.wheelOnly!=null?p.wheelOnly:inc,pmcc=p.pmcc!=null?p.pmcc:0;
+  const split=(wheel||pmcc)?' (wheel '+reportMoney(wheel)+', PMCC calls '+reportMoney(pmcc)+')':'';
   const prem=p.collected?reportMoney(p.collected):'$0';
-  return p.label+': '+pnl+' options P&L'+split+', '+trades+', premium collected '+prem+'.';
+  return p.label+': '+(inc?reportMoney(inc):'$0')+' option income'+split+', '+(realised?reportMoney(realised):'$0')+' total realised, '+trades+', premium collected '+prem+'.';
 }
+
 // Display-only: same closed sold-option outcomes as calcWinLoss, with the close date so periods can be bucketed.
 // Does not change calcWinLoss. Long LEAPs are excluded, matching Home.
 function reportWinLossItems(wheels,trades,legs){
@@ -7461,36 +7492,36 @@ function reportLegKind(l){
   return(side+what+strike).trim();
 }
 function reportSentences(F){
-  if(!F||F.empty)return['No realised options P&L yet. Log a trade and it will show up here.'];
+  if(!F||F.empty)return['No realised P&L yet. Log a trade and it will show up here.'];
+  // Same two terms as Home and More data: Option income (closed sold options, net of buybacks) and Total realised (adds closed LEAPs, share sales and dividends)
   const out=[];
   const span=F.months===1?`One month, ${reportMonthName(F.firstYm)}.`:`${F.months} months, ${reportMonthName(F.firstYm)} to ${reportMonthName(F.lastYm)}.`;
-  out.push(span+' Realised options P&L, wheels and LEAPs.');
-  let opt=`Options P&L: ${reportMoney(F.options)}, about ${reportMoney(F.optionsAvg)} a month`;
-  if(F.completeMonths>0&&F.completeMonths!==F.months&&F.optionsCompleteAvg!=null)
-    opt+=`, or ${reportMoney(F.optionsCompleteAvg)} over ${F.completeMonths} complete month${F.completeMonths===1?'':'s'}`;
-  out.push(opt+'.');
+  out.push(span+' Realised only. Option income is wheel and PMCC short premium net of buybacks; total realised adds closed LEAPs, share sales and dividends.');
+  let inc=`Option income: ${reportMoney(F.premium)}, about ${reportMoney(F.premiumAvg)} a month`;
+  if(F.completeMonths>0&&F.completeMonths!==F.months&&F.premiumCompleteAvg!=null)
+    inc+=`, or ${reportMoney(F.premiumCompleteAvg)} over ${F.completeMonths} complete month${F.completeMonths===1?'':'s'}`;
+  out.push(inc+'.');
+  out.push(`Option income this month so far: ${reportMoney(F.thisMonth)}.`);
   if(F.ret){
     const pct=(F.ret.pct>=0?'+':'−')+Math.abs(F.ret.pct).toFixed(2)+'%';
     const of=F.base==='account'?'your account size':(reportMoney(F.capital).replace(/^[+-]/,'')+' capital at work');
-    let s=`Monthly return on short premium is ${pct} of ${of}`;
+    let s=`Monthly return on option income is ${pct} of ${of}`;
     if(F.target>0)s+=F.ret.ok?`, meeting your ${F.target}% target`:` against your ${F.target}% target`;
     s+='.';
     out.push(s);
   }else{
     out.push('Capital at work is the cost basis of open puts, shares and LEAPs. A monthly return percentage is not shown because there is no capital figure to measure against.');
   }
-  let prem=`Short premium alone came to ${reportMoney(F.premium)}, about ${reportMoney(F.premiumAvg)} a month`;
-  if(F.completeMonths>0&&F.completeMonths!==F.months&&F.premiumCompleteAvg!=null)
-    prem+=`, or ${reportMoney(F.premiumCompleteAvg)} over complete months`;
-  out.push(prem+'.');
+  out.push(`Total realised: ${reportMoney(F.realised)}, about ${reportMoney(F.realisedAvg)} a month.`);
   if(F.loser){
     const when=F.loser.date?`, closed ${typeof fmtDate==='function'?fmtDate(F.loser.date):F.loser.date}`:'';
     const tk=F.loser.ticker?F.loser.ticker+' ':'';
-    out.push(`Your biggest losing closed option is ${tk}${reportLegKind(F.loser)}${when}, at ${reportMoney(F.loser.realized)}. Without that trade, options P&L is ${reportMoney(F.optionsEx)}.`);
+    out.push(`Your biggest losing closed option is ${tk}${reportLegKind(F.loser)}${when}, at ${reportMoney(F.loser.realized)}. Without that trade, total realised is ${reportMoney(F.realisedEx)}.`);
   }
-  if(F.best&&F.worst){
-    if(F.best.ym===F.worst.ym)out.push(`That month was ${reportMonthName(F.best.ym)} at ${reportMoney(F.best.options)}.`);
-    else out.push(`Best month was ${reportMonthName(F.best.ym)} at ${reportMoney(F.best.options)}. Worst was ${reportMonthName(F.worst.ym)} at ${reportMoney(F.worst.options)}.`);
+  const B=F.bestIncome,W=F.worstIncome;
+  if(B&&W){
+    if(B.ym===W.ym)out.push(`That month's option income was ${reportMoney(B.premium)}.`);
+    else out.push(`Best month for option income was ${reportMonthName(B.ym)} at ${reportMoney(B.premium)}. Worst was ${reportMonthName(W.ym)} at ${reportMoney(W.premium)}.`);
   }
   return out;
 }
@@ -7513,7 +7544,7 @@ function renderReport(){
   return`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>Report</h1><a onclick="switchView('analytics')">More data →</a></div>
   <div class="rep-wrap"><div class="rep-card" id="report-text" data-copy="${esc(copy).replace(/\n/g,'&#10;')}">${paras}${periodHtml}
     <button type="button" class="btn btn-ghost rep-copy" id="report-copy" onclick="copyReport()">Copy summary</button>
-    <p class="rep-note">Same realised figures as Home. Short premium and the monthly return are wheel and covered calls, not closed LEAPs. Closed-trade counts and win rate use the same sold-option rule as Home. Nothing is sent off this device.</p>
+    <p class="rep-note">Same realised figures as Home and More data. Option income (and the monthly return) is wheel and PMCC short premium net of buybacks; total realised adds closed LEAPs, share sales and dividends. Closed-trade counts and win rate use the same sold-option rule as Home. Nothing is sent off this device.</p>
   </div></div>`;
 }
 function copyReport(){
@@ -8855,6 +8886,31 @@ function setMoreScope(k){
 // More data figures, all from one OT_LEDGER build filtered to the scope ('all' | 'wheel' | 'pmcc'). Pure: no db.
 // Option income = closed sold options (wheel puts/calls + PMCC and other short calls), net of buybacks.
 // Total realised = option income + share sales + dividends + closed LEAPs. AROC is capital×days weighted.
+// Open LEAPs with their open short calls, plus open short options not written against an open LEAP. Pure (OPTS only).
+function openLeapPositions(legs,today){
+  today=String(today||new Date().toISOString().slice(0,10)).slice(0,10);
+  const open=(legs||[]).filter(l=>l&&!l.demo&&l.status==='open');
+  const dte=e=>e?Math.round((Date.parse(e+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/864e5):null;
+  const row=l=>{const p=OPTS.legPnL(l);return{leg:l,id:l.id,ticker:l.underlying||l.und||l.ticker||'',type:l.type,strike:+l.strike||0,expiry:l.expiry||'',dte:dte(l.expiry),cost:p.costBasis,unrealised:p.unrealized};};
+  const leaps=open.filter(l=>l.side==='long'&&!l.parentLeapId);
+  const ids=new Set(leaps.map(l=>l.id));
+  const shorts=open.filter(l=>l.side==='short');
+  const byExp=(a,b)=>a.expiry.localeCompare(b.expiry)||a.ticker.localeCompare(b.ticker);
+  const rows=leaps.map(l=>({...row(l),shorts:shorts.filter(s=>s.parentLeapId===l.id).map(row).sort(byExp)})).sort(byExp);
+  const other=shorts.filter(s=>!s.parentLeapId||!ids.has(s.parentLeapId)).map(row).sort(byExp);
+  return{leaps:rows,other,shortCount:shorts.length,cost:Math.round(rows.reduce((a,r)=>a+r.cost,0)*100)/100};
+}
+// Risk & Exposure inputs by source: wheel trades vs LEAP / short-call legs. Pure (OPTS only).
+function moreRiskFigures(trades,legs){
+  trades=trades||[];legs=(legs||[]).filter(l=>l&&!l.demo);
+  const rd=n=>Math.round(n*100)/100;
+  const wheelFees=rd(trades.reduce((a,t)=>a+(+t.fees||0),0));
+  const legFees=rd(legs.reduce((a,l)=>a+(+l.fees||0)+(+l.closeFees||0),0));
+  const legCredits=rd(legs.filter(l=>l.side==='short').reduce((a,l)=>a+(+l.entryPrice||0)*100*(+l.qty||0),0));
+  const peakCsp=trades.filter(t=>t.action==='CSP'&&t.strike&&t.shares).reduce((a,t)=>Math.max(a,t.strike*t.shares),0);
+  const peakLeap=rd(legs.filter(l=>l.side==='long'&&!l.parentLeapId).reduce((a,l)=>Math.max(a,OPTS.legPnL(l).costBasis),0));
+  return{wheelFees,legFees,legCredits,peakCsp,peakLeap};
+}
 function moreLedgerStats(scope,wheels,trades,legs,today){
   today=String(today||new Date().toISOString().slice(0,10)).slice(0,10);
   wheels=wheels||[];trades=trades||[];legs=(legs||[]).filter(l=>l&&!l.demo);
@@ -8930,7 +8986,7 @@ function moreLedgerStats(scope,wheels,trades,legs,today){
     aroc:split(inc),arocOpen:split(incOpen),openWheels:openWheel.size,openLeaps:legs.filter(l=>l.side==='long'&&!l.parentLeapId&&l.status==='open').length,
     eventMonths,months,sortino,maxDD,maxDDPct:peak>0?maxDD/peak*100:0,maxStreak,bestMonth,worstMonth,
     month:monthNet(ym),lastMonth:monthNet(lastYm),hasMonths:eventMonths.length>0,
-    best,bestPPD,biggestBuyback,totalOptDays:sum(inc,e=>e.daysHeld),avgLeg:inc.length?grossIn/inc.length:0,
+    best,bestPPD,biggestBuyback,totalOptDays:sum(inc,e=>e.daysHeld),avgLeg:inc.length?S.total/inc.length:0,
     dte,csp:strat(true),cc:strat(false),tickers,board,dteOf,openerOf};
 }
 function pnlCurveHtml(){
@@ -9161,8 +9217,9 @@ function renderAnalytics(){
   </tr>`).join('');
 
   // ── Section 5: Strategy Comparison ──
+  const stratTip='Closed trades, net of buybacks: option income kept on sold options that were bought back, expired or assigned. Avg DTE is days to expiry when opened; Avg PPD is option income per day held. Options still open and gross credits opened are not counted.';
   const stratBox=(title,c)=>`<div class="a-chart-box">
-      <div class="a-chart-title">${title}</div>
+      <div class="a-chart-title">${title} ${ii(stratTip)}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem">
         <div><span class="t3-xs">Closed</span><div class="fw5">${c.count}</div></div>
         <div><span class="t3-xs">Option Income</span><div class="${colorN(c.total)} fw5">${fmtMoney(c.total)}</div></div>
@@ -9190,11 +9247,24 @@ function renderAnalytics(){
   }).join('');
 
   // ── Section 6: Risk ──
+  // Risk & Exposure follows the scope: wheel trades, LEAP / short-call legs, or both
+  const R=moreRiskFigures(db.trades,db.opts||[]),OL=openLeapPositions(db.opts||[],today);
+  const k$=n=>fmtMoney(n).replace(/\.\d\d$/,'');
+  const feeAmt=scope==='wheel'?R.wheelFees:scope==='pmcc'?R.legFees:R.wheelFees+R.legFees;
+  const feeBase=scope==='wheel'?s.premiumCredits:scope==='pmcc'?R.legCredits:s.premiumCredits+R.legCredits;
+  const feePct=feeBase>0?feeAmt/feeBase*100:0;
+  const peak=scope==='wheel'?R.peakCsp:scope==='pmcc'?R.peakLeap:Math.max(R.peakCsp,R.peakLeap);
   const riskStats=`<div class="a-stat-grid">
-    ${(c=>stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),'var(--text)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
-    ${stat(fmtMoney(cap.maxCap),'Peak Exposure','highest single CSP','var(--text2)','Largest single cash-secured put notional ever opened. Your peak capital requirement.')}
-    ${stat(fmtMoney(cap.totalFees),'Total Fees',cap.feesPct.toFixed(1)+'% of gross premium','var(--text2)','All commissions and regulatory fees logged across every trade.')}
-    ${stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
+    ${(c=>scope==='wheel'
+      ?stat(fmtMoney(c.wheel),'Current Exposure','Puts '+k$(c.puts)+' · Shares '+k$(c.shares),'var(--text)','Capital at work in wheels, same as Home: open put collateral plus the cost of shares you hold.')
+      :scope==='pmcc'
+      ?stat(fmtMoney(c.leaps),'Current Exposure',OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),'var(--text)','Capital at work in LEAPs, same as Home: what you paid for open LEAPs. Short calls written against them need no extra capital.')
+      :stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),'var(--text)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
+    ${stat(fmtMoney(peak),'Peak Exposure',scope==='wheel'?'highest single CSP':scope==='pmcc'?'highest single LEAP':'highest single CSP or LEAP','var(--text2)',scope==='wheel'?'Largest single cash-secured put notional ever opened. Your peak capital requirement.':scope==='pmcc'?'Most you have paid for a single LEAP, open or closed. Your peak capital requirement.':'Largest single commitment ever: a cash-secured put notional or what you paid for one LEAP, whichever is bigger.')}
+    ${stat(fmtMoney(feeAmt),'Total Fees',feePct.toFixed(1)+'% of gross premium','var(--text2)',scope==='wheel'?'Commissions and regulatory fees logged on wheel trades.':scope==='pmcc'?'Commissions and regulatory fees logged on LEAPs and short calls, opening and closing.':'Commissions and regulatory fees logged on every wheel trade, LEAP and short call.')}
+    ${scope==='pmcc'
+      ?stat(String(OL.shortCount),'Open Short Calls','against '+OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),OL.shortCount>0?'var(--orange)':'var(--text3)','Short calls still open, written against your LEAPs (and any short options not tied to a LEAP).')
+      :stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--orange)':'var(--text3)','Total shares currently held as a result of put assignment.')}
   </div>`;
 
   // ── Section 7: Wheel Scoreboard ──
@@ -9236,7 +9306,7 @@ function renderAnalytics(){
     ${stat(M.maxStreak?M.maxStreak+' mo':'—','Win Streak','consecutive profitable months','var(--green)','Longest run of consecutive months with positive net option income.')}
     ${stat(M.bestMonth?fmtMoney(M.bestMonth.net):'—','Best Month',M.bestMonth?M.bestMonth.label:'','var(--green)','Single best calendar month by option income.')}
     ${stat(M.worstMonth?fmtMoney(M.worstMonth.net):'—','Worst Month',M.worstMonth?M.worstMonth.label:'',M.worstMonth&&M.worstMonth.net<0?'var(--red)':'var(--text2)','Worst calendar month by option income. Negative means buyback costs exceeded credits.')}
-    ${stat(M.best?fmtMoney(M.best.amount):'—','Best Single Trade',M.best?evKind(M.best)+' · '+fmtDate(M.best.date):'','var(--green)','Closed sold option with the most option income kept, net of any buyback.')}
+    ${stat(M.best?fmtMoney(M.best.amount):'—','Best Single Trade',M.best?evKind(M.best)+' · '+fmtDate(M.best.date):'','var(--green)','Closed trades, net of buybacks: the sold option that kept the most option income once any buyback is taken off. Not the biggest gross credit opened.')}
   </div>`;
 
   // ═══ ASSEMBLE ═══
@@ -9255,8 +9325,8 @@ function renderAnalytics(){
         ${dteTable}
       </div>
       <div class="a-stat-grid" style="margin-top:0.75rem">
-        ${stat(M.totalOptDays+'d','Total Option-Days','closed options, days held','var(--text2)','Sum of days held across every closed sold option. Your total time exposure to the market.')}
-        ${stat(fmtMoney(avgTradeSize),'Avg Leg Size','per closed option','var(--text2)','Average premium collected per closed sold option, before any buyback.')}
+        ${stat(M.totalOptDays+'d','Total Option-Days','closed trades, days held','var(--text2)','Closed trades only: the sum of days held across every sold option that was bought back, expired or assigned. Options still open are not counted.')}
+        ${stat(fmtMoney(avgTradeSize),'Avg Leg Size','per closed trade, net','var(--text2)','Closed trades, net of buybacks: average option income kept per sold option that was bought back, expired or assigned. Not the gross credit of options opened.')}
         ${stat(M.bestPPD?fmtMoney(M.bestPPD.amount/M.bestPPD.daysHeld)+'/d':'—','Best PPD Trade',M.bestPPD?evKind(M.bestPPD)+' · '+M.bestPPD.daysHeld+'d':'','var(--green)','Closed sold option with the most option income per day held — your most capital-efficient trade.')}
         ${stat(M.biggestBuyback?fmtMoney(M.biggestBuyback.grossOut):'—','Biggest BTC',M.biggestBuyback?fmtDate(M.biggestBuyback.date):'',M.biggestBuyback?'var(--red)':'var(--text3)','Most expensive single buyback. Large BTCs eat into premium — track these to improve roll timing.')}
       </div>

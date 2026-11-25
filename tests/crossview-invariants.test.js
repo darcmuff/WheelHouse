@@ -210,3 +210,87 @@ test('More data scope toggle: All | Wheels | LEAPs & PMCC, persisted', () => {
   X.setMoreScope('wheel');
   assert.strictEqual(X.moreScope(), 'wheel');
 });
+
+test('More data k1 per-day / per-week use the same total and days as k3 Projected Yearly, in every scope', () => {
+  const overview = extractFn('renderStatsOverview');
+  assert.match(overview, /const pyDay=py\.yearly!=null&&py\.days>0\?py\.total\/py\.days:null;/);
+  assert.match(overview, /kpi\(scopeName\+'Realised P&L '\+new Date\(\)\.getFullYear\(\),fmtMoney\(py\.total\),pyDay!=null\?`\$\{fmtMoney\(pyDay\)\}\/day · \$\{fmtMoney\(pyDay\*7\)\}\/wk`/);
+  assert.doesNotMatch(overview, /fmtMoney\(ytd\.net\)|ytd\.daily|ytd\.weekly/);
+  const db = fixture();
+  const S = sandbox(db);
+  [[db.trades, db.opts], [db.trades, []], [[], db.opts]].forEach(([tr, lg]) => {
+    const py = S.calcProjectedYearly(tr, lg, TODAY);
+    const perDay = py.total / py.days;
+    assert.strictEqual(Math.round(perDay * 365 * 100) / 100, Math.round(py.yearly * 100) / 100);
+  });
+});
+
+test('Report wording: Option income and Total realised, same terms as Home and More data', () => {
+  const V = views(fixture());
+  const s = V.S.reportSentences(V.F).join(' ');
+  assert.match(s, /Option income: -\$780\.00/);
+  assert.match(s, /Option income this month so far: -\$1,350\.00/);
+  assert.match(s, /Total realised: /);
+  assert.doesNotMatch(s, /Options P&L|Short premium/);
+  const total = V.P.find(p => p.key === 'total');
+  assert.match(V.S.reportPeriodLine(total), /option income \(wheel [+-]\$[\d,.]+, PMCC calls \+\$250\.00\), [+-]\$[\d,.]+ total realised/);
+});
+
+test('Open LEAPs & short calls: each open LEAP with its open calls; closed legs and wheels left out', () => {
+  const S = new Function(extractFn('optionsLib') + '\nconst OPTS=optionsLib();\n' + extractFn('openLeapPositions') + extractFn('moreRiskFigures') + '\nreturn {openLeapPositions,moreRiskFigures};')();
+  const legs = fixture().opts.concat([
+    { id: 'C4', parentLeapId: 'L2', side: 'short', type: 'C', underlying: 'SOFI', strike: 24, qty: 1, entryPrice: 0.9, entryDate: '2026-11-15', expiry: '2026-12-19', status: 'open', fees: 0.65, closeFees: 0, mark: 0.4 },
+    { id: 'P9', side: 'short', type: 'P', underlying: 'KO', strike: 60, qty: 1, entryPrice: 1.1, entryDate: '2026-11-10', expiry: '2026-12-05', status: 'open', fees: 0, closeFees: 0 },
+  ]);
+  const P = S.openLeapPositions(legs, TODAY);
+  assert.deepStrictEqual(P.leaps.map(r => r.id), ['L2']);           // L1 is closed
+  assert.deepStrictEqual(P.leaps[0].shorts.map(r => r.id), ['C4']); // C3 is closed
+  assert.strictEqual(P.leaps[0].cost, 400);
+  assert.strictEqual(P.leaps[0].unrealised, null);                  // no mark: shown as "no mark"
+  assert.strictEqual(P.leaps[0].shorts[0].unrealised, 49.35);       // 90 - 0.65 fees - 40 mark
+  assert.strictEqual(P.leaps[0].shorts[0].dte, 29);
+  assert.deepStrictEqual(P.other.map(r => r.id), ['P9']);           // short put with no LEAP
+  assert.strictEqual(P.shortCount, 2);
+  assert.strictEqual(P.cost, 400);
+  const R = S.moreRiskFigures(fixture().trades.map(t => ({ ...t, fees: 1 })), legs);
+  assert.strictEqual(R.wheelFees, 8);
+  assert.strictEqual(R.legFees, 0.65);
+  assert.strictEqual(R.peakCsp, 5000);
+  assert.strictEqual(R.peakLeap, 500);
+  assert.strictEqual(R.legCredits, 100 + 80 + 120 + 90 + 110);
+});
+
+test('Risk & Exposure and Open Positions follow the scope; no unexplained wheel-only table in LEAPs & PMCC', () => {
+  const overview = extractFn('renderStatsOverview');
+  const analytics = extractFn('renderAnalytics');
+  // Open Positions: wheel table hidden in pmcc scope, LEAP panel hidden in wheel scope, both in All
+  assert.match(overview, /\$\{scope!=='pmcc'\?`<div class="d-panel">[\s\S]*?\$\{posHdr\}\$\{posRows\}[\s\S]*?`:''\}\s*\$\{scope!=='wheel'\?leapPanel:''\}/);
+  assert.match(overview, /openLeapPositions\(db\.opts\|\|\[\],today\)/);
+  assert.match(overview, /Open LEAPs &amp; Short Calls/);
+  assert.match(overview, /No open LEAPs or short calls\./);
+  assert.match(overview, /goToLeap\(/);
+  // Risk: every tile branches on scope
+  assert.match(analytics, /moreRiskFigures\(db\.trades,db\.opts\|\|\[\]\)/);
+  assert.match(analytics, /stat\(fmtMoney\(c\.wheel\),'Current Exposure','Puts '/);
+  assert.match(analytics, /stat\(fmtMoney\(c\.leaps\),'Current Exposure'/);
+  assert.match(analytics, /scope==='pmcc'\?'highest single LEAP'/);
+  assert.match(analytics, /const feeAmt=scope==='wheel'\?R\.wheelFees:scope==='pmcc'\?R\.legFees:R\.wheelFees\+R\.legFees;/);
+  assert.match(analytics, /'Open Short Calls'/);
+  assert.doesNotMatch(analytics, /cap\.totalFees|cap\.maxCap/);
+});
+
+test('Closed-trade tooltips say closed trades, net of buybacks — not gross credits opened', () => {
+  const analytics = extractFn('renderAnalytics');
+  const overview = extractFn('renderStatsOverview');
+  const tip = (src, label) => { const m = src.match(new RegExp("'" + label + "'[^\\n]*")); assert.ok(m, label); return m[0]; };
+  assert.match(tip(analytics, 'Total Option-Days'), /Closed trades only/);
+  assert.match(tip(analytics, 'Avg Leg Size'), /Closed trades, net of buybacks/);
+  assert.match(tip(analytics, 'Best Single Trade'), /Closed trades, net of buybacks/);
+  assert.match(analytics, /const stratTip='Closed trades, net of buybacks/);
+  assert.match(analytics, /\$\{title\} \$\{ii\(stratTip\)\}/);
+  const k2 = overview.slice(overview.indexOf('const k2Tip='), overview.indexOf('const k2=kpi('));
+  assert.strictEqual((k2.match(/Closed trades, net of buybacks/g) || []).length, 3);
+  assert.doesNotMatch(analytics, /before any buyback/);
+  // Avg Leg Size value is net too: option income ÷ closed trades
+  assert.match(extractFn('moreLedgerStats'), /avgLeg:inc\.length\?S\.total\/inc\.length:0/);
+});
