@@ -12,7 +12,7 @@ function exportCsvFrom(db, logQ) {
   };
   function Blob(parts, opts) { this._text = (parts || []).join(''); this.type = opts && opts.type; }
   const run = new Function('document', 'URL', 'Blob', 'db', 'logQ',
-    extractFn('wheelLabelDisplay') + '\n' + extractFn('exportCSV') + '\nexportCSV();'
+    extractFn('tradeIsRoll') + '\n' + extractFn('wheelLabelDisplay') + '\n' + extractFn('exportCSV') + '\nexportCSV();'
   );
   run(document, URL, Blob, db, logQ || '');
   return captured;
@@ -39,7 +39,7 @@ test('Status is the last column: active for open wheels, closed otherwise; label
   const csv = exportCsvFrom({ wheels, trades }, '');
   const lines = csv.trim().split('\n');
   const hdr = lines[0].split(',');
-  assert.deepEqual(hdr, ['Ticker','Action','Wheel','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment','Status']);
+  assert.deepEqual(hdr, ['Ticker','Action','Wheel','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment','Roll','Roll ID','Status']);
   assert.strictEqual(hdr[hdr.length - 1], 'Status');
   const rows = lines.slice(1).map(line => {
     const cells = line.match(/"((?:[^"]|"")*)"/g).map(c => c.slice(1, -1).replace(/""/g, '"'));
@@ -53,6 +53,8 @@ test('Status is the last column: active for open wheels, closed otherwise; label
   assert.strictEqual(rows[1].Status, 'closed');
   assert.strictEqual(rows[1].Wheel, 'Sep/Nov 2025');
   assert.strictEqual(rows[2].Status, 'closed'); // missing wheel
+  assert.strictEqual(rows[0].Roll, '');
+  assert.strictEqual(rows[0]['Roll ID'], '');
 });
 
 test('importer still parses the new export: CoveredWheel, trades intact, Status ignored', () => {
@@ -79,4 +81,38 @@ test('importer still parses the new export: CoveredWheel, trades intact, Status 
     assert.strictEqual(r.status, undefined);
     assert.ok(!('Status' in r));
   });
+});
+
+test('Roll and Roll ID export and re-import; Status stays last', () => {
+  const rolled = trades.concat([
+    { ticker: 'SOFI', action: 'BTC', wheelId: 'w-open', entered: '2026-03-20', expiry: '2026-03-20', strike: 17, premium: 0.05, fees: 1, shares: 100, total: -6, days: 10, verified: false, comment: 'close', roll: true, rollId: 'roll-abc' },
+    { ticker: 'SOFI', action: 'CSP', wheelId: 'w-open', entered: '2026-03-20', expiry: '2026-04-17', strike: 16, premium: 0.40, fees: 1.3, shares: 100, total: 38.7, days: 28, verified: false, comment: 'open', roll: true, rollId: 'roll-abc' }
+  ]);
+  const csv = exportCsvFrom({ wheels, trades: rolled }, '');
+  const lines = csv.trim().split('\n');
+  const hdr = lines[0].split(',');
+  assert.strictEqual(hdr[hdr.length - 1], 'Status');
+  assert.ok(hdr.includes('Roll') && hdr.includes('Roll ID'));
+  const rows = lines.slice(1).map(line => {
+    const cells = line.match(/"((?:[^"]|"")*)"/g).map(c => c.slice(1, -1).replace(/""/g, '"'));
+    const rec = {};
+    hdr.forEach((h, i) => { rec[h] = cells[i]; });
+    return rec;
+  });
+  const close = rows.find(r => r.Action === 'BTC' && r.Comment === 'close');
+  const open = rows.find(r => r.Action === 'CSP' && r.Comment === 'open');
+  assert.strictEqual(close.Roll, 'Yes');
+  assert.strictEqual(open.Roll, 'Yes');
+  assert.strictEqual(close['Roll ID'], 'roll-abc');
+  assert.strictEqual(open['Roll ID'], 'roll-abc');
+  const parsed = L.parseBrokerCSV(csv);
+  assert.strictEqual(parsed.broker, 'CoveredWheel');
+  const pc = parsed.rows.find(r => r.action === 'BTC' && r.comment === 'close');
+  const po = parsed.rows.find(r => r.action === 'CSP' && r.comment === 'open');
+  assert.strictEqual(pc.roll, true);
+  assert.strictEqual(po.roll, true);
+  assert.strictEqual(pc.rollId, 'roll-abc');
+  assert.strictEqual(po.rollId, 'roll-abc');
+  const plain = parsed.rows.find(r => r.comment === 'open wheel');
+  assert.ok(!plain.roll && !plain.rollId);
 });

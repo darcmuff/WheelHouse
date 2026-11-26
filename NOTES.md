@@ -8,6 +8,20 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `main` is at sw v417 (`c6156d6`, 2026-11-26): checkout error handling (v414), US date default (v415), phone tab swipe (v416) and the neighbouring-page peek (v417).
 
+- `dev` only (sw v418, 2026-11-26, Marc approved this build; do not push to main until he says so): A Roll tick box on Add/Edit trade and Manual Entry. Stored as `roll: true` plus a shared `rollId` linking the close leg and the open leg. Old trades with neither field are unchanged. Auto-detects a roll only when complementary legs (BTC/STC + CSP/STOC/STO) on the same ticker are entered together (a SmartScan two-leg paste, or both already flagged in an import) and share a fill timestamp to the minute, or the same `entered` calendar day when there is no `filledAt`. A large unflagged broker CSV is not guessed. A quiet grey "⟳ Roll" chip (Urbanist, 6px corners, `--text3` / `--bg3`) on the trade row — desktop and the phone card — links the mate. The old "Mark as roll?" prompt and roll-from pickers stay gone. P&L maths and `app/ledger.js` are unchanged. Tests: `tests/rollflag.test.js`, plus updates in `tests/rollprompt.test.js` and `tests/exportcsv.test.js`.
+
+### OpTrack Bot — roll fields (v418)
+
+Write these on each wheel trade document at `users/{uid}/trades/{id}` when the bot records a roll:
+
+- `roll` (boolean): `true` only. Omit the field on ordinary trades (do not write `false`) so older records stay compatible.
+- `rollId` (string): the same non-empty id on the buy-to-close (BTC or STC) leg and the matching sell-to-open (CSP, STOC, or STO) leg.
+
+The bot should set both fields itself. The web app persists them as written (`_saveTrade` / `_stripUndefined` only drops `undefined`). A CoveredWheel CSV import also accepts columns `Roll` (`true`, `yes`, `1`, or `Y`) and `Roll ID` (aliases `roll`, `rollId`, `roll_id`). If two imported rows are flagged as a roll without an id and are a complementary pair, OpTrack shares one `rollId`. Do not rely on a full historical broker dump to be auto-linked.
+
+`filledAt` (ISO 8601, ideally with a timezone offset) is still the fill-time field on the same path, and is what the app uses (to the minute) when deciding whether two bot-entered legs share a timestamp.
+
+
 - `dev` and `main` (sw v417, 2026-11-26, Marc's spec): Phone tab swipe now peeks the neighbouring page (Home / Wheels / LEAPs) so it slides in with the finger, then snaps in ~280ms. Rubber-band at the ends still has no peek and no wraparound. Vertical-scroll protection and the existing exclusions are unchanged. Tests: `tests/phoneswipe.test.js`. On main as of 2026-11-26 (c6156d6).
 
 - `dev` and `main` (sw v416, 2026-11-26, Marc's spec): On phones (700px and under), swipe left or right between the three tab-bar pages — Home, Wheels and LEAPs, in that order. The page follows the finger and then snaps; there is no wraparound past Home or LEAPs. A vertical scroll never changes page (a clear horizontal-intent threshold). Swipes that start on inputs, open modals or sheets, the tab/top bars, the Capital at Work / What if? panels, ⋯ menus, a fullscreen chart, or a horizontally scrollable element are left alone. The tab bar's active state stays in sync. Desktop is unchanged. Tests: `tests/phoneswipe.test.js`. On main as of 2026-11-26 (c6156d6).

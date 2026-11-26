@@ -388,6 +388,10 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .action-cell{display:flex;align-items:center;gap:0.25rem;flex-wrap:wrap;min-width:0;line-height:1.2}
 .trow.expired-trade{border-left:0.1875rem solid var(--green);padding-left:0.8125rem;background:rgba(34,197,94,0.04)}
 .exp-badge{font-size:0.75rem;font-weight:720;color:var(--green);letter-spacing:.5px;vertical-align:middle}
+.roll-chip{display:inline-flex;align-items:center;gap:0.15rem;padding:0.1rem 0.35rem;border-radius:6px;font-family:Urbanist,inherit;font-size:0.7rem;font-weight:480;letter-spacing:.02em;color:var(--text3);background:var(--bg3);border:1px solid var(--border);cursor:pointer;text-decoration:none;vertical-align:middle;white-space:nowrap}
+.roll-chip:hover{color:var(--text2)}
+.roll-tick{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.825rem;font-weight:480;color:var(--text2);cursor:pointer;user-select:none}
+.roll-tick input{width:1rem;height:1rem;accent-color:var(--text3)}
 .ab{padding:0.1875rem 0.5rem;border-radius:0.25rem;font-size:0.825rem;font-weight:720;white-space:nowrap;display:inline-block;letter-spacing:.3px}
 .cp-edit{display:flex;flex-direction:column;gap:0.1rem;margin-top:0.2rem;font-size:0.72rem;font-weight:480;color:var(--text3);line-height:1.2}.cp-edit span{display:inline-flex;align-items:center;gap:0.15rem;color:var(--text2)}.cp-edit input{width:4.5rem;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:0.25rem;padding:0 0.2rem}
 .ab-CSP{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.28)}
@@ -2240,6 +2244,7 @@ select,textarea,
       <div class="fld"><label>DTE <small style="color:#555">auto</small></label><input id="tf-days" type="number" step="1" oninput="autoCalcPPD()"></div>
       <div class="fld"><label>PPD ($) <small style="color:#555">auto</small></label><input id="tf-ppd" type="number" step="0.01" readonly></div>
       <div class="fld" style="grid-column:span 3"><label>Comment</label><textarea id="tf-comment" rows="1"></textarea></div>
+      <div class="fld" style="grid-column:span 3"><label class="roll-tick"><input type="checkbox" id="tf-roll"> Roll</label></div>
       <div class="fld" style="grid-column:span 3;display:none" id="tg-created-at"><label>Date Added <small style="color:#555">auto</small></label><input id="tf-created-at" type="text" readonly style="color:var(--text3);background:var(--bg3);cursor:default"></div>
     </div>
     <input type="hidden" id="tf-id">
@@ -2301,6 +2306,7 @@ select,textarea,
           <div class="fld"><label>Fees ($)</label><input id="pm-fees" type="number" step="0.01" value="0" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="pm-total" type="number" step="0.01" readonly></div>
           <div class="fld"><label>Comment</label><input id="pm-comment" type="text"></div>
+          <div class="fld" style="grid-column:span 3"><label class="roll-tick"><input type="checkbox" id="pm-roll"> Roll</label></div>
         </div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="savePMTrade()">Save Trade</button></div>
       </div>
@@ -6407,9 +6413,10 @@ function renderTradeRow(t,wheelTrades,opts){
   const _total=`<span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>`;
   const _fees=t.fees?'$'+fmt2(t.fees):'—';
   const _edit=opts.noEdit?'':opts.editBtn?`<button class="btn btn-ghost btn-sm" onclick="${editOn};event.stopPropagation()">Edit</button>`:`<button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>`;
+  const _roll=typeof tradeRollChip==='function'?tradeRollChip(t):'';
   const _tsText=hasExtra?String(opts.extraAfterStrike||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim():'';
   return`<div class="trow ${rowCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}" data-act="${esc(t.action||'')}" data-strike="${t.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
-    <span class="action-cell">${_ab}${expBadge}${_warn}</span>
+    <span class="action-cell">${_ab}${_roll}${expBadge}${_warn}</span>
     <span>${_entered}</span>
     <span>${_expiry}</span>
     <span>${_strike}</span>
@@ -6421,7 +6428,7 @@ function renderTradeRow(t,wheelTrades,opts){
     <span style="white-space:nowrap">${ppdDisplay}</span>
     <span style="color:${rocColor}">${rocDisplay}</span>
     <span style="display:flex;gap:0.1875rem;justify-content:flex-end">${_edit}</span>
-    ${typeof tradeRowPhoneCard==='function'?tradeRowPhoneCard({ab:_ab,exp:expBadge,warn:_warn,id:_strike,cap:rocDisplay,capColor:rocColor,entered:_entered,expiry:_expiry,premium:_prem,shares:_shares,fees:_fees,total:_total,ppd:ppdDisplay,toStrike:_tsText,edit:_edit}):''}
+    ${typeof tradeRowPhoneCard==='function'?tradeRowPhoneCard({ab:_ab,exp:(_roll||'')+(expBadge||''),warn:_warn,id:_strike,cap:rocDisplay,capColor:rocColor,entered:_entered,expiry:_expiry,premium:_prem,shares:_shares,fees:_fees,total:_total,ppd:ppdDisplay,toStrike:_tsText,edit:_edit}):''}
   </div>`;
 }
 
@@ -8033,7 +8040,7 @@ function openAddTrade(wheelId){
   ['tf-expiry','tf-strike','tf-delta','tf-premium','tf-shares','tf-total','tf-days','tf-ppd','tf-comment','tf-fill-time'].forEach(id=>document.getElementById(id).value='');
   const _tfh=document.getElementById('tf-fill-time-hint');if(_tfh){_tfh.textContent='';_tfh.hidden=true;}
   document.getElementById('tf-fees').value='0';
-  const tr=document.getElementById('tf-roll');if(tr){tr.checked=false;document.getElementById('tf-roll-box').hidden=true;}
+  const tr=document.getElementById('tf-roll');if(tr)tr.checked=false;
   document.getElementById('tf-delete-btn').style.display='none';
   document.getElementById('tf-expired-btn').style.display='none';
   document.getElementById('tg-created-at').style.display='none';
@@ -8060,7 +8067,7 @@ function openEditTrade(id){
   document.getElementById('tf-fees').value=t.fees||0;document.getElementById('tf-total').value=t.total||'';
   document.getElementById('tf-days').value=t.days||'';document.getElementById('tf-ppd').value=t.ppd||'';
   document.getElementById('tf-comment').value=t.comment||'';
-  const tr=document.getElementById('tf-roll');if(tr){tr.checked=false;document.getElementById('tf-roll-box').hidden=true;}
+  const tr=document.getElementById('tf-roll');if(tr)tr.checked=!!(t.roll||t.rollId);
   document.getElementById('tf-delete-btn').style.display='inline-flex';
   document.getElementById('mTradeTitle').textContent='Edit Trade';
   const _expBtn=document.getElementById('tf-expired-btn');
@@ -8117,6 +8124,109 @@ function autoCalcDTE(){
   const ex=document.getElementById('tf-expiry').value;
   if(en&&ex){const d=Math.round((new Date(ex)-new Date(en))/86400000);if(d>=0){document.getElementById('tf-days').value=d;autoCalcPPD();}}
 }
+function parseRollFlag(v){
+  if(v===true||v===1)return true;
+  const s=String(v==null?'':v).trim().toLowerCase();
+  return s==='true'||s==='yes'||s==='1'||s==='y'||s==='roll';
+}
+function tradeIsRoll(t){return !!(t&&(t.roll===true||t.rollId));}
+function isRollCloser(action){return action==='BTC'||action==='STC';}
+function isRollOpener(action){return action==='CSP'||action==='STOC'||action==='STO';}
+function tradeRollDay(t){
+  if(!t)return'';
+  if(t.filledAt)return String(t.filledAt).slice(0,10);
+  return String(t.entered||'').slice(0,10);
+}
+function tradeRollStamp(t){
+  if(!t)return'';
+  if(t.filledAt)return String(t.filledAt).slice(0,16);
+  return tradeRollDay(t);
+}
+function sameRollStamp(a,b){
+  if(!a||!b)return false;
+  const ta=(a.ticker||'').toUpperCase(),tb=(b.ticker||'').toUpperCase();
+  if(!ta||ta!==tb)return false;
+  if(a.filledAt&&b.filledAt)return String(a.filledAt).slice(0,16)===String(b.filledAt).slice(0,16);
+  return !!(tradeRollDay(a)&&tradeRollDay(a)===tradeRollDay(b));
+}
+function isRollPair(a,b){
+  if(!a||!b||a===b||(a.id&&b.id&&a.id===b.id))return false;
+  const ac=isRollCloser(a.action),ao=isRollOpener(a.action),bc=isRollCloser(b.action),bo=isRollOpener(b.action);
+  if(!((ac&&bo)||(ao&&bc)))return false;
+  return sameRollStamp(a,b);
+}
+function findRollMate(trade,trades){
+  const list=trades||[];
+  const cands=list.filter(o=>o&&o!==trade&&o.id!==trade.id&&isRollPair(trade,o)&&(!o.rollId||o.rollId===trade.rollId));
+  const same=cands.filter(o=>!trade.wheelId||o.wheelId===trade.wheelId);
+  return same[0]||cands[0]||null;
+}
+function autoLinkRollBatch(trades,opts){
+  opts=opts||{};
+  const mk=opts.uid||(typeof uid==='function'?uid:()=>'roll');
+  const list=trades||[];
+  const by={};
+  list.forEach(t=>{if(t&&t.rollId)(by[t.rollId]=by[t.rollId]||[]).push(t);});
+  Object.keys(by).forEach(id=>by[id].forEach(t=>{t.roll=true;}));
+  const used=new Set();
+  for(let i=0;i<list.length;i++){
+    const a=list[i];if(!a||used.has(a)||a.rollId)continue;
+    let mate=null;
+    for(let j=i+1;j<list.length;j++){
+      const b=list[j];if(!b||used.has(b)||b.rollId)continue;
+      if(!isRollPair(a,b))continue;
+      if(opts.enteredTogether||(a.roll&&b.roll)){mate=b;break;}
+    }
+    if(mate){
+      const id=mk();
+      a.roll=true;a.rollId=id;
+      mate.roll=true;mate.rollId=id;
+      used.add(a);used.add(mate);
+    }
+  }
+  list.forEach(t=>{if(t&&(t.roll===true)&&!t.rollId)t.rollId=mk();});
+  return list;
+}
+function applyTradeRollFromForm(trade,checked,allTrades){
+  if(!trade)return trade;
+  if(!checked){delete trade.roll;delete trade.rollId;return trade;}
+  trade.roll=true;
+  if(trade.rollId)return trade;
+  const mate=findRollMate(trade,allTrades||[]);
+  const id=(mate&&mate.rollId)||(typeof uid==='function'?uid():('roll_'+Date.now()));
+  trade.rollId=id;
+  if(mate&&!mate.rollId){
+    mate.roll=true;mate.rollId=id;
+    if(typeof _saveTrade==='function')_saveTrade(mate);
+  }
+  return trade;
+}
+function applyImportRoll(nt,row){
+  if(!nt)return nt;
+  const flagged=parseRollFlag(row&&row.roll)||!!(row&&row.rollId);
+  if(!flagged)return nt;
+  nt.roll=true;
+  if(row.rollId)nt.rollId=String(row.rollId);
+  return nt;
+}
+function tradeRollMate(t,trades){
+  if(!t||!t.rollId)return null;
+  const list=trades||(typeof db!=='undefined'&&db.trades)||[];
+  return list.find(o=>o&&o.id!==t.id&&o.rollId===t.rollId)||null;
+}
+function tradeRollChip(t){
+  if(!tradeIsRoll(t))return'';
+  const mate=tradeRollMate(t);
+  const tip=mate?('Rolled with '+mate.action+(mate.strike!=null?(' $'+fmt2(mate.strike).replace(/\.00$/,'')):'')):('Roll');
+  const go=mate?`goToRollMate('${esc(t.id)}');return false;`:'';
+  return `<a class="roll-chip" href="#${mate?('t-'+mate.id):''}" title="${esc(tip)}"${go?` onclick="${go}"`:''}>⟳ Roll</a>`;
+}
+function goToRollMate(id){
+  const t=(typeof db!=='undefined'&&db.trades||[]).find(x=>x.id===id);if(!t||!t.rollId)return;
+  const mate=tradeRollMate(t);if(!mate)return;
+  goToTrade(mate.wheelId||t.wheelId,mate.id);
+  setTimeout(()=>{const row=document.querySelector('[data-tid="'+CSS.escape(mate.id)+'"]');if(row&&typeof _flashTrade==='function')_flashTrade(row);},90);
+}
 function saveTrade(){
   const id=document.getElementById('tf-id').value;
   if(id)_clearFocus(id); // editing the focused trade counts as acting on it
@@ -8154,7 +8264,8 @@ function saveTrade(){
     if(idx>=0){
       const old=db.trades[idx];
       const updated={id,...data,createdAt:old.createdAt||new Date().toISOString()};
-      if(old.rollId)updated.rollId=old.rollId;                 // keep a stored link; the form no longer edits it
+      if(old.rollId)updated.rollId=old.rollId;
+      applyTradeRollFromForm(updated,!!(document.getElementById('tf-roll')&&document.getElementById('tf-roll').checked),db.trades);
       if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
       updated.verified=old.verified||false;                    // preserve verification status
       if(old.currentPrice!=null&&old.currentPrice!==''){updated.currentPrice=old.currentPrice;updated.currentPriceAt=old.currentPriceAt||null;}
@@ -8165,6 +8276,7 @@ function saveTrade(){
   }
   else{
     const newTrade={id:uid(),createdAt:new Date().toISOString(),...data};
+    applyTradeRollFromForm(newTrade,!!(document.getElementById('tf-roll')&&document.getElementById('tf-roll').checked),db.trades);
     const _firstTrade=!db.trades.length;
     db.trades.push(newTrade);
     expanded.add(wheelId);
@@ -8379,7 +8491,7 @@ function brokerCSVLib(){
     const lines=text.split('\n');
     const hdr=lines[0].split(',').map(h=>h.replace(/['"]/g,'').trim().toLowerCase().replace(/:$/,''));
     const col=n=>hdr.indexOf(n);
-    const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),verified:col('verified'),comment:col('comment')};
+    const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),verified:col('verified'),comment:col('comment'),roll:col('roll'),rollId:col('roll id')>-1?col('roll id'):(col('rollid')>-1?col('rollid'):col('roll_id'))};
     for(let i=1;i<lines.length;i++){
       const line=lines[i].trim();if(!line)continue;
       const v=parseCSVLine(line);
@@ -8392,7 +8504,10 @@ function brokerCSVLib(){
       const strike=parseFloat(get(C.strike))||null,shares=parseFloat(get(C.shares))||0;
       const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
       const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
-      rows.push({ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days:parseFloat(get(C.days))||0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)});
+      const row={ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days:parseFloat(get(C.days))||0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)};
+      const _rf=get(C.roll).toLowerCase();
+      if(['true','yes','1','y','roll'].includes(_rf)||get(C.rollId)){row.roll=true;const rid=get(C.rollId);if(rid)row.rollId=rid;}
+      rows.push(row);
     }
     return{broker:'CoveredWheel',rows,unrecognised:bad,skipped:[]};
   }
@@ -8841,8 +8956,10 @@ function doImport(){
     }
     const days=r.days||0;
     const nt={id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:r.expiry||null,strike,premium:r.premium||0,fees:r.fees||0,shares,total:r.total||0,days,ppd:days>0?(r.total||0)/days:0,verified:!!r.verified,comment:r.comment||''};
+    applyImportRoll(nt,r);
     db.trades.push(nt);newTrades.push(nt);imported++;
   }
+  autoLinkRollBatch(newTrades); // only fills rollId for rows already flagged as a roll
   newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');
   document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();render();
 
@@ -9491,8 +9608,8 @@ function exportCSV(){
     if(!q)return true;
     return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
   });
-  const hdr=['Ticker','Action','Wheel','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment','Status'];
-  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?wheelLabelDisplay(w.label,w):'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||'',w&&w.status==='open'?'active':'closed'].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
+  const hdr=['Ticker','Action','Wheel','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment','Roll','Roll ID','Status'];
+  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?wheelLabelDisplay(w.label,w):'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||'',tradeIsRoll(t)?'Yes':'',t.rollId||'',w&&w.status==='open'?'active':'closed'].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
   const csv=[hdr.join(','),...rows].join('\n');
   const suffix=q?`-${q}`:'';
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`optrack${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
@@ -9524,7 +9641,7 @@ function switchPasteTab(tab){
     ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment','pm-current-price','pm-fill-time'].forEach(id=>document.getElementById(id).value='');
     const _pmh=document.getElementById('pm-fill-time-hint');if(_pmh){_pmh.textContent='';_pmh.hidden=true;}
     document.getElementById('pm-fees').value='0';
-    const pr=document.getElementById('pm-roll');if(pr){pr.checked=false;document.getElementById('pm-roll-box').hidden=true;}
+    const pr=document.getElementById('pm-roll');if(pr)pr.checked=false;
     populatePMWheelSelect(wheelId,ticker);
     onPMActionChange();
   }
@@ -9583,6 +9700,7 @@ function savePMTrade(){
   if(action==='IN'&&openMarket)newTrade.openMarket=true;
   if(_fa.value)newTrade.filledAt=_fa.value;
   if(action==='CSP'||action==='STOC'){const raw=document.getElementById('pm-current-price').value.trim();if(raw!==''&&+raw>=0){newTrade.currentPrice=+raw;newTrade.currentPriceAt=new Date().toISOString();}}
+  applyTradeRollFromForm(newTrade,!!(document.getElementById('pm-roll')&&document.getElementById('pm-roll').checked),db.trades);
   const _firstTrade=!db.trades.length;
   db.trades.push(newTrade);expanded.add(wheelId);
   _saveTrade(newTrade);closeModal('mPaste');render();
@@ -10054,13 +10172,16 @@ function confirmParsed(){
       else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
     const _firstTrade=!db.trades.length;
-    trades.forEach(p=>{
+    const built=trades.map(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
         expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
         shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
         verified:false,comment:'via SmartScan'};
-      db.trades.push(nt);_saveTrade(nt);
+      applyImportRoll(nt,p);
+      return nt;
     });
+    autoLinkRollBatch(built,{enteredTogether:true});
+    built.forEach(nt=>{db.trades.push(nt);_saveTrade(nt);});
     expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
     try{render();}catch(e){console.error('SmartScan roll render error:',e);}
     if(_firstTrade)noteFirstTrade();
@@ -10079,6 +10200,8 @@ function confirmParsed(){
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
     verified:false,comment:'via SmartScan'};
+  applyImportRoll(nt,p);
+  autoLinkRollBatch([nt]);
   db.trades.push(nt);_saveTrade(nt); // save only what was touched
   expanded.add(wheelId);
   closeModal('mPaste');parsedTradeData=null;
