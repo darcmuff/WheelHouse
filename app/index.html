@@ -758,6 +758,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tn-trial:hover{color:var(--text);border-color:var(--text3)}
 .tn-trial.tn-trial-end{color:var(--brand-orange);border-color:rgba(var(--brand-orange-rgb),.45);background:rgba(var(--brand-orange-rgb),.06)}
 .tn-trial[hidden]{display:none}
+.ret-pro{display:inline-flex;align-items:center;margin-top:0.25rem;font:inherit;font-size:0.75rem;font-weight:700;padding:0.375rem 0.625rem;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer}
+.ret-pro:hover{color:var(--brand-orange);border-color:rgba(var(--brand-orange-rgb),.45)}
 .tn-trial .tt-short{display:none}
 @media(max-width:480px){.tn-trial{font-size:0.6875rem;padding:0.3125rem 0.4375rem}.tn-trial .tt-long{display:none}.tn-trial .tt-short{display:inline}}
 /* Upgrade box: Annual/Monthly toggle (Annual default) + the Free vs Pro table from BRAND.plans.comparison */
@@ -6752,7 +6754,8 @@ function renderHome(){
   const caw=currentCapitalAtWork();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
   const monthlyCap=OT_LEDGER.monthlyDeployedCapital(db.wheels,db.trades,legs,{today});
-  const rBase=monthReturnCapital(rs,today.slice(0,7),monthlyCap),mr=monthReturnPct(F.month.total,rBase,rs.target);
+  const rsH=homeReturnSettings(rs); // Free: the target line / progress is Pro-only; the return itself always shows
+  const rBase=monthReturnCapital(rs,today.slice(0,7),monthlyCap),mr=monthReturnPct(F.month.total,rBase,rsH.target);
   const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
   const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
   const cls=n=>n>0?'pos':n<0?'neg':'';
@@ -6769,7 +6772,7 @@ function renderHome(){
   </div>
   <div class="hk-grid hk-row2">
     <div class="hk${(health.length||_pend.length)?' hk-need':''}" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p){p.hidden=!p.hidden;_nyOpen=!p.hidden}"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':_pend.length?'':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):_pend.length?_pend.length+' pending':'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':'')+(_pend.length?` · ${_pend.length} pending`:''):_pend.length?'dismissed, not fixed yet':'nothing to do'}</div></div>
-    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's options P&L as a % of ${rs.base==='account'?'your account size':'this month\'s peak deployed capital'}.${rs.target?` Target ${rs.target}%.`:''} Change this with the cog.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':(mr.pct<0?'neg':'')):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">${rBase>0?`of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'deployed'}`:''}${rBase>0&&rs.target?` · target ${rs.target}%`:rs.target?`target ${rs.target}%`:''}</div></div>
+    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's options P&L as a % of ${rs.base==='account'?'your account size':'this month\'s peak deployed capital'}.${rsH.target?` Target ${rsH.target}%.`:''} Change this with the cog.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':(mr.pct<0?'neg':'')):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">${rBase>0?`of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'deployed'}`:''}${rBase>0&&rsH.target?` · target ${rsH.target}%`:rsH.target?`target ${rsH.target}%`:''}</div></div>
     <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
   </div>
   </div></section>
@@ -9914,7 +9917,11 @@ function openSettings(){
 function fillReturnSettings(){}
 // Return settings live in a small panel opened from the cog on the Home Capital at work / Account size tile.
 function retFmtAcct(el){const v=el.value,pos=el.selectionStart||0;const before=v.slice(0,pos).replace(/[^0-9]/g,'').length;const d=v.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');const f=d?Number(d).toLocaleString('en-US'):'';el.value=f;let i=0,c=0;while(i<f.length&&c<before){if(/\d/.test(f[i]))c++;i++;}try{el.setSelectionRange(i,i);}catch(e){}}
+// Monthly target tracking is Pro (paid or trial). Free keeps the saved target but Home ignores it.
+function retTargetOn(){return canUse('analytics');}
+function homeReturnSettings(rs){return retTargetOn()?rs:{...rs,target:null};}
 function openRetCfg(btn){
+  const _tOn=retTargetOn();
   closeRetCfg();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]);
   let rawBase=null;try{rawBase=JSON.parse(localStorage.getItem('wh-returnSet')||'null')?.base;}catch(e){}
@@ -9927,9 +9934,9 @@ function openRetCfg(btn){
   </div>
   <div class="wl-wi-in">
     <label id="ret-acct-row">Account size<span class="ret-dol"><input id="ret-account" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 50,000" oninput="retFmtAcct(this)" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>
-    <label>Monthly target<span class="ret-pct"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>
+    ${_tOn?`<label>Monthly target<span class="ret-pct"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>`:`<label>Monthly target<button type="button" class="ret-pro" onclick="closeRetCfg();openUpgrade('analytics')" title="Monthly target tracking is part of Pro">Pro · Upgrade</button><input id="ret-target" type="hidden"></label>`}
   </div>
-  <div style="font-size:0.72rem;color:var(--text3);font-weight:480">Banked profit only. Leave the target empty to switch it off.</div>
+  <div style="font-size:0.72rem;color:var(--text3);font-weight:480">${_tOn?'Banked profit only. Leave the target empty to switch it off.':'Banked profit only. Monthly target tracking is part of Pro.'}</div>
   <div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="saveReturnSettings(true)">Save</button></div>`;
   document.body.appendChild(p);
   p.querySelector('#ret-base').value=base;

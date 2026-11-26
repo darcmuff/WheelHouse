@@ -35,7 +35,7 @@ test('every Home tile has a tip', () => {
   // Return this month uses nested backticks, so the old /ii\(`([^`]*)`/ regex missed it.
   assert.ok(h.includes("This month's options P&L as a % of"));
   assert.ok(h.includes('your account size') && h.includes('peak deployed capital'));
-  assert.ok(h.includes('Target ${rs.target}%.') && h.includes('Change this with the cog.'));
+  assert.ok(h.includes('Target ${rsH.target}%.') && h.includes('Change this with the cog.'));
   assert.ok(h.includes('Open put collateral, open shares and open LEAP cost'));
 });
 test('moving the mouse off a flipped tile flips it back', () => {

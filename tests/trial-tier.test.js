@@ -111,3 +111,17 @@ test('top banner: compliant Grok Bot copy, no "Brought to you by" or xAI logo; t
   assert.ok(SRC.includes('id="tn-trial"')&&/tn-trial-end',t\.trialDaysLeft<=3/.test(extractFn('syncTrialPill')));
   assert.ok(!/openModal\('mUpgrade'\)/.test(extractFn('syncTrialPill'))&&!/openUpgrade/.test(extractFn('_maybeStartTrial').replace(/openUpgrade\('trial'\)/,'')),'no popups on load');
 });
+test('Home "Return this month": target line / progress is Pro-only; Free still sees the return; target setting shows a Pro prompt',()=>{
+  const H=new Function('canUse',extractFn('retTargetOn')+'\n'+extractFn('homeReturnSettings')+'\nreturn homeReturnSettings;');
+  const rs={base:'caw',account:0,target:2};
+  assert.deepStrictEqual(H(()=>false)(rs),{base:'caw',account:0,target:null},'Free: target dropped for Home');assert.strictEqual(rs.target,2,'saved target untouched');
+  assert.strictEqual(H(()=>true)(rs),rs,'Pro / trial: unchanged');
+  assert.match(extractFn('retTargetOn'),/canUse\('analytics'\)/);
+  const a=SRC.indexOf('function renderHome'),h=SRC.slice(a,SRC.indexOf('\n}\n',a));
+  assert.ok(h.includes('const rsH=homeReturnSettings(rs);')&&h.includes('monthReturnPct(F.month.total,rBase,rsH.target)'));
+  const tile=h.slice(h.indexOf('Return this month'),h.indexOf('Avg win / loss'));assert.ok(!/rs\.target/.test(tile)&&/rsH\.target/.test(tile),'tile reads only the gated target');
+  assert.ok(/mr\.pct>=0\?'\+':'−'/.test(tile),'the actual return still shows');
+  // the return itself never depends on the target: same pct with or without it
+  const M=new Function(extractFn('monthReturnPct')+'\nreturn monthReturnPct;')();assert.strictEqual(M(500,10000,2).pct,M(500,10000,null).pct);assert.strictEqual(M(500,10000,null).ok,null);
+  const cfg=extractFn('openRetCfg');assert.ok(cfg.includes("onclick=\"closeRetCfg();openUpgrade('analytics')\"")&&cfg.includes('<input id="ret-target" type="hidden">'),'Free: Pro prompt opens the upgrade box; saving keeps the stored target');
+});
