@@ -388,10 +388,12 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .action-cell{display:flex;align-items:center;gap:0.25rem;flex-wrap:wrap;min-width:0;line-height:1.2}
 .trow.expired-trade{border-left:0.1875rem solid var(--green);padding-left:0.8125rem;background:rgba(34,197,94,0.04)}
 .exp-badge{font-size:0.75rem;font-weight:720;color:var(--green);letter-spacing:.5px;vertical-align:middle}
-.roll-chip{display:inline-flex;align-items:center;gap:0.15rem;padding:0.1rem 0.35rem;border-radius:6px;font-family:Urbanist,inherit;font-size:0.7rem;font-weight:480;letter-spacing:.02em;color:var(--text3);background:var(--bg3);border:1px solid var(--border);cursor:pointer;text-decoration:none;vertical-align:middle;white-space:nowrap}
-.roll-chip:hover{color:var(--text2)}
-.roll-tick{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.825rem;font-weight:480;color:var(--text2);cursor:pointer;user-select:none}
-.roll-tick input{width:1rem;height:1rem;accent-color:var(--text3)}
+.roll-chip{display:inline-flex;align-items:center;padding:0.1rem 0.35rem;border-radius:6px;font-family:Urbanist,inherit;font-size:0.7rem;font-weight:480;letter-spacing:.02em;color:var(--text3);background:var(--bg3);border:1px solid var(--border);cursor:default;vertical-align:middle;white-space:nowrap;pointer-events:none}
+.roll-fld{align-items:flex-start;justify-content:flex-start}
+.roll-tick{display:inline-flex;align-items:center;gap:0.45rem;width:auto;max-width:100%;flex-wrap:wrap;font-size:0.825rem;font-weight:480;letter-spacing:0;text-transform:none;color:var(--text2);cursor:pointer;user-select:none;line-height:1.2}
+.roll-tick input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:18px;height:18px;min-width:18px;max-width:18px;flex:0 0 18px;margin:0;padding:0;accent-color:var(--brand-orange);background:none!important;border:none!important;box-shadow:none!important;border-radius:0!important;color:inherit!important}
+.roll-tick input[type=checkbox]:focus{outline:2px solid var(--brand-orange);outline-offset:2px;border:none!important;box-shadow:none!important}
+.roll-hint{font-size:0.75rem;font-weight:480;color:var(--text3);letter-spacing:0;text-transform:none}
 .ab{padding:0.1875rem 0.5rem;border-radius:0.25rem;font-size:0.825rem;font-weight:720;white-space:nowrap;display:inline-block;letter-spacing:.3px}
 .cp-edit{display:flex;flex-direction:column;gap:0.1rem;margin-top:0.2rem;font-size:0.72rem;font-weight:480;color:var(--text3);line-height:1.2}.cp-edit span{display:inline-flex;align-items:center;gap:0.15rem;color:var(--text2)}.cp-edit input{width:4.5rem;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:0.25rem;padding:0 0.2rem}
 .ab-CSP{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.28)}
@@ -643,11 +645,11 @@ body.sel-mode .trow.sel .sel-mark::after{content:'✓'}
 .fld{display:flex;flex-direction:column;gap:0.1875rem;min-width:0}
 .fld.s2{grid-column:span 2}
 .fld label{font-size:0.75rem;color:var(--text3);font-weight:720;text-transform:uppercase;letter-spacing:.4px}
-.fld input,.fld select,.fld textarea,.wh-pick-btn{
+.fld input:not([type=checkbox]),.fld select,.fld textarea,.wh-pick-btn{
   background:var(--bg);border:1px solid var(--border2);color:var(--text);
   padding:0.375rem 0.5625rem;border-radius:0.375rem;font-size:0.8125rem;width:100%;min-width:0;transition:border-color .15s;
 }
-.fld input:focus,.fld select:focus,.fld textarea:focus,.wh-pick-btn:focus{outline:none;border-color:var(--orange)}
+.fld input:not([type=checkbox]):focus,.fld select:focus,.fld textarea:focus,.wh-pick-btn:focus{outline:none;border-color:var(--orange)}
 .wh-pick{position:relative}.wh-pick-btn{display:flex;align-items:center;gap:0.4rem;text-align:left;cursor:pointer}
 .wh-pick-face{display:flex;align-items:center;gap:0.4rem;flex:1;min-width:0}.wh-caret{color:var(--text3);font-size:0.84rem}
 .wh-pick-face .rot-logo,.wh-opt .rot-logo{width:1.125rem;height:1.125rem}
@@ -1101,8 +1103,8 @@ html .hk-back .hk-x{color:inherit;opacity:.72}
 .mbox{background:var(--bg2);border:1px solid var(--border);border-radius:1.25rem;box-shadow:0 12px 40px rgba(20,24,20,.18);padding:1.375rem 1.5rem}
 .mtitle{color:var(--text);font-size:0.95rem;font-weight:720}
 .fld label{text-transform:none;letter-spacing:0;font-weight:480;color:var(--text2);font-size:0.75rem}
-.fld input,.fld select,.fld textarea,.wh-pick-btn,.mbox textarea,.mbox input[type=text]{background:var(--bg)!important;border:1px solid var(--border)!important;border-radius:0.625rem!important;color:var(--text)!important}
-.fld input:focus,.fld select:focus,.fld textarea:focus,.mbox textarea:focus{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeD)}
+.fld input:not([type=checkbox]),.fld select,.fld textarea,.wh-pick-btn,.mbox textarea,.mbox input[type=text]{background:var(--bg)!important;border:1px solid var(--border)!important;border-radius:0.625rem!important;color:var(--text)!important}
+.fld input:not([type=checkbox]):focus,.fld select:focus,.fld textarea:focus,.mbox textarea:focus{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeD)}
 .mfoot{border-top:1px solid var(--bg3)}
 .hint{color:var(--text3)}
 .imp-drop{border:1.5px dashed var(--border2);background:var(--bg);color:var(--text2);border-radius:0.875rem}
@@ -1345,7 +1347,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .sort-dropdown,.wh-pick-btn,.pc-r,
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]):not([type=image]),
 select,textarea,
-.fld input,.fld select,.fld textarea,.mbox textarea,.mbox input[type=text],
+.fld input:not([type=checkbox]),.fld select,.fld textarea,.mbox textarea,.mbox input[type=text],
 .wl-wi-in input,.ret-pop select,.cp-edit input,
 .row-tag,.hy-tag,.lc-lbl,.ab,.leap-badge,.pmcc-tag,.rot-badge,
 .rot-dte-badge,.rot-earn,.rot-ticker,.rot-mini .mini-ticker,.rot-mini .mini-dte,.rot-mini .mini-badge,
@@ -2244,7 +2246,7 @@ select,textarea,
       <div class="fld"><label>DTE <small style="color:#555">auto</small></label><input id="tf-days" type="number" step="1" oninput="autoCalcPPD()"></div>
       <div class="fld"><label>PPD ($) <small style="color:#555">auto</small></label><input id="tf-ppd" type="number" step="0.01" readonly></div>
       <div class="fld" style="grid-column:span 3"><label>Comment</label><textarea id="tf-comment" rows="1"></textarea></div>
-      <div class="fld" style="grid-column:span 3"><label class="roll-tick"><input type="checkbox" id="tf-roll"> Roll</label></div>
+      <div class="fld roll-fld" style="grid-column:span 3"><label class="roll-tick"><input type="checkbox" id="tf-roll"> Roll <span class="roll-hint">links the close and new open</span></label></div>
       <div class="fld" style="grid-column:span 3;display:none" id="tg-created-at"><label>Date Added <small style="color:#555">auto</small></label><input id="tf-created-at" type="text" readonly style="color:var(--text3);background:var(--bg3);cursor:default"></div>
     </div>
     <input type="hidden" id="tf-id">
@@ -2306,7 +2308,7 @@ select,textarea,
           <div class="fld"><label>Fees ($)</label><input id="pm-fees" type="number" step="0.01" value="0" oninput="autoCalcPMTotal()"></div>
           <div class="fld"><label>Total ($) <small style="color:#555">auto</small></label><input id="pm-total" type="number" step="0.01" readonly></div>
           <div class="fld"><label>Comment</label><input id="pm-comment" type="text"></div>
-          <div class="fld" style="grid-column:span 3"><label class="roll-tick"><input type="checkbox" id="pm-roll"> Roll</label></div>
+          <div class="fld roll-fld" style="grid-column:span 3"><label class="roll-tick"><input type="checkbox" id="pm-roll"> Roll <span class="roll-hint">links the close and new open</span></label></div>
         </div>
         <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mPaste')">Cancel</button><button class="btn btn-primary" onclick="savePMTrade()">Save Trade</button></div>
       </div>
@@ -8216,16 +8218,7 @@ function tradeRollMate(t,trades){
 }
 function tradeRollChip(t){
   if(!tradeIsRoll(t))return'';
-  const mate=tradeRollMate(t);
-  const tip=mate?('Rolled with '+mate.action+(mate.strike!=null?(' $'+fmt2(mate.strike).replace(/\.00$/,'')):'')):('Roll');
-  const go=mate?`goToRollMate('${esc(t.id)}');return false;`:'';
-  return `<a class="roll-chip" href="#${mate?('t-'+mate.id):''}" title="${esc(tip)}"${go?` onclick="${go}"`:''}>⟳ Roll</a>`;
-}
-function goToRollMate(id){
-  const t=(typeof db!=='undefined'&&db.trades||[]).find(x=>x.id===id);if(!t||!t.rollId)return;
-  const mate=tradeRollMate(t);if(!mate)return;
-  goToTrade(mate.wheelId||t.wheelId,mate.id);
-  setTimeout(()=>{const row=document.querySelector('[data-tid="'+CSS.escape(mate.id)+'"]');if(row&&typeof _flashTrade==='function')_flashTrade(row);},90);
+  return '<span class="roll-chip">Roll</span>';
 }
 function saveTrade(){
   const id=document.getElementById('tf-id').value;

@@ -131,36 +131,43 @@ test('applyImportRoll is backward compatible and copies explicit fields',()=>{
   assert.equal(flagged.rollId,'R1');
 });
 
-test('tradeRollChip is a quiet grey Roll chip that links the mate',()=>{
-  const a={id:'a1',ticker:'SOFI',action:'BTC',strike:17,roll:true,rollId:'R'};
-  const b={id:'b1',ticker:'SOFI',action:'CSP',strike:16,roll:true,rollId:'R'};
-  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-  function fmt2(n){return (Math.round(n*100)/100).toFixed(2);}
-  const html=new Function('db','esc','fmt2',[
+test('tradeRollChip is a plain non-interactive Roll label',()=>{
+  const html=new Function([
     'function tradeIsRoll(t){return !!(t&&(t.roll===true||t.rollId));}',
-    extractFn('tradeRollMate'),
     extractFn('tradeRollChip'),
-    'return tradeRollChip(db.trades[0]);'
-  ].join('\n'))({trades:[a,b]},esc,fmt2);
-  assert.match(html,/class="roll-chip"/);
-  assert.match(html,/⟳ Roll/);
-  assert.match(html,/goToRollMate\('a1'\)/);
-  assert.match(html,/href="#t-b1"/);
-  const none=new Function('db',[
+    "return tradeRollChip({id:'a1',roll:true,rollId:'R'});"
+  ].join('\n'))();
+  assert.equal(html,'<span class="roll-chip">Roll</span>');
+  assert.doesNotMatch(html,/<a\b|<button\b|href=|onclick=|goToRollMate|⟳/);
+  const none=new Function([
     'function tradeIsRoll(t){return !!(t&&(t.roll===true||t.rollId));}',
-    extractFn('tradeRollMate'),
     extractFn('tradeRollChip'),
     'return tradeRollChip({id:"z",action:"CSP"});'
-  ].join('\n'))({trades:[]});
+  ].join('\n'))();
   assert.equal(none,'');
 });
 
-test('row render wires the chip; CSS is Urbanist, grey, 6px',()=>{
+test('row render wires the chip; CSS is Urbanist, grey, 6px, not clickable',()=>{
   assert.match(extractFn('renderTradeRow'),/tradeRollChip/);
   assert.match(SRC,/\.roll-chip\{[^}]*border-radius:6px/);
   assert.match(SRC,/\.roll-chip\{[^}]*font-family:Urbanist/);
   assert.match(SRC,/\.roll-chip\{[^}]*color:var\(--text3\)/);
   assert.match(SRC,/\.roll-chip\{[^}]*background:var\(--bg3\)/);
+  assert.match(SRC,/\.roll-chip\{[^}]*cursor:default/);
+  assert.doesNotMatch(SRC,/\.roll-chip:hover|\.roll-chip:focus/);
+  assert.ok(!SRC.includes('function goToRollMate'));
+  assert.ok(!SRC.includes('⟳ Roll'));
+});
+
+test('Roll form tick is a compact left-aligned checkbox, not a full-width input',()=>{
+  assert.match(SRC,/id="tf-roll"/);
+  assert.match(SRC,/id="pm-roll"/);
+  assert.match(SRC,/class="roll-hint">links the close and new open/);
+  assert.match(SRC,/\.roll-tick input\[type=checkbox\]\{[^}]*width:18px/);
+  assert.match(SRC,/\.roll-tick input\[type=checkbox\]\{[^}]*accent-color:var\(--brand-orange\)/);
+  assert.match(SRC,/\.roll-tick input\[type=checkbox\]\{[^}]*border:none!important/);
+  assert.match(SRC,/\.fld input:not\(\[type=checkbox\]\)/);
+  assert.equal((SRC.match(/\.fld input,/g)||[]).length,0);
 });
 
 test('ledger P&L walk is untouched and old roll controls stay gone',()=>{
