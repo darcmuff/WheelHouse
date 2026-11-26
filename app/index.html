@@ -363,9 +363,12 @@ body.sel-mode .trow.sel{background:var(--orangeL);box-shadow:inset 0.2rem 0 0 va
 .sel-h .sel-kind{font-size:0.8125rem;font-weight:720}
 .sel-x{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;margin-right:-0.25rem;border:0;background:transparent;color:var(--text3);cursor:pointer;line-height:1;padding:0;border-radius:6px}.sel-x svg{width:0.875rem;height:0.875rem;display:block}
 .sel-x:hover{color:var(--text)}
-#sel-net{font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:1.75rem;font-weight:480;letter-spacing:normal;line-height:1.1}
+#sel-net{font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:1.75rem;font-weight:480;letter-spacing:normal;line-height:1.1;color:var(--text)}
+#sel-net.sel-net-neutral{color:var(--text)}
 #sel-sub{font-size:0.75rem;color:var(--text3);margin-top:0.2rem}
 .sel-bits{margin-top:0.75rem;font-size:0.75rem;color:var(--text2);line-height:1.45}
+.sel-status{margin-top:0.65rem;padding-top:0.55rem;border-top:1px solid var(--border);font-size:0.75rem;color:var(--text3);line-height:1.45}
+.sel-status .g,.sel-status .r{font-weight:720}
 .sel-list{margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.4rem}
 .sel-row{display:grid;grid-template-columns:4.2rem minmax(0,1fr) auto;gap:0.4rem;align-items:baseline;font-size:0.75rem;padding:0.28rem 0;color:var(--text)}
 .sel-row span:first-child{color:var(--text3)}.sel-row span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sel-row span:last-child{white-space:nowrap;text-align:right}.sel-bits>div{overflow-wrap:anywhere}
@@ -2804,16 +2807,111 @@ function isCredit(a){return CREDITS.has(a);}
 function selCash(action,total){const n=+total||0;if(n<0)return Math.round(n*100)/100;return Math.round((isCredit(action)?n:-n)*100)/100;}
 function selCt(action,shares){if(action!=='CSP'&&action!=='BTC'&&action!=='STOC'&&action!=='STC'&&action!=='STO')return 0;const sh=+shares||0;return sh>0?Math.round(sh)/100:0;}
 function selSummary(items){
-  let net=0,min='',max='',fees=0,credits=0,debits=0,optCash=0,contracts=0;const by={};
+  let net=0,min='',max='',fees=0,credits=0,debits=0,optCash=0,opened=0,closed=0,unknown=0;const by={};
   (items||[]).forEach(x=>{
     const c=+x.cash||0;net+=c;if(c>0)credits+=c;else if(c<0)debits+=-c;fees+=+x.fee||0;
     const d=x.date||'';if(d){if(!min||d<min)min=d;if(!max||d>max)max=d;}
     const tk=x.tk||'';if(tk)by[tk]=(by[tk]||0)+c;
-    const q=+x.ct||0;if(q>0){contracts+=q;optCash+=c;}
+    const q=+x.ct||0;if(q>0){
+      optCash+=c;
+      const act=x.act||'';
+      if(act==='CSP'||act==='STOC'||act==='STO')opened+=q;
+      else if(act==='BTC'||act==='STC')closed+=q;
+      else unknown+=q;
+    }
   });
   const r=n=>Math.round(n*100)/100;
   const names=Object.keys(by);
-  return{net:r(net),n:(items||[]).length,min,max,credits:r(credits),debits:r(debits),fees:r(fees),contracts:r(contracts),per:contracts?r(optCash/contracts):null,tickers:names.length>1?names.sort().map(t=>({tk:t,cash:r(by[t])})):[]};
+  const closedContracts=r(closed),openedContracts=r(opened);
+  const isRoll=closed>0&&opened>0&&unknown===0;
+  let contracts,per;
+  if(isRoll){
+    if(closedContracts===openedContracts){contracts=closedContracts;per=contracts?r(net/contracts):null;}
+    else{contracts=null;per=null;}
+  }else{
+    contracts=r(opened+closed+unknown);
+    per=contracts?r(optCash/contracts):null;
+  }
+  return{net:r(net),n:(items||[]).length,min,max,credits:r(credits),debits:r(debits),fees:r(fees),contracts,per,isRoll,openedContracts,closedContracts,tickers:names.length>1?names.sort().map(t=>({tk:t,cash:r(by[t])})):[]};
+}
+function selHeadline(s){
+  s=s||{};
+  if(s.isRoll){
+    const kind=s.net<0?'Roll cashflow (net debit)':s.net>0?'Roll cashflow (net credit)':'Roll cashflow';
+    return{kind,kindClass:'sel-kind',netClass:'sel-net-neutral'};
+  }
+  const kind=s.net<0?'Net debit':s.net>0?'Net credit':'Even';
+  const tone=s.net<0?'r':s.net>0?'g':'';
+  return{kind,kindClass:'sel-kind'+(tone?' '+tone:''),netClass:tone};
+}
+function selContractLine(s,money){
+  s=s||{};
+  if(s.isRoll&&s.closedContracts!==s.openedContracts)return s.closedContracts+' closed → '+s.openedContracts+' opened';
+  if(s.contracts>0&&s.per!=null)return s.contracts+' contract'+(s.contracts===1?'':'s')+' · '+money(s.per)+' each';
+  if(s.contracts>0)return s.contracts+' contract'+(s.contracts===1?'':'s');
+  return '';
+}
+function rollChainStatus(chainTrades,openLeg,mark){
+  const r=n=>Math.round(n*100)/100;
+  const signed=t=>(typeof isCredit==='function'&&isCredit(t.action)?1:-1)*(+t.total||0);
+  const expiryMax=r((chainTrades||[]).reduce((s,t)=>s+signed(t),0));
+  const shares=openLeg?((+openLeg._rem>0?+openLeg._rem:+openLeg.shares)||0):0;
+  const openCredit=openLeg?(+openLeg.total||0):0;
+  const closeCost=(mark!=null&&mark>=0&&shares>0)?r(mark*shares):null;
+  const openPnl=closeCost!=null?r(openCredit-closeCost):null;
+  const chainNow=closeCost!=null?r(expiryMax-closeCost):null;
+  let assignedBasis=null;
+  if(openLeg&&openLeg.action==='CSP'&&shares>0&&openLeg.strike!=null&&openLeg.strike!==''){
+    assignedBasis=r(((+openLeg.strike)*shares-expiryMax)/shares);
+  }
+  return{openPnl,chainNow,expiryMax,assignedBasis,closeCost};
+}
+function rollStatusHtml(st,money){
+  if(!st)return '';
+  const pnl=n=>`<span class="${n<0?'r':'g'}">${money(n)}</span>`;
+  const lines=[];
+  if(st.chainNow!=null)lines.push(`<div>Chain P&L now: ${pnl(st.chainNow)}</div>`);
+  if(st.expiryMax!=null)lines.push(`<div>If expired worthless: ${pnl(st.expiryMax)}</div>`);
+  if(st.assignedBasis!=null)lines.push(`<div>If assigned: ${fmtMoney(st.assignedBasis)}/sh</div>`);
+  return lines.length?`<div class="sel-status">${lines.join('')}</div>`:'';
+}
+function selItemId(x){
+  const k=x&&x.key||'';
+  return (k.startsWith('w:')||k.startsWith('p:'))?k.slice(2):'';
+}
+function selCollectTrades(items){
+  const ids=[...new Set((items||[]).map(selItemId).filter(Boolean))];
+  const all=(typeof db!=='undefined'&&Array.isArray(db.trades))?db.trades:[];
+  const found=ids.map(id=>all.find(t=>t.id===id)).filter(Boolean);
+  if(!found.length)return{trades:[],tip:null};
+  const wheelIds=new Set(found.map(t=>t.wheelId).filter(Boolean));
+  let pool=all;
+  if(wheelIds.size===1){const wid=[...wheelIds][0];pool=all.filter(t=>t.wheelId===wid);}
+  else if(found[0]&&found[0].ticker){const tk=found[0].ticker;pool=all.filter(t=>t.ticker===tk);}
+  let tip=null;
+  if(typeof isChainTip==='function'){
+    for(const t of found){if(isChainTip(pool,t)){tip=t;break;}}
+    if(!tip){
+      for(const t of found){
+        if((t.action==='BTC'||t.action==='STC')&&t.rollId){
+          const mate=pool.find(x=>x.rollId===t.rollId&&(x.action==='CSP'||x.action==='STOC')&&isChainTip(pool,x));
+          if(mate){tip=mate;break;}
+        }
+      }
+    }
+  }
+  return{trades:pool,tip};
+}
+function selOpenMark(tip){
+  if(!tip)return null;
+  const occ=typeof wheelLegOcc==='function'?wheelLegOcc(tip.ticker||'',tip):'';
+  const known=!!(occ&&typeof _wheelMarks!=='undefined'&&Object.prototype.hasOwnProperty.call(_wheelMarks,occ));
+  const live=known?_wheelMarks[occ]:null;
+  const hasTyped=tip.currentPrice!=null&&tip.currentPrice!=='';
+  const typedFresh=hasTyped&&tip.currentPriceAt&&typeof isSameMarkDay==='function'&&isSameMarkDay(tip.currentPriceAt);
+  if(hasTyped&&(typedFresh||live==null||!known)){const n=+tip.currentPrice;return n>=0?n:null;}
+  if(live!=null&&live>=0)return +live;
+  return null;
 }
 let _selOn=false,_selSkip=false,_selPop=false;const _sel=new Map();
 function computeTotal(action,premium,shares,fees){
@@ -4527,10 +4625,9 @@ function renderPmccListRow(e,spot,today){
     const sold=+c.entryPrice||0;
     if(e.open){
       ts=toStrike(spot,+c.strike).text;
-      const t=pmccLegToTrade(c,today);if(t.days>0&&t.total)ppd=ppdCellHtml(t.total/t.days,t.days);
       const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
       if(c.markWhy==='none')cap=`<span title="${esc(c.markNote||'No reliable quote for this contract')}">no quote</span>`;
-      else if(mark!=null&&sold>0){const pct=Math.round((sold-mark)/sold*100),dl=pmccShortProfit(c,mark,pmccChainPriorNet(c,db.opts||[])),cc=capturedCellHtml(pct,dl,true);cap=`<div style="white-space:nowrap" title="${esc(c.markNote||('Buy-back price $'+(+mark).toFixed(2)))}">${pct}% <span class="cap-at">· at $${(+mark).toFixed(2)}</span></div><div style="white-space:nowrap">${cc.html.replace(/^-?\d+% /,'')}</div>`;capColor=cc.color;}
+      else if(mark!=null&&sold>0){const pct=Math.round((sold-mark)/sold*100),own=pmccShortProfit(c,mark,0),prior=pmccChainPriorNet(c,db.opts||[]),chainPnl=prior?Math.round((own+prior)*100)/100:null,cell=openCapturedHtml(pct,own,mark,chainPnl,c.markNote||('Buy-back price $'+(+mark).toFixed(2)));cap=cell.html;capColor=cell.color;}
     }else{
       const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
       const net=OPTS.legPnL(c).realized;
@@ -6206,6 +6303,15 @@ function calcTradeROC(t,net,endDate){
 }
 // Shared list formats (wheel + LEAP): strike trims .00 ($170, $19.5, $142.50); debit totals show with a minus (display only).
 // Shared trade-list cells (wheel + LEAP cards). Captured: % kept, with profit $ beside it.
+function openCapturedHtml(pct,openPnl,px,chainPnl,title){
+  const c=capturedCellHtml(pct,openPnl,true);
+  const dol=openPnl!=null?` <span class="${openPnl>=0?'g':'r'}">${openPnl>=0?'+':'-'}${fmtMoney(Math.abs(openPnl))}</span>`:'';
+  const at=px!=null?` <span class="cap-at">· at $${(+px).toFixed(2)}</span>`:'';
+  const tip=title?` title="${esc(title)}"`:'';
+  let html=`<div style="white-space:nowrap"${tip}>${pct}% ·${dol}${at}</div>`;
+  if(chainPnl!=null)html+=`<div style="white-space:nowrap">Chain <span class="${chainPnl>=0?'g':'r'}">${chainPnl>=0?'+':'-'}${fmtMoney(Math.abs(chainPnl))}</span></div>`;
+  return{html,color:c.color};
+}
 function capturedCellHtml(pct,dollars,open){
   if(pct==null)return{html:'—',color:'var(--text3)'};
   const color=open?(pct>=40?'var(--green)':pct>=0?'var(--text2)':'var(--red)'):(pct>=0?'var(--green)':'var(--red)');
@@ -6322,16 +6428,16 @@ function wheelListCells(t,L){
   const left=slices.rem[t.id],baseSh=+t.shares||0,openSh=left!=null?left:baseSh;
   if(L.openIds.has(t.id)){
     r.ts=toStrike(L.spot,+t.strike).text;
-    const d=dd(L.today,t.entered);if(d&&t.total)r.ppd=ppdCellHtml(t.total*(baseSh?openSh/baseSh:1)/d,d);
     const occ=wheelLegOcc(L.ticker,t),known=!!(L.marks&&Object.prototype.hasOwnProperty.call(L.marks,occ));
     const mark=L.marks?L.marks[occ]:null;
     const hasTyped=t.currentPrice!=null&&t.currentPrice!=='';
     const typedFresh=hasTyped&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);
-    if(hasTyped&&prem>0&&(typedFresh||mark==null)){const px=+t.currentPrice;const cv=Math.round(px*openSh*100)/100;const pf=Math.round((prem-px)*openSh*100)/100;const pct=Math.round((prem-px)/prem*100);const c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${px.toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;return r;}
+    const openCreditOf=()=>{const gross=prem*openSh,proFees=(+t.fees||0)*(baseSh?openSh/baseSh:1);if(baseSh>0){const tot=t.total;if(tot!=null&&tot!==''&&!isNaN(+tot)&&((+tot)>0||proFees>=gross))return Math.round((+tot)*(openSh/baseSh)*100)/100;return Math.round((gross-proFees)*100)/100;}return Math.round((gross-proFees)*100)/100;};
+    if(hasTyped&&prem>0&&(typedFresh||mark==null)){const px=+t.currentPrice;const opt={id:t.id,premium:prem,contracts:openSh/100,openCredit:openCreditOf()};const cv=Math.round(px*openSh*100)/100;const pf=wheelCurrentProfit(opt,cv);const ch=wheelChainProfit(L.trades,opt,cv);const pct=Math.round((prem-px)/prem*100),cell=openCapturedHtml(pct,pf,px,ch?ch.profit:null);r.cap=cell.html;r.capColor=cell.color;return r;}
     if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
-    if(mark!=null&&prem>0){const gross=prem*openSh,proFees=(+t.fees||0)*(baseSh?openSh/baseSh:1);let openCredit=null;if(baseSh>0){const tot=t.total;if(tot!=null&&tot!==''&&!isNaN(+tot)&&((+tot)>0||proFees>=gross))openCredit=Math.round((+tot)*(openSh/baseSh)*100)/100;else openCredit=Math.round((gross-proFees)*100)/100;}const opt={id:t.id,premium:prem,contracts:openSh/100,openCredit};const cv=wheelCurrentValue(opt,mark);
-      const ch=wheelChainProfit(L.trades,opt,cv);const pf=ch?ch.profit:wheelCurrentProfit(opt,cv);
-      const pct=Math.round((prem-mark)/prem*100),c=capturedCellHtml(pct,pf,true);r.cap=`<div style="white-space:nowrap" title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'')}">${pct}% <span class="cap-at">· at $${(+mark).toFixed(2)}</span></div><div style="white-space:nowrap">${c.html.replace(/^-?\d+% /,'')}</div>`;r.capColor=c.color;}
+    if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:openSh/100,openCredit:openCreditOf()};const cv=wheelCurrentValue(opt,mark);
+      const ch=wheelChainProfit(L.trades,opt,cv);const pf=wheelCurrentProfit(opt,cv);
+      const pct=Math.round((prem-mark)/prem*100),cell=openCapturedHtml(pct,pf,mark,ch?ch.profit:null,typeof wheelMarkNote==='function'?wheelMarkNote(occ):'');r.cap=cell.html;r.capColor=cell.color;}
     return r;
   }
   const rest=slices.remainder[t.id];
@@ -10850,12 +10956,12 @@ function dismissSelTip(e){if(e){e.preventDefault();e.stopPropagation();}try{loca
 function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');dismissSelTip();try{history.pushState({whSel:1},'');}catch(e){}selPaint();}
 function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const panel=document.getElementById('sel-panel');if(panel)panel.hidden=true;}
 function selDone(){if(_selOn&&history.state&&history.state.whSel){_selPop=true;history.back();return;}selExit();}
-function selRead(row){return{cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||'',tk:row.getAttribute('data-tk')||'',fee:+row.getAttribute('data-fee')||0,ct:+row.getAttribute('data-ct')||0,act:row.getAttribute('data-act')||'',strike:row.getAttribute('data-strike')||''};}
+function selRead(row){return{key:row.getAttribute('data-sel')||'',cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||'',tk:row.getAttribute('data-tk')||'',fee:+row.getAttribute('data-fee')||0,ct:+row.getAttribute('data-ct')||0,act:row.getAttribute('data-act')||'',strike:row.getAttribute('data-strike')||''};}
 function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_sel.has(k))_sel.delete(k);else _sel.set(k,selRead(row));row.classList.toggle('sel',_sel.has(k));if(!_sel.size){selDone();return;}selBar();}
 function selPaint(){document.querySelectorAll('.trow[data-sel]').forEach(el=>el.classList.toggle('sel',_sel.has(el.getAttribute('data-sel'))));selBar();}
 function selPlace(){const panel=document.getElementById('sel-panel');if(!panel||panel.hidden)return;const de=document.documentElement,vw=de.clientWidth||innerWidth,vv=window.visualViewport,visL=vv?Math.max(0,vv.offsetLeft):0,visR=vv?Math.min(vw,vv.offsetLeft+vv.width):vw;panel.style.right='auto';panel.style.left=Math.round((visL+visR)/2)+'px';panel.style.width='min(22rem,'+Math.max(200,Math.floor(visR-visL-48))+'px)';}
 window.addEventListener('resize',selPlace);if(window.visualViewport)visualViewport.addEventListener('resize',selPlace);
-function selBar(){const panel=document.getElementById('sel-panel');if(!panel)return;if(!_selOn||!_sel.size){panel.hidden=true;return;}panel.hidden=false;selPlace();const items=[..._sel.values()];const s=selSummary(items);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),kind=document.getElementById('sel-kind'),bits=document.getElementById('sel-bits'),list=document.getElementById('sel-list');const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));if(net){net.textContent=money(s.net);net.className=s.net<0?'r':'g';}if(kind){kind.textContent=s.net<0?'Net debit':s.net>0?'Net credit':'Even';kind.className='sel-kind '+(s.net<0?'r':'g');}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(bits){const lines=[`Collected ${fmtMoney(s.credits)}` ,`Paid ${fmtMoney(s.debits)}`,`Fees ${fmtMoney(s.fees)}`];if(s.tickers.length>1)lines.push(s.tickers.map(t=>`${esc(t.tk)} ${money(t.cash)}`).join(' · '));if(s.contracts>0)lines.push(`${s.contracts} contract${s.contracts===1?'':'s'} · ${money(s.per)} each`);bits.innerHTML=lines.map(l=>`<div>${l}</div>`).join('');}if(list){list.innerHTML=items.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>{const k=t.strike?` $${fmt2(+t.strike).replace(/\.00$/,'')}`:'';return `<div class="sel-row"><span>${t.date?fmtDateShort(t.date):''}</span><span>${esc((t.act||'')+k)}</span><span class="${t.cash<0?'r':'g'}">${money(t.cash)}</span></div>`;}).join('');}}
+function selBar(){const panel=document.getElementById('sel-panel');if(!panel)return;if(!_selOn||!_sel.size){panel.hidden=true;return;}panel.hidden=false;selPlace();const items=[..._sel.values()];const s=selSummary(items);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),kind=document.getElementById('sel-kind'),bits=document.getElementById('sel-bits'),list=document.getElementById('sel-list');const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));const head=selHeadline(s);if(net){net.textContent=money(s.net);net.className=head.netClass;}if(kind){kind.textContent=head.kind;kind.className=head.kindClass;}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(bits){const lines=[`Collected ${fmtMoney(s.credits)}` ,`Paid ${fmtMoney(s.debits)}`,`Fees ${fmtMoney(s.fees)}`];const cl=selContractLine(s,money);if(cl)lines.push(cl);if(s.tickers.length>1)lines.push(s.tickers.map(t=>`${esc(t.tk)} ${money(t.cash)}`).join(' · '));let status='';if(s.isRoll){const {trades:pool,tip}=selCollectTrades(items);if(tip&&typeof buildRollChain==='function'){const chain=buildRollChain(pool,tip.id);if(chain&&chain.live)status=rollStatusHtml(rollChainStatus(chain.trades,tip,selOpenMark(tip)),money);}}bits.innerHTML=lines.map(l=>`<div>${l}</div>`).join('')+status;}if(list){list.innerHTML=items.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>{const k=t.strike?` $${fmt2(+t.strike).replace(/\.00$/,'')}`:'';return `<div class="sel-row"><span>${t.date?fmtDateShort(t.date):''}</span><span>${esc((t.act||'')+k)}</span><span class="${t.cash<0?'r':'g'}">${money(t.cash)}</span></div>`;}).join('');}}
 document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();_selSkip=true;if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;const x=e.clientX,y=e.clientY;let held=false;try{row.setPointerCapture(e.pointerId);}catch(err){}const timer=setTimeout(()=>{held=true;_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}},500);const cancel=ev=>{clearTimeout(timer);if(ev&&ev.type==='pointerup'&&held)_selSkip=true;row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel(ev);};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
 document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
 document.addEventListener('click',e=>{if(!_selOn)return;const t=e.target;if(t.closest&&(t.closest('.trow[data-sel]')||t.closest('#sel-panel')))return;selDone();});

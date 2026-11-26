@@ -64,7 +64,7 @@ const cardFn = new Function(
       'leapSpotHtml', 'isRegularSession', 'colorN', 'leapPayback', 'leapPaybackTip', 'leapBarHtml',
       'leapAdjMoveHtml', 'leapOptHtml', 'leapHeaderRightHtml', 'pmccShortsFor', 'pmccStats',
       'pmccTradeEvents', 'renderPmcc', 'listCut', 'listMoreBtn', 'pmccShortEvents', 'pmccClosedCaptured',
-      'renderPmccListRow', 'pmccLegToTrade', 'toStrike', 'tradeTableHead', 'ii', 'markDay', 'isSameMarkDay',
+      'openCapturedHtml','renderPmccListRow', 'pmccLegToTrade', 'toStrike', 'tradeTableHead', 'ii', 'markDay', 'isSameMarkDay',
       'leapUnrealPct', 'capturedCellHtml', 'ppdCellHtml', 'pmccShortProfit', 'pmccChainPriorNet'
     ].map(extractFn).join('\n') +
     '\nconst listShowAll=new Set();\nreturn {renderLeapCard,OPTS,setOpts:o=>{db.opts=o;}};'

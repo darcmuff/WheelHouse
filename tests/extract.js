@@ -13,7 +13,7 @@ function extractConst(name) {
   return m[0];
 }
 
-const WHEEL_NORM_BUNDLE = ['walkLegPairs', 'normWheelShortStcClosers'];
+const WHEEL_NORM_BUNDLE = ['walkLegPairs', 'normWheelShortStcClosers', 'capturedCellHtml', 'openCapturedHtml'];
 const WHEEL_NORM_FN = new Set(['realisedPremium', 'wheelSellOutcomes', 'wheelCloseSlices', 'wheelCapturedOnClose', 'wheelRemainLabel', 'wheelListCells']);
 const WHEEL_AROC_BUNDLE = [
   'walkLegPairs',
