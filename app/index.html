@@ -906,6 +906,10 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
   .rep-delta td:not(:first-child)::before{content:attr(data-l);color:var(--text3);font-weight:480}
 }
 .home-more{margin:0.25rem 0 0;font-size:0.78rem;color:var(--text3)}.home-more a{color:var(--orange);cursor:pointer}
+#rotate-phone{display:none}
+@media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
+  #rotate-phone{display:flex;position:fixed;inset:0;z-index:20000;align-items:center;justify-content:center;background:var(--bg);color:var(--text2);font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:1.0625rem;font-weight:480;letter-spacing:0;text-align:center;padding:1.5rem;line-height:1.45}
+}
 @media(max-width:900px){.hk-grid{grid-template-columns:1fr 1fr}.hk.big{grid-column:1/-1}.home-grid{grid-template-columns:1fr}}
 
 /* ── Wheel cards ── */
@@ -1437,7 +1441,6 @@ select,textarea,
 @media(max-width:700px){
   #tabbar a.nav-item[data-view="log"]{display:none}
   #tabbar .nav-item{min-height:44px;min-width:44px;box-sizing:border-box;justify-content:center}
-  .settings-log,.settings-more,.settings-report{display:none!important}
   .ny-desk{display:none}
   .card-acts-inline{display:none!important}
   .card-more{display:block;position:relative;flex-shrink:0;margin-left:0.15rem;z-index:4}
@@ -1978,7 +1981,7 @@ select,textarea,
 #mSettings .st-fold>summary::after{content:'';width:0.4rem;height:0.4rem;border-right:1.6px solid var(--text3);border-bottom:1.6px solid var(--text3);transform:rotate(-45deg);margin-right:0.2rem;transition:transform .15s}
 #mSettings .st-fold[open]>summary::after{transform:rotate(45deg)}
 #mSettings .st-fold-body{display:flex;flex-direction:column;gap:0.625rem;padding:0.125rem 0.75rem 0.875rem}
-@media(max-width:700px){#mSettings .st-desk{display:none!important}}
+
 </style>
 </head>
 <body>
@@ -2507,12 +2510,6 @@ select,textarea,
             <option value="uk">DD/MM</option>
           </select>
         </div>
-      </section>
-      <section class="st-group st-desk">
-        <div class="st-h">Go to</div>
-        <button class="btn btn-ghost btn-full settings-log" onclick="switchView('log');closeModal('mSettings')"><span>Trade Log</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="btn btn-ghost btn-full settings-more" onclick="closeModal('mSettings');switchView('analytics')"><span>More data</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="btn btn-ghost btn-full settings-report" onclick="closeModal('mSettings');switchView('report')"><span>Report</span><svg class="st-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </section>
       <section class="st-group" id="settings-data">
         <div class="st-h">Your data</div>
@@ -10777,7 +10774,18 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
 // ════════════════════════════════════════════════════════
 // DOM EVENT WIRING + GLOBAL EXPOSE — INSIDE module scope
 // ════════════════════════════════════════════════════════
+function tryLockPhonePortrait(){
+  try{
+    if(!(window.matchMedia&&matchMedia('(max-width:700px) and (pointer:coarse)').matches))return;
+    const ori=screen.orientation;
+    if(ori&&typeof ori.lock==='function'){
+      const p=ori.lock('portrait');
+      if(p&&typeof p.catch==='function')p.catch(function(){});
+    }
+  }catch(e){}
+}
 document.addEventListener('DOMContentLoaded', () => {
+  tryLockPhonePortrait();
   const tabSignin = document.getElementById('tab-signin');
   const tabSignup = document.getElementById('tab-signup');
   if (tabSignin) tabSignin.addEventListener('click', () => authTab('signin'));
@@ -10798,6 +10806,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tickerField = document.getElementById('onboard-ticker');
   if (tickerField) tickerField.addEventListener('keydown', e => { if(e.key==='Enter') onboardSubmit(); });
 });
+window.addEventListener('pageshow',tryLockPhonePortrait);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)tryLockPhonePortrait();});
 
 window.togglePw = togglePw;
 window.authTab = authTab;
@@ -10920,6 +10930,7 @@ setTimeout(function(){if(window._authResolved)return;var t=document.getElementBy
 </script>
 <!-- Register the offline service worker. sw-update.js activates a new worker silently: no reload, no banner. -->
 <script src="sw-update.js"></script>
+<div id="rotate-phone" role="status">Please rotate your phone</div>
 </body>
 </html>
 

@@ -110,10 +110,9 @@ test('LEAP payback bar has a small ⓘ at the left, not a tooltip on the bar', (
 test('More data and Report are hidden on phone and kept on desktop', () => {
   const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
   assert.ok(/\.v2-hero\.v2-home \.home-head p\.home-more\{display:none\}/.test(H));
-  assert.ok(/\.settings-log,\.settings-more,\.settings-report\{display:none!important\}/.test(H));
   assert.ok(/\.ny-desk\{display:none\}/.test(H));
-  assert.ok(H.includes('class="btn btn-ghost btn-full settings-more"'));
-  assert.ok(H.includes('class="btn btn-ghost btn-full settings-report"'));
+  assert.ok(!H.includes('settings-log') && !H.includes('settings-more') && !H.includes('settings-report'));
+  assert.ok(!/<div class="st-h">Go to<\/div>/.test(H));
   assert.ok(H.includes('span class="ny-desk"'));
   assert.ok(H.includes("(v==='log'||v==='analytics'||v==='report')&&isPhoneLayout())v='dash'"));
   assert.ok(H.includes("(view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())view='dash'"));
