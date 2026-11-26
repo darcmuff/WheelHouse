@@ -80,6 +80,39 @@ test('roll popover headline is cashflow, styled neutral — not victory green',(
   assert.strictEqual(plain.netClass,'g');
 });
 
+test('full 3-leg chain selection is 4 contracts · +$167.38 each, never 4 closed → 8 opened, and the headline is Chain cashflow',()=>{
+  const items=[
+    {cash:S.selCash('CSP',OPEN.total),date:'2026-11-19',tk:'SPCX',fee:OPEN.fees,ct:S.selCt('CSP',OPEN.shares),act:'CSP',strike:OPEN.strike},
+    {cash:S.selCash('BTC',BTC.total),date:'2026-11-24',tk:'SPCX',fee:BTC.fees,ct:S.selCt('BTC',BTC.shares),act:'BTC',strike:BTC.strike},
+    {cash:S.selCash('CSP',CSP2.total),date:'2026-11-24',tk:'SPCX',fee:CSP2.fees,ct:S.selCt('CSP',CSP2.shares),act:'CSP',strike:CSP2.strike}
+  ];
+  const s=S.selSummary(items);
+  assert.strictEqual(s.net,669.52);
+  assert.strictEqual(s.fees,6.48);
+  assert.strictEqual(s.contracts,4);
+  assert.notStrictEqual(s.contracts,8);
+  assert.strictEqual(s.per,167.38);
+  assert.strictEqual(s.isRoll,true);
+  assert.strictEqual(s.isChain,true);
+  assert.strictEqual(S.selContractLine(s,money),'4 contracts · +$167.38 each');
+  assert.ok(!String(S.selContractLine(s,money)).includes('closed →'));
+  const head=S.selHeadline(s);
+  assert.strictEqual(head.kind,'Chain cashflow (net credit)');
+  assert.strictEqual(head.netClass,'sel-net-neutral');
+  // Roll-only selection (close + new open) keeps the Roll cashflow label
+  const rollOnly=S.selHeadline(S.selSummary(ROLL_ITEMS));
+  assert.strictEqual(rollOnly.kind,'Roll cashflow (net credit)');
+  // A genuine size-up on the roll itself is still 4 closed → 6 opened
+  const sized=S.selSummary([
+    items[0],
+    items[1],
+    {...items[2],ct:6}
+  ]);
+  assert.strictEqual(S.selContractLine(sized,money),'4 closed → 6 opened');
+  assert.strictEqual(sized.per,null);
+  assert.notStrictEqual(sized.contracts,10);
+});
+
 test('honest chain status: open P&L, chain now, expiry max, assigned basis',()=>{
   const st=S.rollChainStatus([OPEN,BTC,CSP2],CSP2,MARK);
   assert.strictEqual(st.openPnl,49.84);
@@ -95,7 +128,7 @@ test('honest chain status: open P&L, chain now, expiry max, assigned basis',()=>
 
 const listFns=['isCredit','walkLegPairs','normWheelShortStcClosers','strikeStep','nearStrike','exactSubset','withInferredRolls','buildRollChain','wheelCurrentValue','wheelCurrentProfit','wheelChainProfit','wheelLegOcc','toStrike','openCapturedHtml','capturedCellHtml','ppdCellHtml','closedCapturedHtml','wheelCloseSlices','wheelListCells'];
 const listCode=[extractConst('CREDITS'),extractConst('_effRollCache')].concat(listFns.map(extractFn)).join('\n');
-const L=new Function(stubs+listCode+'\nreturn{wheelListCells,wheelLegOcc,wheelCurrentProfit,wheelCurrentValue,wheelChainProfit,buildRollChain};')();
+const L=new Function(stubs+listCode+'\nreturn{wheelListCells,wheelLegOcc,wheelCurrentProfit,wheelCurrentValue,wheelChainProfit,buildRollChain,openCapturedHtml};')();
 
 test('open roll row: own P&L with % and mark, labeled chain line, PPD is a dash',()=>{
   const occ=L.wheelLegOcc('XYZ',CSP2);
@@ -113,14 +146,22 @@ test('open roll row: own P&L with % and mark, labeled chain line, PPD is a dash'
   assert.ok(cells.cap.includes('at $7.08'),cells.cap);
   assert.ok(cells.cap.includes('Chain')&&cells.cap.includes('-$2,162.48'),cells.cap);
   // open P&L and chain figure must not be stacked unlabeled
-  assert.ok(/2%\s*·\s*<span class="g">\+\$49\.84<\/span>\s*·\s*<span class="cap-at">· at \$7\.08<\/span>/.test(cells.cap)
-    || /2%[^<]*·[^<]*\$49\.84[^<]*·[^<]*at \$7\.08/.test(cells.cap)
-    || cells.cap.includes('2%')&&cells.cap.includes('+$49.84')&&cells.cap.includes('at $7.08'),cells.cap);
+  assert.ok(cells.cap.includes('2%')&&cells.cap.includes('+$49.84')&&cells.cap.includes('at $7.08'),cells.cap);
+  // % follows the open-leg P&L sign (green), not a red cell colour; only Chain stays red
+  assert.ok(/<span class="g">2%<\/span>/.test(cells.cap),cells.cap);
+  assert.ok(/<span class="g">\+\$49\.84<\/span>/.test(cells.cap),cells.cap);
+  assert.ok(/Chain <span class="r">-\$2,162\.48<\/span>/.test(cells.cap),cells.cap);
+  const down=L.openCapturedHtml(-50,-350.16,2.61,null);
+  assert.ok(/<span class="r">-50%<\/span>/.test(down.html),down.html);
+  assert.ok(/<span class="r">-\$350\.16<\/span>/.test(down.html),down.html);
+  assert.ok(!down.html.includes('Chain'),down.html);
 });
 
 test('picker markup keeps roll cashflow framing and status labels',()=>{
-  assert.match(SRC,/Roll cashflow \(net credit\)/);
-  assert.match(SRC,/Roll cashflow \(net debit\)/);
+  assert.match(SRC,/Roll cashflow/);
+  assert.match(SRC,/Chain cashflow/);
+  assert.match(SRC,/\(net credit\)/);
+  assert.match(SRC,/\(net debit\)/);
   assert.match(SRC,/sel-net-neutral/);
   assert.match(SRC,/Chain P&L now/);
   assert.match(SRC,/If expired worthless/);

@@ -2807,37 +2807,54 @@ function isCredit(a){return CREDITS.has(a);}
 function selCash(action,total){const n=+total||0;if(n<0)return Math.round(n*100)/100;return Math.round((isCredit(action)?n:-n)*100)/100;}
 function selCt(action,shares){if(action!=='CSP'&&action!=='BTC'&&action!=='STOC'&&action!=='STC'&&action!=='STO')return 0;const sh=+shares||0;return sh>0?Math.round(sh)/100:0;}
 function selSummary(items){
-  let net=0,min='',max='',fees=0,credits=0,debits=0,optCash=0,opened=0,closed=0,unknown=0;const by={};
+  const dir=act=>{if(act==='CSP'||act==='STOC'||act==='STO')return'open';if(act==='BTC'||act==='STC')return'close';return null;};
+  let net=0,min='',max='',fees=0,credits=0,debits=0,optCash=0,unknown=0;const by={};
+  const legs=[];
   (items||[]).forEach(x=>{
     const c=+x.cash||0;net+=c;if(c>0)credits+=c;else if(c<0)debits+=-c;fees+=+x.fee||0;
     const d=x.date||'';if(d){if(!min||d<min)min=d;if(!max||d>max)max=d;}
     const tk=x.tk||'';if(tk)by[tk]=(by[tk]||0)+c;
     const q=+x.ct||0;if(q>0){
       optCash+=c;
-      const act=x.act||'';
-      if(act==='CSP'||act==='STOC'||act==='STO')opened+=q;
-      else if(act==='BTC'||act==='STC')closed+=q;
+      const side=dir(x.act);
+      if(side)legs.push({dir:side,q,date:d});
       else unknown+=q;
     }
   });
+  legs.sort((a,b)=>{
+    if(a.date!==b.date)return a.date<b.date?-1:a.date>b.date?1:0;
+    const ra=a.dir==='close'?0:1,rb=b.dir==='close'?0:1;
+    return ra-rb;
+  });
+  let priorOpen=0,closed=0,subsequentOpen=0,seenClose=false;
+  legs.forEach(leg=>{
+    if(leg.dir==='close'){closed+=leg.q;seenClose=true;}
+    else if(seenClose)subsequentOpen+=leg.q;
+    else priorOpen+=leg.q;
+  });
   const r=n=>Math.round(n*100)/100;
   const names=Object.keys(by);
-  const closedContracts=r(closed),openedContracts=r(opened);
-  const isRoll=closed>0&&opened>0&&unknown===0;
+  const closedContracts=r(closed),openedContracts=r(subsequentOpen);
+  const isRoll=closed>0&&(priorOpen>0||subsequentOpen>0)&&unknown===0;
+  const isChain=isRoll&&priorOpen>0;
   let contracts,per;
   if(isRoll){
-    if(closedContracts===openedContracts){contracts=closedContracts;per=contracts?r(net/contracts):null;}
-    else{contracts=null;per=null;}
+    if(subsequentOpen>0&&closedContracts!==openedContracts){contracts=null;per=null;}
+    else{
+      const n=subsequentOpen>0?closedContracts:r(closed||priorOpen);
+      contracts=n||null;per=contracts?r(net/contracts):null;
+    }
   }else{
-    contracts=r(opened+closed+unknown);
+    contracts=r(priorOpen+subsequentOpen+closed+unknown);
     per=contracts?r(optCash/contracts):null;
   }
-  return{net:r(net),n:(items||[]).length,min,max,credits:r(credits),debits:r(debits),fees:r(fees),contracts,per,isRoll,openedContracts,closedContracts,tickers:names.length>1?names.sort().map(t=>({tk:t,cash:r(by[t])})):[]};
+  return{net:r(net),n:(items||[]).length,min,max,credits:r(credits),debits:r(debits),fees:r(fees),contracts,per,isRoll,isChain,openedContracts,closedContracts,tickers:names.length>1?names.sort().map(t=>({tk:t,cash:r(by[t])})):[]};
 }
 function selHeadline(s){
   s=s||{};
   if(s.isRoll){
-    const kind=s.net<0?'Roll cashflow (net debit)':s.net>0?'Roll cashflow (net credit)':'Roll cashflow';
+    const label=s.isChain?'Chain cashflow':'Roll cashflow';
+    const kind=s.net<0?label+' (net debit)':s.net>0?label+' (net credit)':label;
     return{kind,kindClass:'sel-kind',netClass:'sel-net-neutral'};
   }
   const kind=s.net<0?'Net debit':s.net>0?'Net credit':'Even';
@@ -6304,13 +6321,15 @@ function calcTradeROC(t,net,endDate){
 // Shared list formats (wheel + LEAP): strike trims .00 ($170, $19.5, $142.50); debit totals show with a minus (display only).
 // Shared trade-list cells (wheel + LEAP cards). Captured: % kept, with profit $ beside it.
 function openCapturedHtml(pct,openPnl,px,chainPnl,title){
-  const c=capturedCellHtml(pct,openPnl,true);
+  const sign=openPnl>0?'g':openPnl<0?'r':'';
   const dol=openPnl!=null?` <span class="${openPnl>=0?'g':'r'}">${openPnl>=0?'+':'-'}${fmtMoney(Math.abs(openPnl))}</span>`:'';
   const at=px!=null?` <span class="cap-at">· at $${(+px).toFixed(2)}</span>`:'';
   const tip=title?` title="${esc(title)}"`:'';
-  let html=`<div style="white-space:nowrap"${tip}>${pct}% ·${dol}${at}</div>`;
+  const pctHtml=pct==null?'':(sign?`<span class="${sign}">${pct}%</span>`:`${pct}%`);
+  let html=`<div style="white-space:nowrap"${tip}>${pctHtml} ·${dol}${at}</div>`;
   if(chainPnl!=null)html+=`<div style="white-space:nowrap">Chain <span class="${chainPnl>=0?'g':'r'}">${chainPnl>=0?'+':'-'}${fmtMoney(Math.abs(chainPnl))}</span></div>`;
-  return{html,color:c.color};
+  const color=openPnl>0?'var(--green)':openPnl<0?'var(--red)':'var(--text2)';
+  return{html,color};
 }
 function capturedCellHtml(pct,dollars,open){
   if(pct==null)return{html:'—',color:'var(--text3)'};
