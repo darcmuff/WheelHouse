@@ -1633,7 +1633,10 @@ select,textarea,
     padding-top:8px!important;
     padding-left:max(8px, env(safe-area-inset-left))!important;
     padding-right:max(8px, env(safe-area-inset-right))!important;
+    touch-action:pan-y;
   }
+  #content.swipe-drag{touch-action:none;transition:none;will-change:transform}
+  #content.swipe-anim{transition:transform .22s ease-out}
   #topnav,#demo-banner{
     padding-left:max(8px, env(safe-area-inset-left))!important;
     padding-right:max(8px, env(safe-area-inset-right))!important;
@@ -3807,10 +3810,238 @@ function switchView(v){
   if(v==='analytics'&&!canUse('analytics')){openUpgrade('analytics');return;}
   if(v==='report'&&!canUse('report')){openUpgrade('report');return;}
   view=v;
+  if(!_phoneSwipeHold&&typeof phoneSwipeClear==='function')phoneSwipeClear();
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
   if(v==='report'&&typeof otTrack==='function'){try{otTrack('/report');}catch(e){}}
   render();
 }
+let _phoneSwipeHold=false;
+const PHONE_SWIPE_TABS=['dash','positions','options'];
+const PHONE_SWIPE_INTENT=14;
+const PHONE_SWIPE_MIN=56;
+const PHONE_SWIPE_RATIO=0.22;
+const PHONE_SWIPE_FLICK=0.45;
+function phoneSwipeTabIndex(v){return PHONE_SWIPE_TABS.indexOf(v);}
+function phoneSwipeNext(v,dir){
+  const i=phoneSwipeTabIndex(v);
+  if(i<0||!dir)return null;
+  const j=i+dir;
+  if(j<0||j>=PHONE_SWIPE_TABS.length)return null;
+  return PHONE_SWIPE_TABS[j];
+}
+function phoneSwipeDirFromDx(dx){return dx===0?0:(dx>0?-1:1);}
+function phoneSwipeIntent(dx,dy,threshold){
+  const adx=Math.abs(dx),ady=Math.abs(dy),t=threshold==null?PHONE_SWIPE_INTENT:threshold;
+  if(adx<t&&ady<t)return null;
+  if(adx>=t&&adx>ady)return 'h';
+  return 'v';
+}
+function phoneSwipeCommit(dx,vx,width){
+  const dist=Math.abs(dx);
+  const need=Math.max(PHONE_SWIPE_MIN,(width||0)*PHONE_SWIPE_RATIO);
+  if(dist>=need)return true;
+  if(Math.abs(vx)>=PHONE_SWIPE_FLICK&&dist>=PHONE_SWIPE_INTENT*2)return true;
+  return false;
+}
+function phoneSwipeTranslate(dx,hasNeighbor,width){
+  if(!hasNeighbor){
+    const sign=dx<0?-1:1;
+    return sign*Math.min(48,Math.abs(dx)*0.28);
+  }
+  const w=width||Math.abs(dx);
+  return Math.max(-w,Math.min(w,dx));
+}
+function phoneSwipeInHScroll(target){
+  let n=target;
+  while(n&&n.nodeType===1){
+    if((n.scrollWidth||0)>(n.clientWidth||0)+1){
+      let ox='';
+      try{if(typeof getComputedStyle==='function')ox=getComputedStyle(n).overflowX||'';}catch(e){}
+      if(!ox||ox==='auto'||ox==='scroll'||ox==='overlay')return true;
+    }
+    n=n.parentElement;
+  }
+  return false;
+}
+function phoneSwipeBlocked(target){
+  if(!target||!target.closest)return true;
+  try{
+    if(typeof document!=='undefined'&&document.querySelector){
+      if(document.querySelector('.mb.open'))return true;
+      const sel=document.getElementById&&document.getElementById('sel-panel');
+      if(sel&&!sel.hidden)return true;
+      if(document.body&&document.body.classList&&document.body.classList.contains('pc-lock'))return true;
+    }
+  }catch(e){}
+  if(target.closest('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return true;
+  if(target.closest('.mb,#sel-panel,#ii-pop,#tabbar,#topnav,#demo-banner,#onboard-overlay,#auth-overlay,#loading-overlay,#ret-pop,.wl-wi,.card-more-menu,.card-more,.pc-full'))return true;
+  return phoneSwipeInHScroll(target);
+}
+function phoneSwipeCreate(){return {active:false};}
+function phoneSwipeOnStart(s,info){
+  if(!info||!info.phone||phoneSwipeTabIndex(info.view)<0||info.blocked)return {active:false};
+  return {active:true,x:info.x,y:info.y,t:info.t,id:info.id,intent:null,dx:0,dy:0,vx:0,view:info.view,width:info.width||390};
+}
+function phoneSwipeOnMove(s,info){
+  if(!s||!s.active||!info)return s||{active:false};
+  if(info.id!=null&&s.id!=null&&info.id!==s.id)return s;
+  const dx=info.x-s.x,dy=info.y-s.y;
+  const prevX=s.lx==null?s.x:s.lx,prevT=s.lt==null?s.t:s.lt;
+  const dt=Math.max(1,(info.t||0)-prevT);
+  const vx=(info.x-prevX)/dt;
+  let intent=s.intent;
+  if(!intent){
+    intent=phoneSwipeIntent(dx,dy);
+    if(intent==='v')return {active:false};
+    if(!intent)return Object.assign({},s,{dx,dy,lx:info.x,ly:info.y,lt:info.t});
+  }
+  const dir=phoneSwipeDirFromDx(dx);
+  const next=dir?phoneSwipeNext(s.view,dir):null;
+  const tx=phoneSwipeTranslate(dx,!!next,s.width);
+  return Object.assign({},s,{intent:'h',dx,dy,vx,lx:info.x,ly:info.y,lt:info.t,tx,next,prevent:true});
+}
+function phoneSwipeOnEnd(s,info){
+  if(!s||!s.active)return {active:false,action:'none'};
+  if(s.intent!=='h')return {active:false,action:'none'};
+  const x=info&&info.x!=null?info.x:(s.lx==null?s.x+s.dx:s.lx);
+  const t=info&&info.t!=null?info.t:(s.lt==null?s.t:s.lt);
+  const dx=x-s.x;
+  const prevX=s.lx==null?s.x:s.lx,prevT=s.lt==null?s.t:s.lt;
+  const dt=Math.max(1,t-prevT);
+  const vx=info&&info.x!=null?(x-prevX)/dt:s.vx;
+  const dir=phoneSwipeDirFromDx(dx);
+  const next=dir?phoneSwipeNext(s.view,dir):null;
+  if(next&&phoneSwipeCommit(dx,vx,s.width))return {active:false,action:'commit',view:next,dir,width:s.width};
+  return {active:false,action:'cancel'};
+}
+function phoneSwipeClear(){
+  const c=typeof document!=='undefined'&&document.getElementById?document.getElementById('content'):null;
+  if(!c)return;
+  c.classList.remove('swipe-drag','swipe-anim');
+  c.style.transform='';
+}
+function phoneSwipeAnimateIn(dest,dir,width){
+  const c=document.getElementById('content');
+  if(!c){if(typeof switchView==='function')switchView(dest);return;}
+  _phoneSwipeHold=true;
+  try{switchView(dest);}finally{_phoneSwipeHold=false;}
+  const w=c.getBoundingClientRect().width||width||390;
+  const start=dir>0?w:-w;
+  c.classList.remove('swipe-drag','swipe-anim');
+  c.style.transform='translate3d('+start+'px,0,0)';
+  const play=()=>{
+    c.classList.add('swipe-anim');
+    c.style.transform='translate3d(0,0,0)';
+    let done=false;
+    const finish=ev=>{
+      if(done)return;
+      if(ev&&ev.propertyName&&ev.propertyName!=='transform')return;
+      done=true;
+      c.removeEventListener('transitionend',finish);
+      c.classList.remove('swipe-anim');
+      c.style.transform='';
+    };
+    c.addEventListener('transitionend',finish);
+    setTimeout(finish,280);
+  };
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(play));
+  else setTimeout(play,16);
+}
+function phoneSwipeCommitAnim(dest,dir,width){
+  const c=document.getElementById('content');
+  if(!c){if(typeof switchView==='function')switchView(dest);return;}
+  const w=c.getBoundingClientRect().width||width||390;
+  const end=dir>0?-w:w;
+  c.classList.remove('swipe-drag');
+  c.classList.add('swipe-anim');
+  c.style.transform='translate3d('+end+'px,0,0)';
+  let finished=false;
+  const go=ev=>{
+    if(finished)return;
+    if(ev&&ev.propertyName&&ev.propertyName!=='transform')return;
+    finished=true;
+    c.removeEventListener('transitionend',go);
+    phoneSwipeAnimateIn(dest,dir,w);
+  };
+  c.addEventListener('transitionend',go);
+  setTimeout(go,280);
+}
+function bindPhoneSwipe(){
+  if(typeof document==='undefined'||document._phoneSwipeBound)return;
+  document._phoneSwipeBound=true;
+  let st=phoneSwipeCreate();
+  let suppressClick=false;
+  const stage=()=>document.getElementById('content');
+  const now=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
+  document.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch')return;
+    if(e.button!=null&&e.button!==0)return;
+    const c=stage();
+    if(!c||!(c.contains&&c.contains(e.target)))return;
+    st=phoneSwipeOnStart(st,{
+      x:e.clientX,y:e.clientY,t:now(),id:e.pointerId,
+      phone:typeof isPhoneLayout==='function'&&isPhoneLayout(),
+      view:typeof view!=='undefined'?view:null,
+      width:c.getBoundingClientRect?c.getBoundingClientRect().width:390,
+      blocked:phoneSwipeBlocked(e.target)
+    });
+  },{passive:true});
+  document.addEventListener('pointermove',e=>{
+    if(!st.active||e.pointerId!==st.id)return;
+    st=phoneSwipeOnMove(st,{x:e.clientX,y:e.clientY,t:now(),id:e.pointerId});
+    const c=stage();
+    if(!c||st.intent!=='h')return;
+    suppressClick=true;
+    if(!st.captured){
+      try{if(c.setPointerCapture)c.setPointerCapture(e.pointerId);}catch(err){}
+      c.classList.add('swipe-drag');
+      c.classList.remove('swipe-anim');
+      st.captured=true;
+    }
+    c.style.transform='translate3d('+(st.tx||0)+'px,0,0)';
+  });
+  document.addEventListener('touchmove',e=>{
+    if(!st.active||st.intent!=='h')return;
+    if(e.cancelable)e.preventDefault();
+  },{passive:false});
+  const finish=e=>{
+    if(!st.active)return;
+    if(e.pointerId!=null&&st.id!=null&&e.pointerId!==st.id)return;
+    const res=phoneSwipeOnEnd(st,{x:e.clientX,y:e.clientY,t:now()});
+    st=phoneSwipeCreate();
+    const c=stage();
+    if(res.action==='commit'){
+      suppressClick=true;
+      phoneSwipeCommitAnim(res.view,res.dir,res.width);
+      return;
+    }
+    if(res.action==='cancel'&&c){
+      c.classList.remove('swipe-drag');
+      c.classList.add('swipe-anim');
+      c.style.transform='translate3d(0,0,0)';
+      let done=false;
+      const end=ev=>{
+        if(done)return;
+        if(ev&&ev.propertyName&&ev.propertyName!=='transform')return;
+        done=true;
+        c.removeEventListener('transitionend',end);
+        c.classList.remove('swipe-anim');
+        c.style.transform='';
+      };
+      c.addEventListener('transitionend',end);
+      setTimeout(end,280);
+    }
+  };
+  document.addEventListener('pointerup',finish);
+  document.addEventListener('pointercancel',finish);
+  document.addEventListener('click',e=>{
+    if(!suppressClick)return;
+    suppressClick=false;
+    e.preventDefault();
+    e.stopPropagation();
+  },true);
+}
+bindPhoneSwipe();
 
 // ════════════════════════════════════════════════════════
 // RENDER
