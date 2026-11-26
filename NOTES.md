@@ -6,6 +6,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 ## Current state (checked in git on 2026-11-09)
 
+- `dev` (sw v417, 2026-11-26, Marc's spec): Phone tab swipe now peeks the neighbouring page (Home / Wheels / LEAPs) so it slides in with the finger, then snaps in ~280ms. Rubber-band at the ends still has no peek and no wraparound. Vertical-scroll protection and the existing exclusions are unchanged. Tests: `tests/phoneswipe.test.js`. NOT on main until Marc reviews.
+
 - `dev` (sw v416, 2026-11-26, Marc's spec): On phones (700px and under), swipe left or right between the three tab-bar pages — Home, Wheels and LEAPs, in that order. The page follows the finger and then snaps; there is no wraparound past Home or LEAPs. A vertical scroll never changes page (a clear horizontal-intent threshold). Swipes that start on inputs, open modals or sheets, the tab/top bars, the Capital at Work / What if? panels, ⋯ menus, a fullscreen chart, or a horizontally scrollable element are left alone. The tab bar's active state stays in sync. Desktop is unchanged. Tests: `tests/phoneswipe.test.js`. NOT on main until Marc reviews.
 
 - `dev` (sw v415, 2026-11-26, Marc's spec): Default date format is US (MM/DD, e.g. 11/26/26 and month-name dates like Nov 26). Anyone who has not saved a choice in Settings → Date format gets US; a saved UK (DD/MM) choice is still honoured. Month-name dates (`cpDate`, `_fdShort`, chart/report labels) follow the same setting via `dateLocale()`. Stored values and CSV export stay ISO (`YYYY-MM-DD`); date inputs stay `type=date`. Tests: `tests/datefmt.test.js`. NOT on main until Marc reviews.

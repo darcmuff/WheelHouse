@@ -1,4 +1,4 @@
-// phoneswipe.test.js — phone tab swipe between Home, Wheels and LEAPs (v416)
+// phoneswipe.test.js — phone tab swipe between Home, Wheels and LEAPs (v417)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -14,12 +14,14 @@ function harness(stubs = '') {
     ${extractConst('PHONE_SWIPE_MIN')}
     ${extractConst('PHONE_SWIPE_RATIO')}
     ${extractConst('PHONE_SWIPE_FLICK')}
+    ${extractConst('PHONE_SWIPE_MS')}
     ${extractFn('phoneSwipeTabIndex')}
     ${extractFn('phoneSwipeNext')}
     ${extractFn('phoneSwipeDirFromDx')}
     ${extractFn('phoneSwipeIntent')}
     ${extractFn('phoneSwipeCommit')}
     ${extractFn('phoneSwipeTranslate')}
+    ${extractFn('phoneSwipePeekTx')}
     ${extractFn('phoneSwipeInHScroll')}
     ${extractFn('phoneSwipeBlocked')}
     ${extractFn('phoneSwipeCreate')}
@@ -27,9 +29,9 @@ function harness(stubs = '') {
     ${extractFn('phoneSwipeOnMove')}
     ${extractFn('phoneSwipeOnEnd')}
     return {
-      PHONE_SWIPE_TABS, PHONE_SWIPE_INTENT, PHONE_SWIPE_MIN, PHONE_SWIPE_RATIO, PHONE_SWIPE_FLICK,
+      PHONE_SWIPE_TABS, PHONE_SWIPE_INTENT, PHONE_SWIPE_MIN, PHONE_SWIPE_RATIO, PHONE_SWIPE_FLICK, PHONE_SWIPE_MS,
       phoneSwipeTabIndex, phoneSwipeNext, phoneSwipeDirFromDx, phoneSwipeIntent,
-      phoneSwipeCommit, phoneSwipeTranslate, phoneSwipeInHScroll, phoneSwipeBlocked,
+      phoneSwipeCommit, phoneSwipeTranslate, phoneSwipePeekTx, phoneSwipeInHScroll, phoneSwipeBlocked,
       phoneSwipeCreate, phoneSwipeOnStart, phoneSwipeOnMove, phoneSwipeOnEnd
     };
   `)();
@@ -235,6 +237,27 @@ test('swipes are ignored on inputs, open modals, tab bars and horizontal scrolle
   assert.equal(sheet.phoneSwipeBlocked(page), true);
 });
 
+test('the neighbouring page sits beside the current one and they move together', () => {
+  const h = harness();
+  assert.equal(h.phoneSwipePeekTx(-80, 1, 390), 310);
+  assert.equal(h.phoneSwipePeekTx(80, -1, 390), -310);
+  assert.equal(h.phoneSwipePeekTx(0, 1, 390), 390);
+  assert.equal(h.phoneSwipePeekTx(0, -1, 390), -390);
+  // a 100px left-drag should leave 100px of the next page visible
+  assert.equal(h.phoneSwipePeekTx(-100, 1, 390), 290);
+});
+
+test('rubber-band at the ends has no neighbouring peek to show', () => {
+  const h = harness();
+  let first = start(h, 'dash');
+  first = h.phoneSwipeOnMove(first, { x: 320, y: 300, t: 1080, id: 1 });
+  assert.equal(first.next, null);
+  assert.ok(first.tx > 0 && first.tx < 48);
+  let last = start(h, 'options');
+  last = h.phoneSwipeOnMove(last, { x: 80, y: 300, t: 1080, id: 1 });
+  assert.equal(last.next, null);
+});
+
 test('swipe wiring is phone-only, uses no library, and keeps the nav in sync via switchView', () => {
   assert.match(SRC, /function bindPhoneSwipe\(\)/);
   assert.match(SRC, /bindPhoneSwipe\(\);/);
@@ -244,7 +267,18 @@ test('swipe wiring is phone-only, uses no library, and keeps the nav in sync via
   assert.match(extractFn('switchView'), /if\(!_phoneSwipeHold&&typeof phoneSwipeClear==='function'\)phoneSwipeClear\(\)/);
   assert.match(extractFn('switchView'), /nav-item.*dataset\.view===v/);
   assert.match(SRC, /@media\(max-width:700px\)\{[\s\S]*?#content\.swipe-drag/);
-  assert.match(SRC, /#content\.swipe-anim\{transition:transform/);
+  assert.match(extractFn('phoneSwipeScheduleTx'), /requestAnimationFrame/);
+  assert.match(extractFn('bindPhoneSwipe'), /phoneSwipeScheduleTx/);
+  assert.match(extractFn('bindPhoneSwipe'), /passive:true/);
+  assert.match(extractFn('bindPhoneSwipe'), /phoneSwipeShowNeighbor/);
+  assert.match(extractFn('phoneSwipePeekHtml'), /renderHome/);
+  assert.match(extractFn('phoneSwipePeekHtml'), /renderPositions/);
+  assert.match(extractFn('phoneSwipePeekHtml'), /renderOptions/);
+  assert.match(extractFn('phoneSwipeFillPeek'), /swipe-peek-/);
+  assert.match(SRC, /#swipe-peek/);
+  assert.match(SRC, /#content\.swipe-anim,#swipe-peek\.swipe-anim\{transition:transform \.28s cubic-bezier/);
+  const ms = harness().PHONE_SWIPE_MS;
+  assert.ok(ms >= 250 && ms <= 300, 'snap duration should be 250–300ms');
   assert.match(SRC, /touch-action:pan-y/);
   assert.doesNotMatch(SRC, /swiper|hammer\.js|alloyfinger|touch-swipe/i);
   assert.equal((SRC.match(/id="tabbar"/g) || []).length, 1);
