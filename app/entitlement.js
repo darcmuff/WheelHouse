@@ -61,15 +61,15 @@
     if (isProTier(info)) return true;
     return (openLeapCount || 0) + (adding || 1) <= lim(cfg, 'maxOpenLeaps', 1);
   }
-  // Sell a NEW PMCC short call against a LEAP (also a roll, which opens a new call). Buying back an existing one is always fine.
-  function canAddPmccCall(info) { return isProTier(info); }
+  // PMCC short calls against an open LEAP: every tier (Free is limited only by its 1 open LEAP).
+  function canAddPmccCall(info) { return true; }
   // Robinhood CSV import: Free gets 1 completed import, Pro / trial unlimited.
   function canImportCsv(info, ent, cfg) {
     if (isProTier(info)) return true;
     return ((ent && +ent.csvImportsUsed) || 0) < lim(cfg, 'maxCsvImports', 1);
   }
-  // Live option prices (1-minute option polling, live buy-back marks). Pro only.
-  function liveOptionPrices(info) { return isProTier(info); }
+  // Live option prices (1-minute option polling, live buy-back marks): every tier.
+  function liveOptionPrices(info) { return true; }
   // Pro-only views (monthly target, analytics, scoreboard, written report).
   const PRO_VIEWS = ['analytics', 'report'];
   function canSeeView(info, view) { return PRO_VIEWS.indexOf(view) < 0 || isProTier(info); }

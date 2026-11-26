@@ -6,7 +6,7 @@ const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(A,'brand.js')
 const DAY=864e5,T0=Date.parse('2026-12-01T10:00:00Z');
 const trialUser=()=>({...T.trialFields(T0)});
 // index.html gates, run against the real OT_TIER helper
-const G=new Function('OT_TIER','let _ent=null,_entErr=false;'+['planCfg','_tierLib','effectiveTier','isPro','canUse','underLimit','wheelCapOk','leapCapOk','csvImportOk','pmccCallOk'].map(extractFn).join('\n')+'\nreturn{isPro,canUse,wheelCapOk,leapCapOk,csvImportOk,pmccCallOk,effectiveTier};')(T);
+const G=new Function('OT_TIER','let _ent=null,_entErr=false;'+['planCfg','_tierLib','effectiveTier','isPro','canUse','underLimit','wheelCapOk','leapCapOk','csvImportOk'].map(extractFn).join('\n')+'\nreturn{isPro,canUse,wheelCapOk,leapCapOk,csvImportOk,effectiveTier};')(T);
 
 test('new user: Pro trial on days 1–14, Free after trialEndsAt',()=>{
   const u=trialUser();assert.strictEqual(Date.parse(u.trialEndsAt)-Date.parse(u.trialStartedAt),14*DAY);
@@ -36,21 +36,21 @@ test('paid Pro on new USD and legacy GBP price IDs stays Pro regardless of trial
   }}finally{process.env=o;}
   assert.strictEqual(T.getEffectiveTier({founder:true,trialEndsAt:'2020-01-01'},T0).tier,'pro');
 });
-test('post-trial downgrade: existing data kept and editable; new ticker, 2nd LEAP and new PMCC calls blocked',()=>{
+test('post-trial downgrade: existing data kept and editable; new ticker and 2nd LEAP blocked; PMCC calls on the 1 LEAP allowed',()=>{
   const ent={...trialUser(),plan:'free'};const now=T0+20*DAY;const info=T.getEffectiveTier(ent,now);assert.strictEqual(info.tier,'free');
   const wheels=['AAPL','TSLA','SOFI'].map((t,i)=>({id:'w'+i,ticker:t,status:'open'}));const legs=[{id:'a',side:'long',status:'open'},{id:'b',side:'long',status:'open'}];
   assert.deepStrictEqual(T.existingDataAccess(),{view:true,edit:true,close:true,export:true,delete:true});
   assert.ok(T.canOpenWheel(info,wheels.map(w=>w.ticker),'TSLA',P),'legs on an existing open ticker');assert.ok(!T.canOpenWheel(info,wheels.map(w=>w.ticker),'NVDA',P),'new ticker blocked');
-  assert.ok(!T.canOpenLeap(info,2,P));assert.ok(!T.canAddPmccCall(info));
+  assert.ok(!T.canOpenLeap(info,1,P),'2nd LEAP blocked');assert.ok(T.canAddPmccCall(info),'PMCC calls on the allowed LEAP');
   // the same rules through the app's real gate functions (expired trial, real clock is after Dec 2026 + 20d? use a past trial)
   const expired={plan:'free',trialStartedAt:'2025-01-01T00:00:00Z',trialEndsAt:'2025-01-15T00:00:00Z'};
   assert.ok(G.wheelCapOk('TSLA',wheels,P,expired,false));assert.ok(!G.wheelCapOk('NVDA',wheels,P,expired,false));
-  assert.ok(!G.leapCapOk(1,legs,P,expired,false));assert.ok(!G.pmccCallOk(P,expired,false));
-  const live={plan:'free',...T.trialFields(Date.now())};assert.ok(G.wheelCapOk('NVDA',wheels,P,live,false)&&G.leapCapOk(1,legs,P,live,false)&&G.pmccCallOk(P,live,false),'trial = Pro');
+  assert.ok(!G.leapCapOk(1,legs,P,expired,false));assert.ok(!G.leapCapOk(1,legs.slice(0,1),P,expired,false),'1 open LEAP: a 2nd is blocked');assert.ok(G.leapCapOk(1,[],P,expired,false),'first LEAP allowed');
+  const live={plan:'free',...T.trialFields(Date.now())};assert.ok(G.wheelCapOk('NVDA',wheels,P,live,false)&&G.leapCapOk(1,legs,P,live,false),'trial = Pro');
   // existing-data routes carry no gates; buying back a PMCC call is checked before the new-call gate
-  ['openLeapEdit','buildExport','openPmccLegEdit','savePmccLeg'].forEach(f=>assert.ok(!/CapOk|canUse|pmccCallOk/.test(extractFn(f)),f+' is never gated'));
-  const sp=extractFn('savePmcc');assert.ok(sp.indexOf("g('pcc-side')==='btc'")<sp.indexOf('pmccCallOk()'),'buy-back before the gate');
-  assert.match(extractFn('openPmccSell'),/_pmccFree&&!P\.open\.length/);assert.match(extractFn('pmccSaveRoll'),/pmccCallOk\(\)/);
+  ['openLeapEdit','buildExport','openPmccLegEdit','savePmccLeg'].forEach(f=>assert.ok(!/CapOk|canUse/.test(extractFn(f)),f+' is never gated'));
+  ['openPmccSell','savePmcc','pmccSaveRoll'].forEach(f=>assert.ok(!/canUse|openUpgrade|pmccCallOk|_pmccFree/.test(extractFn(f)),f+': Free can sell and roll PMCC calls'));
+  assert.ok(!/pmccCallOk|pmccLockMsg/.test(SRC)&&!P.paidFeatures.includes('leaps-full'));
 });
 test('Free: 1 Robinhood CSV import (csvImportsUsed < 1); Pro / trial unlimited; counted server-side',async()=>{
   assert.ok(G.csvImportOk(P,{plan:'free'},false));assert.ok(G.csvImportOk(P,{plan:'free',csvImportsUsed:0},false));
@@ -61,13 +61,14 @@ test('Free: 1 Robinhood CSV import (csvImportsUsed < 1); Pro / trial unlimited; 
   const deps={bearerUser:async()=>({uid:'u'}),getEntitlement:async u=>S[u],setEntitlement:async(u,f)=>{S[u]={...S[u],...f};}};
   const r=await acc._handler({httpMethod:'POST',headers:{},body:'{"action":"csv-import"}'},{},deps);assert.strictEqual(r.statusCode,200);assert.strictEqual(S.u.csvImportsUsed,1);
 });
-test('Free: no 1-minute live option polling or live buy-back marks',async()=>{
-  assert.match(extractFn('fetchWheelMarks'),/^function fetchWheelMarks\(force\)\{\n  if\(!canUse\('live-refresh'\)\)return;/);
-  let calls=0;const run=new Function('db','canUse','fetch',"let _optMarkStatus='',_optMarksAt=0;async "+extractFn('fetchOptionMarks')+'\nreturn fetchOptionMarks(false);');
-  await run({opts:[{id:'l',status:'open',underlying:'AAPL',expiry:'2027-01-15',strike:200,type:'C',side:'long'}]},()=>false,()=>{calls++;});
-  assert.strictEqual(calls,0,'no option quote requests on Free');
-  assert.ok(G.canUse('live-refresh',P,{plan:'pro'},false)&&!G.canUse('live-refresh',P,{plan:'free'},false));
-  assert.match(extractFn('refreshLegMark'),/openUpgrade\('live-refresh'\)/);
+test('Free gets live option prices: 1-minute option polling and live buy-back marks on every tier',async()=>{
+  assert.ok(!P.paidFeatures.includes('live-refresh'),'live-refresh is not a paid feature');
+  assert.ok(!/canUse\('live-refresh'\)/.test(SRC),'no live-price gate left in the app');
+  assert.ok(!/canUse|openUpgrade/.test(extractFn('fetchWheelMarks'))&&!/canUse|openUpgrade/.test(extractFn('refreshLegMark')));
+  let calls=0;const run=new Function('db','canUse','fetch','quotes','OPTS','AbortSignal',"let _optMarkStatus='',_optMarksAt=0,view='x';const render=()=>{};async "+extractFn('fetchOptchain')+"\nasync "+extractFn('fetchOptionMarks')+'\nreturn fetchOptionMarks(false);');
+  try{await run({opts:[{id:'l',status:'open',underlying:'AAPL',expiry:'2027-01-15',strike:200,type:'C',side:'long'}]},()=>false,async()=>{calls++;return{ok:true,json:async()=>({spot:0,contracts:{}})};},{},{occ:()=>'AAPL270115C00200000'},{timeout:()=>undefined});}catch(e){}
+  assert.ok(calls>0,'option quotes are requested even when the account is Free');
+  assert.ok(G.canUse('live-refresh',P,{plan:'free'},false)&&T.liveOptionPrices(T.getEffectiveTier({plan:'free'},T0)));
   for(const f of fs.readdirSync(A).filter(f=>/\.(html|js)$/.test(f)))assert.ok(!/once per visit/i.test(fs.readFileSync(path.join(A,f),'utf8')),f);
 });
 test('pricing: one config, USD $59/yr default ($4.92/mo, Save 30%) and $6.99/mo; no GBP left',()=>{
@@ -80,8 +81,8 @@ test('comparison table matches the agreed Free vs Pro split; landing, start and 
   assert.deepStrictEqual(JSON.parse(JSON.stringify(P.comparison)),[
     ['Manual entry and SmartScan','✓','✓'],['OpTrack Bot <em>(requires Grok Bot)</em>','✓','✓'],['Robinhood CSV import','1 import','Unlimited'],
     ['Realised P&amp;L and Home','✓','✓'],['Export and delete your data','✓','✓'],['Wheel tickers','Up to 2 open','Unlimited'],
-    ['LEAPs &amp; PMCC tracking','1 open LEAP <em>(no PMCC tracking)</em>','Unlimited LEAPs &amp; PMCC tracking'],
-    ['Live option prices (refreshed every minute)','–','✓'],['Monthly target tracking, analytics &amp; scoreboard','–','✓'],['Plain-English account performance report','–','✓']]);
+    ['LEAPs &amp; PMCC tracking','1 open LEAP with PMCC tracking','Unlimited LEAPs &amp; PMCC tracking'],
+    ['Live option prices (refreshed every minute)','✓','✓'],['Monthly target tracking, analytics &amp; scoreboard','–','✓'],['Plain-English account performance report','–','✓']]);
   const L=fs.readFileSync(path.join(A,'landing.html'),'utf8'),St=fs.readFileSync(path.join(A,'start.html'),'utf8');
   assert.ok(L.includes('P.comparison')&&L.includes('src="entitlement.js"')&&St.includes('P.comparison')&&St.includes('src="entitlement.js"'));
   assert.ok(/P\.comparison/.test(extractFn('openUpgrade'))&&SRC.includes('id="upg-table"')&&SRC.includes('data-iv="annual" class="on"'));

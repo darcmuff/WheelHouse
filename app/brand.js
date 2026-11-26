@@ -33,10 +33,9 @@ window.BRAND = {
     free: { maxWheelTickers: 2, maxOpenLeaps: 1, maxCsvImports: 1 },   // limits on the free plan (new additions only)
     // Paid-only features. Remove a line to make it free; add it back to make it paid.
     // Robinhood CSV import is not here: Free gets free.maxCsvImports imports, Pro unlimited.
+    // Free for everyone (Marc, 2026-11-26): live option prices every minute and PMCC tracking on the open LEAP(s) you have.
     paidFeatures: [
-      'unlimited',        // more than the free ticker / LEAP limits above
-      'leaps-full',       // more than 1 open LEAP, and PMCC short calls against LEAPs
-      'live-refresh',     // live option prices: marks refreshed every minute, live buy-back marks
+      'unlimited',        // more than the free limits above (2 open wheel tickers, 1 open LEAP)
       'analytics',        // More data: monthly target tracking, analytics, scoreboard
       'report'            // Plain-English account performance report
     ],
@@ -48,8 +47,8 @@ window.BRAND = {
       ['Realised P&amp;L and Home', '✓', '✓'],
       ['Export and delete your data', '✓', '✓'],
       ['Wheel tickers', 'Up to 2 open', 'Unlimited'],
-      ['LEAPs &amp; PMCC tracking', '1 open LEAP <em>(no PMCC tracking)</em>', 'Unlimited LEAPs &amp; PMCC tracking'],
-      ['Live option prices (refreshed every minute)', '–', '✓'],
+      ['LEAPs &amp; PMCC tracking', '1 open LEAP with PMCC tracking', 'Unlimited LEAPs &amp; PMCC tracking'],
+      ['Live option prices (refreshed every minute)', '✓', '✓'],
       ['Monthly target tracking, analytics &amp; scoreboard', '–', '✓'],
       ['Plain-English account performance report', '–', '✓']
     ]
@@ -57,8 +56,6 @@ window.BRAND = {
   // Plain-English names for upgrade prompts.
   featureNames: {
     'unlimited': 'Unlimited wheel tickers and LEAPs',
-    'leaps-full': 'Unlimited LEAPs and PMCC tracking',
-    'live-refresh': 'Live option prices (refreshed every minute)',
     'robinhood-import': 'Unlimited Robinhood CSV imports',
     'analytics': 'Monthly target tracking, analytics and scoreboard',
     'report': 'Plain-English account performance report'

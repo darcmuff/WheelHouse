@@ -4496,14 +4496,13 @@ let _pmccScan=null;
 function openPmccSell(leapId){
   const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
   const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
-  const _pmccFree=!pmccCallOk();if(_pmccFree&&!P.open.length){openUpgrade('leaps-full',pmccLockMsg());return;} // Free: only buying back existing calls
   const v=(k,x)=>document.getElementById(k).value=x??'';
   v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste','pcc-current-price','pcc-fill-time'].forEach(k=>v(k,''));
   const _pch=document.getElementById('pcc-fill-time-hint');if(_pch){_pch.textContent='';_pch.hidden=true;}
   v('pcc-qty',Math.max(1,(+L.qty||1)-P.open.reduce((a,l)=>a+(+l.qty||0),0)));v('pcc-fees','0');v('pcc-date',new Date().toISOString().slice(0,10));
   document.getElementById('mPmccTitle').textContent=`Add trade · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
   document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
-  ['pcc-scan-msg','pcc-filled','pcc-err'].forEach(k=>document.getElementById(k).style.display='none');pmccSide(_pmccFree?'btc':'sto');document.getElementById('pcc-pick').innerHTML='';
+  ['pcc-scan-msg','pcc-filled','pcc-err'].forEach(k=>document.getElementById(k).style.display='none');pmccSide('sto');document.getElementById('pcc-pick').innerHTML='';
   const pr=document.getElementById('pcc-roll');if(pr){pr.checked=false;document.getElementById('pcc-roll-box').hidden=true;fillLeapRollSelect(L);}
   ['pcc-price','pcc-date','pcc-qty','pcc-fees','pcc-expiry'].forEach(k=>document.getElementById(k).style.borderColor='');
   _pmccMode='trade';document.getElementById('pcc-scan-btn').style.display='';
@@ -4615,7 +4614,6 @@ function pmccRollPreview(r){
   <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save</button>`;
 }
 function pmccSaveRoll(){
-  if(!pmccCallOk()){openUpgrade('leaps-full',pmccLockMsg());return;}
   const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
   const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),false);
   if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
@@ -4672,7 +4670,6 @@ function savePmcc(){
     if(r.rest){db.opts.push(r.rest);_saveOpt(r.rest);}
     closeModal('mPmcc');render();return;
   }
-  if(!pmccCallOk()){openUpgrade('leaps-full',pmccLockMsg());return;} // a NEW short call
   const r=pmccFormLeg(f,L);
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
   const _fa=readFilledAtField('pcc-date','pcc-fill-time','pcc-fill-time-hint',null);if(_fa.error)return;
@@ -5124,7 +5121,6 @@ async function fetchOptchain(symbol,contracts){
   throw last||new Error('optchain failed');
 }
 async function fetchWheelMarks(force){
-  if(!canUse('live-refresh'))return; // live buy-back marks are Pro only
   if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
   const byU={};
   (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const u=String(w.ticker).toUpperCase();openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry).forEach(t=>{(byU[u]=byU[u]||new Set()).add(wheelLegOcc(w.ticker,t));});});
@@ -5147,7 +5143,6 @@ async function fetchOptionMarks(force, onlyId){
   if(onlyId)open=open.filter(l=>l.id===onlyId);
   if(!open.length){if(!onlyId)_optMarkStatus='';return;}
   if(!onlyId){
-    if(!force&&!canUse('live-refresh'))return; // live option prices are Pro only: no option polling on Free (typed marks still work)
     if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
   }
   const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
@@ -5179,7 +5174,7 @@ async function fetchOptionMarks(force, onlyId){
   _optMarkStatus=failU.length&&!ok?'Using the last saved price':`Marks: ${ok} updated${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
   if(changed||view==='options')render();
 }
-async function refreshLegMark(id){if(!canUse('live-refresh')){openUpgrade('live-refresh');return;}await fetchOptionMarks(true,id);}
+async function refreshLegMark(id){await fetchOptionMarks(true,id);}
 
 function renderSidebar(){
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
@@ -10038,9 +10033,6 @@ function capNewLeaps(existing,newLegs,cfg,ent,err){const drop=new Set();let n=(e
 // Robinhood CSV import: Free gets plans.free.maxCsvImports completed imports (csvImportsUsed, server-written), Pro/trial unlimited.
 function csvImportOk(cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const e=ent===undefined?_ent:ent;const T=_tierLib();
   if(T)return T.canImportCsv(effectiveTier(e),e,cfg);return isPro(e,false)||((e&&+e.csvImportsUsed)||0)<((cfg.free||{}).maxCsvImports??1);}
-// PMCC: selling a NEW short call against a LEAP (or rolling into one) is Pro. Buying back an existing call is always allowed.
-function pmccCallOk(cfg,ent,err){return canUse('leaps-full',cfg,ent,err);}
-function pmccLockMsg(){return 'Free plan: PMCC short calls against LEAPs are part of Pro. Your existing calls are kept — you can still buy them back.';}
 function capMsg(kind){const f=planCfg().free||{};return kind==='wheel'?`Free plan: up to ${f.maxWheelTickers} open tickers. Your existing ones are kept — upgrade to add more.`:`Free plan: up to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. Your existing ones are kept — upgrade to add more.`;}
 async function loadEntitlement(uid){try{const sn=await listenServer(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}syncProBadge();}
 async function _pollUpgrade(uid){for(let i=0;i<6&&!isPaidPro(_ent);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPaidPro(_ent)){alert('Thanks! Pro is now on for your account.');render();}}
