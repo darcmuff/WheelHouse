@@ -758,6 +758,8 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tn-trial:hover{color:var(--text);border-color:var(--text3)}
 .tn-trial.tn-trial-end{color:var(--brand-orange);border-color:rgba(var(--brand-orange-rgb),.45);background:rgba(var(--brand-orange-rgb),.06)}
 .tn-trial[hidden]{display:none}
+.tn-trial .tt-short{display:none}
+@media(max-width:480px){.tn-trial{font-size:0.6875rem;padding:0.3125rem 0.4375rem}.tn-trial .tt-long{display:none}.tn-trial .tt-short{display:inline}}
 /* Upgrade box: Annual/Monthly toggle (Annual default) + the Free vs Pro table from BRAND.plans.comparison */
 .upg-body{padding:0.25rem 0;font-size:0.8125rem;color:var(--text2);line-height:1.45}
 .upg-feature{margin:0 0 0.75rem;font-weight:720;color:var(--text)}
@@ -9991,7 +9993,7 @@ function isPaidPro(ent){return !!(ent&&(ent.plan==='pro'||ent.founder));}
 function proBadgeOn(ent){return !!(ent&&ent.demo!==true&&(ent.plan==='pro'||ent.founder));}
 function syncProBadge(){const el=document.getElementById('tn-pro');if(el)el.hidden=!proBadgeOn(_ent);syncTrialPill();}
 function syncTrialPill(info){const el=document.getElementById('tn-trial');if(!el)return;const t=info||(planCfg().gating&&!_entErr&&!(_ent&&_ent.demo)?effectiveTier(_ent):null);
-  if(!t||!t.isTrial){el.hidden=true;return;}el.textContent='Pro trial · '+t.trialDaysLeft+' day'+(t.trialDaysLeft===1?'':'s')+' left';el.classList.toggle('tn-trial-end',t.trialDaysLeft<=3);el.hidden=false;}
+  if(!t||!t.isTrial){el.hidden=true;return;}const d=t.trialDaysLeft;el.innerHTML='<span class="tt-long">Pro trial · '+d+' day'+(d===1?'':'s')+' left</span><span class="tt-short">Trial · '+d+'d</span>';el.setAttribute('aria-label','Pro trial, '+d+' day'+(d===1?'':'s')+' left. See Pro plans');el.classList.toggle('tn-trial-end',t.trialDaysLeft<=3);el.hidden=false;}
 function canUse(feature,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(!(cfg.paidFeatures||[]).includes(feature))return true;
   return isPro(ent===undefined?_ent:ent,err===undefined?_entErr:err);}
 function underLimit(kind,count,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const f=cfg.free||{};const lim=kind==='wheel'?f.maxWheelTickers:f.maxOpenLeaps;return lim==null||count<lim;}
