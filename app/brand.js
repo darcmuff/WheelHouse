@@ -14,32 +14,54 @@ window.BRAND = {
            m192: 'icon-maskable-192.png', m512: 'icon-maskable-512.png', mark: 'logo-mark.svg', horizontal: 'logo-horizontal.svg' },
   supportEmail: 'support@optrack.app',
 
-  // ── Plans and payments. Gating is ON: Free caps apply; Pro unlocks paidFeatures.
-  // Founders (Marc, his brother) are kept on Pro by entitlement docs (see SETUP.md) and are never locked out.
+  // ── Plans and payments: the ONE pricing config. To change a price, edit `prices` here and swap the Stripe Price IDs
+  // in Netlify (STRIPE_PRICE_PRO_ANNUAL_USD / STRIPE_PRICE_PRO_MONTHLY_USD). Display text ($4.92/mo, Save 30%) is
+  // computed from these numbers by OT_TIER.priceDisplay (app/entitlement.js). Gating is ON: Free caps apply; Pro
+  // (paid or the 14-day trial) unlocks paidFeatures. Founders are kept on Pro by entitlement docs (see SETUP.md).
   plans: {
     gating: true,
-    currency: '£',
-    priceMonthly: 9,
-    priceYearly: 79,
-    free: { maxWheelTickers: 2, maxOpenLeaps: 1 },   // limits on the free plan
+    currency: 'USD',
+    symbol: '$',
+    defaultInterval: 'annual',          // the toggle starts on Annual
+    prices: {
+      annual: { amount: 59 },           // $59/year → shown as $4.92/mo, billed $59/year · Save 30%
+      monthly: { amount: 6.99 }         // $6.99/month
+    },
+    priceMonthly: 6.99,                 // kept for older readers; same numbers as `prices`
+    priceYearly: 59,
+    trialDays: 14,                      // reverse trial, no card; the server sets the dates (OT_TIER.TRIAL_DAYS)
+    free: { maxWheelTickers: 2, maxOpenLeaps: 1, maxCsvImports: 1 },   // limits on the free plan (new additions only)
     // Paid-only features. Remove a line to make it free; add it back to make it paid.
+    // Robinhood CSV import is not here: Free gets free.maxCsvImports imports, Pro unlimited.
     paidFeatures: [
-      'unlimited',        // more than the free limits above
-      'leaps-full',       // LEAP + PMCC tracking beyond the free limit, LEAP analytics
-      'live-refresh',     // option marks refreshed automatically every minute
-      'robinhood-import', // Robinhood CSV import
-      'analytics',        // More data: monthly target, analytics, scoreboard
-      'report'            // Written performance report from existing figures
+      'unlimited',        // more than the free ticker / LEAP limits above
+      'leaps-full',       // more than 1 open LEAP, and PMCC short calls against LEAPs
+      'live-refresh',     // live option prices: marks refreshed every minute, live buy-back marks
+      'analytics',        // More data: monthly target tracking, analytics, scoreboard
+      'report'            // Plain-English account performance report
+    ],
+    // The Free vs Pro comparison (landing, start page and the in-app upgrade box all read this).
+    comparison: [
+      ['Manual entry and SmartScan', '✓', '✓'],
+      ['OpTrack Bot <em>(requires Grok Bot)</em>', '✓', '✓'],
+      ['Robinhood CSV import', '1 import', 'Unlimited'],
+      ['Realised P&amp;L and Home', '✓', '✓'],
+      ['Export and delete your data', '✓', '✓'],
+      ['Wheel tickers', 'Up to 2 open', 'Unlimited'],
+      ['LEAPs &amp; PMCC tracking', '1 open LEAP <em>(no PMCC tracking)</em>', 'Unlimited LEAPs &amp; PMCC tracking'],
+      ['Live option prices (refreshed every minute)', '–', '✓'],
+      ['Monthly target tracking, analytics &amp; scoreboard', '–', '✓'],
+      ['Plain-English account performance report', '–', '✓']
     ]
   },
-  // Plain-English names for the comparison table and upgrade prompts.
+  // Plain-English names for upgrade prompts.
   featureNames: {
-    'unlimited': 'Unlimited tickers and LEAPs',
-    'leaps-full': 'Full LEAP and PMCC tracking',
-    'live-refresh': 'Live captured profit (marks refresh every minute)',
-    'robinhood-import': 'Robinhood CSV import',
-    'analytics': 'More data: monthly return against your own target, and analytics',
-    'report': 'A written report of your options P&L, monthly return and premium'
+    'unlimited': 'Unlimited wheel tickers and LEAPs',
+    'leaps-full': 'Unlimited LEAPs and PMCC tracking',
+    'live-refresh': 'Live option prices (refreshed every minute)',
+    'robinhood-import': 'Unlimited Robinhood CSV imports',
+    'analytics': 'Monthly target tracking, analytics and scoreboard',
+    'report': 'Plain-English account performance report'
   },
 
   // ── Privacy-friendly, cookie-free analytics. Off until set.

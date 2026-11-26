@@ -2,7 +2,7 @@
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path'),vm=require('vm');
 const{extractFn}=require('./extract');const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app','brand.js'),'utf8'),ctx);const ON=ctx.window.BRAND.plans,OFF={...ON,gating:false};
-const G=new Function("let _ent=null,_entErr=false;"+['planCfg','isPro','canUse','underLimit','wheelCapOk','leapCapOk','capNewLeaps'].map(extractFn).join('\n')+'\nreturn{wheelCapOk,leapCapOk,capNewLeaps};')();
+const G=new Function("OT_TIER","let _ent=null,_entErr=false;"+['planCfg','isPro','canUse','underLimit','wheelCapOk','leapCapOk','capNewLeaps','_tierLib','effectiveTier'].map(extractFn).join('\n')+'\nreturn{wheelCapOk,leapCapOk,capNewLeaps};')(require('../app/entitlement.js'));
 const FREE={plan:'free'},PRO={plan:'pro'},FOUNDER={founder:true};
 const W=n=>Array.from({length:n},(_,i)=>({id:'w'+i,ticker:'T'+i,status:'open'}));
 const LEAP=(id,st='open')=>({id,side:'long',type:'C',status:st});

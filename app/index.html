@@ -99,6 +99,7 @@
 <script src="demo.js"></script>
 <script>try{if(localStorage.getItem('ot-sim')==='1')window._gcSkip=1;window._gcStoreTest=localStorage.getItem('gc_test');}catch(e){}if(window._gcSendPageview)window._gcSendPageview();</script>
 <script src="brand.js"></script>
+<script src="entitlement.js"></script>
 <script src="wc-brand.js"></script>
 <script src="popular.js"></script>
 <script src="delta.js"></script>
@@ -752,6 +753,33 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tn-word{display:flex;flex-direction:column;align-items:flex-end}
 .tn-pro{margin-top:0.2rem;font-size:0.675rem;font-weight:840;letter-spacing:0.06em;line-height:1;color:var(--orange)}
 .tn-pro[hidden]{display:none}
+/* Pro trial pill: quiet grey; a touch more orange in the last 3 days. Never a popup. */
+.tn-trial{display:inline-flex;align-items:center;white-space:nowrap;font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:0.75rem;font-weight:700;line-height:1;padding:0.375rem 0.625rem;border-radius:6px;border:1px solid var(--border);background:var(--surface,#fff);color:var(--text2);text-decoration:none}
+.tn-trial:hover{color:var(--text);border-color:var(--text3)}
+.tn-trial.tn-trial-end{color:var(--brand-orange);border-color:rgba(var(--brand-orange-rgb),.45);background:rgba(var(--brand-orange-rgb),.06)}
+.tn-trial[hidden]{display:none}
+/* Upgrade box: Annual/Monthly toggle (Annual default) + the Free vs Pro table from BRAND.plans.comparison */
+.upg-body{padding:0.25rem 0;font-size:0.8125rem;color:var(--text2);line-height:1.45}
+.upg-feature{margin:0 0 0.75rem;font-weight:720;color:var(--text)}
+.upg-toggle{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--border);border-radius:6px;background:var(--bg)}
+.upg-toggle button{font:inherit;font-weight:700;font-size:0.8125rem;border:0;border-radius:6px;padding:0.375rem 0.75rem;background:transparent;color:var(--text2);cursor:pointer}
+.upg-toggle button.on{background:var(--surface,#fff);color:var(--text);box-shadow:0 1px 2px rgba(17,15,21,.12)}
+.upg-save{font-size:0.6875rem;font-weight:800;color:var(--brand-orange);margin-left:0.25rem}
+.upg-price{margin:0.75rem 0 0.625rem}
+.upg-amt{font-size:1.75rem;font-weight:800;color:var(--text);line-height:1.1}
+.upg-amt span{font-size:0.875rem;font-weight:600;color:var(--text3)}
+.upg-billed{font-size:0.75rem;color:var(--text3);margin-top:0.125rem}
+.upg-go{width:100%;justify-content:center}
+.upg-msg{margin-top:0.5rem;font-size:0.75rem;color:var(--text3)}
+.upg-table{width:100%;border-collapse:collapse;margin-top:0.875rem;font-size:0.75rem}
+.upg-table th{text-align:center;font-weight:800;color:var(--text);padding:0.375rem 0.25rem;border-bottom:1px solid var(--border)}
+.upg-table th:first-child{text-align:left}
+.upg-table td{padding:0.375rem 0.25rem;border-bottom:1px solid var(--border);text-align:center;color:var(--text2);vertical-align:top}
+.upg-table td:first-child{text-align:left;color:var(--text)}
+.upg-table td em{font-style:normal;color:var(--text3)}
+.upg-table td.y{color:var(--text);font-weight:700}
+.upg-table td.n{color:var(--text3)}
+.upg-foot{margin:0.75rem 0 0;font-size:0.75rem;color:var(--text3)}
 #topnav{flex-wrap:nowrap}
 .tn-tabs{display:flex;gap:0.25rem}
 #topnav .nav-item,#tabbar .nav-item{border:0;padding:0.4375rem 0.875rem;border-radius:0.625rem;color:var(--text2);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:0.375rem;background:none}
@@ -783,8 +811,7 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tnb-eyes{transform-box:view-box;transform-origin:72px 78px}
 .tnb-shadow{position:absolute;left:30%;right:30%;bottom:17%;height:3px;border-radius:50%;background:rgba(17,15,21,.18);filter:blur(1px)}
 .tnb-tx{display:flex;flex-direction:column;gap:0.25rem}
-.tnb-by{display:flex;align-items:center;gap:0.3125rem;font-size:0.625rem;font-weight:600;letter-spacing:0.02em;color:var(--text3)}
-.tnb-xai{display:block;height:13px;width:auto;color:var(--text)}
+.tnb-by{display:flex;align-items:center;gap:0.3125rem;font-size:0.6875rem;font-weight:700;letter-spacing:0.01em;color:var(--text3)}
 .tnb-hl{font-weight:800;font-size:0.875rem;letter-spacing:-0.005em;color:var(--text)}
 .tnb-btn{display:inline-flex;align-items:center;gap:0.375rem;margin-left:1.25rem;color:#fff;font-weight:740;font-size:0.75rem;padding:0.5rem 0.8125rem;border-radius:6px;background:var(--brand-orange);box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 3px 10px rgba(var(--brand-orange-rgb),.28)}
 .tn-bot:hover .tnb-btn{background:var(--brand-orange-hover)}
@@ -2128,8 +2155,9 @@ select,textarea,
   <header id="topnav">
     <div class="tn-brand"><img class="tn-mark" src="logo-mark.svg?v=372" alt=""><span class="tn-word"><span class="wm" data-brand="name">OpTrack</span><span class="tn-pro" id="tn-pro" hidden>Pro</span></span></div>
     <nav class="tn-tabs"><a class="nav-item" data-view="dash" onclick="switchView('dash')">Home<span class="nav-health-badge"></span></a><a class="nav-item active" data-view="positions" onclick="switchView('positions')">Wheels</a><a class="nav-item" data-view="options" onclick="switchView('options')">LEAPs</a><a class="nav-item" data-view="log" onclick="switchView('log')">Activity</a></nav>
-    <div class="tn-bot-wrap"><a id="tn-optrack-bot" class="tn-bot" href="" target="_blank" rel="noopener" onclick="if(typeof otTrack==='function')otTrack('/optrack-bot')"><span class="tnb-av" aria-hidden="true"><span class="tnb-hop"><span class="tnb-bob"><span class="tnb-tilt"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" viewBox="0 0 122.67 122.67"><defs><path id="tnb-body" d="M18.65 74.87 18.66 73.27 18.73 71.66 18.86 70.06 19.04 68.46 19.28 66.86 19.58 65.26 19.93 63.68 20.33 62.1 20.8 60.54 21.31 58.98 21.88 57.44 22.5 55.92 23.17 54.42 23.9 52.93 24.67 51.46 25.5 50.02 26.37 48.6 27.29 47.21 28.26 45.84 29.27 44.51 30.33 43.2 31.43 41.92 32.58 40.68 33.76 39.47 34.98 38.3 36.25 37.16 37.54 36.07 38.87 35.01 40.24 33.99 41.63 33.01 43.05 32.08 44.5 31.19 45.97 30.34 47.47 29.54 48.98 28.79 50.52 28.08 52.08 27.43 53.64 26.82 55.23 26.26 56.83 25.75 58.44 25.29 60.05 24.88 61.69 24.52 63.33 24.22 64.98 23.97 66.65 23.77 68.29 23.62 69.93 23.53 71.58 23.49 73.22 23.5 74.87 23.56 76.51 23.68 78.18 23.85 79.84 24.07 81.47 24.35 83.12 24.68 84.74 25.06 86.36 25.49 87.96 25.97 89.57 26.5 91.14 27.08 92.71 27.72 94.26 28.39 95.79 29.12 97.3 29.9 98.78 30.71 100.25 31.58 101.69 32.49 103.1 33.44 104.48 34.43 105.83 35.47 107.14 36.55 108.42 37.66 109.66 38.81 110.87 40 112.04 41.22 113.16 42.48 114.24 43.77 115.28 45.09 116.27 46.43 117.22 47.81 118.11 49.21 118.96 50.64 119.76 52.09 120.51 53.57 121.21 55.06 121.86 56.57 122.46 58.1 123 59.64 123.49 61.2 123.92 62.77 124.3 64.35 124.62 65.94 124.89 67.53 125.1 69.13 125.26 70.73 125.35 72.34 125.39 73.94 125.37 75.54 125.29 77.14 125.15 78.73 124.96 80.31 124.7 81.89 124.39 83.45 124.01 85 123.58 86.54 123.09 88.06 122.54 89.57 121.92 91.05 121.25 92.52 120.52 93.96 119.74 95.38 118.89 96.77 117.99 98.14 117.02 99.47 116 100.78 114.93 102.05 113.8 103.3 112.62 104.51 111.38 105.68 110.09 106.82 108.74 107.91 107.35 108.97 105.92 109.99 104.44 110.97 102.92 111.9 101.37 112.79 99.77 113.64 98.15 114.44 96.5 115.2 94.84 115.9 93.16 116.56 91.46 117.17 89.75 117.73 88.03 118.25 86.32 118.71 84.58 119.11 82.83 119.47 81.12 119.78 79.37 120.03 77.61 120.23 75.88 120.38 74.15 120.47 72.42 120.51 70.69 120.5 68.97 120.44 67.23 120.32 65.47 120.15 63.72 119.93 62 119.65 60.24 119.33 58.5 118.95 56.78 118.52 55.05 118.04 53.33 117.51 51.62 116.93 49.93 116.3 48.26 115.62 46.6 114.89 44.96 114.12 43.35 113.3 41.78 112.44 40.24 111.53 38.75 110.58 37.3 109.58 35.89 108.55 34.52 107.47 33.21 106.36 31.96 105.21 30.75 104.02 29.6 102.8 28.5 101.54 27.46 100.25 26.47 98.93 25.55 97.58 24.68 96.21 23.87 94.8 23.11 93.37 22.42 91.92 21.78 90.45 21.2 88.95 20.68 87.44 20.22 85.91 19.82 84.37 19.48 82.81 19.2 81.24 18.97 79.66 18.81 78.07 18.7 76.47Z"/><mask id="tnb-inside" maskUnits="userSpaceOnUse" x="0" y="0" width="144" height="144"><use href="#tnb-body" fill="#fff"/></mask></defs><g transform="matrix(0.71 0 0 0.71 9.83 9.83)"><use href="#tnb-body" fill="#FF5A36"/><g mask="url(#tnb-inside)"><g class="tnb-eyes"><path d="M52.53 86.19 52.52 85.43 52.52 84.67 52.51 83.91 52.5 83.14 52.5 82.38 52.49 81.62 52.48 80.86 52.48 80.09 52.47 79.33 52.46 78.57 52.46 77.81 52.45 77.05 52.44 76.28 52.44 75.52 52.43 74.76 52.42 74 52.42 73.23 52.41 72.47 52.4 71.71 52.4 70.95 52.67 68.97 53.5 67.18 54.82 65.75 56.51 64.83 58.4 64.5 60.32 64.8 62.08 65.69 63.49 67.09 64.4 68.87 64.73 70.84 64.74 71.6 64.75 72.36 64.76 73.13 64.76 73.89 64.77 74.65 64.78 75.41 64.78 76.18 64.79 76.94 64.79 77.7 64.8 78.46 64.8 79.22 64.81 79.99 64.81 80.75 64.82 81.51 64.82 82.27 64.83 83.04 64.83 83.8 64.83 84.56 64.84 85.32 64.84 86.09 64.54 88.06 63.65 89.85 62.26 91.28 60.52 92.2 58.61 92.53 56.72 92.24 55.04 91.34 53.7 89.94 52.84 88.17Z" fill="#fff"/><path d="M81.19 85.94 81.18 85.18 81.18 84.42 81.18 83.66 81.17 82.89 81.17 82.13 81.17 81.37 81.16 80.61 81.16 79.84 81.15 79.08 81.15 78.32 81.14 77.56 81.14 76.8 81.13 76.03 81.12 75.27 81.12 74.51 81.11 73.75 81.1 72.98 81.1 72.22 81.09 71.46 81.08 70.7 81.37 68.72 82.24 66.93 83.61 65.5 85.33 64.58 87.22 64.25 89.1 64.55 90.79 65.44 92.13 66.84 92.99 68.62 93.3 70.59 93.31 71.35 93.32 72.12 93.32 72.88 93.33 73.64 93.34 74.4 93.34 75.16 93.35 75.93 93.35 76.69 93.36 77.45 93.36 78.21 93.37 78.98 93.37 79.74 93.37 80.5 93.37 81.26 93.37 82.02 93.38 82.79 93.38 83.55 93.38 84.31 93.37 85.07 93.37 85.84 93.08 87.81 92.24 89.6 90.92 91.03 89.26 91.95 87.39 92.28 85.5 91.99 83.77 91.09 82.39 89.69 81.5 87.92Z" fill="#fff"/></g></g></g></svg></span></span></span><span class="tnb-shadow"></span></span><span class="tnb-tx"><span class="tnb-by">Brought to you by <svg class="tnb-xai" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="xAI" viewBox="0 0 526 578" fill="currentColor"><path d="M122 405 0 578 121 578 182 491ZM1 186 274 578 395 578 121 186ZM526 45 427 186 437 578 516 578ZM526 0 405 0 214 272 274 360Z"/></svg></span><span class="tnb-hl">Never enter a trade again.</span></span><span class="tnb-btn">Get OpTrack Bot<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a><button type="button" class="tn-bot-x" aria-label="Hide OpTrack Bot" title="Hide OpTrack Bot" onclick="otBotAdHide()"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12"/></svg></button></div><script>try{if(localStorage.getItem('ot_bot_ad_hidden')==='1')document.currentScript.previousElementSibling.classList.add('tn-bot-off');}catch(e){}function otBotAdHide(){try{localStorage.setItem('ot_bot_ad_hidden','1');}catch(e){}var w=document.querySelector('.tn-bot-wrap');if(w)w.classList.add('tn-bot-off');if(typeof otTrack==='function')otTrack('/optrack-bot-hide');}</script>
+    <div class="tn-bot-wrap"><a id="tn-optrack-bot" class="tn-bot" href="" target="_blank" rel="noopener" onclick="if(typeof otTrack==='function')otTrack('/optrack-bot')"><span class="tnb-av" aria-hidden="true"><span class="tnb-hop"><span class="tnb-bob"><span class="tnb-tilt"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" viewBox="0 0 122.67 122.67"><defs><path id="tnb-body" d="M18.65 74.87 18.66 73.27 18.73 71.66 18.86 70.06 19.04 68.46 19.28 66.86 19.58 65.26 19.93 63.68 20.33 62.1 20.8 60.54 21.31 58.98 21.88 57.44 22.5 55.92 23.17 54.42 23.9 52.93 24.67 51.46 25.5 50.02 26.37 48.6 27.29 47.21 28.26 45.84 29.27 44.51 30.33 43.2 31.43 41.92 32.58 40.68 33.76 39.47 34.98 38.3 36.25 37.16 37.54 36.07 38.87 35.01 40.24 33.99 41.63 33.01 43.05 32.08 44.5 31.19 45.97 30.34 47.47 29.54 48.98 28.79 50.52 28.08 52.08 27.43 53.64 26.82 55.23 26.26 56.83 25.75 58.44 25.29 60.05 24.88 61.69 24.52 63.33 24.22 64.98 23.97 66.65 23.77 68.29 23.62 69.93 23.53 71.58 23.49 73.22 23.5 74.87 23.56 76.51 23.68 78.18 23.85 79.84 24.07 81.47 24.35 83.12 24.68 84.74 25.06 86.36 25.49 87.96 25.97 89.57 26.5 91.14 27.08 92.71 27.72 94.26 28.39 95.79 29.12 97.3 29.9 98.78 30.71 100.25 31.58 101.69 32.49 103.1 33.44 104.48 34.43 105.83 35.47 107.14 36.55 108.42 37.66 109.66 38.81 110.87 40 112.04 41.22 113.16 42.48 114.24 43.77 115.28 45.09 116.27 46.43 117.22 47.81 118.11 49.21 118.96 50.64 119.76 52.09 120.51 53.57 121.21 55.06 121.86 56.57 122.46 58.1 123 59.64 123.49 61.2 123.92 62.77 124.3 64.35 124.62 65.94 124.89 67.53 125.1 69.13 125.26 70.73 125.35 72.34 125.39 73.94 125.37 75.54 125.29 77.14 125.15 78.73 124.96 80.31 124.7 81.89 124.39 83.45 124.01 85 123.58 86.54 123.09 88.06 122.54 89.57 121.92 91.05 121.25 92.52 120.52 93.96 119.74 95.38 118.89 96.77 117.99 98.14 117.02 99.47 116 100.78 114.93 102.05 113.8 103.3 112.62 104.51 111.38 105.68 110.09 106.82 108.74 107.91 107.35 108.97 105.92 109.99 104.44 110.97 102.92 111.9 101.37 112.79 99.77 113.64 98.15 114.44 96.5 115.2 94.84 115.9 93.16 116.56 91.46 117.17 89.75 117.73 88.03 118.25 86.32 118.71 84.58 119.11 82.83 119.47 81.12 119.78 79.37 120.03 77.61 120.23 75.88 120.38 74.15 120.47 72.42 120.51 70.69 120.5 68.97 120.44 67.23 120.32 65.47 120.15 63.72 119.93 62 119.65 60.24 119.33 58.5 118.95 56.78 118.52 55.05 118.04 53.33 117.51 51.62 116.93 49.93 116.3 48.26 115.62 46.6 114.89 44.96 114.12 43.35 113.3 41.78 112.44 40.24 111.53 38.75 110.58 37.3 109.58 35.89 108.55 34.52 107.47 33.21 106.36 31.96 105.21 30.75 104.02 29.6 102.8 28.5 101.54 27.46 100.25 26.47 98.93 25.55 97.58 24.68 96.21 23.87 94.8 23.11 93.37 22.42 91.92 21.78 90.45 21.2 88.95 20.68 87.44 20.22 85.91 19.82 84.37 19.48 82.81 19.2 81.24 18.97 79.66 18.81 78.07 18.7 76.47Z"/><mask id="tnb-inside" maskUnits="userSpaceOnUse" x="0" y="0" width="144" height="144"><use href="#tnb-body" fill="#fff"/></mask></defs><g transform="matrix(0.71 0 0 0.71 9.83 9.83)"><use href="#tnb-body" fill="#FF5A36"/><g mask="url(#tnb-inside)"><g class="tnb-eyes"><path d="M52.53 86.19 52.52 85.43 52.52 84.67 52.51 83.91 52.5 83.14 52.5 82.38 52.49 81.62 52.48 80.86 52.48 80.09 52.47 79.33 52.46 78.57 52.46 77.81 52.45 77.05 52.44 76.28 52.44 75.52 52.43 74.76 52.42 74 52.42 73.23 52.41 72.47 52.4 71.71 52.4 70.95 52.67 68.97 53.5 67.18 54.82 65.75 56.51 64.83 58.4 64.5 60.32 64.8 62.08 65.69 63.49 67.09 64.4 68.87 64.73 70.84 64.74 71.6 64.75 72.36 64.76 73.13 64.76 73.89 64.77 74.65 64.78 75.41 64.78 76.18 64.79 76.94 64.79 77.7 64.8 78.46 64.8 79.22 64.81 79.99 64.81 80.75 64.82 81.51 64.82 82.27 64.83 83.04 64.83 83.8 64.83 84.56 64.84 85.32 64.84 86.09 64.54 88.06 63.65 89.85 62.26 91.28 60.52 92.2 58.61 92.53 56.72 92.24 55.04 91.34 53.7 89.94 52.84 88.17Z" fill="#fff"/><path d="M81.19 85.94 81.18 85.18 81.18 84.42 81.18 83.66 81.17 82.89 81.17 82.13 81.17 81.37 81.16 80.61 81.16 79.84 81.15 79.08 81.15 78.32 81.14 77.56 81.14 76.8 81.13 76.03 81.12 75.27 81.12 74.51 81.11 73.75 81.1 72.98 81.1 72.22 81.09 71.46 81.08 70.7 81.37 68.72 82.24 66.93 83.61 65.5 85.33 64.58 87.22 64.25 89.1 64.55 90.79 65.44 92.13 66.84 92.99 68.62 93.3 70.59 93.31 71.35 93.32 72.12 93.32 72.88 93.33 73.64 93.34 74.4 93.34 75.16 93.35 75.93 93.35 76.69 93.36 77.45 93.36 78.21 93.37 78.98 93.37 79.74 93.37 80.5 93.37 81.26 93.37 82.02 93.38 82.79 93.38 83.55 93.38 84.31 93.37 85.07 93.37 85.84 93.08 87.81 92.24 89.6 90.92 91.03 89.26 91.95 87.39 92.28 85.5 91.99 83.77 91.09 82.39 89.69 81.5 87.92Z" fill="#fff"/></g></g></g></svg></span></span></span><span class="tnb-shadow"></span></span><span class="tnb-tx"><span class="tnb-by">Automate with Grok Bot</span><span class="tnb-hl">Never enter a trade again.</span></span><span class="tnb-btn">Get OpTrack Bot<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a><button type="button" class="tn-bot-x" aria-label="Hide OpTrack Bot" title="Hide OpTrack Bot" onclick="otBotAdHide()"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12"/></svg></button></div><script>try{if(localStorage.getItem('ot_bot_ad_hidden')==='1')document.currentScript.previousElementSibling.classList.add('tn-bot-off');}catch(e){}function otBotAdHide(){try{localStorage.setItem('ot_bot_ad_hidden','1');}catch(e){}var w=document.querySelector('.tn-bot-wrap');if(w)w.classList.add('tn-bot-off');if(typeof otTrack==='function')otTrack('/optrack-bot-hide');}</script>
     <div class="tn-right">
+      <a class="tn-trial" id="tn-trial" href="#" hidden onclick="openUpgrade('trial');return false" title="See Pro plans"></a>
       <button class="tn-gear" onclick="openSettings()" title="Settings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button>
     </div>
   </header>
@@ -2510,14 +2538,16 @@ select,textarea,
 </div>
 <!-- MODAL: Upgrade -->
 <div class="mb" id="mUpgrade">
-  <div class="mbox sm">
-    <div class="mtitle"><span>Pro</span><span class="mx" onclick="closeModal('mUpgrade')">✕</span></div>
-    <div style="padding:0.5rem 0;font-size:0.8125rem;color:var(--text2);line-height:1.5">
-      <p id="upg-feature" style="margin:0 0 0.5rem;font-weight:720;color:var(--text)"></p>
-      <p style="margin:0 0 0.25rem">Pro includes:</p><ul id="upg-list" style="margin:0 0 0.75rem;padding-left:1.1rem"></ul>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap"><button class="btn btn-primary" onclick="startCheckout('monthly')" id="upg-monthly"></button><button class="btn btn-ghost" onclick="startCheckout('yearly')" id="upg-yearly"></button></div>
-      <div id="upg-msg" style="margin-top:0.5rem;font-size:0.75rem;color:var(--text3)"></div>
-      <p style="margin:0.75rem 0 0;font-size:0.825rem;color:var(--text3)">Cancel any time from Settings. Payments handled securely by Stripe.</p>
+  <div class="mbox sm upg">
+    <div class="mtitle"><span>OpTrack Pro</span><span class="mx" onclick="closeModal('mUpgrade')">✕</span></div>
+    <div class="upg-body">
+      <p id="upg-feature" class="upg-feature"></p>
+      <div class="upg-toggle" role="group" aria-label="Billing"><button type="button" data-iv="annual" class="on" aria-pressed="true" onclick="upgSetInterval('annual')">Annual <span id="upg-save" class="upg-save">Save 30%</span></button><button type="button" data-iv="monthly" aria-pressed="false" onclick="upgSetInterval('monthly')">Monthly</button></div>
+      <div class="upg-price"><div class="upg-amt" id="upg-amt"></div><div class="upg-billed" id="upg-billed"></div></div>
+      <button class="btn btn-primary upg-go" onclick="upgGo()">Upgrade to Pro</button>
+      <div id="upg-msg" class="upg-msg"></div>
+      <table class="upg-table"><thead><tr><th></th><th>Free</th><th>Pro</th></tr></thead><tbody id="upg-table"></tbody></table>
+      <p class="upg-foot">Cancel any time from Settings. Payments handled securely by Stripe. Your trades are never locked or deleted on any plan.</p>
     </div>
   </div>
 </div>
@@ -2542,7 +2572,7 @@ select,textarea,
 
 <script>
 // Theme: the stored value keeps its old meaning ('light' → light, 'dark' → dark); nothing stored → light.
-(function(){var q=location.search;var c=/[?&]checkout=(monthly|yearly)/.exec(q);var s=/(?:^|[?&])signup=1(?:&|$)/.test(q);if(c){try{sessionStorage.setItem('ot-checkout',c[1]);}catch(e){}}if(s){try{sessionStorage.setItem('ot-signup','1');}catch(e){}}if(c||s)history.replaceState(null,'',location.pathname);})();
+(function(){var q=location.search;var c=/[?&]checkout=(annual|monthly|yearly)/.exec(q);var s=/(?:^|[?&])signup=1(?:&|$)/.test(q);if(c){try{sessionStorage.setItem('ot-checkout',c[1]);}catch(e){}}if(s){try{sessionStorage.setItem('ot-signup','1');}catch(e){}}if(c||s)history.replaceState(null,'',location.pathname);})();
 function themeFromStored(v){return v==='dark'?'dark':'light';}
 // Legacy GitHub Pages deployment — redirect to the live app. Never fake a user.
 (function(){
@@ -4457,13 +4487,14 @@ let _pmccScan=null;
 function openPmccSell(leapId){
   const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
   const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
+  const _pmccFree=!pmccCallOk();if(_pmccFree&&!P.open.length){openUpgrade('leaps-full',pmccLockMsg());return;} // Free: only buying back existing calls
   const v=(k,x)=>document.getElementById(k).value=x??'';
   v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste','pcc-current-price','pcc-fill-time'].forEach(k=>v(k,''));
   const _pch=document.getElementById('pcc-fill-time-hint');if(_pch){_pch.textContent='';_pch.hidden=true;}
   v('pcc-qty',Math.max(1,(+L.qty||1)-P.open.reduce((a,l)=>a+(+l.qty||0),0)));v('pcc-fees','0');v('pcc-date',new Date().toISOString().slice(0,10));
   document.getElementById('mPmccTitle').textContent=`Add trade · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
   document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
-  ['pcc-scan-msg','pcc-filled','pcc-err'].forEach(k=>document.getElementById(k).style.display='none');pmccSide('sto');document.getElementById('pcc-pick').innerHTML='';
+  ['pcc-scan-msg','pcc-filled','pcc-err'].forEach(k=>document.getElementById(k).style.display='none');pmccSide(_pmccFree?'btc':'sto');document.getElementById('pcc-pick').innerHTML='';
   const pr=document.getElementById('pcc-roll');if(pr){pr.checked=false;document.getElementById('pcc-roll-box').hidden=true;fillLeapRollSelect(L);}
   ['pcc-price','pcc-date','pcc-qty','pcc-fees','pcc-expiry'].forEach(k=>document.getElementById(k).style.borderColor='');
   _pmccMode='trade';document.getElementById('pcc-scan-btn').style.display='';
@@ -4575,6 +4606,7 @@ function pmccRollPreview(r){
   <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save</button>`;
 }
 function pmccSaveRoll(){
+  if(!pmccCallOk()){openUpgrade('leaps-full',pmccLockMsg());return;}
   const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
   const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),false);
   if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
@@ -4631,6 +4663,7 @@ function savePmcc(){
     if(r.rest){db.opts.push(r.rest);_saveOpt(r.rest);}
     closeModal('mPmcc');render();return;
   }
+  if(!pmccCallOk()){openUpgrade('leaps-full',pmccLockMsg());return;} // a NEW short call
   const r=pmccFormLeg(f,L);
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
   const _fa=readFilledAtField('pcc-date','pcc-fill-time','pcc-fill-time-hint',null);if(_fa.error)return;
@@ -5082,6 +5115,7 @@ async function fetchOptchain(symbol,contracts){
   throw last||new Error('optchain failed');
 }
 async function fetchWheelMarks(force){
+  if(!canUse('live-refresh'))return; // live buy-back marks are Pro only
   if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
   const byU={};
   (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const u=String(w.ticker).toUpperCase();openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry).forEach(t=>{(byU[u]=byU[u]||new Set()).add(wheelLegOcc(w.ticker,t));});});
@@ -5104,11 +5138,7 @@ async function fetchOptionMarks(force, onlyId){
   if(onlyId)open=open.filter(l=>l.id===onlyId);
   if(!open.length){if(!onlyId)_optMarkStatus='';return;}
   if(!onlyId){
-    if(!force&&_optMarksAt&&!canUse('live-refresh')){
-      // free plan: marks once per visit, but a leftover Friday mark is fetched again on the next session
-      const stale=open.some(l=>l.markAt&&markDay(l.markAt)<markDay());
-      if(!stale)return;
-    }
+    if(!force&&!canUse('live-refresh'))return; // live option prices are Pro only: no option polling on Free (typed marks still work)
     if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
   }
   const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
@@ -5140,7 +5170,7 @@ async function fetchOptionMarks(force, onlyId){
   _optMarkStatus=failU.length&&!ok?'Using the last saved price':`Marks: ${ok} updated${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
   if(changed||view==='options')render();
 }
-async function refreshLegMark(id){await fetchOptionMarks(true,id);}
+async function refreshLegMark(id){if(!canUse('live-refresh')){openUpgrade('live-refresh');return;}await fetchOptionMarks(true,id);}
 
 function renderSidebar(){
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
@@ -8341,7 +8371,7 @@ function importPreview(pre){
   if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
   const p=_routeToOpenLongs(pre||BCSV.parseBrokerCSV(txt));_importParsed=p;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
-  if(p.rh&&!canUse('robinhood-import')){box.innerHTML=`<div class="imp-err">Robinhood import is a Pro feature. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
+  if(p.rh&&!csvImportOk()){box.innerHTML=`<div class="imp-err">The free plan includes 1 Robinhood CSV import, and you've used it. Pro has unlimited imports. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
   if(p.rh){ // Robinhood activity report: plan against what's already here
     const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;p.rows=P.wheelRows;p.unrecognised=p.unrecognised.concat(P.unrecognised);p.skipped=p.skipped.concat(P.skipped);
     const why={};p.skipped.forEach(x=>{why[x.reason]=(why[x.reason]||0)+1;});
@@ -8405,7 +8435,7 @@ function doImport(){
     const P=p.plan;
     if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
     else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));const cap=capNewLeaps(db.opts,P.newLegs);capSkipLeaps+=cap.droppedLeaps;db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(cap.keep);cap.keep.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);}
-    if(!p.rows.length){closeModal('mImport');document.getElementById('import-csv').value='';_importParsed=null;importPreview();render();if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
+    if(!p.rows.length){_noteCsvImport(p);closeModal('mImport');document.getElementById('import-csv').value='';_importParsed=null;importPreview();render();if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
   }
   if(!(p.rows.length||(p.optionFills||[]).length))return;
   if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
@@ -8454,6 +8484,7 @@ function doImport(){
   if(dupes>0)parts.push(`${dupes} duplicates skipped`);
   if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in ${_brandName()}`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
   if(capSkipRows)parts.push(`${capSkipRows} trades for ${[...capSkipTickers].join(', ')} skipped (free plan limit)`);if(capSkipLeaps)parts.push(`${capSkipLeaps} LEAP${capSkipLeaps>1?'s':''} skipped (free plan limit)`);
+  _noteCsvImport(p);
   alert(`Import complete: ${parts.join(', ')}.`);
   if(capSkipRows||capSkipLeaps)openUpgrade('unlimited',capSkipRows?capMsg('wheel'):capMsg('leap'));
 }
@@ -9876,7 +9907,7 @@ function openSettings(){
   if(dateSel)dateSel.value=dateFmt;
   fillReturnSettings();
   const pl=document.getElementById('settings-plan'),lab=planLabel();
-  if(pl){const extra=_ent&&_ent.founder?'':_ent&&_ent.stripeCustomerId?'<a href="#" onclick="openBillingPortal();return false" style="color:var(--orange)">Manage billing</a>':'<a href="#" onclick="closeModal(\'mSettings\');openUpgrade(\'unlimited\');return false" style="color:var(--orange)">Upgrade</a>';pl.style.display=lab?'block':'none';pl.innerHTML=!lab?'':`Plan: <b>${lab}</b>`+(extra?' · '+extra:'');}
+  if(pl){const extra=_ent&&_ent.founder?'':_ent&&_ent.stripeCustomerId?'<a href="#" onclick="openBillingPortal();return false" style="color:var(--orange)">Manage billing</a>':'<a href="#" onclick="closeModal(\'mSettings\');openUpgrade(\'trial\');return false" style="color:var(--orange)">Upgrade</a>';pl.style.display=lab?'block':'none';pl.innerHTML=!lab?'':`Plan: <b>${lab}</b>`+(extra?' · '+extra:'');}
 }
 function fillReturnSettings(){}
 // Return settings live in a small panel opened from the cog on the Home Capital at work / Account size tile.
@@ -9951,10 +9982,16 @@ function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls
 // The entitlement lives at entitlements/{uid}: users can read it, only the server (Stripe webhook / founder tool) can write it.
 let _ent=null,_entErr=false;
 function planCfg(){return (typeof window!=='undefined'&&window.BRAND&&window.BRAND.plans)||{gating:false,paidFeatures:[],free:{}};}
-function isPro(ent,err){return !!(err||(ent&&(ent.plan==='pro'||ent.founder))); } // can't read it → never lock anyone out
+// Pro = paid subscription, founder, or inside the 14-day trial. One source of truth: OT_TIER.getEffectiveTier (app/entitlement.js).
+function _tierLib(){return typeof OT_TIER!=='undefined'?OT_TIER:(typeof window!=='undefined'&&window.OT_TIER)||null;}
+function effectiveTier(ent){const T=_tierLib();if(T)return T.getEffectiveTier(ent===undefined?_ent:ent,Date.now());const p=!!(ent&&(ent.plan==='pro'||ent.founder));return{tier:p?'pro':'free',isTrial:false,trialDaysLeft:0,paid:p};}
+function isPro(ent,err){return !!(err||effectiveTier(ent).tier==='pro'); } // can't read it → never lock anyone out
+function isPaidPro(ent){return !!(ent&&(ent.plan==='pro'||ent.founder));}
 // Badge only: a real Pro entitlement (plan pro, or a founder). A failed read and the demo stay unmarked.
 function proBadgeOn(ent){return !!(ent&&ent.demo!==true&&(ent.plan==='pro'||ent.founder));}
-function syncProBadge(){const el=document.getElementById('tn-pro');if(el)el.hidden=!proBadgeOn(_ent);}
+function syncProBadge(){const el=document.getElementById('tn-pro');if(el)el.hidden=!proBadgeOn(_ent);syncTrialPill();}
+function syncTrialPill(info){const el=document.getElementById('tn-trial');if(!el)return;const t=info||(planCfg().gating&&!_entErr&&!(_ent&&_ent.demo)?effectiveTier(_ent):null);
+  if(!t||!t.isTrial){el.hidden=true;return;}el.textContent='Pro trial · '+t.trialDaysLeft+' day'+(t.trialDaysLeft===1?'':'s')+' left';el.classList.toggle('tn-trial-end',t.trialDaysLeft<=3);el.hidden=false;}
 function canUse(feature,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(!(cfg.paidFeatures||[]).includes(feature))return true;
   return isPro(ent===undefined?_ent:ent,err===undefined?_entErr:err);}
 function underLimit(kind,count,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const f=cfg.free||{};const lim=kind==='wheel'?f.maxWheelTickers:f.maxOpenLeaps;return lim==null||count<lim;}
@@ -9966,16 +10003,28 @@ function leapCapOk(adding,legs,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimi
 function capNewLeaps(existing,newLegs,cfg,ent,err){const drop=new Set();let n=(existing||[]).filter(l=>l.status==='open'&&l.side==='long').length;
   (newLegs||[]).forEach(l=>{if(l.side==='long'&&l.status==='open'){if(leapCapOk(1,Array(n).fill({status:'open',side:'long'}),cfg,ent,err))n++;else drop.add(l.id);}});
   const keep=(newLegs||[]).filter(l=>!drop.has(l.id)&&!(l.parentLeapId&&drop.has(l.parentLeapId)));return{keep,dropped:(newLegs||[]).length-keep.length,droppedLeaps:drop.size};}
+// Robinhood CSV import: Free gets plans.free.maxCsvImports completed imports (csvImportsUsed, server-written), Pro/trial unlimited.
+function csvImportOk(cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const e=ent===undefined?_ent:ent;const T=_tierLib();
+  if(T)return T.canImportCsv(effectiveTier(e),e,cfg);return isPro(e,false)||((e&&+e.csvImportsUsed)||0)<((cfg.free||{}).maxCsvImports??1);}
+// PMCC: selling a NEW short call against a LEAP (or rolling into one) is Pro. Buying back an existing call is always allowed.
+function pmccCallOk(cfg,ent,err){return canUse('leaps-full',cfg,ent,err);}
+function pmccLockMsg(){return 'Free plan: PMCC short calls against LEAPs are part of Pro. Your existing calls are kept — you can still buy them back.';}
 function capMsg(kind){const f=planCfg().free||{};return kind==='wheel'?`Free plan: up to ${f.maxWheelTickers} open tickers. Your existing ones are kept — upgrade to add more.`:`Free plan: up to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. Your existing ones are kept — upgrade to add more.`;}
 async function loadEntitlement(uid){try{const sn=await listenServer(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}syncProBadge();}
-async function _pollUpgrade(uid){for(let i=0;i<6&&!isPro(_ent,false);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPro(_ent,false)){alert('Thanks! Pro is now on for your account.');render();}}
-function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';if(isPro(_ent,false))return 'Pro';return 'Free';}
+async function _pollUpgrade(uid){for(let i=0;i<6&&!isPaidPro(_ent);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPaidPro(_ent)){alert('Thanks! Pro is now on for your account.');render();}}
+function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';const t=effectiveTier(_ent);if(t.isTrial)return `Pro trial · ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left`;if(t.tier==='pro')return 'Pro';return 'Free';}
+let _upgInterval='annual';
+function _upgPrices(){const T=_tierLib();return T?T.priceDisplay(planCfg()):null;}
+function upgSetInterval(iv){_upgInterval=iv==='monthly'?'monthly':'annual';const D=_upgPrices();if(!D)return;
+  document.querySelectorAll('#mUpgrade [data-iv]').forEach(b=>{const on=b.dataset.iv===_upgInterval;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
+  const x=_upgInterval==='annual'?D.annual:D.monthly;document.getElementById('upg-amt').innerHTML=`${esc(x.perMonthText)}<span> / month</span>`;document.getElementById('upg-billed').textContent=x.line;
+  document.getElementById('upg-save').textContent=`Save ${D.annual.savePct}%`;}
+function upgGo(){return startCheckout(_upgInterval);}
 function openUpgrade(feature,msg){
-  const B=window.BRAND||{},P=planCfg(),N=B.featureNames||{};
-  document.getElementById('upg-feature').textContent=N[feature]?N[feature]+' is part of Pro.':'That is part of Pro.';
-  document.getElementById('upg-list').innerHTML=(P.paidFeatures||[]).map(k=>`<li>${esc(N[k]||k)}</li>`).join('');
-  document.getElementById('upg-monthly').textContent=`${P.currency||'£'}${P.priceMonthly} a month`;
-  document.getElementById('upg-yearly').textContent=`${P.currency||'£'}${P.priceYearly} a year`;
+  const B=window.BRAND||{},P=planCfg(),N=B.featureNames||{},t=effectiveTier(_ent);
+  document.getElementById('upg-feature').textContent=feature==='trial'?(t.isTrial?`You're on the Pro trial: ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left. Keep Pro when it ends:`:'Pro'):N[feature]?N[feature]+' is part of Pro.':'That is part of Pro.';
+  document.getElementById('upg-table').innerHTML=(P.comparison||[]).map(r=>`<tr><td>${r[0]}</td>${[r[1],r[2]].map(v=>`<td class="${v==='✓'||v==='Unlimited'?'y':v==='–'?'n':''}">${v}</td>`).join('')}</tr>`).join('');
+  upgSetInterval(P.defaultInterval||'annual');
   document.getElementById('upg-msg').textContent=msg||'';openModal('mUpgrade');
 }
 async function _billingCall(fn,payload){
@@ -9984,7 +10033,17 @@ async function _billingCall(fn,payload){
   const r=await fetch('/.netlify/functions/'+fn,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify(payload||{})});
   const j=await r.json().catch(()=>({}));if(!r.ok||!j.url)throw new Error(j.error||'Something went wrong, please try again.');return j.url;
 }
-async function startCheckout(plan){const m=document.getElementById('upg-msg');if(m)m.textContent='Opening secure checkout…';try{const url=await _billingCall('checkout',{plan});if(url&&(plan==='monthly'||plan==='yearly')){try{if(typeof otTrack==='function')otTrack('/checkout-started/'+plan);}catch(e){}}if(url)location.href=url;}catch(e){if(m)m.textContent=e.message;}}
+async function startCheckout(interval){interval=interval==='monthly'?'monthly':'annual'; // older links said yearly
+  const m=document.getElementById('upg-msg');if(m)m.textContent='Opening secure checkout…';try{const url=await _billingCall('checkout',{interval});if(url){try{if(typeof otTrack==='function')otTrack('/checkout-started/'+interval);}catch(e){}}if(url)location.href=url;}catch(e){if(m)m.textContent=e.message;}}
+// Server-side plan bookkeeping (entitlements are read-only to the browser): start the trial once for a new account, count CSV imports.
+async function _accountCall(action){if(APP_DEMO)return null;const u=_auth.currentUser;if(!u)return null;
+  const r=await fetch('/.netlify/functions/account',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify({action})});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'account '+r.status);if(j.entitlement)_ent={...(_ent||{}),...j.entitlement};syncProBadge();return j;}
+// New accounts only (created in the last 48h, re-checked on the server): ask the server to start the 14-day trial once.
+function _maybeStartTrial(user){try{if(_entErr||!planCfg().gating||APP_DEMO)return;if(_ent&&(_ent.trialStartedAt||isPaidPro(_ent)))return;
+  const c=Date.parse(user&&user.metadata&&user.metadata.creationTime||'');if(!c||Date.now()-c>48*3600e3)return;
+  _accountCall('start-trial').then(j=>{if(j&&j.started)render();}).catch(e=>console.warn('Trial start:',e.message));}catch(e){}}
+function _noteCsvImport(p){if(!p||!p.rh)return;_ent={...(_ent||{}),csvImportsUsed:((_ent&&+_ent.csvImportsUsed)||0)+1};_accountCall('csv-import').catch(e=>console.warn('Import count:',e.message));}
 async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
 
 // ── Your data: export and delete ─────────────────────────────
@@ -10165,7 +10224,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
     if(fresh){
       showOnboardingIfNeeded();
       hideLoadingOverlay(true);
-      loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
+      loadEntitlement(user.uid).then(()=>{_maybeStartTrial(user);if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPaidPro(_ent))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
       migrateLegacy().then(loadAccount).then(()=>{startLiveQuotes();}).catch(e=>{
         console.error('Load failed:',e);
       });
@@ -10179,7 +10238,7 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
     if(loadingBar)loadingBar.style.width='30%';
 
     try{
-      loadEntitlement(user.uid).then(()=>{if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPro(_ent,false))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
+      loadEntitlement(user.uid).then(()=>{_maybeStartTrial(user);if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPaidPro(_ent))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
       await migrateLegacy();
       await loadAccount();
     }catch(e){
@@ -10315,7 +10374,7 @@ window.setDateFmt = setDateFmt;
 window.toggleSidebar = toggleSidebar;
 window.doSignOut = doSignOut;
 window.onboardSkip = onboardSkip;
-window.saveReturnSettings = saveReturnSettings; window.retFmtAcct = retFmtAcct; window.openRetCfg = openRetCfg; window.closeRetCfg = closeRetCfg; window.openUpgrade = openUpgrade; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
+window.saveReturnSettings = saveReturnSettings; window.retFmtAcct = retFmtAcct; window.openRetCfg = openRetCfg; window.closeRetCfg = closeRetCfg; window.openUpgrade = openUpgrade; window.upgGo = upgGo; window.upgSetInterval = upgSetInterval; window.syncTrialPill = syncTrialPill; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
 window.exportMyData = exportMyData; window.openDeleteAccount = openDeleteAccount; window.doDeleteAccount = doDeleteAccount;
 window.exportCSV = exportCSV;
 window.toggleAnalyticsSec = toggleAnalyticsSec;

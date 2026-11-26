@@ -20,7 +20,7 @@ test('webhook handler rejects unsigned calls and never writes',async()=>{process
   const ok=await hook.handler({httpMethod:'POST',headers:{'stripe-signature':sign(body,'whsec_t')},body},{},st);assert.strictEqual(ok.statusCode,200);assert.strictEqual(st.S.eve.plan,'pro');});
 test('checkout: needs config, sign-in and a known plan; ties the session to the uid',async()=>{const o={...process.env};
   delete process.env.STRIPE_SECRET_KEY;assert.strictEqual((await checkout._handler({httpMethod:'POST',headers:{}})).statusCode,503);
-  process.env.STRIPE_SECRET_KEY='sk_test_x';process.env.STRIPE_PRICE_MONTHLY='price_m';process.env.STRIPE_PRICE_YEARLY='price_y';
+  process.env.STRIPE_SECRET_KEY='sk_test_x';process.env.STRIPE_PRICE_PRO_MONTHLY_USD='price_m';process.env.STRIPE_PRICE_PRO_ANNUAL_USD='price_y';
   assert.strictEqual((await checkout._handler({httpMethod:'POST',headers:{}},{}, {bearerUser:async()=>null})).statusCode,401);
   let sent;const deps={bearerUser:async()=>({uid:'alice',email:'a@x.com'}),getEntitlement:async()=>null,stripe:async(p,params)=>{sent=params;return{url:'https://checkout.stripe.com/x'};}};
   const r=await checkout._handler({httpMethod:'POST',headers:{origin:'https://dev--wheelhouse-tracker.netlify.app'},body:'{"plan":"yearly"}'},{},deps);

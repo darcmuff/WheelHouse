@@ -73,10 +73,11 @@
 <script>try{if(localStorage.getItem('ot-sim')==='1')window._gcSkip=1;window._gcStoreTest=localStorage.getItem('gc_test');}catch(e){}if(window._gcSendPageview)window._gcSendPageview();</script>
 <script data-goatcounter="https://optrack.goatcounter.com/count" async src="https://gc.zgo.at/count.js" onload="window._gcSendPageview&&window._gcSendPageview()"></script>
 <title>Start OpTrack</title>
-<meta name="description" content="Track your options wheel and LEAPs. Free plan, or Pro for a few quid a month.">
+<meta name="description" content="Track your options wheel and LEAPs. Free plan, or Pro from $4.92 a month.">
 <meta name="theme-color" content="#f8f9fc"><link rel="icon" href="favicon.ico"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="/manifest.json">
 <meta property="og:title" content="Start OpTrack"><meta property="og:image" content="optrack-share.png">
 <script src="brand.js"></script>
+<script src="entitlement.js"></script>
 <script src="analytics.js" defer></script>
 <script>function otCount(p){try{if(window.otTrack)window.otTrack(p);}catch(e){}}</script>
 <style>
@@ -116,17 +117,17 @@ footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap
 
   <div class="hero"><div>
   <h1><span data-brand="name">OpTrack</span></h1>
-  <p class="price" id="price">£9 <span>/ month</span></p>
-  <p class="small" id="price-year">or £79 a year</p>
-  <p class="free">Free plan available</p>
+  <p class="price" id="price">$4.92 <span>/ month</span></p>
+  <p class="small" id="price-year">billed $59/year · Save 30%, or $6.99 month to month</p>
+  <p class="free">Free plan available. Every new account starts with a 14-day Pro trial, no card needed.</p>
 
   <p class="promise">See what your options trades have actually made you.</p>
   <p>I sell puts and calls and run a few LEAPs, and I got fed up with spreadsheets that never added up. OpTrack is what I built for myself. You put your trades in, it keeps every roll in one chain and shows what you've banked and what's still open. No hype, no tips, just your numbers done properly.</p>
 
   <div class="join">
     <a class="btn p" href="/app/?signup=1" id="go-free" onclick="otCount('/start-free')">Start free</a>
-    <a class="btn g" href="/app/?signup=1&checkout=monthly" id="go-pro" onclick="otCount('/go-pro')">Go Pro</a>
-    <a class="small" href="/app/?signup=1&checkout=yearly" id="go-pro-year" onclick="otCount('/go-pro')" style="text-align:center">Or go Pro yearly</a>
+    <a class="btn g" href="/app/?signup=1&checkout=annual" id="go-pro" onclick="otCount('/go-pro')">Go Pro yearly</a>
+    <a class="small" href="/app/?signup=1&checkout=monthly" id="go-pro-month" onclick="otCount('/go-pro')" style="text-align:center">Or go Pro monthly</a>
     <a class="small" href="/demo" id="try-demo" onclick="otCount('/demo')" style="text-align:center">Not sure yet? Try the demo, no sign-up needed</a>
   </div>
 
@@ -142,14 +143,15 @@ footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap
   <details><summary>What do I get?</summary><p>A web app for tracking the wheel and LEAPs. It runs in your browser on phone or computer, with nothing to download, and you can pin it to your home screen if you like. Log a trade, follow it through rolls and assignment, and see your realised profit, return on capital and win rate. The free plan covers the basics; Pro takes the limits off and adds the extras listed above.</p></details>
   <details><summary>Is it for beginners?</summary><p>Yes, if you already know what selling a put or a covered call is. It doesn't teach you to trade. It just keeps your record straight, which helps whether you've done ten trades or a thousand.</p></details>
   <details><summary>Do I need to link my broker?</summary><p>No. You type trades in, paste a confirmation and let SmartScan fill it in, or import a Robinhood CSV. Nothing connects to your broker, and your data stays yours. You can export it or delete your account at any time.</p></details>
-  <details><summary>Can I cancel anytime?</summary><p>Yes. Cancel Pro from Settings whenever you like and you keep it until the end of the period you paid for, then drop back to the free plan. Your trades stay put.</p></details>
+  <details><summary>Can I cancel anytime?</summary><p>Yes. Cancel Pro from Settings whenever you like and you keep it until the end of the period you paid for, then drop back to the free plan. Your trades stay put: nothing is ever hidden, locked or deleted.</p></details>
+  <details><summary>How does the free trial work?</summary><p>Every new account gets Pro free for 14 days, with no card. After that you stay on the free plan unless you choose to upgrade. Everything you added during the trial stays, and you can still view, edit, close and export it.</p></details>
   <details><summary>Is this financial advice?</summary><p>No. OpTrack records the trades you enter and does the sums. It doesn't tell you what to buy or sell, and prices can be delayed. Your trades are your call.</p></details>
 
   </div>
 
   <!-- Reviews: add real customer reviews and a star summary here once we have them. Never invent any. -->
 
-  <div class="join end"><a class="btn p" href="/app/?signup=1" onclick="otCount('/start-free')">Start free</a><a class="btn g" href="/app/?signup=1&checkout=monthly" onclick="otCount('/go-pro')">Go Pro</a></div>
+  <div class="join end"><a class="btn p" href="/app/?signup=1" onclick="otCount('/start-free')">Start free</a><a class="btn g" href="/app/?signup=1&checkout=annual" onclick="otCount('/go-pro')">Go Pro</a></div>
   <p class="small" id="gating-note"></p>
 
   <footer><span>© <span id="yr">2026</span> Marc Duff</span><a href="/">Home</a><a href="legal.html#privacy">Privacy</a><a href="legal.html#terms">Terms</a><a href="legal.html#advice">Not financial advice</a></footer>
@@ -158,14 +160,12 @@ footer{margin:2.5rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap
 (function(){var B=window.BRAND;if(!B)return;
   document.querySelectorAll('[data-brand="name"]').forEach(function(e){e.textContent=B.name;});
   document.getElementById('yr').textContent=new Date().getFullYear();
-  var P=B.plans,N=B.featureNames||{};if(!P)return;var c=P.currency||'£',paid=P.paidFeatures||[];
-  document.getElementById('price').innerHTML=c+P.priceMonthly+' <span>/ month</span>';
-  document.getElementById('price-year').textContent='or '+c+P.priceYearly+' a year';
-  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');};
-  var free=['Manual entry and SmartScan (paste a trade confirmation)','Wheel tracking'+(paid.indexOf('unlimited')>=0?' <em>up to '+P.free.maxWheelTickers+' tickers</em>':''),'LEAPs and PMCC'+(paid.indexOf('unlimited')>=0||paid.indexOf('leaps-full')>=0?' <em>'+P.free.maxOpenLeaps+' open LEAP</em>':''),'Realised profit, return and win rate','Export or delete your data any time'];
-  Object.keys(N).forEach(function(k){if(paid.indexOf(k)<0)free.push(esc(N[k]));});
-  document.getElementById('get-free').innerHTML=free.map(function(x){return '<li>'+x+'</li>';}).join('');
-  document.getElementById('get-pro').innerHTML=paid.map(function(k){return '<li>'+esc(N[k]||k)+'</li>';}).join('');
+  var P=B.plans;if(!P)return;
+  var T=window.OT_TIER;if(T){var D=T.priceDisplay(P);document.getElementById('price').innerHTML=D.annual.perMonthText+' <span>/ month</span>';
+    document.getElementById('price-year').textContent=D.annual.line+', or '+D.monthly.perMonthText+' month to month';}
+  var rows=P.comparison||[];
+  document.getElementById('get-free').innerHTML=rows.filter(function(r){return r[1]!=='–';}).map(function(r){return '<li>'+r[0]+(r[1]!=='✓'?' <em>'+r[1]+'</em>':'')+'</li>';}).join('');
+  document.getElementById('get-pro').innerHTML=rows.filter(function(r){return r[1]!==r[2];}).map(function(r){return '<li>'+r[0]+(r[2]!=='✓'?' <em>'+r[2]+'</em>':'')+'</li>';}).join('');
   if(!P.gating)document.getElementById('gating-note').textContent='For now everything is free while I finish setting up, so Start free gets you the lot.';
 })();
 </script>

@@ -34,8 +34,8 @@ After changing env vars, redeploy: **Deploys → Trigger deploy → Deploy site*
 ## 6. Stripe (start in TEST mode, nothing real is charged)
 1. Sign up at stripe.com (business type: individual / sole trader, UK).
 2. Keep the **Test mode** switch ON (top right).
-3. **Product catalogue → Add product**: name "OpTrack Pro". Add two prices: **£9 monthly** (recurring) and **£79 yearly** (recurring).
-   Copy each price's ID (starts `price_`).
+3. **Product catalogue → Add product**: name "OpTrack Pro". Add two USD prices: **$59 yearly** (recurring) and **$6.99 monthly** (recurring).
+   Copy each price's ID (starts `price_`). Keep the old £79 / £9 prices active for existing subscribers; do not archive them.
 4. **Developers → API keys**: copy the **Secret key** (starts `sk_test_`).
 5. **Settings → Billing → Customer portal**: turn it on; allow cancel and switch plan.
 6. **Developers → Webhooks → Add endpoint**:
@@ -44,8 +44,11 @@ After changing env vars, redeploy: **Deploys → Trigger deploy → Deploy site*
    - After saving, copy the **Signing secret** (starts `whsec_`).
 7. Netlify env (all secret):
    - `STRIPE_SECRET_KEY` = sk_test_…
-   - `STRIPE_PRICE_MONTHLY` = price_… (the £9 one)
-   - `STRIPE_PRICE_YEARLY` = price_… (the £79 one)
+   - `STRIPE_PRICE_PRO_ANNUAL_USD` = price_… (the $59/year one; Annual is the default)
+   - `STRIPE_PRICE_PRO_MONTHLY_USD` = price_… (the $6.99/month one)
+   - Legacy, keep if set: `STRIPE_PRICE_YEARLY` (£79) and `STRIPE_PRICE_MONTHLY` (£9). New checkouts never use them; the webhook still treats them as Pro. Optional `STRIPE_PRICE_LEGACY_IDS` = comma-separated extra legacy price IDs.
+   - Checkout returns a clear 500 naming the missing variable if a USD price ID is not set.
+   - The 14-day trial needs no Stripe setup: the `account` function writes `trialStartedAt` / `trialEndsAt` on `entitlements/{uid}` with the Firebase service account (`FIREBASE_SERVICE_ACCOUNT`, step 4). Optional `FIREBASE_WEB_API_KEY` (defaults to the public web key in app/index.html).
    - `STRIPE_WEBHOOK_SECRET` = whsec_…
 8. Test: with gating on (step 9) on the dev site, use card `4242 4242 4242 4242`, any future date, any CVC.
 9. Going real later: repeat 3–7 with Test mode OFF, and add `STRIPE_ALLOW_LIVE` = `1`. The code refuses live keys without it, as a safety catch.

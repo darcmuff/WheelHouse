@@ -1,10 +1,10 @@
 // OpTrack service worker. Bump CACHE on every release.
-const CACHE='optrack-v407';
+const CACHE='optrack-v408';
 // Caches from earlier app names, deleted on update. Only the service-worker cache: your data and settings are untouched.
 const LEGACY = ['wheelhouse-'];
 const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
 // Logo SVGs carry ?v=N (bump with the pages that reference them when their colour changes) so a new page never pairs with an old cached logo.
-const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './wc-brand.js', './demo.js', './popular.js', './delta.js', './ledger.js', './analytics.js', './sw-update.js', './legal.html', './nunito-900.woff2', './urbanist-var.woff2', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg?v=372', './logo-horizontal.svg?v=372', './brand/index.json', './brand/overrides.json', './brand/top250-options.json'];
+const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './wc-brand.js', './demo.js', './popular.js', './delta.js', './ledger.js', './entitlement.js', './analytics.js', './sw-update.js', './legal.html', './nunito-900.woff2', './urbanist-var.woff2', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg?v=372', './logo-horizontal.svg?v=372', './brand/index.json', './brand/overrides.json', './brand/top250-options.json'];
 
 self.addEventListener('message', e => {
   var d = e.data || {};

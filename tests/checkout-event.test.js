@@ -10,9 +10,11 @@ async function run(plan,opts={}){
   await startCheckout(bill,opts.track===null?undefined:(opts.track||(p=>tracks.push(p))),doc,loc)(plan);
   return {tracks,href,msg};
 }
-test('checkout event uses the plan name only after a Stripe URL',async()=>{
+test('checkout event uses the interval name only after a Stripe URL',async()=>{
   const m=await run('monthly');assert.deepStrictEqual(m.tracks,['/checkout-started/monthly']);assert.strictEqual(m.href,'https://checkout.stripe.com/c/pay/test');
-  const y=await run('yearly');assert.deepStrictEqual(y.tracks,['/checkout-started/yearly']);assert.ok(y.href);
+  const a=await run('annual');assert.deepStrictEqual(a.tracks,['/checkout-started/annual']);assert.ok(a.href);
+  const y=await run('yearly');assert.deepStrictEqual(y.tracks,['/checkout-started/annual'],'old yearly links go to annual');assert.ok(y.href);
+  let sent;await startCheckout(async(fn,p)=>{sent=p;return 'https://x';},()=>{},{getElementById(){return{};}},{})('monthly');assert.deepStrictEqual(sent,{interval:'monthly'});
 });
 test('checkout event does not fire without a URL, on error, or if analytics is missing',async()=>{
   const empty=await run('monthly',{bill:async()=>''});assert.deepStrictEqual(empty.tracks,[]);assert.strictEqual(empty.href,null);

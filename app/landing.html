@@ -102,6 +102,7 @@
 <meta name="twitter:description" content="Pick any trades. See the real net. Track the options wheel and LEAPs without linking your broker.">
 <meta name="twitter:image" content="https://optrack.app/optrack-share.png">
 <script src="brand.js"></script>
+<script src="entitlement.js"></script>
 <script src="analytics.js" defer></script>
 <script>function otCount(p){try{if(window.otTrack)window.otTrack(p);}catch(e){}}</script>
 <style>
@@ -141,6 +142,7 @@ h2{font-size:1.6rem;margin:4rem 0 1.25rem;letter-spacing:-.01em;font-weight:840}
 .shot{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#fff;display:block}figure{margin:1.25rem 0 0}figcaption{font-size:.85rem;color:var(--text3);margin-top:.4rem}
 .plans{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.925rem;box-shadow:var(--shadow)}th,td{padding:.625rem .75rem;border-bottom:1px solid var(--line);text-align:left}th:not(:first-child),td:not(:first-child){text-align:center;width:7rem}tr:last-child td{border-bottom:0}th,b,strong{font-weight:840}.y{color:var(--brand-orange);font-weight:840}.n{color:var(--text3)}
+.price.v2a .plink{color:#fff;text-decoration:underline}.ptog{display:inline-flex;gap:2px;padding:2px;margin:.5rem 0 .75rem;border-radius:6px;background:rgba(255,255,255,.16)}.ptog button{font:inherit;font-size:.8125rem;font-weight:740;border:0;border-radius:6px;padding:.375rem .75rem;background:transparent;color:#fff;cursor:pointer}.ptog button.on{background:#fff;color:var(--text)}.ptog .psave{font-size:.6875rem;color:var(--brand-orange);font-weight:840;margin-left:.25rem}.ptog button:not(.on) .psave{color:#fff}th small{display:block;font-size:.6875rem;font-weight:600;color:var(--text3);margin-top:.125rem}td em{font-style:normal;color:var(--text3);font-size:.8125rem}@media(max-width:600px){th:not(:first-child),td:not(:first-child){width:auto}th,td{padding:.5rem .4rem;font-size:.8125rem}}
 .price{background:var(--card);border:0;border-radius:12px;padding:1.5rem;box-shadow:var(--shadow)}.price .amt{font-size:2rem;font-weight:840}.price .amt span{font-size:1rem;color:var(--text3);font-weight:480}.price.v2a .small{color:rgba(255,255,255,.88)}.price.v2a .amt,.price.v2a .amt span{color:#fff}.price.v2a .amt span{opacity:.88}.price.v2a .btn.g{background:#fff}
 .bot{margin:3.5rem 0 0;background:var(--card);border:1px solid #FF5A36;border-radius:12px;padding:1.35rem 1.5rem;scroll-margin-top:1.25rem;box-shadow:none}
 .bot .k{font-size:.75rem;font-weight:840;color:var(--brand-orange);text-transform:uppercase;letter-spacing:.08em}
@@ -200,7 +202,7 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
   <section class="bot" id="grokbot">
     <div class="k">Hands-free entry</div>
     <h2>Automatic trade inputs with Grok Bot, no brokerage link needed.</h2>
-    <p>Set this up in your own Grok Bot. Every weekday it reads your new broker trades, through the Plaid connection you linked yourself, and types them into OpTrack the same way you would. OpTrack never receives your broker credentials.</p>
+    <p>Set this up in your own Grok Bot. Every weekday it reads the trade confirmation emails your broker already sends you and types those trades into OpTrack the same way you would. No broker link: OpTrack never receives your broker credentials.</p>
     <a class="btn p bot-get" href="https://x.ai/bot/o3uycIpqy16pM04-Yh1AW" target="_blank" rel="noopener">Get OpTrack Bot</a>
   </section>
 
@@ -215,17 +217,17 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
 
   <h2>Free and Pro</h2>
   <div class="plans">
-    <table id="plans"><thead><tr><th></th><th>Free</th><th>Pro</th></tr></thead><tbody id="plans-body">
+    <table id="plans"><thead><tr><th></th><th>Free</th><th id="plans-pro-h">Pro<small>$4.92/mo billed yearly · $6.99/mo monthly</small></th></tr></thead><tbody id="plans-body">
       <tr><td>Manual entry and SmartScan</td><td class="y">✓</td><td class="y">✓</td></tr>
-      <tr><td>Wheel tracking</td><td>Up to 2 tickers</td><td class="y">Unlimited</td></tr>
+      <tr><td>Wheel tickers</td><td>Up to 2 open</td><td class="y">Unlimited</td></tr>
     </tbody></table>
-    <div class="price v2a"><div class="v2-art" aria-hidden="true"><i class="t"></i><div class="lg"><i></i></div></div><div class="small">Pro</div><div class="amt" id="pro-amt">£9 <span>/ month</span></div><p class="small" id="price-line">Pro is £9 a month or £79 a year. Cancel any time.</p>
-      <div class="cta" style="margin:1rem 0 0"><a class="btn p" href="/app/?signup=1" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/start">See plans</a></div></div>
+    <div class="price v2a"><div class="v2-art" aria-hidden="true"><i class="t"></i><div class="lg"><i></i></div></div><div class="small">Pro</div><div class="ptog" role="group" aria-label="Billing"><button type="button" data-iv="annual" class="on" aria-pressed="true">Annual <b class="psave" id="pro-save">Save 30%</b></button><button type="button" data-iv="monthly" aria-pressed="false">Monthly</button></div><div class="amt" id="pro-amt">$4.92 <span>/ month</span></div><p class="small" id="price-line">billed $59/year · Save 30%</p><p class="small" id="trial-line">Every new account starts with a 14-day Pro trial. No card needed. Cancel any time. <a class="plink" href="/start">More about plans</a></p>
+      <div class="cta" style="margin:1rem 0 0"><a class="btn p" href="/app/?signup=1" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/app/?signup=1&checkout=annual" id="go-pro-plan" onclick="otCount('/go-pro')">Go Pro</a></div></div>
   </div>
 
   <div class="nfa"><b>Not financial advice.</b> <span data-brand="name">OpTrack</span> keeps a record of the trades you enter and does the sums. It doesn't tell you what to buy or sell. Prices are delayed and can be wrong, so always check against your broker. Options are risky. <a href="legal.html#advice">Read more</a>.</div>
 
-  <div class="cta" style="margin-top:2rem"><a class="btn p" href="/app/?signup=1" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/app/">Sign in</a><a class="btn g" href="/app/?signup=1&checkout=monthly" onclick="otCount('/go-pro')">Go Pro</a></div>
+  <div class="cta" style="margin-top:2rem"><a class="btn p" href="/app/?signup=1" onclick="otCount('/start-free')">Start free<small>Sign up</small></a><a class="btn g" href="/app/">Sign in</a><a class="btn g" href="/app/?signup=1&checkout=annual" onclick="otCount('/go-pro')">Go Pro</a></div>
 
   <footer><span>© <span id="yr">2026</span> Marc Duff</span><a href="legal.html#privacy">Privacy</a><a href="legal.html#terms">Terms</a><a href="legal.html#advice">Not financial advice</a><a id="support" href="#" hidden>Contact</a></footer>
 </div>
@@ -234,11 +236,18 @@ footer{margin:3rem 0 2rem;color:var(--text3);font-size:.85rem;display:flex;gap:1
   document.querySelectorAll('[data-brand="name"]').forEach(function(e){e.textContent=B.name;});document.title=B.name+': '+B.tagline;
   document.getElementById('yr').textContent=new Date().getFullYear();
   if(B.supportEmail){var s=document.getElementById('support');s.href='mailto:'+B.supportEmail+'?subject='+encodeURIComponent('OpTrack support');s.hidden=false;var addr=document.getElementById('support-addr');if(!addr){addr=document.createElement('span');addr.id='support-addr';s.after(addr);}addr.textContent=' '+B.supportEmail;}
-  var P=B.plans,N=B.featureNames||{};if(!P)return;var paid=P.paidFeatures||[],c=P.currency||'£';
-  var rows=[['Manual entry and SmartScan','✓','✓'],['Wheel tracking',paid.indexOf('unlimited')>=0?'Up to '+P.free.maxWheelTickers+' tickers':'Unlimited','Unlimited'],['LEAPs',paid.indexOf('unlimited')>=0||paid.indexOf('leaps-full')>=0?P.free.maxOpenLeaps+' open LEAP':'Unlimited','Unlimited'],['Realised P&L and Home','✓','✓'],['Export and delete your data','✓','✓']];
-  Object.keys(N).forEach(function(k){if(k==='unlimited'||k==='leaps-full')return;rows.push([N[k],paid.indexOf(k)>=0?'–':'✓','✓']);});
-  document.getElementById('plans-body').innerHTML=rows.map(function(r){return '<tr><td>'+r[0]+'</td>'+[r[1],r[2]].map(function(v){return '<td class="'+(v==='✓'||v==='Unlimited'?'y':v==='–'?'n':'')+'">'+v+'</td>';}).join('')+'</tr>';}).join('');
-  var pa=document.getElementById('pro-amt');if(pa)pa.innerHTML=c+P.priceMonthly+' <span>/ month</span>';document.getElementById('price-line').textContent='Pro is '+c+P.priceMonthly+' a month or '+c+P.priceYearly+' a year. Cancel any time.'+(P.gating?'':' For now, everything is free while we finish setting up.');
+  var P=B.plans;if(!P)return;
+  // The Free vs Pro rows and the prices come from BRAND.plans (app/brand.js); display text from OT_TIER.priceDisplay.
+  document.getElementById('plans-body').innerHTML=(P.comparison||[]).map(function(r){return '<tr><td>'+r[0]+'</td>'+[r[1],r[2]].map(function(v){return '<td class="'+(v==='✓'||v==='Unlimited'?'y':v==='–'?'n':'')+'">'+v+'</td>';}).join('')+'</tr>';}).join('');
+  var T=window.OT_TIER;if(!T)return;var D=T.priceDisplay(P);
+  var h=document.getElementById('plans-pro-h');if(h)h.innerHTML='Pro<small>'+D.annual.perMonthText+'/mo billed yearly · '+D.monthly.perMonthText+'/mo monthly</small>';
+  document.getElementById('pro-save').textContent='Save '+D.annual.savePct+'%';
+  function show(iv){var x=iv==='monthly'?D.monthly:D.annual;document.getElementById('pro-amt').innerHTML=x.perMonthText+' <span>/ month</span>';document.getElementById('price-line').textContent=x.line;
+    document.querySelectorAll('.ptog button').forEach(function(b){var on=b.getAttribute('data-iv')===iv;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
+    var g=document.getElementById('go-pro-plan');if(g)g.href='/app/?signup=1&checkout='+(iv==='monthly'?'monthly':'annual');}
+  document.querySelectorAll('.ptog button').forEach(function(b){b.addEventListener('click',function(){show(b.getAttribute('data-iv'));});});
+  show(D.defaultInterval);
+  if(!P.gating)document.getElementById('trial-line').textContent='For now, everything is free while we finish setting up.';
 })();
 </script>
 <script src="sw-update.js"></script>

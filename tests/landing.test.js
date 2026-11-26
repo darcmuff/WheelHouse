@@ -31,7 +31,7 @@ test('landing, app and start all link /manifest.json and register the service wo
 });
 test('landing leads with the USPs, top three first, then the rest, plans, not financial advice, CTAs, no hype',()=>{
   const i=id=>L.indexOf('id="'+id+'"');assert.ok(i('usp-broker')>0&&i('usp-broker')<i('usp-honest')&&i('usp-honest')<i('usp-smartscan')&&i('usp-smartscan')<i('plans'),'USP order');
-  ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Pick any trades. See the real net.','PMCC','every minute','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','Try the demo','href="/start"','id="plans"','id="start-free"','id="try-demo"','id="signin-top"','id="go-pro"','href="/app/?signup=1"','signup=1&checkout=monthly'].forEach(s=>assert.ok(L.includes(s),s));
+  ['No broker link','brokerage login','Robinhood CSV','export it or delete it','Only banked money counts','fees','win rate','SmartScan','Pick any trades. See the real net.','PMCC','every minute','Monthly return','web browser','Not financial advice','legal.html#privacy','legal.html#terms','Start free','Sign in','Try the demo','href="/start"','id="plans"','id="start-free"','id="try-demo"','id="signin-top"','id="go-pro"','href="/app/?signup=1"','signup=1&checkout=annual'].forEach(s=>assert.ok(L.includes(s),s));
   assert.ok(!L.includes('id="signin-hero"')&&!L.includes('I have an account'),'hero row has no Sign in button');
   assert.ok(L.includes('id="ways-note">Start free creates an account. No card. The demo needs no sign-up. Nothing to download: it runs in your web browser.'));
   assert.ok(L.includes('@media(min-width:1280px)')&&L.includes('#ways-in{flex-direction:column')&&/id="start-free"[\s\S]*id="try-demo"[\s\S]*id="go-pro"/.test(L)&&L.includes("otCount('/start-free')")&&L.includes("otCount('/demo')")&&L.includes("otCount('/go-pro')"));
@@ -40,7 +40,7 @@ test('landing leads with the USPs, top three first, then the rest, plans, not fi
   assert.ok(L.includes('Demo data')&&L.includes('made-up numbers'),'screens and examples labelled');
   assert.ok(!/retired roofer|review|★|financial freedom|passive income|guaranteed|game.?changer|revolutionary/i.test(L));
   assert.ok(i('grokbot')>i('usp-smartscan')&&i('grokbot')<i('plans'),'Grok Bot block sits with the features');
-  assert.ok(L.includes('id="grokbot"')&&L.includes('Automatic trade inputs with Grok Bot, no brokerage link needed.')&&L.includes('Plaid connection you linked yourself')&&L.includes('OpTrack never receives your broker credentials'));
+  assert.ok(L.includes('id="grokbot"')&&L.includes('Automatic trade inputs with Grok Bot, no brokerage link needed.')&&!/Plaid/i.test(L)&&L.includes('trade confirmation emails')&&L.includes('OpTrack never receives your broker credentials'));
   assert.ok(!/no one sees your broker|partnership|xAI/i.test(L));});
 test('landing drop the roll tagline, keep wheel wording, V2 hero cards',()=>{
   assert.ok(!/no such thing as a roll/i.test(L));
@@ -62,7 +62,7 @@ test('analytics: goatcounter on the public site, cookie-free providers only, nev
   assert.strictEqual(countEvent('/go-pro','optrack.app',true),false);
   ['index.html','landing.html','start.html','legal.html'].forEach(f=>{const h=fs.readFileSync(path.join(A,f),'utf8');assert.ok(h.indexOf('src="brand.js"')>=0&&h.indexOf('src="brand.js"')<h.indexOf('src="analytics.js"'),f);});
   const S=fs.readFileSync(path.join(A,'start.html'),'utf8');
-  assert.ok(S.includes('id="go-free"')&&S.includes('href="/app/?signup=1"')&&S.includes('signup=1&checkout=monthly')&&S.includes('href="/app/">Sign in'));
+  assert.ok(S.includes('id="go-free"')&&S.includes('href="/app/?signup=1"')&&S.includes('signup=1&checkout=annual')&&S.includes('signup=1&checkout=monthly')&&S.includes('href="/app/">Sign in'));
   const H=fs.readFileSync(path.join(A,'index.html'),'utf8');
   assert.ok(H.includes("sessionStorage.setItem('ot-signup','1')")&&H.includes("otTrack('/signup-complete')")&&H.includes("otTrack('/first-trade-saved')"));});
 test('service worker keeps the app, not the landing page, as the offline shell',()=>{const s=fs.readFileSync(path.join(A,'sw.js'),'utf8');assert.ok(s.includes("const SHELL = './index.html'")&&s.includes('x.put(SHELL, c)'));});
