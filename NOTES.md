@@ -8,6 +8,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `main` is at sw v417 (`c6156d6`, 2026-11-26): checkout error handling (v414), US date default (v415), phone tab swipe (v416) and the neighbouring-page peek (v417).
 
+- `dev` only (sw v423, 2026-11-26): Selected trade rows in the picker keep the reddish tint (`--orangeL`) and orange left bar, as before v422. The orange tick-boxes stay hidden. The picker itself is unchanged. Do not push to main until Marc says so.
+
 - `dev` only (sw v422, 2026-11-26): The orange tick-boxes (and the reddish row tint / orange left bar) on selected trade rows are gone. They belonged to the “Pick any trades. See the real net.” picker, which is unchanged: right-click, long-press, or Ctrl/Cmd-click still selects trades and the net panel still appears. The boxes were never shown until you were in that mode; they just looked like permanent checkboxes once a row was selected. Tests updated in `tests/selectnet.test.js`. Do not push to main until Marc says so.
 
 - `dev` only (sw v421, 2026-11-26): Settings no longer has the Trade Log, More data, or Report rows (the whole “Go to” group). On desktop they stay reachable from the top nav (Activity) and Home (“More data” / “Report”, and the Needs you links). On phones those views were already hidden and still bounce to Home. The installed phone app locks to portrait via the manifest; a browser tab that can’t lock shows a quiet “Please rotate your phone” overlay only for coarse-pointer landscape with a short viewport (max-height 500px), so desktop and tablets are unchanged. Tests: `tests/portrait.test.js`, plus `tests/home.test.js`. Do not push to main until Marc says so.

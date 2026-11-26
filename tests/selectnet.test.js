@@ -33,11 +33,11 @@ test('rows carry a selection key and the bar is hidden until select mode',()=>{
   assert.ok(!SRC.includes('id="sel-bar"'));
   assert.ok(SRC.includes("e.key==='Escape'&&_selOn"));
 });
-test('picker checkboxes and the selected-row tint stay hidden; the net panel remains',()=>{
+test('picker tick-boxes stay hidden; selected rows keep the orange tint and left bar',()=>{
   assert.match(SRC,/\.sel-mark\{display:none\}/);
   assert.doesNotMatch(SRC,/body\.sel-mode \.trow\.sel \.sel-mark\{display:flex/);
   assert.doesNotMatch(SRC,/sel-mark::after\{content:'✓'\}/);
-  assert.doesNotMatch(SRC,/body\.sel-mode \.trow\.sel\{background:var\(--orangeL\)/);
+  assert.match(SRC,/body\.sel-mode \.trow\.sel\{background:var\(--orangeL\);box-shadow:inset 0\.2rem 0 0 var\(--orange\)\}/);
   assert.match(SRC,/function selEnter\(/);
   assert.match(SRC,/id="sel-panel"/);
   assert.match(SRC,/Right-click to select trades/);
