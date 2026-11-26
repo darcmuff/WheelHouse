@@ -78,13 +78,15 @@ test('Next expiry tile is clickable and keyboard-accessible when a trade exists'
   assert.ok(/animation:\s*nx-flash 1\.5s/.test(H) || /nx-flash 1\.5s/.test(H));
 });
 
-test('LEAP payback bar has a tooltip for open and closed cards', () => {
+test('LEAP payback bar has a small ⓘ at the left, not a tooltip on the bar', () => {
   const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
-  assert.ok(H.includes('.ii, .lc-bar[data-tip]'));
+  assert.ok(H.includes("n.closest('.ii')") || H.includes('n.closest(".ii")') || H.includes("closest('.ii')"));
+  assert.ok(!H.includes('.lc-bar[data-tip]'));
+  assert.ok(!H.includes('.lc-bar::after'));
   assert.strictEqual((H.match(/\$\{leapBarHtml\(pb,P\.cost,P\.net,!open\)\}/g) || []).length, 2);
-  assert.ok(/\.lc-bar::after\{content:''/.test(H));
   const { leapPayback, leapPaybackTip, leapBarHtml } = new Function(
     require('./extract').extractFn('fmtMoney') +
+    require('./extract').extractFn('ii') +
     require('./extract').extractFn('leapPayback') +
     require('./extract').extractFn('leapPaybackTip') +
     require('./extract').extractFn('leapBarHtml') +
@@ -96,9 +98,13 @@ test('LEAP payback bar has a tooltip for open and closed cards', () => {
   assert.strictEqual(leapPaybackTip(15000, 5680, pb.pct, true),
     'LEAP payback: 38% of your $15,000 cost paid back by closed or expired short calls ($5,680 total). Open calls count once closed.');
   const html = leapBarHtml(pb, 15000, 5680, false);
-  assert.ok(/class="lc-bar"/.test(html) && /role="button"/.test(html) && /tabindex="0"/.test(html));
-  assert.ok(/data-tip="LEAP payback: 38% of your \$15,000 cost paid back by closed or expired short calls \(\$5,680 so far\)\. Open calls count once closed\."/.test(html));
-  assert.ok(/aria-label="LEAP payback: 38%/.test(html) && /width:38%/.test(html));
+  assert.match(html, /class="lc-bar-row"/);
+  assert.match(html, /<button type="button" class="ii"/);
+  assert.match(html, /aria-label="How it's worked out"/);
+  assert.match(html, /data-tip="LEAP payback: 38% of your \$15,000 cost paid back by closed or expired short calls \(\$5,680 so far\)\. Open calls count once closed\."/);
+  assert.match(html, /<div class="lc-bar" aria-hidden="true"><i style="width:38%"><\/i><\/div>/);
+  assert.doesNotMatch(html, /class="lc-bar"[^>]*(role="button"|tabindex=|data-tip=|aria-label=)/);
+  assert.ok(!/class="lc-bar"[^>]*role="button"/.test(html));
 });
 
 test('More data and Report are hidden on phone and kept on desktop', () => {

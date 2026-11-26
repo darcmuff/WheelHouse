@@ -996,7 +996,10 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .lc-h{display:flex;justify-content:space-between;align-items:center}.lc-lacts{display:flex;gap:0.25rem;margin-left:auto;padding-left:0.5rem}.lc-lacts .btn{padding:0.1875rem 0.5rem;font-size:0.825rem}.lc-tk{font-weight:720;font-size:0.9375rem;margin-right:0.5rem}.lc-ct{color:var(--text2);font-size:0.78rem}
 .lc-note{color:var(--text3);font-size:0.72rem;margin-top:0.25rem}
 .lc-hero{display:flex;justify-content:space-between;gap:1.75rem;margin-top:0.75rem;flex-wrap:nowrap;padding-inline:3rem}.lc-hero>div{flex:0 1 auto;min-width:0}.lc-hero>div:last-child:not(:first-child){text-align:right}.lc-k{color:var(--text3);font-size:0.72rem}.lc-v{font-size:1.25rem;font-weight:480}.lc-v.sm{font-size:0.95rem;margin-top:0.25rem}.lc-mut{color:var(--text2)}
-.lc-bar{position:relative;display:block;width:auto;box-sizing:border-box;height:0.3rem;margin:0.75rem 0 0.375rem;padding:0;border:0;border-radius:1rem;background:var(--bg3);overflow:visible;font:inherit;color:inherit;cursor:help;-webkit-appearance:none;appearance:none}.lc-bar i{display:block;height:100%;background:var(--orange);border-radius:inherit}.lc-bar::after{content:'';position:absolute;left:0;right:0;top:-16px;bottom:-16px}.lc-bar:focus{outline:none}.lc-bar:focus-visible{outline:1px solid var(--border);outline-offset:3px}
+.lc-bar-row{display:flex;align-items:center;gap:0.3rem;margin:0.75rem 0 0.375rem;min-width:0}
+.lc-bar-row .ii{margin:0;flex:0 0 auto;padding:0;width:14px;height:14px;font-size:11px;line-height:1;opacity:.75;color:var(--text3)}
+.lc-bar{position:relative;display:block;flex:1;min-width:0;width:auto;box-sizing:border-box;height:0.3rem;margin:0;padding:0;border:0;border-radius:1rem;background:var(--bg3);overflow:hidden}
+.lc-bar i{display:block;height:100%;background:var(--orange);border-radius:inherit}
 .ii{position:relative;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0 0.125rem;margin-left:0.25rem;font:inherit;font-size:0.8em;font-weight:480;line-height:1;color:var(--text3);opacity:.7;cursor:help;vertical-align:baseline;text-transform:none;letter-spacing:0}
 /* ⓘ beside text that stayed above the small-font cut still gets the +20% */
 .wl-memo>.ii,.a-chart-title>.ii,.d-panel-title>.ii,.hc-h>h2>.ii{font-size:0.96em}.ii:hover,.ii:focus{opacity:1;color:var(--text2);outline:none}.ii:focus-visible{outline:1px solid var(--border);border-radius:4px}#ii-pop{position:fixed;z-index:10000;max-width:17rem;width:max-content;padding:0.5rem 0.625rem;border-radius:8px;background:var(--surface,var(--bg2,#fff));color:var(--text2);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:0.825rem;font-weight:480;line-height:1.45;text-align:left;white-space:normal;overflow-wrap:break-word;pointer-events:none;text-transform:none;letter-spacing:0}#ii-pop[hidden]{display:none}@media(max-width:700px){#ii-pop{max-width:min(17rem,calc(100vw - 16px));box-sizing:border-box}}
@@ -1299,7 +1302,7 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .lcw>*:not(.wc-art):not(.lc-tex){position:relative;z-index:1}
 .lcw .wc-lgw{--s:.78;top:-20px;right:calc(12% - 70px)}
 .lcw .wc-tk{font-size:8rem}
-.lcw>.lc-h,.lcw>.lc-quiet,.lcw>.lc-note,.lcw>.lc-hero,.lcw>.lc-bar,.lcw>.wl-memo,.lcw>.wl-top{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#3DDC84;--red:#FF8A8A;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--border:rgba(255,255,255,.28);color:#fff}
+.lcw>.lc-h,.lcw>.lc-quiet,.lcw>.lc-note,.lcw>.lc-hero,.lcw>.lc-bar-row,.lcw>.wl-memo,.lcw>.wl-top{--text:#fff;--text2:rgba(255,255,255,.88);--text3:rgba(255,255,255,.8);--silver:rgba(255,255,255,.88);--green:#3DDC84;--red:#FF8A8A;--blue:#cfe3ff;--yellow:#ffe1a6;--orange:#fff;--orange2:#fff;--border:rgba(255,255,255,.28);color:#fff}
 .lcw>.lc-h{padding:16px 22px 8px}
 .lcw>.lc-h:last-child,.lcw>.lc-quiet:last-child{padding-bottom:16px}
 .lcw .lc-tk{font-size:18px;font-weight:720;color:#fff}
@@ -1323,8 +1326,9 @@ html:not([data-theme="dark"]) .hk-cog svg{fill:currentColor}
 .lcw .lc-mut{color:#fff}
 .lcw>.lc-hero .lc-pct{font-size:14.4px!important;margin-top:2px}
 .lcw .lc-be-orig,.lcw .lc-saved{color:var(--text3);font-size:0.72rem;margin-top:2px;font-weight:480}
-.lcw>.lc-bar{height:3px;margin:-8px 22px 14px;background:rgba(255,255,255,.18)}
-.lcw>.lc-bar i{background:var(--brand-orange)}
+.lcw>.lc-bar-row{margin:-8px 22px 14px;background:transparent}
+.lcw>.lc-bar-row .lc-bar{height:3px;background:rgba(255,255,255,.18)}
+.lcw>.lc-bar-row .lc-bar i{background:var(--brand-orange)}
 .lcw>.trade-body{background:var(--bg2);color:var(--text);border:1px solid rgba(17,15,21,.08);border-radius:12px;margin:0 18px 18px!important;box-shadow:0 2px 4px rgba(17,15,21,.05)}
 .lcw .trade-body .btn{border-radius:6px;font-family:inherit}
 @media(max-width:700px){.lcw .wc-lgw{--s:.45}.lcw>.lc-h{padding:14px 8px 6px;flex-wrap:nowrap;align-items:flex-start;gap:0.4rem 0.35rem;min-width:0;box-sizing:border-box}.lcw>.lc-h>div:first-child{min-width:0;flex:1}.lcw>.lc-h .lc-h-right{flex-shrink:0;align-self:flex-start;margin-left:auto;margin-right:0}.lcw>.wl-top{padding:0 14px 6px}.lcw>.lc-hero{grid-template-columns:1fr 1fr;margin:0 12px 12px;padding:12px}.lcw>.trade-body{margin:0 10px 10px!important}}
@@ -1665,7 +1669,7 @@ select,textarea,
   .lcw>.lc-h{padding-left:8px;padding-right:8px}
   .lcw>.wl-top{padding-left:8px;padding-right:8px}
   .lcw>.lc-hero{margin:0 8px 10px;padding:10px 8px}
-  .lcw>.lc-bar{margin-left:8px;margin-right:8px}
+  .lcw>.lc-bar-row{margin-left:8px;margin-right:8px}
   .lcw>.wl-memo{margin-inline:8px}
   .lcw>.trade-body{margin:0 8px 8px!important}
 
@@ -4627,7 +4631,7 @@ function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString((typeo
 // Pure: share of the LEAP's cost won back by calls sold against it (0–100, whole %).
 function leapPayback(cost,net){return{pct:cost>0?Math.max(0,Math.min(100,Math.round(net/cost*100))):0};}
 function leapPaybackTip(cost,net,pct,closed){const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');return`LEAP payback: ${pct}% of your ${m0(cost)} cost paid back by closed or expired short calls (${m0(Math.max(0,net))} ${closed?'total':'so far'}). Open calls count once closed.`;}
-function leapBarHtml(pb,cost,net,closed){const tip=leapPaybackTip(cost,net,pb.pct,closed),attr=String(tip).replace(/<[^>]*>/g,'').replace(/"/g,'&quot;');return`<div class="lc-bar" role="button" tabindex="0" data-tip="${attr}" aria-label="${attr}" onclick="event.stopPropagation()"><i style="width:${pb.pct}%"></i></div>`;}
+function leapBarHtml(pb,cost,net,closed){const tip=leapPaybackTip(cost,net,pb.pct,closed);return`<div class="lc-bar-row">${ii(tip)}<div class="lc-bar" aria-hidden="true"><i style="width:${pb.pct}%"></i></div></div>`;}
 // Pure: Cost after calls vs original LEAP cost. Lower = green ▼ (calls paid you back); higher = red ▲.
 function leapAdjMoveHtml(cost,adj){
   if(!(cost>0)||adj==null||!Number.isFinite(+adj))return '';
@@ -9574,7 +9578,7 @@ function iiPlace(r,w,h,vw,vh){
 (function(){
   if(typeof document==='undefined')return;
   let cur=null;
-  const tipOf=n=>n&&n.closest&&n.closest('.ii, .lc-bar[data-tip]');
+  const tipOf=n=>n&&n.closest&&n.closest('.ii');
   const pop=()=>{let p=document.getElementById('ii-pop');if(!p){p=document.createElement('div');p.id='ii-pop';p.setAttribute('role','tooltip');p.hidden=true;document.body.appendChild(p);}return p;};
   const show=b=>{const p=pop();p.textContent=b.getAttribute('data-tip')||'';p.hidden=false;const r=b.getBoundingClientRect(),q=p.getBoundingClientRect(),o=iiPlace(r,q.width,q.height,innerWidth,innerHeight);p.style.left=o.left+'px';p.style.top=o.top+'px';cur=b;};
   const hide=()=>{const p=document.getElementById('ii-pop');if(p)p.hidden=true;cur=null;};
