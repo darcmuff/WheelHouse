@@ -96,7 +96,8 @@ test('checkout: interval → USD env vars, clear error if missing, no Stripe at 
     assert.strictEqual((await call({interval:'annual'})).statusCode,200);assert.strictEqual(sent['line_items[0][price]'],'price_a');
     assert.strictEqual((await call({interval:'monthly'})).statusCode,200);assert.strictEqual(sent['line_items[0][price]'],'price_m');
     assert.strictEqual((await call({})).statusCode,200);assert.strictEqual(sent['line_items[0][price]'],'price_a','default annual');
-    delete process.env.STRIPE_PRICE_PRO_MONTHLY_USD;const bad=await call({interval:'monthly'});assert.strictEqual(bad.statusCode,500);assert.match(JSON.parse(bad.body).error,/STRIPE_PRICE_PRO_MONTHLY_USD is not set/);
+    delete process.env.STRIPE_PRICE_PRO_MONTHLY_USD;assert.strictEqual((await call({interval:'monthly'})).statusCode,200);assert.strictEqual(sent['line_items[0][price]'],'price_1Ug01bDsI2fxIBCJ67VgZOTK','no env: live monthly ID');
+    delete process.env.STRIPE_PRICE_PRO_ANNUAL_USD;assert.strictEqual((await call({interval:'yearly'})).statusCode,200);assert.strictEqual(sent['line_items[0][price]'],'price_1Ug015DsI2fxIBCJocEZDG2e','no env: live annual ID');
   }finally{process.env=o;}
   const acc=fs.readFileSync(path.join(__dirname,'..','netlify/functions/account.js'),'utf8');assert.ok(!/require\('\.\.\/lib\/stripe'\)/.test(acc),'trial never touches Stripe');
   // start-trial writes only our own record, once
@@ -125,4 +126,18 @@ test('Home "Return this month": target line / progress is Pro-only; Free still s
   // the return itself never depends on the target: same pct with or without it
   const M=new Function(extractFn('monthReturnPct')+'\nreturn monthReturnPct;')();assert.strictEqual(M(500,10000,2).pct,M(500,10000,null).pct);assert.strictEqual(M(500,10000,null).ok,null);
   const cfg=extractFn('openRetCfg');assert.ok(cfg.includes("onclick=\"closeRetCfg();openUpgrade('analytics')\"")&&cfg.includes('<input id="ret-target" type="hidden">'),'Free: Pro prompt opens the upgrade box; saving keeps the stored target');
+});
+test('USD price IDs: env vars are optional overrides of the live IDs; webhook knows the live IDs as Pro',async()=>{
+  const pr=require('../netlify/lib/pricing');
+  assert.deepStrictEqual({...pr.LIVE_USD},{annual:'price_1Ug015DsI2fxIBCJocEZDG2e',monthly:'price_1Ug01bDsI2fxIBCJ67VgZOTK'});
+  assert.strictEqual(pr.priceForInterval('annual',{}).price,'price_1Ug015DsI2fxIBCJocEZDG2e');assert.strictEqual(pr.priceForInterval('monthly',{}).price,'price_1Ug01bDsI2fxIBCJ67VgZOTK');
+  assert.strictEqual(pr.priceForInterval('yearly',{}).interval,'annual');assert.strictEqual(pr.priceForInterval('weekly',{}).status,400);
+  assert.strictEqual(pr.priceForInterval('annual',{STRIPE_PRICE_PRO_ANNUAL_USD:'price_test_a'}).price,'price_test_a');assert.strictEqual(pr.priceForInterval('monthly',{STRIPE_PRICE_PRO_MONTHLY_USD:'  '}).price,'price_1Ug01bDsI2fxIBCJ67VgZOTK','blank env falls back');
+  const ids=pr.proPriceIds({});assert.ok(ids.has('price_1Ug015DsI2fxIBCJocEZDG2e')&&ids.has('price_1Ug01bDsI2fxIBCJ67VgZOTK'));
+  assert.ok(pr.proPriceIds({STRIPE_PRICE_YEARLY:'price_gbp'}).has('price_gbp'),'legacy GBP still recognised');assert.strictEqual(pr.isLegacyPrice('price_1Ug015DsI2fxIBCJocEZDG2e',{}),false);
+  const hook=require('../netlify/functions/stripe-webhook');const warn=console.warn;let warned=0;console.warn=()=>{warned++;};
+  try{const o={...process.env};delete process.env.STRIPE_PRICE_PRO_ANNUAL_USD;delete process.env.STRIPE_PRICE_PRO_MONTHLY_USD;
+    for(const id of ['price_1Ug015DsI2fxIBCJocEZDG2e','price_1Ug01bDsI2fxIBCJ67VgZOTK']){const r=hook.planForSubscription({status:'active',items:{data:[{price:{id}}]}},false);assert.strictEqual(r.plan,'pro');assert.strictEqual(r.legacyPrice,false);}
+    process.env=o;}finally{console.warn=warn;}
+  assert.strictEqual(warned,0,'live IDs are known prices, not unlisted');
 });

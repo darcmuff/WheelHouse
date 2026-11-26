@@ -44,10 +44,8 @@ After changing env vars, redeploy: **Deploys → Trigger deploy → Deploy site*
    - After saving, copy the **Signing secret** (starts `whsec_`).
 7. Netlify env (all secret):
    - `STRIPE_SECRET_KEY` = sk_test_…
-   - `STRIPE_PRICE_PRO_ANNUAL_USD` = price_… (the $59/year one; Annual is the default)
-   - `STRIPE_PRICE_PRO_MONTHLY_USD` = price_… (the $6.99/month one)
+   - Optional overrides: `STRIPE_PRICE_PRO_ANNUAL_USD` (default live `price_1Ug015DsI2fxIBCJocEZDG2e`, $59/year, Annual is the default) and `STRIPE_PRICE_PRO_MONTHLY_USD` (default live `price_1Ug01bDsI2fxIBCJ67VgZOTK`, $6.99/month), product OpTrack Pro `prod_VZfOc6GNY8hIhP`. The live IDs are built into `netlify/lib/pricing.js`; set these only to use other (e.g. test-mode) prices.
    - Legacy, keep if set: `STRIPE_PRICE_YEARLY` (£79) and `STRIPE_PRICE_MONTHLY` (£9). New checkouts never use them; the webhook still treats them as Pro. Optional `STRIPE_PRICE_LEGACY_IDS` = comma-separated extra legacy price IDs.
-   - Checkout returns a clear 500 naming the missing variable if a USD price ID is not set.
    - The 14-day trial needs no Stripe setup: the `account` function writes `trialStartedAt` / `trialEndsAt` on `entitlements/{uid}` with the Firebase service account (`FIREBASE_SERVICE_ACCOUNT`, step 4). Optional `FIREBASE_WEB_API_KEY` (defaults to the public web key in app/index.html).
    - `STRIPE_WEBHOOK_SECRET` = whsec_…
 8. Test: with gating on (step 9) on the dev site, use card `4242 4242 4242 4242`, any future date, any CVC.
