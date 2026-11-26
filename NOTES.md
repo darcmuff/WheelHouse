@@ -6,6 +6,7 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 ## Current state (checked in git on 2026-11-09)
 
+- `dev` (sw v411, 2026-11-26, Marc's spec): Capital at Work cog popover swaps the 'Measure return against' dropdown for a clean Auto / Manual toggle (Auto = caw, Manual = account size; saved values and maths unchanged). Two grey lines under the toggle: Auto uses each month's peak capital at work; Manual uses the typed account size; applies to Return this month, the monthly table, and the Report. Monthly target (and the Free Pro prompt from v410) and the Banked profit line are unchanged. Tests: `tests/caw-toggle.test.js`. NOT on main until Marc reviews.
 - `dev` (sw v408–v410, 2026-11-26, Marc's spec): USD Pro pricing, 14-day reverse trial, tighter Free gates, compliance copy. NOT on main until Marc reviews.
   - Pricing config is `BRAND.plans` in `app/brand.js` (`prices.annual.amount` 59, `prices.monthly.amount` 6.99, `defaultInterval` 'annual', `comparison` rows for every Free vs Pro table). Display text ($4.92/mo, "billed $59/year · Save 30%") comes from `OT_TIER.priceDisplay`.
   - `app/entitlement.js` (window.OT_TIER and Node module) is the single source of truth: `getEffectiveTier(ent, now)` → paid (plan pro or founder) → pro; else `now <= trialEndsAt` → pro trial with `trialDaysLeft`; else free. Gate helpers: canOpenWheel, canOpenLeap, canAddPmccCall, canImportCsv, liveOptionPrices, canSeeView. index.html `isPro` routes through it; `isPaidPro` is for checkout/upgrade polling only.
