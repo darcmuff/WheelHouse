@@ -5,6 +5,7 @@ const { bearerUser, getEntitlement } = require('../lib/fbadmin');
 const { stripe, stripeKey } = require('../lib/stripe');
 const { originOf } = require('../lib/origin');
 const { priceForInterval } = require('../lib/pricing');
+const CHECKOUT_DOWN = "Checkout isn't available right now. Please try again shortly.";
 const J = (code, body) => ({ statusCode: code, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) });
 const _handler = async (event, ctx, deps = {}) => {
   if (event.httpMethod !== 'POST') return J(405, { error: 'POST only' });
@@ -17,13 +18,19 @@ const _handler = async (event, ctx, deps = {}) => {
   const site = originOf(event.headers) || process.env.URL;
   let ent = null; try { ent = await (deps.getEntitlement || getEntitlement)(user.uid); } catch (e) {}
   if (ent && ent.founder) return J(409, { error: 'You are a founder: Pro is already yours, free.' });
-  const s = await (deps.stripe || stripe)('checkout/sessions', {
+  // Stripe errors are logged here and never sent to the browser (no raw Stripe text, no stack trace).
+  let s;
+  try { s = await (deps.stripe || stripe)('checkout/sessions', {
     mode: 'subscription', 'line_items[0][price]': price, 'line_items[0][quantity]': 1,
     client_reference_id: user.uid, customer: ent && ent.stripeCustomerId || undefined, customer_email: ent && ent.stripeCustomerId ? undefined : (user.email || undefined),
     metadata: { uid: user.uid, interval: pick.interval }, subscription_data: { metadata: { uid: user.uid, interval: pick.interval } }, allow_promotion_codes: 'true',
     success_url: site + '/app/?upgraded=1', cancel_url: site + '/app/?upgrade=cancelled'
-  });
+  }); } catch (e) { console.error('checkout: Stripe error', pick.interval, (e && e.message) || e); return J(502, { error: CHECKOUT_DOWN }); }
+  if (!s || !/^https:\/\/checkout\.stripe\.com\//.test(s.url || '')) { console.error('checkout: Stripe returned no checkout URL', pick.interval); return J(502, { error: CHECKOUT_DOWN }); }
   return J(200, { url: s.url, interval: pick.interval });
 };
-exports._handler = _handler;
-exports.handler = require('../lib/origin').guard(_handler);
+// Last line of defence: anything unexpected becomes the same clean 502, logged server-side.
+const _safe = async (event, ctx, deps) => { try { return await _handler(event, ctx, deps); } catch (e) { console.error('checkout: unexpected error', (e && e.message) || e); return J(502, { error: CHECKOUT_DOWN }); } };
+exports._handler = _safe;
+exports.CHECKOUT_DOWN = CHECKOUT_DOWN;
+exports.handler = require('../lib/origin').guard(_safe);
