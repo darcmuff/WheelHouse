@@ -2485,8 +2485,8 @@ select,textarea,
         </div>
         <div class="st-row st-set"><label for="date-fmt-select">Date format</label>
           <select id="date-fmt-select" class="st-select" onchange="setDateFmt(this.value)">
+            <option value="us" selected>MM/DD</option>
             <option value="uk">DD/MM</option>
-            <option value="us">MM/DD</option>
           </select>
         </div>
       </section>
@@ -3304,7 +3304,7 @@ function calcMonthlyPnL(){
   db.trades.forEach(t=>{if(t.action==='DIV'&&t.entered)M(t.entered.slice(0,7)).credits+=t.total||0;});
   return Object.entries(mo).sort(([a],[b])=>a.localeCompare(b)).map(([ym,v])=>({
     ym,
-    label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),
+    label:new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'numeric'}),
     credits:v.credits,debits:v.debits,net:v.credits-v.debits,
     pNet:v.pCr-v.pDb,pCr:v.pCr,pDb:v.pDb
   }));
@@ -3370,7 +3370,7 @@ function allOptionsByMonth(wheelMonthly,legs,today){
   const O=optsMonthly(legs),yr=(today||new Date().toISOString()).slice(0,4);
   // Covered calls only: realised PMCC short-call premium. Closed LEAPs live in Shares & LEAPs P&L, never here.
   const yms=[...new Set([...Object.keys(W),...Object.keys(O.ccByMonth)])].sort().reverse();
-  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.ccByMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
+  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.ccByMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
   const sum=(f,yr0)=>Math.round(rows.filter(r=>!yr0||r.ym.startsWith(yr0)).reduce((a,r)=>a+r[f],0)*100)/100;
   return{rows,ytd:{wheel:sum('wheel',yr),opts:sum('opts',yr),total:sum('total',yr),year:yr},all:{wheel:sum('wheel'),opts:sum('opts'),total:sum('total')},open:{pl:O.ccOpenPl,unmarked:O.ccUnmarked,n:O.ccOpenN}};
 }
@@ -3382,7 +3382,7 @@ function renderAllOptionsByMonth(monthly){
   const two=(f,sh)=>`<span class="lf">${f}</span><span class="ls">${sh}</span>`;
   const cols='minmax(0,1.2fr) repeat(3,minmax(0,1fr))';
   const row=(a,b,c,d,st='')=>`<div class="d-table-row" style="grid-template-columns:${cols};${st}"><span>${a}</span><span style="text-align:right">${b}</span><span style="text-align:right">${c}</span><span style="text-align:right;font-weight:720">${d}</span></div>`;
-  const body=A.rows.map(r=>row(two(r.label,new Date(r.ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'2-digit'})),m(r.wheel),m(r.opts),m(r.total))).join('');
+  const body=A.rows.map(r=>row(two(r.label,new Date(r.ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'2-digit'})),m(r.wheel),m(r.opts),m(r.total))).join('');
   const tot=row(`<b>${two('Year to date '+A.ytd.year,'YTD')}</b>`,m(A.ytd.wheel),m(A.ytd.opts),m(A.ytd.total),'background:var(--bg3)')+row('<b>All time</b>',m(A.all.wheel),m(A.all.opts),m(A.all.total),'background:var(--bg3)');
   const openH=`<div style="padding:0.5625rem 1.25rem;font-size:0.825rem;color:var(--text3);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center"><span><b style="color:var(--text2)">Open covered calls, not yet banked:</b> ${A.open.n?m(A.open.pl):'—'}</span><span>${A.open.n} open covered call${A.open.n!==1?'s':''} (premium not banked yet; LEAPs not included)${A.open.unmarked?` · ${A.open.unmarked} without a mark`:''} · moves with prices, not in the months above${optDemo?' · <b style="color:#fcd34d">options figures are DEMO</b>':''}</span></div>`;
   return`<div class="d-panel mo-pnl">
@@ -3556,7 +3556,8 @@ function fmtPrem(n){if(n==null||isNaN(n))return'—';const s=parseFloat(Number(n
 // esc — HTML-escape any user-origin string before interpolating into innerHTML.
 // Covers both element context (<>&) and attribute context ("') in one pass.
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-let dateFmt=localStorage.getItem('wh-dateFmt')||'uk'; // uk | us
+let dateFmt=localStorage.getItem('wh-dateFmt')||'us'; // us | uk
+function dateLocale(){return (typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US';}
 function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
 function colorN(n){return n==null?'m':n>=0?'g':'r';}
@@ -4139,7 +4140,7 @@ function pmccClosedCaptured(c){
   if(net!=null){const cc=capturedCellHtml(0,net,false);return {html:cc.html.replace(/^0% /,''),color:cc.color};}
   return null;
 }
-function cpDate(iso){if(!iso)return'';const d=new Date(iso);return isNaN(+d)?'':d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+function cpDate(iso){if(!iso)return'';const d=new Date(iso);return isNaN(+d)?'':d.toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{day:'numeric',month:'short'});}
 function cpEditor(id,value,when,saveFn){const v=value!=null&&value!==''?String(value):'';const whenTxt=v!==''?cpDate(when):'';return `<label class="cp-edit" onclick="event.stopPropagation()">Current price<span>Now $<input id="current-price-${esc(id)}" name="current-price" aria-label="Current price" type="number" step="0.0001" value="${esc(v)}" onchange="${saveFn}('${id}',this.value)">${whenTxt?` · ${esc(whenTxt)}`:''}</span></label>`;}
 function saveWheelCurrentPrice(id,raw){const t=(db.trades||[]).find(x=>x.id===id);if(!t)return;const v=String(raw==null?'':raw).trim();if(v===''){if(t.currentPrice==null)return;delete t.currentPrice;delete t.currentPriceAt;}else{const n=+v;if(!(n>=0))return;if(t.currentPrice!=null&&+t.currentPrice===n)return;t.currentPrice=n;t.currentPriceAt=new Date().toISOString();}_saveTrade(t);render();}
 function saveOptCurrentPrice(id,raw){const i=(db.opts||[]).findIndex(x=>x.id===id);if(i<0)return;const l=db.opts[i];const v=String(raw==null?'':raw).trim();if(v===''){if(l.mark==null||l.mark==='')return;l.mark=null;l.markAt=null;l.markSrc=null;}else{const n=+v;if(!(n>=0))return;if(l.markSrc==='manual'&&l.mark!=null&&+l.mark===n)return;l.mark=n;l.markSrc='manual';l.markAt=new Date().toISOString();l.delta=null;l.theta=null;l.iv=null;}_saveOpt(l);render();}
@@ -4246,7 +4247,7 @@ function savePmccLeg(){
   const _dlt=parseFloat(document.getElementById('pe-delta').value);if(isNaN(_dlt)){delete r.leg.deltaAtOpen;}else r.leg.deltaAtOpen=_dlt;
   db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmccLeg');render();
 }
-function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}):'—';}
+function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{day:'numeric',month:'short',year:'2-digit'}):'—';}
 // Pure: share of the LEAP's cost won back by calls sold against it (0–100, whole %).
 function leapPayback(cost,net){return{pct:cost>0?Math.max(0,Math.min(100,Math.round(net/cost*100))):0};}
 function leapPaybackTip(cost,net,pct,closed){const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');return`LEAP payback: ${pct}% of your ${m0(cost)} cost paid back by closed or expired short calls (${m0(Math.max(0,net))} ${closed?'total':'so far'}). Open calls count once closed.`;}
@@ -6749,7 +6750,7 @@ function renderHome(){
   const wheelLegs=db.wheels.filter(w=>w.status==='open').flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).map(l=>({...l,ticker:l.ticker||w.ticker,wheelId:w.id})));
   const nx=nextExpiry(wheelLegs,legs,today);
   const health=openHealth();const _pend=pendingHealth();
-  const mName=new Date().toLocaleDateString('en-GB',{month:'long'});
+  const mName=new Date().toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'long'});
   const wl=calcWinLoss();
   const caw=currentCapitalAtWork();
   const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
@@ -7292,7 +7293,7 @@ function reportMoney(n){
   return(n<0?'-':'+')+'$'+abs;
 }
 function reportMonthName(ym){
-  return new Date(ym+'-02').toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  return new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'long',year:'numeric'});
 }
 function reportLegKind(l){
   const typ=String(l.type||'').toLowerCase();
@@ -8590,7 +8591,7 @@ function renderMonthlyForMeasure(measure){
   const monthlyCap=OT_LEDGER.monthlyDeployedCapital(db.wheels,db.trades,db.opts||[],{today});
   const manual=rs.base==='account'&&rs.account>0;
   const sum=(list,keys)=>{const o={};keys.forEach(k=>o[k]=Math.round(list.reduce((a,r)=>a+(r[k]||0),0)*100)/100);return o;};
-  const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+  const lbl=ym=>new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'numeric'});
   const cell=(v,cls,lab)=>`<td class="num ${v?cls:'m'}"${lab?` data-lbl="${lab}"`:''}>${v?fmtMoney(v):'—'}</td>`;
   const pcell=(v,lab)=>`<td class="num mpl-net ${v?colorN(v):'m'}" style="font-weight:720"${lab?` data-lbl="${lab}"`:''}>${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
   const heads=isSh?['Gains','Losses','Net','%']:['Premium collected','Loss','Profit','%'];
@@ -8707,7 +8708,7 @@ function moreLedgerStats(scope,wheels,trades,legs,today){
   const incOpen=inc.filter(isOpenPos);
   // Months of option income: event months for streaks / best / worst; calendar span (quiet months = 0) for Sortino and drawdown
   const g=L.groupEventsByPeriod(inc,{gran:'Month'});
-  const lbl=ym=>new Date(ym+'-02').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+  const lbl=ym=>new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'numeric'});
   const eventMonths=g.buckets.map(b=>({ym:b.key,label:lbl(b.key),gain:b.gain,loss:b.loss,net:b.net}));
   const months=[];
   if(eventMonths.length){
@@ -8772,9 +8773,9 @@ function pnlCurveHtml(){
   const raw=rg/5,m=Math.pow(10,Math.floor(Math.log10(raw))),step=[1,2,5,10].map(k=>k*m).find(k=>k>=raw)||m*10;
   const money=v=>(v<0?'-':'')+'$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1).replace(/\.0$/,'')+'k':Math.round(Math.abs(v)));
   let grid='';for(let v=Math.ceil(mn/step)*step;v<=mx+1e-9;v+=step){const y=Y(v).toFixed(1);grid+=`<line x1="${PL}" x2="${W-PR}" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width="1"${Math.abs(v)<1e-9?'':' stroke-dasharray="2 4"'}/><text x="${PL-8}" y="${+y+3}" text-anchor="end" fill="var(--text3)" font-size="12">${money(v)}</text>`;}
-  const lab=k=>{const t=new Date(k+'T12:00:00');return B.gran==='Month'?t.toLocaleDateString('en-GB',{month:'short',year:'2-digit'}):t.toLocaleDateString('en-GB',{day:'numeric',month:'short'});};
+  const lab=k=>{const t=new Date(k+'T12:00:00');return B.gran==='Month'?t.toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'2-digit'}):t.toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{day:'numeric',month:'short'});};
   const every=Math.max(1,Math.ceil(n/(cw/70)));
-  const tipLab=k=>B.gran==='Week'?'Week of '+lab(k):B.gran==='Month'?new Date(k+'T12:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'}):new Date(k+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const tipLab=k=>B.gran==='Week'?'Week of '+lab(k):B.gran==='Month'?new Date(k+'T12:00:00').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'long',year:'numeric'}):new Date(k+'T12:00:00').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   let bars='';B.buckets.forEach((b,i)=>{const cx=PL+slot*i+slot/2;
     if(b.gain)bars+=`<rect x="${(cx-bw-1).toFixed(1)}" y="${Y(b.gain).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.gain)).toFixed(1)}" rx="2" fill="var(--green)" fill-opacity="0.85"/>`;
     if(b.loss)bars+=`<rect x="${(cx+1).toFixed(1)}" y="${Y(b.loss).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.loss)).toFixed(1)}" rx="2" fill="var(--red)" fill-opacity="0.85"/>`;
@@ -9993,6 +9994,7 @@ async function loadReturnSettings(uid){
   }catch(e){console.warn('Return settings load failed:',e.message);}
 }
 function setDateFmt(val){
+  if(val!=='us'&&val!=='uk')return;
   dateFmt=val;
   localStorage.setItem('wh-dateFmt',val);
   render();

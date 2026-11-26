@@ -6,6 +6,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 ## Current state (checked in git on 2026-11-09)
 
+- `dev` (sw v415, 2026-11-26, Marc's spec): Default date format is US (MM/DD, e.g. 11/26/26 and month-name dates like Nov 26). Anyone who has not saved a choice in Settings → Date format gets US; a saved UK (DD/MM) choice is still honoured. Month-name dates (`cpDate`, `_fdShort`, chart/report labels) follow the same setting via `dateLocale()`. Stored values and CSV export stay ISO (`YYYY-MM-DD`); date inputs stay `type=date`. Tests: `tests/datefmt.test.js`. NOT on main until Marc reviews.
+
 - `dev` (sw v411, 2026-11-26, Marc's spec): Capital at Work cog popover swaps the 'Measure return against' dropdown for a clean Auto / Manual toggle (Auto = caw, Manual = account size; saved values and maths unchanged). Two grey lines under the toggle: Auto uses each month's peak capital at work; Manual uses the typed account size; applies to Return this month, the monthly table, and the Report. Monthly target (and the Free Pro prompt from v410) and the Banked profit line are unchanged. Tests: `tests/caw-toggle.test.js`. NOT on main until Marc reviews.
 - `dev` (sw v408–v412, 2026-11-26, Marc's spec): USD Pro pricing, 14-day reverse trial, tighter Free gates, compliance copy. NOT on main until Marc reviews.
   - Pricing config is `BRAND.plans` in `app/brand.js` (`prices.annual.amount` 59, `prices.monthly.amount` 6.99, `defaultInterval` 'annual', `comparison` rows for every Free vs Pro table). Display text ($4.92/mo, "billed $59/year · Save 30%") comes from `OT_TIER.priceDisplay`.

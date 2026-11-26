@@ -89,7 +89,7 @@ test('renderLeapCard: saved date under Value now; no header option today-move wh
   cardFn.setOpts([stale]);
   const html = cardFn.renderLeapCard(stale, 200, today);
   assert.match(html, /lc-saved/);
-  assert.match(html, /saved 15 Oct/);
+  assert.match(html, /saved Oct 15/);
   assert.doesNotMatch(html, /lc-opt[\s\S]*today/);
 });
 
