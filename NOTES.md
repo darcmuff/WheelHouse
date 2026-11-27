@@ -8,6 +8,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `main` is at sw v417 (`c6156d6`, 2026-11-26): checkout error handling (v414), US date default (v415), phone tab swipe (v416) and the neighbouring-page peek (v417).
 
+- `dev` only (sw v434, 2026-11-27): Follow-up to v433 Chain Captured %: the popover `Now:` line was declared inside a block and never reached the subtitle, and a manual buy-back price now also prices `Net P&L (now)` so the card sub-line can show on Free / unquoted legs. Do not push to main until Marc says so.
+
 - `dev` only (sw v433, 2026-11-27): Active rolled chains show a Chain Captured % under the wheel card’s `Net P&L (now)` (e.g. `50% of $200 chain`) and a `Now: +$100.00 · 50% captured` line on the Chain cashflow popover. Hidden on a single unrolled leg, a net-debit roll, or an unpriced open option. Do not push to main until Marc says so.
 
 - `dev` only (sw v432, 2026-11-27): The wheel card’s top-right figure is now `Net P&L (now)`: cycle mark-to-market (the same realised figure shown underneath, plus the open option’s mark and any open-share unrealised). An unpriced open option shows — rather than a partial number. Trade-row P&L is unchanged. Do not push to main until Marc says so.

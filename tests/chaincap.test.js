@@ -66,6 +66,8 @@ test('an unpriced open option hides the chain sub-line cleanly',()=>{
 test('the popover Now line sits under the subtitle and uses the same chain net as buildRollChain',()=>{
   assert.match(SRC,/id="sel-now"/);
   assert.match(SRC,/chainCapturedNow\(chain\.net/);
-  assert.match(extractFn('selBar'),/sel-now/);
+  const bar=extractFn('selBar');
+  assert.match(bar,/let nowLine='';if\(bits\)/);
+  assert.match(bar,/sel-now/);
   assert.match(extractFn('chainCapturedNow'),/Math\.round\(\(now\/c\)\*100\)/);
 });
