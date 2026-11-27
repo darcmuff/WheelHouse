@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // SPCX 13 Nov 2026 $130 put, 4 contracts, sold at $1.74 (the live card in the bug report).
 // The mark must be this contract brought forward to the live stock, and Captured / Profit use that same mark.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
@@ -27,12 +28,12 @@ test('an explicit empty quote says no quote, and a mark that has not loaded yet 
   assert.strictEqual(cells({},141.03).cap,'—');
 });
 test('card Profit uses the same words when the quote was rejected',()=>{
-  const src=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+  const src=appSrc();
   assert.ok(src.includes('wl-cur"><span>Profit</span><b class="m">no quote</b>'));
   assert.ok(src.includes("c.markWhy==='none'"));
 });
 test('LEAP short rows say no quote when the mark was rejected, even if a last price is still saved',()=>{
-  const src=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+  const src=appSrc();
   const i=src.indexOf('function renderPmccListRow');
   const bit=src.slice(i, i+1800);
   const why=bit.indexOf("c.markWhy==='none'");

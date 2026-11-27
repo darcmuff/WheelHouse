@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // unsigned-color.test.js — unsigned figures (no +/−) must not use brand orange
 const assert = require('node:assert/strict');
 const test = require('node:test');
@@ -5,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { extractFn } = require('./extract');
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const F = new Function(extractFn('arocColor') + '\n' + extractFn('unsignedValueColor') + '\nreturn {arocColor, unsignedValueColor};')();
 
 test('arocColor: mid-range AROC is normal text, never orange', () => {

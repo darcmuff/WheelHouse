@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // pmcc.test.js — poor man's covered calls: short calls sold against a LEAP (fake figures only).
 // Covers linking, premium/adjusted cost maths, no risk warnings, SmartScan for sold calls, and that nothing touches wheel data.
 // Run: node tests/pmcc.test.js
@@ -60,7 +61,7 @@ const risky = [leap, sh({ id: 'r', strike: 120, expiry: '2029-01-19', entryPrice
 S.setOpts(risky);
 check('stats carry no warnings field', !('warnings' in S.pmccStats(leap, risky, today)));
 check('risky short still saves (no blocking)', !!S.pmccFormLeg({ strike: '120', expiry: '2029-01-19', qty: '5', price: '9', newId: 'z' }, leap).leg);
-const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const html = appSrc();
 check('no PMCC risk copy anywhere in the app', !/pmccWarnings|pmcc-warn|pcc-warn|would be naked|risk a loss if called away|lock in a loss/.test(html));
 // ── status labels (open short only) ──
 const o = (x) => ({ status: 'open', strike: 245, expiry: '2026-11-20', entryPrice: 6.40, mark: 5, ...x });
@@ -77,7 +78,7 @@ S.setOpts(legs);
 const h = S.renderPmcc(leap, today);
 check('trade list: short calls only (STO/BTC/EXP, no LEAP BTO), Edit on every row', /pmcc-trades/.test(h) && !/ab-BTO/.test(h) && /ab-STO/.test(h) && /ab-BTC/.test(h) && /ab-EXP/.test(h) && (h.match(/class="trow /g)||[]).length===(h.match(/openPmccLegEdit\(/g)||[]).length && /To strike/.test(h) && /Captured/.test(h));
 check('LEAP What if? has new net cost and breakeven, not If called away', (()=>{
-  const src=require('fs').readFileSync(require('path').join(__dirname,'../app/index.html'),'utf8');
+  const src=appSrc();
   const i=src.indexOf("data-kind=\"leap\"");
   const j=src.indexOf('function wlWhatIfCalc');
   const calc=src.slice(j, src.indexOf('function wlWhatIfLog', j));

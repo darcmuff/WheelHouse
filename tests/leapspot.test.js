@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 const i=SRC.indexOf('function leapSpotHtml(');const j=SRC.indexOf('\nfunction renderLeapCard(',i);
 const f=new Function(SRC.slice(i,j)+'\nreturn leapSpotHtml;')();
 test('LEAP header price: up, open session, above strike',()=>{const h=f({price:165,pct:1.23,state:'REGULAR'},150,true);assert.ok(h.includes('$165.00')&&h.includes('▲1.2%')&&h.includes('var(--green)')&&h.includes('10.0% above strike')&&!h.includes('close'));});

@@ -1,9 +1,10 @@
+const{appSrc}=require('./appsrc');
 // The LEAPs page summary tiles (Total value, Unrealised P&L, Calls banked, Next to act) were removed.
 const fs=require('fs');
 const path=require('path');
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const H=fs.readFileSync(path.join(__dirname,'../app/index.html'),'utf8');
+const H=appSrc();
 
 test('LEAPs page has no summary tiles box; header is followed by the right-click hint then the cards',()=>{
   assert.ok(!/class="leap-sum"/.test(H));

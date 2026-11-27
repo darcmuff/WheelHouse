@@ -1,7 +1,8 @@
+const{appSrc}=require('./appsrc');
 // Wheel trade-form validation and phone field UX (no formula changes).
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
 const{extractFn}=require('./extract');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 const attr=(id)=>((SRC.match(new RegExp(`<input id="${id}"[^>]*>`))||[])[0]||'');
 
 test('option trades need an expiry on every wheel save path',()=>{

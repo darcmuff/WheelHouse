@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // Settings no longer links to views that already live in the app; phones stay in portrait.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -5,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { extractFn } = require('./extract');
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app', 'manifest.json'), 'utf8'));
 
 test('Settings has no Trade Log, More data or Report rows, and no empty Go to group', () => {

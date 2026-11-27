@@ -1,9 +1,10 @@
+const{appSrc}=require('./appsrc');
 // optdemo.test.js — Options demo mode: sample legs are sensible and NOTHING is ever written to Firestore.
 // Run: node tests/optdemo.test.js
 const { extractFn, extractConst } = require('./extract');
 let pass = 0, fail = 0;
 const check = (n, ok, x) => { ok ? pass++ : fail++; console.log((ok ? '  ✓ ' : '  ✗ ') + n + (ok || x === undefined ? '' : '  → ' + JSON.stringify(x))); };
-const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const src = appSrc();
 const grab = (re) => { const m = src.match(re); if (!m) throw new Error('not found ' + re); return m[0]; };
 const stubs = `
 let writes=[],deletes=[];

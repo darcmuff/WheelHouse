@@ -1,13 +1,14 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
 const A=path.join(__dirname,'..','app');const L=fs.readFileSync(path.join(A,'landing.html'),'utf8');const R=fs.readFileSync(path.join(A,'_redirects'),'utf8');
 const{analyticsTag,countEvent}=require('../app/analytics.js');
 test('root shows the landing page; /app/ and /index.html are the app',()=>{assert.ok(/^\/\s+\/landing\.html\s+200!$/m.test(R));assert.ok(/^\/app\s+\/index\.html\s+200$/m.test(R)&&/^\/app\/\*\s+\/index\.html\s+200$/m.test(R));assert.ok(!/301/.test(R.replace(/^#.*$/mg,'')),'no slash redirect loop');
-  const h=fs.readFileSync(path.join(A,'index.html'),'utf8');assert.ok(h.includes('<base href="/">'));});
+  const h=appSrc();assert.ok(h.includes('<base href="/">'));});
 test('installed app and returning users skip the landing page',()=>{assert.ok(L.includes("display-mode: standalone")&&L.includes("'wh-view'")&&L.includes("location.replace('/app/'"));assert.ok(L.indexOf('location.replace')<L.indexOf('<style>'),'redirect runs before anything renders');assert.ok(L.includes("ot-open-app=1")&&L.includes("document.cookie"),'fallback redirect sets the cookie');});
 test('returning visits to / are rewritten to the app in one document load',()=>{
   const edge=fs.readFileSync(path.join(__dirname,'..','netlify/edge-functions/open-app.js'),'utf8');
   const toml=fs.readFileSync(path.join(__dirname,'..','netlify.toml'),'utf8');
-  const h=fs.readFileSync(path.join(A,'index.html'),'utf8');
+  const h=appSrc();
   assert.ok(edge.includes("cookies.get('ot-open-app')")&&edge.includes("context.rewrite('/index.html')")&&edge.includes("searchParams.has('home')"));
   assert.ok(toml.includes('open-app')&&toml.includes('path = "/"'));
   assert.ok(h.includes("ot-open-app=1")&&h.includes("history.replaceState(null,'','/app/'"));
@@ -16,7 +17,7 @@ test('returning visits to / are rewritten to the app in one document load',()=>{
 test('installed app keeps its identity',()=>{const m=JSON.parse(fs.readFileSync(path.join(A,'manifest.json'),'utf8'));assert.strictEqual(m.id,'/');assert.strictEqual(m.start_url,'/app/');assert.strictEqual(m.scope,'/');});
 test('landing, app and start all link /manifest.json and register the service worker',()=>{
   const start=fs.readFileSync(path.join(A,'start.html'),'utf8');
-  const app=fs.readFileSync(path.join(A,'index.html'),'utf8');
+  const app=appSrc();
   for (const [name,src] of [['landing',L],['start',start],['app',app]]){
     assert.ok(src.includes('rel="manifest" href="/manifest.json"'), name+' manifest');
     assert.ok(src.includes('src="sw-update.js"')||src.includes("src='sw-update.js'"), name+' sw');
@@ -63,7 +64,7 @@ test('analytics: goatcounter on the public site, cookie-free providers only, nev
   ['index.html','landing.html','start.html','legal.html'].forEach(f=>{const h=fs.readFileSync(path.join(A,f),'utf8');assert.ok(h.indexOf('src="brand.js"')>=0&&h.indexOf('src="brand.js"')<h.indexOf('src="analytics.js"'),f);});
   const S=fs.readFileSync(path.join(A,'start.html'),'utf8');
   assert.ok(S.includes('id="go-free"')&&S.includes('href="/app/?signup=1"')&&S.includes('signup=1&checkout=annual')&&S.includes('signup=1&checkout=monthly')&&S.includes('href="/app/">Sign in'));
-  const H=fs.readFileSync(path.join(A,'index.html'),'utf8');
+  const H=appSrc();
   assert.ok(H.includes("sessionStorage.setItem('ot-signup','1')")&&H.includes("otTrack('/signup-complete')")&&H.includes("otTrack('/first-trade-saved')"));});
 test('service worker keeps the app, not the landing page, as the offline shell',()=>{const s=fs.readFileSync(path.join(A,'sw.js'),'utf8');assert.ok(s.includes("const SHELL = './index.html'")&&s.includes('x.put(SHELL, c)'));});
 
@@ -72,7 +73,7 @@ test('Firebase auth helper is proxied; authDomain is optrack.app only on that ho
   const fbRule=/^\/__\/firebase\/\*\s+https:\/\/wheelhouse-61982\.firebaseapp\.com\/__\/firebase\/:splat\s+200$/m;
   assert.ok(authRule.test(R)&&fbRule.test(R));
   assert.ok(R.search(authRule)<R.search(/^\/\s+\/landing\.html/m),'proxy rules sit before the SPA catch-all');
-  const h=fs.readFileSync(path.join(A,'index.html'),'utf8');
+  const h=appSrc();
   assert.ok(h.includes("location.hostname === 'optrack.app' ? location.hostname : \"wheelhouse-61982.firebaseapp.com\""));
   assert.ok(!/authDomain:[^\n]*netlify\.app/.test(h),'dev Netlify hosts stay on firebaseapp.com');
 });

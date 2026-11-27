@@ -1,8 +1,9 @@
+const{appSrc}=require('./appsrc');
 // Multi-select net: credits minus debits, fees already inside the totals. Read-only.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
 const{extractFn,extractConst}=require('./extract');
 const S=new Function(extractConst('CREDITS')+'\n'+['isCredit','selCash','selCt','selSummary'].map(extractFn).join('\n')+'\nreturn{selCash,selCt,selSummary};')();
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 test('wheel cash: credit minus fees stays positive, buyback is a debit',()=>{
   assert.strictEqual(S.selCash('CSP',174*4-2.16),693.84);
   assert.strictEqual(S.selCash('BTC',40),-40);

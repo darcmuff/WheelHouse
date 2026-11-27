@@ -1,7 +1,8 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 // The app's code lives in a <script type="module">, so inline on*="fn()" handlers only work if fn is put on window.
 const BUILTIN = new Set(['if', 'for', 'return', 'setTimeout', 'alert', 'confirm', 'prompt', 'Number', 'String', 'parseFloat', 'parseInt', 'encodeURIComponent', 'switch', 'while', 'function', 'window', 'document', 'location', 'history', 'navigator', 'localStorage', 'Math', 'JSON', 'Array', 'Object', 'Boolean', 'isNaN', 'requestAnimationFrame']);
 const exposed = n => new RegExp(`window\\.${n}\\s*=`).test(SRC) || new RegExp(`window\\[['"]${n}['"]\\]\\s*=`).test(SRC) || new RegExp(`Object\\.assign\\(window,\\s*\\{[^}]*\\b${n}\\b`).test(SRC);

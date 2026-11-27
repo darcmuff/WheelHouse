@@ -1,8 +1,9 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const { extractFn } = require('./extract');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const names = ['walkLegPairs', 'wheelSellOutcomes', 'realisedPremium', 'wheelListCmp', 'wheelLegOcc', 'capturedCellHtml', 'ppdCellHtml', 'toStrike', 'closedCapturedHtml', 'wheelCloseSlices', 'wheelRemainLabel', 'wheelCapturedOnClose', 'wheelListCells'];
 const F = new Function('fmtMoney', 'fmt2', names.map(extractFn).join('\n') + `\nreturn {${names.join(',')}};`)(
   v => '$' + v.toFixed(2), v => v.toFixed(2));

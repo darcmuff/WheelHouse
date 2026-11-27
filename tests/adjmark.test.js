@@ -1,6 +1,7 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const{extractFn}=require('./extract');const fs=require('fs'),path=require('path');
 const adjMark=new Function(extractFn('adjMark')+'\nreturn adjMark;')();
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 test('delayed Cboe put mid brought up to the live stock price (30 Oct example)',()=>{
   // Cboe: bid 2.48 ask 2.61 (mid 2.545), Δ −0.2649, Γ 0.022 at SPCX 138.13; live SPCX 136.93 → ≈ 2.88 (Robinhood showed 2.86)
   assert.strictEqual(adjMark(2.545,-0.2649,0.022,138.13,136.93),2.88);});

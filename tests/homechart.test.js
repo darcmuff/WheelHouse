@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn } = require('./extract');
@@ -14,7 +15,7 @@ test('no Day/Week/Month toggle: granularity is automatic from the range', () => 
 });
 
 test('chart dropdown is Total Realised / All options / Wheel P&L / PMCC calls / Shares & LEAPs P&L, default All options', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   const load = extractFn('_loadPnlMeasure');
   const daily = extractFn('pnlDailyForMeasure');
   const html = extractFn('pnlCurveHtml');
@@ -100,7 +101,7 @@ test('Shares & LEAPs chart All-range net matches the Home table All-time figure'
 });
 
 test('P&L chart tip is one persistent element, pointer-events none, transform-positioned', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   const css = H.match(/\.pc-tip\{[^}]+/)[0];
   assert.ok(css.includes('pointer-events:none') && css.includes('transform:translate3d') && css.includes('transition:opacity'));
   assert.ok(!css.includes('display:none'));

@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
-const{extractFn}=require('./extract');const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const{extractFn}=require('./extract');const SRC=appSrc();
 const listCut=new Function(extractFn('listCut')+'\nreturn listCut;')();
 const N=(n,v)=>Array(n).fill(v);
 test('10 or fewer: all rows',()=>assert.deepStrictEqual(listCut(8,N(8,null),N(8,false),10,false),[0,1,2,3,4,5,6,7]));

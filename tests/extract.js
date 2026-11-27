@@ -3,13 +3,16 @@
 const fs = require('fs');
 const path = require('path');
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const APP_DIR = path.join(__dirname, '..', 'app');
+const INDEX_SRC = fs.readFileSync(path.join(APP_DIR, 'index.html'), 'utf8');
+const APPJS_SRC = fs.existsSync(path.join(APP_DIR, 'app.js')) ? fs.readFileSync(path.join(APP_DIR, 'app.js'), 'utf8') : '';
+const SRC = INDEX_SRC + '\n' + APPJS_SRC;
 
 // Extract a `const NAME = ...;` declaration (single statement, may span lines)
 function extractConst(name) {
   const re = new RegExp(`const ${name}\\s*=[\\s\\S]*?;\\n`);
   const m = SRC.match(re);
-  if (!m) throw new Error(`const ${name} not found in app/index.html`);
+  if (!m) throw new Error(`const ${name} not found in app/index.html or app/app.js`);
   return m[0];
 }
 
@@ -26,7 +29,7 @@ const WHEEL_AROC_FN = new Set(['calcAROC', 'cycleReturn', 'calcTradeROC']);
 
 function extractFnBody(name) {
   const i = SRC.indexOf(`function ${name}(`);
-  if (i < 0) throw new Error(`function ${name} not found in app/index.html`);
+  if (i < 0) throw new Error(`function ${name} not found in app/index.html or app/app.js`);
   let j = SRC.indexOf('{', i), depth = 0, k = j;
   for (;;) {
     const c = SRC[k];

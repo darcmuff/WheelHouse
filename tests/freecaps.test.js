@@ -1,6 +1,7 @@
+const{appSrc}=require('./appsrc');
 // freecaps.test.js — Free caps (2 open wheel tickers, 1 open LEAP) on every creation route; Pro/founder unlimited; over-limit data kept.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path'),vm=require('vm');
-const{extractFn}=require('./extract');const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const{extractFn}=require('./extract');const SRC=appSrc();
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app','brand.js'),'utf8'),ctx);const ON=ctx.window.BRAND.plans,OFF={...ON,gating:false};
 const G=new Function("OT_TIER","let _ent=null,_entErr=false,db={wheels:[],opts:[]};"+['planCfg','isPro','canUse','underLimit','wheelCapOk','leapCapOk','capNewLeaps','openTickerCount','openLeapCount','wheelRiskOk','pmccRiskOk','_tierLib','effectiveTier'].map(extractFn).join('\n')+'\nreturn{wheelCapOk,leapCapOk,capNewLeaps,wheelRiskOk,pmccRiskOk};')(require('../app/entitlement.js'));
 const FREE={plan:'free'},PRO={plan:'pro'},FOUNDER={founder:true};

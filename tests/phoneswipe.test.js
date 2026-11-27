@@ -1,10 +1,11 @@
+const{appSrc}=require('./appsrc');
 // phoneswipe.test.js — phone tab swipe between Home, Wheels and LEAPs (v417)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { extractFn, extractConst } = require('./extract');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app/index.html'), 'utf8');
+const SRC = appSrc();
 
 function harness(stubs = '') {
   return new Function(`

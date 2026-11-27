@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn, extractConst, withLedger } = require('./extract');
@@ -64,7 +65,7 @@ test('return settings: saved choice wins, bad input is cleaned', () => {
   assert.strictEqual(RS.returnBase({ base: 'caw', account: 50000 }, 30000), 30000);
 });
 test('Home: Capital at work card shows the same figure Return this month divides by (wheel + shares + open LEAP cost)', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   const start = H.indexOf('function renderHome');
   const home = H.slice(start, H.indexOf('\n}\n', start));
   // With no account size the headline is caw.total. With an account size the tile is
@@ -77,7 +78,7 @@ test('Home: Capital at work card shows the same figure Return this month divides
   assert.strictEqual(c.total, c.wheel + c.leaps);
 });
 test('More stats: exposure and utilisation use Home capital at work; utilisation needs an account size', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   const U = new Function(extractFn('utilisation') + '\nreturn utilisation;')();
   assert.strictEqual(U(45000, 0), null); assert.strictEqual(U(45000, null), null); assert.strictEqual(U(45000, 90000), 50);
   assert.ok(H.includes("stat(fmtMoney(c.total),'Current Exposure'") && H.includes('(currentCapitalAtWork())'));

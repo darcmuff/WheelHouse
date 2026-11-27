@@ -13,3 +13,20 @@ test('all inline scripts parse', () => {
     catch (e) { assert.fail(`script #${i} does not parse:\n${String(e.stderr).slice(0, 400)}`); }
   }
 });
+
+test('extracted app.js parses', () => {
+  const { spawnSync } = require('child_process');
+  const path = require('path');
+  const file = path.join(__dirname, '..', 'app', 'app.js');
+  assert.ok(fs.existsSync(file), 'app.js must exist');
+  const r = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
+  assert.strictEqual(r.status, 0, r.stderr || r.stdout);
+});
+test('extracted app.css exists and is linked from the shell', () => {
+  const path = require('path');
+  const css = path.join(__dirname, '..', 'app', 'app.css');
+  assert.ok(fs.existsSync(css), 'app.css must exist');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  assert.match(html, /<link rel="stylesheet" href="app\.css">/);
+  assert.match(html, /<script type="module" src="app\.js"><\/script>/);
+});

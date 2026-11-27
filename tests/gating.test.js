@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path'),vm=require('vm');
-const{extractFn}=require('./extract');const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const{extractFn}=require('./extract');const SRC=appSrc();
 const G=new Function("OT_TIER","let _ent=null,_entErr=false;"+['planCfg','isPro','canUse','underLimit','_tierLib','effectiveTier'].map(extractFn).join('\n')+'\nreturn{isPro,canUse,underLimit};')(require('../app/entitlement.js'));
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app','brand.js'),'utf8'),ctx);const B=ctx.window.BRAND;
 const on={...B.plans,gating:true};

@@ -1,10 +1,11 @@
+const{appSrc}=require('./appsrc');
 // datefmt.test.js — default date format is US; a saved choice is honoured (v415)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { extractFn } = require('./extract');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app/index.html'), 'utf8');
+const SRC = appSrc();
 
 test('default date format is US when nothing is saved; Settings still offers DD/MM', () => {
   assert.match(SRC, /let dateFmt=localStorage\.getItem\('wh-dateFmt'\)\|\|'us'/);

@@ -1,7 +1,8 @@
+const{appSrc}=require('./appsrc');
 // livemarks.test.js — live prices stay in memory; manual marks persist; expired LEAPs read as Expired.
 const { extractFn } = require('./extract');
 const fs = require('fs'), path = require('path');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 let pass = 0, fail = 0;
 const check = (n, ok) => { ok ? pass++ : fail++; console.log((ok ? '  ✓ ' : '  ✗ ') + n); };
 

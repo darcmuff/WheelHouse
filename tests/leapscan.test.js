@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // leapscan.test.js — SmartScan in the '+ LEAP' form: broker fill text → single long call (fake figures only).
 // Every accepted fill checks ALL fields: ticker, strike, expiry, type, qty, price, fees, date.
 // Run: node tests/leapscan.test.js
@@ -176,7 +177,7 @@ check('multi: two calls offered, put skipped', m.calls.length === 2 && m.rejecte
 check('multi: NVDA all fields', JSON.stringify(F.map(f => m.calls[1][f])) === JSON.stringify(['NVDA', 160, '2028-01-21', 'C', 2, 41.25, 2.1, '2026-03-11']), F.map(f => m.calls[1][f]));
 
 // ── UI wiring: SmartScan never saves; rejects never fill ──
-const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const src = appSrc();
 const body = n => extractFn(n);
 check('leapRunScan / leapFillFrom never call save', !/saveLeap\(|_saveOpt|_saveWheel|_saveTrade|saveDB/.test(body('leapRunScan') + body('leapFillFrom') + body('leapLoadFile')));
 check('leapScan is pure (no db / wheel access)', !/\bdb\.|_save|document\./.test(body('leapScan')));

@@ -1,10 +1,11 @@
+const{appSrc}=require('./appsrc');
 // audit-step10.test.js — final tidy, cache bump and the phone Unrealised tile (audit Step 10).
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const { extractFn } = require('./extract');
 const APP = path.join(__dirname, '..', 'app');
-const SRC = fs.readFileSync(path.join(APP, 'index.html'), 'utf8');
+const SRC = appSrc();
 const SW = fs.readFileSync(path.join(APP, 'sw.js'), 'utf8');
 
 test('orphaned buildLastAction, buildMiniCal, dteCls and the mini-calendar CSS are gone', () => {

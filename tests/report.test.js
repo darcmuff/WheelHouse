@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // report.test.js — display-only aggregation of already-computed monthly P&L. No formula changes.
 const test = require('node:test');
 const assert = require('node:assert');
@@ -5,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { extractFn } = require('./extract');
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const brand = fs.readFileSync(path.join(__dirname, '..', 'app', 'brand.js'), 'utf8');
 
 const stubs = `

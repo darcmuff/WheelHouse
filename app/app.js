@@ -1,0 +1,8455 @@
+// ════════════════════════════════════════════════════════
+// FIREBASE — single module context, no execution boundary
+// ════════════════════════════════════════════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, getAdditionalUserInfo } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer, onSnapshot, disableNetwork, terminate } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const _firebaseConfig = {
+  apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
+  authDomain: location.hostname === 'optrack.app' ? location.hostname : "wheelhouse-61982.firebaseapp.com",
+  projectId: "wheelhouse-61982",
+  storageBucket: "wheelhouse-61982.firebasestorage.app",
+  messagingSenderId: "466853706084",
+  appId: "1:466853706084:web:7278a179265e8e540ba271"
+};
+// Demo (/demo): Firebase is never initialised, so nothing can sign in, read or write a real account.
+const APP_DEMO = !!(window.OT_DEMO && window.OT_DEMO.active);
+const _app  = APP_DEMO ? null : initializeApp(_firebaseConfig);
+const _auth = APP_DEMO ? null : getAuth(_app);
+let _fsDb = APP_DEMO ? null : getFirestore(_app);
+let _fsUnsubs=[];
+let _fsStopped=false;
+const _googleProvider = APP_DEMO ? null : new GoogleAuthProvider();
+
+// Scoped UID — only set after onAuthStateChanged confirms a valid user
+let _confirmedUid = null;
+let _freshSignup=false;
+
+// ════════════════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════════════════
+const DB_KEY = 'wheel_tracker_v7';
+let db = { wheels:[], trades:[], opts:[] };
+window._db=db;
+
+const SEED_DATA = {
+  wheels:[],
+  trades:[],
+  opts:[]
+};
+
+function loadDB(){
+  // Auth-gated — real load happens in loadDBFromFirestore after sign-in
+  db = JSON.parse(JSON.stringify(SEED_DATA));
+  window._db = db;
+}
+
+// One-shot server read: wait for the first snapshot that came from the server (a
+// cache-only snapshot is ignored), then stop listening. Nothing reads later snapshots,
+// so a listener left open only cost reads and a live channel for no UI change.
+// A listener still waiting is in _fsUnsubs so releaseFirestore() can stop it.
+function listenServer(q,ms){
+  return new Promise((resolve,reject)=>{
+    let settled=false,unsub=null,timer=null;
+    const stop=()=>{if(!unsub)return;const u=unsub;unsub=null;const i=_fsUnsubs.indexOf(u);if(i>=0)_fsUnsubs.splice(i,1);try{u();}catch(e){}};
+    const done=(fn,arg)=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);stop();fn(arg);};
+    unsub=onSnapshot(q,{includeMetadataChanges:true},snap=>{
+      if(snap.metadata.fromCache)return;
+      done(resolve,snap);
+    },err=>done(reject,err));
+    if(settled){stop();return;}
+    _fsUnsubs.push(unsub);
+    timer=setTimeout(()=>done(reject,new Error('Timed out waiting for your data')),ms||15000);
+  });
+}
+function fsUnsubAll(){
+  const xs=_fsUnsubs.splice(0);
+  xs.forEach(u=>{try{u();}catch(e){}});
+}
+async function releaseFirestore(){
+  if(APP_DEMO||!_fsDb||_fsStopped)return;
+  fsUnsubAll();
+  try{await disableNetwork(_fsDb);}catch(e){}
+  try{await terminate(_fsDb);}catch(e){}
+  _fsStopped=true;
+}
+function ensureFirestore(){
+  if(_fsStopped){_fsDb=getFirestore(_app);_fsStopped=false;_fsUnsubs=[];}
+  return _fsDb;
+}
+async function loadDBFromFirestore(userId){
+  // No try/catch here — a failed load must throw so the caller can halt boot.
+  // Swallowing it made a network blip look like an empty account (onboarding shown).
+  // A cache-only snapshot is ignored: a dead connection must not look like a new account.
+  const [wheelsSnap,tradesSnap,oRes]=await Promise.all([
+    listenServer(collection(_fsDb,'users',userId,'wheels')),
+    listenServer(collection(_fsDb,'users',userId,'trades')),
+    listenServer(collection(_fsDb,'users',userId,'optlegs')).then(sn=>({ok:true,sn})).catch(e=>({ok:false,e}))
+  ]);
+  db.wheels=wheelsSnap.docs.map(d=>d.data());
+  db.trades=tradesSnap.docs.map(d=>d.data());
+  // Options legs live in their own collection; a failure here (e.g. rules not yet updated) must not block the wheel app
+  if(oRes.ok){const real=oRes.sn.docs.map(d=>d.data());if(optDemo){_realOpts=real;db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}else db.opts=real;}
+  else{console.warn('Options legs load failed (check Firestore rules for optlegs):',oRes.e&&oRes.e.message);db.opts=[];_optsLoadError=(oRes.e&&oRes.e.message)||'';if(optDemo){_realOpts=[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}}
+  render();
+  // After a confirmed-successful load, show onboarding only when the account is genuinely empty
+  showOnboardingIfNeeded();
+}
+
+// Firestore helpers
+function _fsDoc(...args){return doc(...args);}
+function _fsSetDoc(...args){return setDoc(...args);}
+function _fsDeleteDoc(...args){return deleteDoc(...args);}
+function _currentUid(){return _confirmedUid;}
+
+function _stripUndefined(o){
+  return Object.fromEntries(Object.entries(o).filter(([,v])=>v!==undefined));
+}
+function _saveWheel(wheel,attempt){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
+  const uid=_currentUid();if(!uid||!wheel||!wheel.id)return;
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheel.id),_stripUndefined(wheel))
+    .catch(e=>{
+      console.error('Wheel save failed:',e);
+      const n=attempt||0;
+      if(n<3)setTimeout(()=>_saveWheel(wheel,n+1),800*(n+1));
+      else alert('Could not save — please check your connection and try again.');
+    });
+}
+function _saveTrade(trade){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
+  const uid=_currentUid();if(!uid||!trade||!trade.id)return;
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),_stripUndefined(trade))
+    .catch(e=>console.error('Trade save failed:',e));
+}
+let _optsLoadError='';
+// A quote we actually received is saved with its date, same as a price you type.
+// Display-only notes (why the number moved) are not stored.
+function _persistableLeg(leg){
+  if(!leg)return leg;
+  const o={...leg};delete o.markWhy;delete o.markNote;return o;
+}
+function _saveOpt(leg){
+  if(APP_DEMO){OT_DEMO.save(db);return;}
+  if(optDemo||(leg&&leg.demo)){_demoNotSaved();return;}
+  const uid=_currentUid();if(!uid||!leg||!leg.id)return;
+  _fsSetDoc(_fsDoc(_fsDb,'users',uid,'optlegs',leg.id),_stripUndefined(_persistableLeg(leg)))
+    .catch(e=>{console.error('Option save failed:',e);toastOptErr(e);});
+}
+function _deleteOptDoc(id){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
+  if(optDemo||String(id).startsWith('demo-')){_demoNotSaved();return;}
+  const uid=_currentUid();if(!uid)return;
+  _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'optlegs',id)).catch(e=>console.error('Option delete failed:',e));
+}
+function toastOptErr(e){if(/permission/i.test(e&&e.message||''))alert('Could not save option position: Firestore rules do not allow the optlegs collection yet. Ask for the optlegs Firestore rule (docs/OPTIONS.md).');}
+function _deleteWheelDoc(wheelId){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
+  const uid=_currentUid();if(!uid)return;
+  _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'wheels',wheelId))
+    .catch(e=>console.error('Wheel delete failed:',e));
+}
+function _deleteTradeDoc(tradeId){
+  if(APP_DEMO){setTimeout(()=>OT_DEMO.save(db),0);return;}
+  const uid=_currentUid();if(!uid)return;
+  _fsDeleteDoc(_fsDoc(_fsDb,'users',uid,'trades',tradeId))
+    .catch(e=>console.error('Trade delete failed:',e));
+}
+
+// saveDB — broad save; fans out to per-document writes
+function saveDB(){
+  const uid=_currentUid();if(!uid)return;
+  db.wheels.forEach(w=>_saveWheel(w));
+  db.trades.forEach(t=>_saveTrade(t));
+  if(!optDemo)(db.opts||[]).forEach(l=>_saveOpt(l));
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+
+const CREDITS=new Set(['CSP','STOC','STO','STC','OUT','DIV']); // STC receives cash; STO = PMCC short call
+const OPTIONS=new Set(['CSP','BTC','STOC','STC']);
+const STOCKS=new Set(['IN','IN_MKT','OUT']);
+function actionFromSelect(a){return a==='IN_MKT'?'IN':a;}
+function isCredit(a){return CREDITS.has(a);}
+function selCash(action,total){const n=+total||0;if(n<0)return Math.round(n*100)/100;return Math.round((isCredit(action)?n:-n)*100)/100;}
+function selCt(action,shares){if(action!=='CSP'&&action!=='BTC'&&action!=='STOC'&&action!=='STC'&&action!=='STO')return 0;const sh=+shares||0;return sh>0?Math.round(sh)/100:0;}
+function selSummary(items){
+  const dir=act=>{if(act==='CSP'||act==='STOC'||act==='STO')return'open';if(act==='BTC'||act==='STC')return'close';return null;};
+  let net=0,min='',max='',fees=0,credits=0,debits=0,optCash=0,unknown=0;const by={};
+  const legs=[];
+  (items||[]).forEach(x=>{
+    const c=+x.cash||0;net+=c;if(c>0)credits+=c;else if(c<0)debits+=-c;fees+=+x.fee||0;
+    const d=x.date||'';if(d){if(!min||d<min)min=d;if(!max||d>max)max=d;}
+    const tk=x.tk||'';if(tk)by[tk]=(by[tk]||0)+c;
+    const q=+x.ct||0;if(q>0){
+      optCash+=c;
+      const side=dir(x.act);
+      if(side)legs.push({dir:side,q,date:d});
+      else unknown+=q;
+    }
+  });
+  legs.sort((a,b)=>{
+    if(a.date!==b.date)return a.date<b.date?-1:a.date>b.date?1:0;
+    const ra=a.dir==='close'?0:1,rb=b.dir==='close'?0:1;
+    return ra-rb;
+  });
+  let priorOpen=0,closed=0,subsequentOpen=0,seenClose=false;
+  legs.forEach(leg=>{
+    if(leg.dir==='close'){closed+=leg.q;seenClose=true;}
+    else if(seenClose)subsequentOpen+=leg.q;
+    else priorOpen+=leg.q;
+  });
+  const r=n=>Math.round(n*100)/100;
+  const names=Object.keys(by);
+  const closedContracts=r(closed),openedContracts=r(subsequentOpen);
+  const isRoll=closed>0&&(priorOpen>0||subsequentOpen>0)&&unknown===0;
+  const isChain=isRoll&&priorOpen>0;
+  let contracts,per;
+  if(isRoll){
+    if(subsequentOpen>0&&closedContracts!==openedContracts){contracts=null;per=null;}
+    else{
+      const n=subsequentOpen>0?closedContracts:r(closed||priorOpen);
+      contracts=n||null;per=contracts?r(net/contracts):null;
+    }
+  }else{
+    contracts=r(priorOpen+subsequentOpen+closed+unknown);
+    per=contracts?r(optCash/contracts):null;
+  }
+  return{net:r(net),n:(items||[]).length,min,max,credits:r(credits),debits:r(debits),fees:r(fees),contracts,per,isRoll,isChain,openedContracts,closedContracts,tickers:names.length>1?names.sort().map(t=>({tk:t,cash:r(by[t])})):[]};
+}
+function selHeadline(s){
+  s=s||{};
+  if(s.isRoll){
+    const label=s.isChain?'Chain cashflow':'Roll cashflow';
+    const kind=s.net<0?label+' (net debit)':s.net>0?label+' (net credit)':label;
+    return{kind,kindClass:'sel-kind',netClass:'sel-net-neutral'};
+  }
+  const kind=s.net<0?'Net debit':s.net>0?'Net credit':'Even';
+  const tone=s.net<0?'r':s.net>0?'g':'';
+  return{kind,kindClass:'sel-kind'+(tone?' '+tone:''),netClass:tone};
+}
+function selContractLine(s,money){
+  s=s||{};
+  if(s.isRoll&&s.closedContracts!==s.openedContracts)return s.closedContracts+' closed → '+s.openedContracts+' opened';
+  if(s.contracts>0&&s.per!=null)return s.contracts+' contract'+(s.contracts===1?'':'s')+' · '+money(s.per)+' each';
+  if(s.contracts>0)return s.contracts+' contract'+(s.contracts===1?'':'s');
+  return '';
+}
+function rollChainStatus(chainTrades,openLeg,mark){
+  const r=n=>Math.round(n*100)/100;
+  const signed=t=>(typeof isCredit==='function'&&isCredit(t.action)?1:-1)*(+t.total||0);
+  const expiryMax=r((chainTrades||[]).reduce((s,t)=>s+signed(t),0));
+  const shares=openLeg?((+openLeg._rem>0?+openLeg._rem:+openLeg.shares)||0):0;
+  const openCredit=openLeg?(+openLeg.total||0):0;
+  const closeCost=(mark!=null&&mark>=0&&shares>0)?r(mark*shares):null;
+  const openPnl=closeCost!=null?r(openCredit-closeCost):null;
+  const chainNow=closeCost!=null?r(expiryMax-closeCost):null;
+  let assignedBasis=null;
+  if(openLeg&&openLeg.action==='CSP'&&shares>0&&openLeg.strike!=null&&openLeg.strike!==''){
+    assignedBasis=r(((+openLeg.strike)*shares-expiryMax)/shares);
+  }
+  return{openPnl,chainNow,expiryMax,assignedBasis,closeCost};
+}
+function rollStatusHtml(st,money){
+  if(!st)return '';
+  const pnl=n=>`<span class="${n<0?'r':'g'}">${money(n)}</span>`;
+  const lines=[];
+  if(st.chainNow!=null)lines.push(`<div>Chain P&L now: ${pnl(st.chainNow)}</div>`);
+  else if(typeof optPriceCueHtml==='function'){const cue=optPriceCueHtml();if(cue)lines.push(`<div>${cue}</div>`);}
+  if(st.expiryMax!=null)lines.push(`<div>If expired worthless: ${pnl(st.expiryMax)}</div>`);
+  if(st.assignedBasis!=null)lines.push(`<div>If assigned: ${fmtMoney(st.assignedBasis)}/sh</div>`);
+  return lines.length?`<div class="sel-status">${lines.join('')}</div>`:'';
+}
+function selItemId(x){
+  const k=x&&x.key||'';
+  return (k.startsWith('w:')||k.startsWith('p:'))?k.slice(2):'';
+}
+function selCollectTrades(items){
+  const ids=[...new Set((items||[]).map(selItemId).filter(Boolean))];
+  const all=(typeof db!=='undefined'&&Array.isArray(db.trades))?db.trades:[];
+  const found=ids.map(id=>all.find(t=>t.id===id)).filter(Boolean);
+  if(!found.length)return{trades:[],tip:null};
+  const wheelIds=new Set(found.map(t=>t.wheelId).filter(Boolean));
+  let pool=all;
+  if(wheelIds.size===1){const wid=[...wheelIds][0];pool=all.filter(t=>t.wheelId===wid);}
+  else if(found[0]&&found[0].ticker){const tk=found[0].ticker;pool=all.filter(t=>t.ticker===tk);}
+  let tip=null;
+  if(typeof isChainTip==='function'){
+    for(const t of found){if(isChainTip(pool,t)){tip=t;break;}}
+    if(!tip){
+      for(const t of found){
+        if((t.action==='BTC'||t.action==='STC')&&t.rollId){
+          const mate=pool.find(x=>x.rollId===t.rollId&&(x.action==='CSP'||x.action==='STOC')&&isChainTip(pool,x));
+          if(mate){tip=mate;break;}
+        }
+      }
+    }
+  }
+  return{trades:pool,tip};
+}
+function selOpenMark(tip){
+  if(!tip)return null;
+  const occ=typeof wheelLegOcc==='function'?wheelLegOcc(tip.ticker||'',tip):'';
+  const marks=typeof optionMarks==='function'?optionMarks():(typeof _wheelMarks!=='undefined'?_wheelMarks:{});
+  const known=!!(occ&&marks&&Object.prototype.hasOwnProperty.call(marks,occ));
+  const live=known?marks[occ]:null;
+  const hasTyped=tip.currentPrice!=null&&tip.currentPrice!=='';
+  const typedFresh=hasTyped&&tip.currentPriceAt&&typeof isSameMarkDay==='function'&&isSameMarkDay(tip.currentPriceAt);
+  if(hasTyped&&(typedFresh||live==null||!known)){const n=+tip.currentPrice;return n>=0?n:null;}
+  if(live!=null&&live>=0)return +live;
+  return null;
+}
+let _selOn=false,_selSkip=false,_selPop=false;const _sel=new Map();
+function computeTotal(action,premium,shares,fees){
+  fees=fees||0;premium=premium||0;shares=shares||0;
+  const gross=premium*shares;
+  return isCredit(action)?gross-fees:gross+fees;
+}
+
+// ════════════════════════════════════════════════════════
+// CALCULATIONS
+// ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// OPTIONS POSITIONS (non-wheel legs) — pure maths, tested from node (tests/options.test.js)
+// Stored in users/{uid}/optlegs — separate from trades so wheel maths never sees them.
+// ════════════════════════════════════════════════════════
+function optionsLib(){
+  const MULT=100,DAY=864e5,RATE=0.04;
+  const r2=n=>Math.round(n*100)/100;
+  const dte=(expiry,today)=>{if(!expiry)return null;const t=today?Date.parse(today):Date.parse(new Date().toISOString().slice(0,10));return Math.round((Date.parse(expiry)-t)/DAY);};
+  const sign=l=>l.side==='long'?1:-1;
+  // cash at open: long pays (negative), short receives (positive); fees always cost
+  const openCash=l=>r2(-sign(l)*(+l.entryPrice||0)*MULT*(+l.qty||0)-(+l.fees||0));
+  const closeCash=l=>{if(l.status==='open')return 0;const p=(l.status==='expired'?0:(+l.closePrice||0));return r2(sign(l)*p*MULT*(+l.qty||0)-(+l.closeFees||0));};
+  const costBasis=l=>r2(Math.abs((+l.entryPrice||0)*MULT*(+l.qty||0))+(l.side==='long'?(+l.fees||0):-(+l.fees||0)));
+  function legPnL(l){
+    const realized=l.status==='open'?0:r2(openCash(l)+closeCash(l));
+    let unrealized=null;
+    if(l.status==='open'&&l.mark!=null&&l.mark!=='')unrealized=r2(openCash(l)+sign(l)*(+l.mark)*MULT*(+l.qty||0));
+    return{realized,unrealized,openCash:openCash(l),costBasis:costBasis(l)};
+  }
+  function tenor(l,today){const d=dte(l.expiry,today);if(d==null)return'';if(d<=9)return'weekly';if(d<=60)return'monthly';if(d>=270)return'leap';return'longer';}
+  // ── Black-Scholes (no dividends) ──
+  const ncdf=x=>{const t=1/(1+0.2316419*Math.abs(x));const d=0.3989423*Math.exp(-x*x/2);const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p;};
+  const npdf=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+  function bs(type,S,K,T,vol,r=RATE){
+    if(!(S>0&&K>0))return null;
+    if(T<=0||vol<=0){const iv=type==='C'?Math.max(0,S-K):Math.max(0,K-S);return{price:iv,delta:type==='C'?(S>K?1:0):(S<K?-1:0),gamma:0,theta:0,vega:0};}
+    const sq=Math.sqrt(T),d1=(Math.log(S/K)+(r+vol*vol/2)*T)/(vol*sq),d2=d1-vol*sq,disc=Math.exp(-r*T);
+    const price=type==='C'?S*ncdf(d1)-K*disc*ncdf(d2):K*disc*ncdf(-d2)-S*ncdf(-d1);
+    const delta=type==='C'?ncdf(d1):ncdf(d1)-1;
+    const theta=(-S*npdf(d1)*vol/(2*sq)-(type==='C'?1:-1)*r*K*disc*ncdf(type==='C'?d2:-d2))/365; // per day, per share
+    return{price,delta,gamma:npdf(d1)/(S*vol*sq),theta,vega:S*npdf(d1)*sq/100};
+  }
+  function impliedVol(type,price,S,K,T,r=RATE){
+    if(!(price>0&&S>0&&K>0&&T>0))return null;
+    let lo=0.01,hi=5;
+    const intrinsic=type==='C'?Math.max(0,S-K*Math.exp(-r*T)):Math.max(0,K*Math.exp(-r*T)-S);
+    if(price<intrinsic-1e-6)return null;
+    for(let i=0;i<100;i++){const m=(lo+hi)/2;const p=bs(type,S,K,T,m,r).price;if(p>price)hi=m;else lo=m;if(hi-lo<1e-5)break;}
+    return(lo+hi)/2;
+  }
+  // Greeks for a position (per contract × qty × side). Uses live greeks if present, else BS from iv (given or implied from mark).
+  function legGreeks(l,spot,today){
+    const d=dte(l.expiry,today);if(d==null||!(spot>0))return null;
+    const T=Math.max(d,0)/365;let iv=l.iv>0?+l.iv:null,src='live';
+    if(l.delta==null||l.theta==null||l.markSrc==='manual'||!l.markSrc){
+      if(!iv&&l.mark>0)iv=impliedVol(l.type,+l.mark,spot,+l.strike,Math.max(T,1/365));
+      if(!iv)return null;
+      const g=bs(l.type,spot,+l.strike,T,iv);if(!g)return null;src='bs';
+      return{delta:r2(g.delta*sign(l)*(+l.qty)*MULT),theta:r2(g.theta*sign(l)*(+l.qty)*MULT),iv,src};
+    }
+    return{delta:r2(+l.delta*sign(l)*(+l.qty)*MULT),theta:r2(+l.theta*sign(l)*(+l.qty)*MULT),iv,src};
+  }
+  function occ(l){const e=String(l.expiry||'').replace(/-/g,'').slice(2);return`${String(l.underlying||'').toUpperCase()}${e}${l.type}${String(Math.round((+l.strike)*1000)).padStart(8,'0')}`;}
+  function strategyName(legs){
+    const open=legs;if(open.length===1){const l=open[0];return`${l.side==='long'?'Long':'Short'} ${l.type==='C'?'call':'put'}`;}
+    const types=new Set(open.map(l=>l.type)),exps=new Set(open.map(l=>l.expiry)),sides=new Set(open.map(l=>l.side));
+    if(open.length===2){
+      if(types.size===1&&exps.size===1&&sides.size===2)return`${open[0].type==='C'?'Call':'Put'} vertical`;
+      if(types.size===1&&exps.size===2)return open[0].strike===open[1].strike?'Calendar':'Diagonal';
+      if(types.size===2&&exps.size===1&&sides.size===1)return`${open[0].strike===open[1].strike?'Straddle':'Strangle'} (${open[0].side})`;
+    }
+    if(open.length===4&&types.size===2&&exps.size===1&&sides.size===2)return'Iron condor';
+    return`${open.length}-leg`;
+  }
+  function groupSummary(legs,today){
+    const g={legs,realized:0,unrealized:0,hasMark:true,openCash:0,status:legs.some(l=>l.status==='open')?'open':'closed'};
+    legs.forEach(l=>{const p=legPnL(l);g.realized+=p.realized;g.openCash+=p.openCash;if(l.status==='open'){if(p.unrealized==null)g.hasMark=false;else g.unrealized+=p.unrealized;}});
+    g.realized=r2(g.realized);g.unrealized=g.hasMark?r2(g.unrealized):null;g.strategy=strategyName(legs);
+    const ds=legs.filter(l=>l.status==='open').map(l=>dte(l.expiry,today)).filter(x=>x!=null);g.dte=ds.length?Math.min(...ds):null;
+    return g;
+  }
+  function groups(legs){const m=new Map();legs.forEach(l=>{const k=l.groupId||l.id;if(!m.has(k))m.set(k,[]);m.get(k).push(l);});return[...m.entries()].map(([id,ls])=>({id,legs:ls}));}
+  // portfolio summary — kept separate from wheel income
+  function portfolio(legs,spots,today){
+    const s={open:0,closed:0,realized:0,unrealized:0,unmarked:0,longPremium:0,shortPremium:0,delta:0,theta:0,greeksMissing:0,byUnderlying:{}};
+    legs.forEach(l=>{
+      const p=legPnL(l);
+      if(l.status==='open'){
+        s.open++;if(p.unrealized==null)s.unmarked++;else s.unrealized+=p.unrealized;
+        if(l.side==='long')s.longPremium+=p.costBasis;else s.shortPremium+=p.costBasis;
+        const g=legGreeks(l,spots&&spots[l.underlying],today);
+        if(g){s.delta+=g.delta;s.theta+=g.theta;}else s.greeksMissing++;
+        const u=s.byUnderlying[l.underlying]=s.byUnderlying[l.underlying]||{legs:0,delta:0,unrealized:0};u.legs++;if(g)u.delta+=g.delta;if(p.unrealized!=null)u.unrealized+=p.unrealized;
+      }else{s.closed++;s.realized+=p.realized;}
+    });
+    ['realized','unrealized','longPremium','shortPremium','theta'].forEach(k=>s[k]=r2(s[k]));s.delta=r2(s.delta);
+    return s;
+  }
+  // Close/roll: returns new leg objects (caller saves). Roll = close old + open new in same group.
+  function closeLeg(l,price,date,fees){return{...l,status:'closed',closePrice:+price||0,closeDate:date,closeFees:+fees||0};}
+  function expireLeg(l){return{...l,status:'expired',closePrice:0,closeDate:l.expiry,closeFees:0};}
+  function rollLeg(l,close,open,newId){
+    const closed=closeLeg(l,close.price,close.date,close.fees);
+    const nl={...l,id:newId,strike:+open.strike,expiry:open.expiry,entryPrice:+open.price,entryDate:close.date,fees:+open.fees||0,qty:+(open.qty||l.qty),status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,markAt:null,markSrc:null,delta:null,theta:null,iv:null,rolledFrom:l.id,groupId:l.groupId||l.id};
+    closed.groupId=l.groupId||l.id;
+    return[closed,nl];
+  }
+  // Import fills → legs. fills: {ticker,side:'long'|'short',effect:'open'|'close',type,strike,expiry,qty,price,fees,date}
+  function applyFills(existing,fills,mkId){
+    const legs=existing.map(l=>({...l})),created=[],changed=new Set(),unmatched=[];
+    const key=f=>`${f.ticker}|${f.type}|${+f.strike}|${f.expiry}`;
+    [...fills].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.effect==='open'?-1:1)).forEach(f=>{
+      if(f.effect==='open'){
+        const l={id:mkId(),groupId:null,underlying:f.ticker,type:f.type,side:f.side,strike:+f.strike,expiry:f.expiry,qty:+f.qty,entryPrice:+f.price,entryDate:f.date,fees:+f.fees||0,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:f.comment||''};
+        l.groupId=l.id;legs.push(l);created.push(l);
+      }else{
+        const l=legs.find(x=>x.status==='open'&&key({ticker:x.underlying,type:x.type,strike:x.strike,expiry:x.expiry})===key(f)&&x.side===f.side);
+        if(!l){unmatched.push(f);return;}
+        if(+f.qty<+l.qty){ // partial close: split leg
+          const rest={...l,id:mkId(),qty:+l.qty-(+f.qty),fees:0};legs.push(rest);created.push(rest);l.qty=+f.qty;
+        }
+        Object.assign(l,f.expired?{status:'expired',closePrice:0,closeDate:f.date,closeFees:0}:{status:'closed',closePrice:+f.price,closeDate:f.date,closeFees:+f.fees||0});
+        if(!created.includes(l))changed.add(l.id);
+      }
+    });
+    return{legs,created,changed:[...changed],unmatched};
+  }
+  function health(legs,wheels,today,trades){
+    today=today||new Date().toISOString().slice(0,10);
+    const out=[];const nm=l=>`${l.underlying} ${l.expiry||'?'} ${l.strike||'?'}${l.type||'?'}`;
+    const seen={};
+    legs.forEach(l=>{
+      if(!l.underlying)out.push({sev:'red',legId:l.id,text:`Option leg ${l.id} has no underlying`});
+      if(!(l.strike>0))out.push({sev:'red',legId:l.id,text:`${nm(l)} has no strike`});
+      if(!l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} has no expiry`});
+      if(!(l.qty>0))out.push({sev:'red',legId:l.id,text:`${nm(l)} has no contract quantity`});
+      if(l.type!=='C'&&l.type!=='P')out.push({sev:'red',legId:l.id,text:`${nm(l)} is neither call nor put`});
+      if(l.side!=='long'&&l.side!=='short')out.push({sev:'red',legId:l.id,text:`${nm(l)} has no long/short side`});
+      if(l.entryPrice==null||l.entryPrice==='')out.push({sev:'amber',legId:l.id,text:`${nm(l)} has no entry premium`});
+      if(l.status==='open'&&l.expiry&&l.expiry<today&&l.side==='long'&&l.type==='C'&&!l.parentLeapId)out.push({sev:'amber',legId:l.id,text:`${l.underlying} LEAP expired — close it`});
+      else if(l.status==='open'&&l.expiry&&l.expiry<today)out.push({sev:'amber',legId:l.id,text:`${nm(l)} expired ${l.expiry} but is still open — close, expire or record assignment`});
+      if(l.status==='closed'&&(l.closePrice==null||!l.closeDate))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is closed but has no close price/date`});
+      if(l.closeDate&&l.entryDate&&l.closeDate<l.entryDate)out.push({sev:'red',legId:l.id,text:`${nm(l)} closed before it was opened`});
+      if(l.entryDate&&l.expiry&&l.entryDate>l.expiry)out.push({sev:'red',legId:l.id,text:`${nm(l)} opened after its expiry`});
+      if(l.parentLeapId&&!legs.some(x=>x.id===l.parentLeapId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} was sold against a LEAP that no longer exists — shown under Other options`});
+      if(l.wheelId&&!wheels.some(w=>w.id===l.wheelId))out.push({sev:'amber',legId:l.id,text:`${nm(l)} is attached to a wheel that no longer exists`});
+      if(l.wheelId){const w=wheels.find(w=>w.id===l.wheelId);if(w&&w.ticker&&w.ticker!==l.underlying)out.push({sev:'grey',legId:l.id,text:`${nm(l)} is attached to the ${w.ticker} wheel — different underlying`});}
+      // A missing quote is shown on the LEAP card, not as a Home nag. The saved date moves when a quote arrives.
+      const fp=`${l.underlying}|${l.type}|${l.strike}|${l.expiry}|${l.side}|${l.entryDate}|${l.qty}|${l.entryPrice}`;(seen[fp]=seen[fp]||[]).push(l);
+    });
+    Object.values(seen).forEach(a=>{if(a.length>1)out.push({sev:'grey',legId:a[0].id,text:`${nm(a[0])} appears ${a.length}× with identical details — duplicates?`});});
+    // informational only: a wheel trade on the same contract & date as an options leg may be the same fill recorded twice
+    (trades||[]).forEach(t=>{
+      if(!t||!t.ticker||!t.strike||!t.expiry||!t.entered)return;
+      const l=legs.find(l=>l.underlying===t.ticker&&+l.strike===+t.strike&&l.expiry===t.expiry&&(l.entryDate===t.entered||l.closeDate===t.entered));
+      if(l)out.push({sev:'grey',legId:l.id,info:true,text:`Wheel trade ${t.ticker} ${t.action} ${t.entered} (${t.strike} exp ${t.expiry}) matches an Options leg on the same day — possibly the same fill recorded twice. Review manually; nothing is changed automatically.`});
+    });
+    return out;
+  }
+  return{dte,legPnL,tenor,bs,impliedVol,legGreeks,occ,strategyName,groupSummary,groups,portfolio,closeLeg,expireLeg,rollLeg,applyFills,health,costBasis};
+}
+const OPTS=optionsLib();
+
+function calcWheel(wheel){
+  const trades=db.trades.filter(t=>t.wheelId===wheel.id).sort((a,b)=>(a.entered||'').localeCompare(b.entered||''));
+  let credits=0,debits=0,sharesHeld=0,premiumCredits=0,premiumDebits=0;
+  trades.forEach(t=>{
+    const total=t.total||0;
+    switch(t.action){
+      case 'CSP': credits+=total;premiumCredits+=total;break;
+      case 'BTC': debits+=total;premiumDebits+=total;break;
+      case 'STOC':credits+=total;premiumCredits+=total;break;
+      case 'STC': credits+=total;premiumCredits+=total;break; // selling to close receives cash
+      case 'IN':  debits+=total;sharesHeld+=(t.shares||0);break;
+      case 'OUT': credits+=total;sharesHeld-=(t.shares||0);break;
+      case 'DIV': credits+=total;break;
+    }
+  });
+  const netPnL=credits-debits;
+  const premiumNet=premiumCredits-premiumDebits;
+  const netCashOut=debits-credits;
+  // Adjusted cost basis per share held (standard wheel method): what the shares still held cost
+  // (first in, first out, incl. fees on the IN), minus ALL net option premium on this wheel (puts before
+  // assignment + calls, buybacks add back) and dividends. Shares already sold are settled in Shares P&L and
+  // don't distort the basis of the ones left. With no sales this equals the old net-cash figure.
+  const divs=trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0);
+  const lots=(shareRealisations(trades.map(t=>({...t,wheelId:wheel.id}))).open[wheel.id])||{shares:0,cost:0};
+  const shareCost=lots.cost;
+  const breakeven=sharesHeld>0?(shareCost-premiumNet-divs)/sharesHeld:null;
+  let unrealised=null;
+  if(wheel.lastPrice!=null&&sharesHeld>0){unrealised=(wheel.lastPrice*sharesHeld)-netCashOut;}
+  const lastTrade=trades.length?trades[trades.length-1]:null;
+  // Realised only: premium banked when a sell is bought back, expires, or is assigned/called away. Never premium on an open option.
+  const premiumRealised=Math.round(realisedPremium(trades.map(t=>({...t,wheelId:wheel.id}))).events.reduce((a,e)=>a+e.amount,0)*100)/100;
+  const shareRealised=shareRealisations(trades.map(t=>({...t,wheelId:wheel.id}))).events.reduce((a,e)=>a+e.pnl,0);
+  const realisedPnL=Math.round((premiumRealised+shareRealised+divs)*100)/100;
+  return{credits,debits,netPnL,premiumNet,premiumRealised,realisedPnL,premiumCredits,premiumDebits,sharesHeld,breakeven,shareCost,unrealised,trades,lastTrade,netCashOut};
+}
+
+// UTC calendar days between ISO dates (inclusive span: same day → 1). No local setHours drift.
+function daysBetweenUTC(startISO,endISO){
+  const d=s=>String(s||'').slice(0,10);
+  const startMs=Date.parse(d(startISO)+'T00:00:00Z'),endMs=Date.parse(d(endISO)+'T00:00:00Z');
+  if(isNaN(startMs)||isNaN(endMs))return Math.max(1,1);
+  return Math.max(1,Math.round((endMs-startMs)/864e5));
+}
+// Peak capital deployed: concurrent CSP collateral plus FIFO share cost (Step-2 pairing rules).
+function wheelPeakCapital(trades){
+  if(!trades||!trades.length)return 0;
+  const closing=a=>(a==='BTC'||a==='STC'||a==='IN'||a==='OUT')?1:0;
+  let list=normWheelShortStcClosers(trades.map((t,i)=>({...t,id:t.id||('wp'+i)})));
+  // Same calendar day: closers before openers (roll day releases collateral before the replacement sell).
+  list=list.slice().sort((a,b)=>(a.entered||'').localeCompare(b.entered||'')||closing(b.action)-closing(a.action));
+  const{pairs}=walkLegPairs(list);
+  const byId={};list.forEach(t=>{byId[t.id]=t;});
+  const csps=[]; // {id,strike,rem}
+  const lots=[]; // {shares,cps}
+  const deployed=()=>{
+    const csp=csps.reduce((s,c)=>s+(+c.strike||0)*(+c.rem||0),0);
+    const sh=lots.reduce((s,l)=>s+l.shares*l.cps,0);
+    return csp+sh;
+  };
+  let peak=0;
+  const bump=()=>{peak=Math.max(peak,deployed());};
+  const takeCsp=(legId,sh)=>{
+    const c=csps.find(x=>x.id===legId);if(!c)return;
+    c.rem-=sh||0;
+  };
+  // A put whose expiry has passed (or expired worthless today) no longer holds collateral: release it before each
+  // trade so sequential puts don't stack. An assignment IN dated after a Friday expiry then finds no put to take
+  // and just adds the shares: the put's collateral becomes share capital once, never put + shares.
+  const releaseExpired=d=>{
+    for(let i=csps.length-1;i>=0;i--){const c=csps[i];if(c.expiry&&(c.expiry<d||(c.expiry===d&&c.expiredWorthless)))csps.splice(i,1);}
+  };
+  for(const t of list){
+    releaseExpired(t.entered||'');
+    if(t.action==='CSP'){
+      csps.push({id:t.id,strike:+t.strike||0,rem:+t.shares||0,expiry:t.expiry||'',expiredWorthless:!!t.expiredWorthless});
+      bump();
+    }else if(t.action==='BTC'){
+      (pairs[t.id]||[]).forEach(p=>takeCsp(p.legId,p.shares));
+      for(let i=csps.length-1;i>=0;i--)if(csps[i].rem<=1e-9)csps.splice(i,1);
+      bump();
+    }else if(t.action==='IN'){
+      if(t.openMarket){
+        const sh=+t.shares||0,v=+t.total||0;
+        if(sh>0)lots.push({shares:sh,cps:v/sh});
+        bump();
+      }else{
+        (pairs[t.id]||[]).forEach(p=>takeCsp(p.legId,p.shares));
+        for(let i=csps.length-1;i>=0;i--)if(csps[i].rem<=1e-9)csps.splice(i,1);
+        const sh=+t.shares||0,v=+t.total||0;
+        if(sh>0)lots.push({shares:sh,cps:v/sh});
+        bump();
+      }
+    }else if(t.action==='OUT'){
+      let left=+t.shares||0;
+      while(left>0&&lots.length){
+        const take=Math.min(left,lots[0].shares);
+        lots[0].shares-=take;left-=take;
+        if(lots[0].shares<=1e-9)lots.shift();
+      }
+      bump();
+    }
+  }
+  return Math.round(peak*100)/100;
+}
+// Closed-wheel cycle end: latest entered date plus expiries only for expiration-resolved legs (not bought-back futures).
+function wheelCycleEndDate(wheel,trades,today){
+  today=today||new Date().toISOString().slice(0,10);
+  let end='';
+  trades.forEach(t=>{if(t.entered&&t.entered>end)end=t.entered;});
+  trades.forEach(t=>{
+    if((t.action==='CSP'||t.action==='STOC')&&t.expiredWorthless&&t.expiry&&t.expiry>end)end=t.expiry;
+  });
+  let list=normWheelShortStcClosers((trades||[]).map((t,i)=>({...t,id:t.id||('we'+i)})));
+  const{open}=walkLegPairs(list);
+  open.forEach(o=>{
+    if((o.action==='CSP'||o.action==='STOC')&&o.expiry&&o.expiry<=today&&!o.expiredWorthless&&o.expiry>end)end=o.expiry;
+  });
+  return end||today;
+}
+// Annualised Return on Capital — capital at risk = peak deployed (CSP collateral + share cost).
+function calcAROC(wheel,m,today){
+  if(!m.trades.length)return null;
+  const cap=wheelPeakCapital(m.trades);
+  if(!cap)return null;
+  const sorted=[...m.trades].sort((a,b)=>(a.entered||'').localeCompare(b.entered||''));
+  const first=sorted[0].entered;
+  const end=wheel.status==='open'?(today||new Date().toISOString().slice(0,10)):wheelCycleEndDate(wheel,m.trades,today);
+  const days=daysBetweenUTC(first,end);
+  const roc=((m.premiumRealised||0)/cap)*100; // realised premium only
+  if(wheel.status==='open'&&days<14)return{roc,aroc:null,cap,days}; // too young to annualise
+  return{roc,aroc:roc*(365/days),cap,days};
+}
+
+
+// ── New metrics (display only, read-only over trades/legs) ──
+// Whole-cycle return: realised only — (realised premium + realised shares + dividends) ÷ peak capital.
+// Annualised over first trade → end (closed: wheelCycleEndDate; open: today). Under 7 days: raw return only.
+function cycleReturn(wheel,m,rss,divs,today){
+  if(!m.trades.length)return null;
+  const cap=wheelPeakCapital(m.trades);
+  if(!cap)return null;
+  const isOpen=wheel.status==='open';
+  const un=0; // realised only: open shares/options never count
+  const realised=m.realisedPnL!=null?m.realisedPnL:((m.premiumRealised||0)+((rss&&rss.realised)||0)+(divs||0));
+  const total=realised+un;
+  const dates=m.trades.map(t=>t.entered).filter(Boolean).sort();
+  const end=isOpen?(today||new Date().toISOString().slice(0,10)):wheelCycleEndDate(wheel,m.trades,today);
+  const days=daysBetweenUTC(dates[0],end);
+  const raw=total/cap*100;
+  return{total,realised,unrealised:un,incUnrealised:isOpen&&un!==0,cap,days,raw,ann:days<7?null:raw*365/days};
+}
+// Profit for the whole cycle if open shares are called at the strike.
+function calledAwayProfit(strike,shares,shareCost,premiumNet,realisedShares,divs){
+  if(!(strike>0&&shares>0))return null;
+  return strike*shares-shareCost+(premiumNet||0)+(realisedShares||0)+(divs||0);
+}
+// What if? panels stay open across re-renders until the user closes them (cross, button, or click elsewhere).
+const _wiOpen={};
+function wlWhatIf(id){
+  const p=document.getElementById('wi-'+id);if(!p)return;
+  const open=p.hidden;p.hidden=!open;
+  if(open){_wiOpen[id]=_wiOpen[id]||{k:'',p:''};const k=p.querySelector('[data-wi=k]');if(k)k.focus();}else delete _wiOpen[id];
+}
+function wlWhatIfClose(id){const p=document.getElementById('wi-'+id);if(p)p.hidden=true;delete _wiOpen[id];}
+function wlWhatIfRestore(focus){
+  Object.keys(_wiOpen).forEach(id=>{
+    const p=document.getElementById('wi-'+id);if(!p){return;}
+    p.hidden=false;const st=_wiOpen[id];
+    const k=p.querySelector('[data-wi=k]'),pr=p.querySelector('[data-wi=p]');
+    if(k)k.value=st.k;if(pr)pr.value=st.p;
+    if(st.k||st.p)wlWhatIfCalc(id);
+  });
+  if(focus&&focus[0]&&focus[1]){const el=document.querySelector('#'+focus[0]+' [data-wi='+focus[1]+']');if(el){el.focus();try{const n=el.value.length;el.setSelectionRange&&el.type!=='number'&&el.setSelectionRange(n,n);}catch(e){}}}
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest&&(e.target.closest('.wl-wi')||e.target.closest('.wl-wi-btn')))return;
+  Object.keys(_wiOpen).forEach(wlWhatIfClose);
+});
+function wlWhatIfCalc(id){
+  const p=document.getElementById('wi-'+id);if(!p)return;
+  const out=p.querySelector('[data-wi=out]');if(!out)return;
+  const k=parseFloat(p.querySelector('[data-wi=k]')?.value)||0;
+  const pr=parseFloat(p.querySelector('[data-wi=p]')?.value)||0;
+  if(_wiOpen[id])_wiOpen[id]={k:p.querySelector('[data-wi=k]')?.value||'',p:p.querySelector('[data-wi=p]')?.value||''};
+  if(p.dataset.kind==='leap'){
+    const blank='<div class="wl-wi-r"><span>New net cost</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div>';
+    if(!(k>0&&pr>0)){out.innerHTML=blank;return;}
+    const qty=parseFloat(p.dataset.qty)||0,cost=parseFloat(p.dataset.cost)||0,net=parseFloat(p.dataset.net)||0,leapK=parseFloat(p.dataset.strike)||0;
+    const r2=n=>Math.round(n*100)/100;
+    const newNet=r2(cost-net-pr*100*qty),perSh=qty?r2(newNet/(100*qty)):0,be=r2(leapK+perSh);
+    out.innerHTML=`<div class="wl-wi-r"><span>New net cost</span><span class="wl-wi-v">${fmtMoney(newNet)}<small>${fmtMoney(perSh)} / sh</small></span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">$${fmt2(be)}</span></div>`;
+    return;
+  }
+  const be=parseFloat(p.dataset.be)||0;
+  const sh=parseFloat(p.dataset.shares)||0;
+  const osh=parseFloat(p.dataset.oshares)||0;
+  const oc=parseFloat(p.dataset.ocost)||0;
+  const prem=parseFloat(p.dataset.prem)||0;
+  const real=parseFloat(p.dataset.real)||0;
+  if(!(k>0&&pr>0)){out.innerHTML='<div class="wl-wi-r"><span>New cost basis</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>If called away</span><span class="wl-wi-v">—</span></div>';return;}
+  const contracts=Math.floor(sh/100);
+  const newPrem=pr*100*contracts;
+  const newBasis=be-newPrem/sh;
+  const divs=parseFloat(p.dataset.divs)||0;
+  const cap=calledAwayProfit(k,osh,oc,prem+newPrem,real,divs);
+  const capPct=oc>0&&cap!=null?cap/oc*100:null;
+  const capHtml=cap!=null?`<span class="wl-wi-v ${cap>=0?'g':'r'}">${cap>=0?'+':'-'}${fmtMoney(Math.abs(cap))}${capPct!=null?`<small class="${cap>=0?'g':'r'}">${capPct>=0?'+':'-'}${Math.round(Math.abs(capPct))}%</small>`:''}</span>`:'<span class="wl-wi-v">—</span>';
+  out.innerHTML=`<div class="wl-wi-r"><span>New cost basis</span><span class="wl-wi-v">$${fmt2(newBasis)}<small>down from $${fmt2(be)}</small></span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">$${fmt2(newBasis)}</span></div><div class="wl-wi-r"><span>If called away</span>${capHtml}</div>`;
+}
+function wlWhatIfLog(id){
+  const p=document.getElementById('wi-'+id);if(!p)return;
+  const k=p.querySelector('[data-wi=k]')?.value||'';
+  const pr=p.querySelector('[data-wi=p]')?.value||'';
+  if(p.dataset.kind==='leap'){
+    openPmccSell(id);pmccTab('manual');
+    document.getElementById('pcc-strike').value=k;
+    document.getElementById('pcc-price').value=pr;
+    const qty=parseFloat(p.dataset.qty)||0;if(qty>0)document.getElementById('pcc-qty').value=String(qty);
+    return;
+  }
+  const sh=parseFloat(p.dataset.shares)||0;
+  const contracts=Math.floor(sh/100);
+  openAddTrade(id);
+  document.getElementById('tf-action').value='STOC';
+  onActionChange();
+  document.getElementById('tf-strike').value=k;
+  document.getElementById('tf-premium').value=pr;
+  const ts=document.getElementById('tf-shares');
+  if(!ts.value&&contracts>0)ts.value=String(contracts*100);
+  document.getElementById('tf-premium').dispatchEvent(new Event('input',{bubbles:true}));
+}
+// Realised P&L per ticker, this year and all time: wheel premium + FIFO share P&L + dividends + closed LEAPs/calls.
+function tickerPnL(trades,wheels,legs,year,today){
+  today=today||new Date().toISOString().slice(0,10);
+  const events=OT_LEDGER.buildLedger(wheels||[],trades||[],legs||[],{today}).events;
+  const out={};
+  const add=(t,d,v,col)=>{if(!t||v==null||!v)return;t=String(t).toUpperCase();const o=out[t]=out[t]||{ticker:t,year:0,all:0,wheel:0,leaps:0};o.all+=v;if(d&&d.startsWith(year))o.year+=v;if(col==='leaps')o.leaps+=v;else o.wheel+=v;return o;};
+  events.forEach(e=>{const d=(e.date||'').slice(0,10),t=e.ticker||'';if(!t)return;const col=e.strategy==='pmcc'?'leaps':'wheel';add(t,d,e.amount,col);});
+  return Object.values(out).map(o=>({...o,year:Math.round(o.year*100)/100,all:Math.round(o.all*100)/100,wheel:Math.round(o.wheel*100)/100,leaps:Math.round(o.leaps*100)/100})).sort((a,b)=>b.all-a.all);
+}
+// Realised option premium events (wheel puts & calls). READ-ONLY.
+// An opener's credit is banked only when the leg resolves: bought back / sold to close (closer date),
+// assigned or called away (IN/OUT date), or expired (expiry date, once past). Closer debits/credits are
+// banked on their own date (so a roll realises the old leg in the roll month; the new leg stays open).
+// Partial closes split the credit pro rata by shares. Returns {events:[{key,ticker,date,amount}], open:[{key,ticker,credit}]}.
+function realisedPremium(trades,today){
+  today=today||new Date().toISOString().slice(0,10);
+  const groups={};(trades||[]).forEach(t=>{const k=t.wheelId||('tk:'+(t.ticker||''));(groups[k]=groups[k]||[]).push(t);});
+  const events=[],open=[];
+  Object.entries(groups).forEach(([k,list])=>{
+    list=list.map((t,i)=>({...t,id:'r'+i})); // private ids: pairing must not depend on stored ids
+    list=normWheelShortStcClosers(list);
+    const tkr=(list.find(t=>t.ticker)||{}).ticker||'';
+    const {open:rest,pairs}=walkLegPairs(list);
+    const byId={};list.forEach(t=>byId[t.id]=t);
+    const used={};
+    Object.entries(pairs).forEach(([cid,ps])=>{const c=byId[cid];if(!c)return;ps.forEach(p=>{
+      const o=byId[p.legId];if(!o)return;const S=Number(o.shares)||0,f=S>0?Math.min(1,(p.shares||0)/S):1-(used[o.id]||0);
+      if(f<=0)return;used[o.id]=(used[o.id]||0)+f;events.push({key:k,ticker:o.ticker||tkr,date:c.entered||'',amount:(o.total||0)*f});});});
+    list.forEach(t=>{const v=t.total||0;
+      if(t.action==='BTC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:-v});
+      else if(t.action==='STC')events.push({key:k,ticker:t.ticker||tkr,date:t.entered||'',amount:v});
+      else if(t.action==='DIV')return;});
+    rest.forEach(o=>{const f=1-(used[o.id]||0);if(f<=1e-9)return;const amt=(o.total||0)*f;
+      if(o.expiry&&(o.expiry<today||o.expiredWorthless&&o.expiry<=today))events.push({key:k,ticker:o.ticker||tkr,date:o.expiry,amount:amt});
+      else if(o.expiredWorthless&&!o.expiry)events.push({key:k,ticker:o.ticker||tkr,date:o.entered||'',amount:amt});
+      else open.push({key:k,ticker:o.ticker||tkr,credit:amt});});
+  });
+  return{events,open};
+}
+// Capital at work right now, the one figure used on Home and in More data.
+function currentCapitalAtWork(){
+  const sr=shareRealisations(db.trades);
+  const shareCost=db.wheels.filter(w=>w.status==='open').reduce((a,w)=>a+((sr.open[w.id]||{}).cost||0),0);
+  let acct=0;try{const _r=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]);acct=_r.base==='account'?_r.account:0;}catch(e){}
+  return capitalAtWork(calcCapitalStats().atRisk,shareCost,db.opts||[],acct);
+}
+// Pure: capital at work as % of the account size the user set; null when no account size.
+function utilisation(cawTotal,accountSize){return accountSize>0?Math.round(cawTotal/accountSize*1000)/10:null;}
+// Money tied up now: open put collateral + open share cost (wheel), and open long LEAP cost (separate).
+function capitalAtWork(putCollateral,shareCost,legs,accountSize){
+  const leaps=(legs||[]).filter(l=>l.status==='open'&&l.side==='long'&&!l.demo).reduce((a,l)=>a+OPTS.legPnL(l).costBasis,0);
+  const wheel=(putCollateral||0)+(shareCost||0),total=wheel+leaps;
+  return{puts:putCollateral||0,shares:shareCost||0,wheel,leaps,total,pct:accountSize>0?total/accountSize*100:null};
+}
+// Return settings: what monthly return % is measured against, and an optional monthly target.
+// base 'caw' = capital at work (worked out by the app), 'account' = an account size the user types in.
+// target: a % or null (Off). Default for new users: capital at work, target Off. Accounts with trades from
+// before this setting existed (entered before RET_LEGACY_BEFORE) keep the old 2% target unless changed.
+const RET_LEGACY_BEFORE='2026-11-02';
+function returnSettings(raw,trades,legs){
+  let s=null;try{s=raw?JSON.parse(raw):null;}catch(e){}
+  if(!s||typeof s!=='object'){
+    const old=(trades||[]).some(t=>t.entered&&t.entered<RET_LEGACY_BEFORE)||(legs||[]).some(l=>!l.demo&&l.entryDate&&l.entryDate<RET_LEGACY_BEFORE);
+    s={base:'caw',account:0,target:old?2:null};
+  }
+  const account=+s.account>0?+s.account:0,target=+s.target>0?+s.target:null;
+  return{base:s.base==='account'&&account>0?'account':'caw',account,target};
+}
+// Pure: the figure the month's return is measured against.
+function returnBase(rs,cawTotal){return rs&&rs.base==='account'&&rs.account>0?rs.account:(cawTotal||0);}
+// Pure: month's realised profit as % of the base; null when no base. ok = hit the target (null when target is Off).
+function monthReturnPct(profit,capital,target){
+  if(!(capital>0))return null;
+  const pct=(profit||0)/capital*100;return{pct,ok:target>0?pct>=target:null};
+}
+// Pure: capital to divide a given month's P&L by.
+// Manual (account) mode: the user-entered size, every month. Auto (caw): that month's peak deployed capital (0 if none).
+function monthReturnCapital(rs,ym,monthlyCap){
+  if(rs&&rs.base==='account'&&rs.account>0)return rs.account;
+  const cap=monthlyCap&&ym?+monthlyCap[ym]:0;
+  return cap>0?cap:0;
+}
+// Pure: mean of individual monthly return % over complete months with deployed capital > 0. Auto mode only.
+function averageAutoMonthReturn(months,todayYm,monthlyCap,profitOf,target){
+  const pcts=[];
+  (months||[]).forEach(r=>{
+    if(!r||!r.ym||!todayYm||r.ym>=todayYm)return;
+    const cap=monthReturnCapital({base:'caw'},r.ym,monthlyCap);
+    const mr=monthReturnPct(profitOf?profitOf(r):(r.premium||0),cap,null);
+    if(mr)pcts.push(mr.pct);
+  });
+  if(!pcts.length)return null;
+  const pct=pcts.reduce((a,x)=>a+x,0)/pcts.length;
+  return{pct,ok:target>0?pct>=target:null,n:pcts.length};
+}
+function capitalTipMoney(n){
+  return String(typeof fmtMoney==='function'?fmtMoney(n):n).replace(/^[+-]/,'').replace(/\.00$/,'');
+}
+// Monthly P&L — group all trades by YYYY-MM
+function calcMonthlyPnL(){
+  // Realised only, booked on the day it was banked: option premium when bought back / expired / assigned,
+  // share sales (FIFO), dividends. Premium on still-open options never counts.
+  const mo={},M=ym=>mo[ym]=mo[ym]||{credits:0,debits:0,pCr:0,pDb:0};
+  realisedPremium(db.trades).events.forEach(e=>{if(!e.date)return;const r=M(e.date.slice(0,7));if(e.amount>=0){r.pCr+=e.amount;r.credits+=e.amount;}else{r.pDb-=e.amount;r.debits-=e.amount;}});
+  shareRealisations(db.trades).events.forEach(e=>{if(!e.date)return;const r=M(e.date.slice(0,7));if(e.pnl>=0)r.credits+=e.pnl;else r.debits-=e.pnl;});
+  db.trades.forEach(t=>{if(t.action==='DIV'&&t.entered)M(t.entered.slice(0,7)).credits+=t.total||0;});
+  return Object.entries(mo).sort(([a],[b])=>a.localeCompare(b)).map(([ym,v])=>({
+    ym,
+    label:new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'numeric'}),
+    credits:v.credits,debits:v.debits,net:v.credits-v.debits,
+    pNet:v.pCr-v.pDb,pCr:v.pCr,pDb:v.pDb
+  }));
+}
+
+// Share P&L, FIFO per wheel: each OUT is matched against that wheel's own IN lots.
+// Read-only over trades. Returns realised events {wheelId,date,shares,proceeds,cost,pnl} and open lots per wheel.
+function shareRealisations(trades){
+  const byRot={};
+  trades.forEach(t=>{if(t.action!=='IN'&&t.action!=='OUT')return;const k=t.wheelId||('tk:'+(t.ticker||''));(byRot[k]=byRot[k]||[]).push(t);});
+  const events=[],open={};
+  Object.entries(byRot).forEach(([k,list])=>{
+    list=list.slice().sort((a,b)=>(a.entered||'').localeCompare(b.entered||'')||(a.action===b.action?0:a.action==='IN'?-1:1));
+    const lots=[];
+    list.forEach(t=>{
+      const sh=t.shares||0,v=t.total||0;
+      if(t.action==='IN'){if(sh>0)lots.push({shares:sh,cps:v/sh});return;}
+      let left=sh,cost=0;
+      while(left>0&&lots.length){const l=lots[0],take=Math.min(left,l.shares);cost+=take*l.cps;l.shares-=take;left-=take;if(l.shares<=1e-9)lots.shift();}
+      events.push({wheelId:k,date:t.entered||'',shares:sh,proceeds:v,cost,pnl:v-cost});
+    });
+    open[k]={shares:lots.reduce((a,l)=>a+l.shares,0),cost:lots.reduce((a,l)=>a+l.shares*l.cps,0)};
+  });
+  return{events,open};
+}
+
+// Per-wheel share figures: Shares P&L (realised, FIFO) and Unrealised (open shares at price minus their FIFO cost).
+// priceOf(wheel) -> number|null. Read-only.
+function rotationShareStats(wheel,trades,priceOf){
+  const sr=shareRealisations(trades.filter(t=>t.wheelId===wheel.id));
+  const realised=sr.events.reduce((a,e)=>a+e.pnl,0);
+  const o=sr.open[wheel.id]||{shares:0,cost:0};
+  const price=priceOf?priceOf(wheel):null;
+  const unrealised=o.shares>0&&price!=null?price*o.shares-o.cost:(o.shares>0?null:0);
+  return{realised,openShares:o.shares,openCost:o.cost,unrealised};
+}
+// Unrealised across open wheels. Returns {value, unpriced} (unpriced = wheels holding shares with no price).
+function calcUnrealised(wheels,trades,priceOf){
+  let value=0,unpriced=0;
+  wheels.filter(w=>w.status==='open').forEach(w=>{const r=rotationShareStats(w,trades,priceOf);if(r.unrealised==null)unpriced++;else value+=r.unrealised;});
+  return{value,unpriced};
+}
+function _priceOf(w){return (typeof quotes!=='undefined'&&quotes[w.ticker]?.price)||(w.lastPrice!=null?w.lastPrice:null);}
+
+// ── All options, by month (READ-ONLY: reads db.trades via calcMonthlyPnL and db.opts; writes nothing) ──
+// Options realised P&L by close date (expired → expiry if no close date). Open legs only feed the "open, not yet banked" line.
+function optsMonthly(legs){
+  const mo={},gain={},loss={},lgain={},lloss={},cc={};let openPl=0,unmarked=0,openN=0,ccOpenPl=0,ccUnmarked=0,ccOpenN=0;
+  (legs||[]).forEach(l=>{
+    const p=OPTS.legPnL(l);
+    if(l.status==='open'){openN++;if(p.unrealized==null)unmarked++;else openPl+=p.unrealized;if(l.side==='short'){ccOpenN++;if(p.unrealized==null)ccUnmarked++;else ccOpenPl+=p.unrealized;}return;}
+    const d=l.closeDate||l.expiry;if(!d)return;const ym=d.slice(0,7);mo[ym]=(mo[ym]||0)+p.realized;
+    const G=v=>{if(v>=0)gain[ym]=(gain[ym]||0)+v;else loss[ym]=(loss[ym]||0)-v;};
+    if(l.side==='short'){G(p.openCash);G(p.realized-p.openCash);cc[ym]=(cc[ym]||0)+p.realized;} // short calls (PMCC) like wheel options: credit collected, buyback cost as loss
+    else{const v=p.realized;if(v>=0)lgain[ym]=(lgain[ym]||0)+v;else lloss[ym]=(lloss[ym]||0)-v;} // long LEAPs: kept out of option income, own table
+  });
+  Object.keys(mo).forEach(k=>mo[k]=Math.round(mo[k]*100)/100);Object.keys(cc).forEach(k=>cc[k]=Math.round(cc[k]*100)/100);
+  // ccByMonth/ccOpen*: PMCC short calls only (no LEAP legs) — for monthly-return style tables
+  return{ccByMonth:cc,ccOpenPl:Math.round(ccOpenPl*100)/100,ccUnmarked,ccOpenN,byMonth:mo,gain,loss,lgain,lloss,openPl:Math.round(openPl*100)/100,unmarked,openN};
+}
+function allOptionsByMonth(wheelMonthly,legs,today){
+  const W={};(wheelMonthly||[]).forEach(m=>W[m.ym]=m.pNet);
+  const O=optsMonthly(legs),yr=(today||new Date().toISOString()).slice(0,4);
+  // Covered calls only: realised PMCC short-call premium. Closed LEAPs live in Shares & LEAPs P&L, never here.
+  const yms=[...new Set([...Object.keys(W),...Object.keys(O.ccByMonth)])].sort().reverse();
+  const rows=yms.map(ym=>{const w=W[ym]||0,o=O.ccByMonth[ym]||0;return{ym,label:new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'numeric'}),wheel:w,opts:o,total:Math.round((w+o)*100)/100};});
+  const sum=(f,yr0)=>Math.round(rows.filter(r=>!yr0||r.ym.startsWith(yr0)).reduce((a,r)=>a+r[f],0)*100)/100;
+  return{rows,ytd:{wheel:sum('wheel',yr),opts:sum('opts',yr),total:sum('total',yr),year:yr},all:{wheel:sum('wheel'),opts:sum('opts'),total:sum('total')},open:{pl:O.ccOpenPl,unmarked:O.ccUnmarked,n:O.ccOpenN}};
+}
+function renderAllOptionsByMonth(monthly){
+  const A=allOptionsByMonth(monthly,db.opts||[],new Date().toISOString().slice(0,10));
+  if(!A.rows.length&&!A.open.n)return'';
+  const kf=n=>{const a=Math.abs(n);return(n<0?'-':'')+'$'+(a>=1e4?Math.round(a/1e3)+'k':a>=1e3?(a/1e3).toFixed(1)+'k':Math.round(a));};
+  const m=n=>`<span class="${n>0?'g':n<0?'r':''}" style="${n?'':'color:var(--text3)'}">${n?`<span class="lf">${(n>0?'+':'')+fmtMoney(n).replace(/\.\d\d$/,'')}</span><span class="ls">${(n>0?'+':'')+kf(n)}</span>`:'—'}</span>`;
+  const two=(f,sh)=>`<span class="lf">${f}</span><span class="ls">${sh}</span>`;
+  const cols='minmax(0,1.2fr) repeat(3,minmax(0,1fr))';
+  const row=(a,b,c,d,st='')=>`<div class="d-table-row" style="grid-template-columns:${cols};${st}"><span>${a}</span><span style="text-align:right">${b}</span><span style="text-align:right">${c}</span><span style="text-align:right;font-weight:720">${d}</span></div>`;
+  const body=A.rows.map(r=>row(two(r.label,new Date(r.ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'2-digit'})),m(r.wheel),m(r.opts),m(r.total))).join('');
+  const tot=row(`<b>${two('Year to date '+A.ytd.year,'YTD')}</b>`,m(A.ytd.wheel),m(A.ytd.opts),m(A.ytd.total),'background:var(--bg3)')+row('<b>All time</b>',m(A.all.wheel),m(A.all.opts),m(A.all.total),'background:var(--bg3)');
+  const openH=`<div style="padding:0.5625rem 1.25rem;font-size:0.825rem;color:var(--text3);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center"><span><b style="color:var(--text2)">Open covered calls, not yet banked:</b> ${A.open.n?m(A.open.pl):'—'}</span><span>${A.open.n} open covered call${A.open.n!==1?'s':''} (premium not banked yet; LEAPs not included)${A.open.unmarked?` · ${A.open.unmarked} without a mark`:''} · moves with prices, not in the months above${optDemo?' · <b style="color:#fcd34d">options figures are DEMO</b>':''}</span></div>`;
+  return`<div class="d-panel mo-pnl">
+      <div class="d-panel-hdr"><span class="d-panel-title">All options, by month</span><span class="d-panel-count">wheel premium + covered calls</span></div>
+      <div class="d-panel-body"><div class="d-table-hdr" style="grid-template-columns:${cols}"><span>Month</span><span style="text-align:right">Wheel</span><span style="text-align:right">${two('Covered calls','CCs')}</span><span style="text-align:right">Total</span></div>
+      <div style="max-height:26.25rem;overflow-y:auto">${body}</div>${tot}${openH}</div>
+    </div>`;
+}
+
+function calcOverall(){
+  let pc=0,pd=0,wins=0,losses=0,open=0,closed=0,sh=0;
+  let capDeployed=0,stockRealised=0,divs=0;
+  const _sr=shareRealisations(db.trades);
+  _sr.events.forEach(e=>{stockRealised+=e.pnl;});
+  Object.values(_sr.open).forEach(o=>{capDeployed+=o.cost;});
+  db.wheels.forEach(w=>{
+    const m=calcWheel(w);
+    pc+=m.premiumCredits; pd+=m.premiumDebits;
+    const rotDiv   = m.trades.filter(t=>t.action==='DIV').reduce((s,t)=>s+(t.total||0),0);
+    divs += rotDiv;
+    if(w.status==='open'){open++;sh+=m.sharesHeld;}
+    else{
+      closed++;
+      // Win/loss on option income (premium net) for this wheel
+      if(m.premiumRealised>=0)wins++;else losses++;
+    }
+  });
+  const pNet=Math.round(db.wheels.reduce((a,w)=>a+calcWheel(w).premiumRealised,0)*100)/100; // realised only
+  // totalRealised = everything except currently-open stock positions
+  const totalRealised=pNet+stockRealised+divs;
+  const tot=wins+losses;
+  return{
+    pNet, stockRealised, capDeployed, divs, totalRealised,
+    premiumCredits:pc, premiumDebits:pd,
+    wins, losses, wr:tot>0?(wins/tot*100).toFixed(1):null,
+    openCount:open, closedCount:closed, totalSharesHeld:sh,
+    // Legacy aliases used by calcCapitalStats etc.
+    netPnL:totalRealised,
+    totalCredits:pc+stockRealised+divs,
+    totalDebits:pd
+  };
+}
+
+// ── W/L per option cycle (LIFO matching: CSP/STOC ↔ BTC/STC/IN/OUT) ──
+// Pure: Home tile text for average win / average loss ('—' when there are none).
+function avgWinLossText(wl){
+  const m=n=>'$'+Math.round(n).toLocaleString('en-US');
+  return{win:wl.avgWin!=null?'+'+m(wl.avgWin):'—',winCls:wl.avgWin!=null?'pos':'',loss:wl.avgLoss!=null?'−'+m(wl.avgLoss):'—',lossCls:wl.avgLoss!=null?'neg':'',
+    sub:'from '+wl.wins+' win'+(wl.wins===1?'':'s')+' · '+wl.losses+' loss'+(wl.losses===1?'':'es')};
+}
+function calcWinLoss(){
+  const ledger=OT_LEDGER.buildLedger(db.wheels,db.trades,db.opts||[]);
+  const inc=OT_LEDGER.summarizeIncome(ledger.events);
+  const openOpts=ledger.open.filter(o=>o.kind==='csp'||o.kind==='cc'||o.kind==='pmcc_call').length;
+  const tot=inc.wins+inc.losses;
+  return{wins:inc.wins,losses:inc.losses,openOpts,avgWin:inc.avgWin,avgLoss:inc.avgLoss,wr:tot>0?((inc.wins/tot)*100).toFixed(1):null};
+}
+
+// ── YTD: Jan 1 of current year to today ──
+// Option income + realised stock sales + dividends; IN debits excluded (capital deployment)
+function calcYTD(){
+  const yr=new Date().getFullYear();
+  const start=`${yr}-01-01`;
+  const today=new Date();today.setHours(0,0,0,0);
+  const days=Math.round((today-new Date(start))/86400000)+1;
+  let sc=0,sd=0,stockOut=0,stockIn=0,divs=0;
+  db.trades.forEach(t=>{
+    if(!t.entered||t.entered<start)return;
+    const v=t.total||0;
+    if(t.action==='OUT')stockOut+=v;
+    else if(t.action==='IN')stockIn+=v;
+    else if(t.action==='DIV')divs+=v;
+  });
+  // realised only: premium banked this year (bought back / expired / assigned), never open sells
+  realisedPremium(db.trades).events.forEach(e=>{if(!e.date||e.date<start)return;if(e.amount>=0)sc+=e.amount;else sd-=e.amount;});
+  const optNet=sc-sd;
+  // Share Realised P&L this year: each sale this year against its own wheel's FIFO cost (may be negative)
+  const stockIncome=shareRealisations(db.trades).events.filter(e=>e.date>=start).reduce((a,e)=>a+e.pnl,0);
+  const stockNet=stockOut-stockIn;
+  const capDeployedYTD=stockNet<0?-stockNet:0;
+  const net=optNet+stockIncome+divs;
+  const daily=days>0?net/days:0;
+  return{days,sc,sd,optNet,stockIncome,capDeployedYTD,divs,net,daily,weekly:daily*7,yearly:daily*365};
+}
+
+function dteDays(expiry){
+  if(!expiry)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  return Math.round((new Date(expiry)-today)/86400000);
+}
+
+// ── Extended dashboard calculations ──
+function calcTradeBreakdown(){
+  const by={};
+  db.trades.forEach(t=>{
+    if(!by[t.action])by[t.action]={count:0,total:0,fees:0,days:0,premiums:[]};
+    by[t.action].count++;by[t.action].total+=t.total||0;
+    by[t.action].fees+=t.fees||0;by[t.action].days+=t.days||0;
+    if(t.premium)by[t.action].premiums.push(t.premium);
+  });
+  return by;
+}
+
+function calcTimingStats(){
+  const cspDTEs=db.trades.filter(t=>t.action==='CSP'&&t.days>0).map(t=>t.days);
+  const stocDTEs=db.trades.filter(t=>t.action==='STOC'&&t.days>0).map(t=>t.days);
+  const allOptDays=db.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.days>0).map(t=>t.days);
+  const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;
+  const cspPPDs=db.trades.filter(t=>t.action==='CSP'&&t.days>0&&t.total>0).map(t=>t.total/t.days);
+  const stocPPDs=db.trades.filter(t=>t.action==='STOC'&&t.days>0&&t.total>0).map(t=>t.total/t.days);
+  return{avgCspDTE:avg(cspDTEs),avgStocDTE:avg(stocDTEs),avgOptDays:avg(allOptDays),
+    totalOptDays:allOptDays.reduce((a,b)=>a+b,0),
+    avgCspPPD:avg(cspPPDs),avgStocPPD:avg(stocPPDs)};
+}
+
+function calcBestWorst(){
+  const opts=db.trades.filter(t=>t.action==='CSP'||t.action==='STOC');
+  const closes=db.trades.filter(t=>t.action==='BTC'||t.action==='STC');
+  if(!opts.length)return{best:null,worst:null,bestPPD:null};
+  const byTotal=[...opts].sort((a,b)=>(b.total||0)-(a.total||0));
+  const byPPD=[...opts].filter(t=>t.days>0).sort((a,b)=>(b.total/b.days)-(a.total/a.days));
+  const biggest=[...closes].sort((a,b)=>(b.total||0)-(a.total||0));
+  return{
+    best:byTotal[0]||null,
+    bestPPD:byPPD[0]||null,
+    biggestBTC:biggest[0]||null,
+    totalBTCs:closes.length,
+    avgBTC:closes.length?closes.reduce((s,t)=>s+(t.total||0),0)/closes.length:null
+  };
+}
+
+function calcCapitalStats(){
+  // Max capital ever deployed = highest single CSP notional
+  const csps=db.trades.filter(t=>t.action==='CSP'&&t.strike&&t.shares);
+  const notionals=csps.map(t=>t.strike*t.shares);
+  const maxCap=notionals.length?Math.max(...notionals):0;
+  // Current capital at risk = genuinely open CSPs (lifecycle-aware, survives rolls)
+  const atRisk=db.wheels.reduce((s,w)=>{
+    const legs=openOptionLegs(db.trades.filter(t=>t.wheelId===w.id));
+    return s+legs.filter(l=>l.action==='CSP'&&l.strike&&l.shares)
+                .reduce((a,l)=>a+l.strike*(l._rem??l.shares),0); // _rem = shares still at risk after partial assigns/closes
+  },0);
+  const totalFees=db.trades.reduce((s,t)=>s+(t.fees||0),0);
+  const s=calcOverall();
+  const feesPct=s.premiumCredits>0?(totalFees/s.premiumCredits*100):0;
+  return{maxCap,atRisk,totalFees,feesPct};
+}
+
+
+function calcStreaks(){
+  // Month-over-month: find best streak of profitable premium months
+  const monthly=calcMonthlyPnL();
+  let curStreak=0,maxStreak=0,curLose=0,maxLose=0;
+  monthly.forEach(mo=>{
+    if(mo.pNet>=0){curStreak++;maxStreak=Math.max(maxStreak,curStreak);curLose=0;}
+    else{curLose++;maxLose=Math.max(maxLose,curLose);curStreak=0;}
+  });
+  const best=monthly.length?[...monthly].sort((a,b)=>b.pNet-a.pNet)[0]:null;
+  const worst=monthly.length?[...monthly].sort((a,b)=>a.pNet-b.pNet)[0]:null;
+  return{maxStreak,maxLose,best,worst,curStreak,months:monthly.length};
+}
+
+function fmtMoney(n){
+  if(n==null||isNaN(n))return'—';
+  const abs=Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return(n<0?'-$':'$')+abs;
+}
+function fmt2(n,dp=2){return n!=null&&!isNaN(n)?parseFloat(n).toFixed(dp):'—';}
+// fmtPrem — premium price, trailing zeros trimmed, minimum 2 decimals: 0.5400 -> 0.54, 0.265 -> 0.265
+function fmtPrem(n){if(n==null||isNaN(n))return'—';const s=parseFloat(Number(n).toFixed(4));return s.toFixed(Math.max(2,(String(s).split('.')[1]||'').length));}
+// esc — HTML-escape any user-origin string before interpolating into innerHTML.
+// Covers both element context (<>&) and attribute context ("') in one pass.
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+let dateFmt=localStorage.getItem('wh-dateFmt')||'us'; // us | uk
+function dateLocale(){return (typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US';}
+function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
+function fmtDateFull(d){if(!d)return'—';const[y,m,day]=d.split('-');return dateFmt==='us'?`${m}/${day}/${y.slice(2)}`:`${day}/${m}/${y.slice(2)}`;}
+function colorN(n){return n==null?'m':n>=0?'g':'r';}
+// Colour for AROC-style percentages: high stays green, mid/low stay unsigned text (never brand orange).
+function arocColor(roc){if(roc==null)return'var(--text3)';if(roc>=15)return'var(--green)';if(roc>=8)return'var(--text)';return'var(--text2)';}
+// Colour for unsigned money/count figures: minus goes red, otherwise normal text — never orange.
+function unsignedValueColor(n){if(n==null||isNaN(n))return'var(--text3)';if(n<0)return'var(--red)';return'var(--text)';}
+
+// ── Metric explain tooltip ──
+function showXpop(badge){
+  const card=badge.closest('[data-xt]');
+  if(!card)return;
+  const pop=document.getElementById('xpop');
+  document.getElementById('xpop-title').textContent=card.dataset.xt||'';
+  document.getElementById('xpop-body').textContent=card.dataset.xb||'';
+  const popW=300, gap=6;
+  const zoom=1; // body zoom removed (root rem scale); rects are already in CSS px
+  const br=badge.getBoundingClientRect();
+  const vw=window.innerWidth/zoom, vh=window.innerHeight/zoom;
+  // Correct for zoom: divide rect values by zoom factor
+  const bLeft=br.left/zoom, bTop=br.top/zoom, bBottom=br.bottom/zoom, bWidth=br.width/zoom;
+  // Position below the badge, centred horizontally
+  let left=bLeft+bWidth/2-popW/2;
+  left=Math.max(10,Math.min(left,vw-popW-10));
+  let top=bBottom+gap;
+  if(top+200>vh) top=bTop-gap-200;
+  top=Math.max(10,top);
+  pop.style.left=left+'px';
+  pop.style.top=top+'px';
+  pop.classList.add('vis');
+}
+function hideXpop(){document.getElementById('xpop').classList.remove('vis');}
+
+// ════════════════════════════════════════════════════════
+// LIVE MARKET DATA  (Finnhub — direct, no proxies)
+// ════════════════════════════════════════════════════════
+// Finnhub API key is now server-side in Netlify function
+let quotes={};
+let sparks={};
+let fetching=false;
+let _pollHandle=null; // quote-poll interval — cleared on sign-out so it never stacks
+// Company logos: cached in memory + localStorage so they paint on first render and survive closed wheels.
+function _loadLogoCache(){try{const o=JSON.parse(localStorage.getItem('wh-logos')||'{}');return o&&typeof o==='object'?o:{};}catch(e){return{};}}
+function _saveLogoCache(){try{const o={};for(const k in logos)if(logos[k])o[k]=logos[k];localStorage.setItem('wh-logos',JSON.stringify(o));}catch(e){}}
+let logos=_loadLogoCache();  // ticker → logo URL
+// Crisp square faces for TSLA/SPCX (Logo.dev icon, same mark the wheel badge shows in real data):
+// black-circle SpaceX X, Tesla T on red. Prefer these over profile/demo letter stubs and over the wide wordmark used as card art.
+const FACE_LOGOS={TSLA:'brand/logos/TSLA.png',SPCX:'brand/logos/SPCX.png'};
+function logoUrlFor(sym){const k=String(sym||'').toUpperCase();if(FACE_LOGOS[k])return FACE_LOGOS[k];return logos[k]||null;}
+Object.keys(FACE_LOGOS).forEach(k=>{logos[k]=FACE_LOGOS[k];});
+
+// Logos for every ticker we show — open or closed wheels, open or closed LEAPs. Quotes stay open-only.
+function logoSyms(){
+  const w=(db.wheels||[]).map(x=>x&&x.ticker).filter(Boolean);
+  const o=(db.opts||[]).map(l=>l&&l.underlying).filter(Boolean);
+  return[...new Set([...w,...o].map(s=>String(s).toUpperCase()))];
+}
+const _pricePending={};
+function markPricePending(sym,on){sym=String(sym||'').toUpperCase();if(!sym)return;if(on)_pricePending[sym]=true;else delete _pricePending[sym];}
+function isPricePending(sym){return!!_pricePending[String(sym||'').toUpperCase()];}
+function pricePendingHtml(sym,cls){
+  if(!isPricePending(sym))return '';
+  return `<span class="${cls||'rot-header-price'}" style="color:var(--text3);font-size:0.8125rem;font-weight:480">Getting price…</span>`;
+}
+function startPriceFill(ticker,wheel){
+  ticker=String(ticker||'').toUpperCase();
+  if(!ticker)return;
+  markPricePending(ticker,true);
+  render();
+  fetchSymbol(ticker).then(()=>{
+    if(quotes[ticker]&&wheel)wheel.lastPrice=quotes[ticker].price;
+    markPricePending(ticker,false);
+    render();
+  }).catch(()=>{markPricePending(ticker,false);render();});
+  fetchLogo(ticker).then(()=>render()).catch(()=>{});
+}
+
+async function fetchSymbol(sym){
+  // Finnhub doesn't support index symbols like ^VIX — skip them
+  if(sym.startsWith('^'))return;
+  const url=`/.netlify/functions/quote?symbol=${encodeURIComponent(sym)}`;
+  const r=await fetch(url,{cache:'no-cache',signal:AbortSignal.timeout(8000)});
+  if(!r.ok)throw new Error(`Quote proxy ${r.status} for ${sym}`);
+  const j=await r.json();
+  if(j.c==null||j.c===0)throw new Error(`No price data for ${sym}`);
+  // j.c=current, j.d=change, j.dp=change%, j.pc=previous close, j.o=open, j.h=high, j.l=low
+  quotes[sym]={price:j.c,prev:j.pc,change:j.d,pct:j.dp,state:'REGULAR'};
+}
+
+async function fetchLogo(sym){
+  sym=String(sym||'').toUpperCase();
+  if(FACE_LOGOS[sym]){logos[sym]=FACE_LOGOS[sym];return;}
+  if(!sym||sym.startsWith('^')||logos[sym]!==undefined)return;
+  try{
+    const url=`/.netlify/functions/profile?symbol=${encodeURIComponent(sym)}`;
+    const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+    if(r.ok){
+      const j=await r.json();
+      logos[sym]=j.logo||null;
+      if(logos[sym])_saveLogoCache();
+    }else{logos[sym]=null;}
+  }catch(e){
+    console.warn('Logo fetch:',sym,e.message);
+    logos[sym]=null;
+  }
+}
+
+async function fetchAllQuotes(){
+  if(fetching)return;
+  fetching=true;
+  try{
+    const wheelSyms=db.wheels.filter(w=>w.status==='open').map(w=>w.ticker).filter(Boolean);
+    const optSyms=(db.opts||[]).filter(l=>l.status==='open').map(l=>l.underlying).filter(Boolean);
+    const allSyms=[...new Set([...wheelSyms,...optSyms].map(s=>String(s).toUpperCase()))];
+    // Logos for every ticker we display (incl. closed) — fire first, re-render as soon as they land
+    const logoPromises=logoSyms().map(sym=>fetchLogo(sym));
+    const logosDone=Promise.allSettled(logoPromises).then(()=>{if(Object.values(logos).some(Boolean))render();});
+    for(const sym of allSyms){
+      try{await fetchSymbol(sym);}catch(e){console.warn('Quote fetch:',sym,e.message);}
+      if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
+    }
+    _applyWheelMarks();
+    if(typeof liveOptionPricesOn!=='function'||liveOptionPricesOn())await fetchOptionMarks(false);
+    await logosDone;
+    const nOk=Object.keys(quotes).length;
+    if(nOk>0){
+      db.wheels.forEach(w=>{
+        if(w.status==='open'&&quotes[w.ticker]&&w.lastPrice!==quotes[w.ticker].price){
+          w.lastPrice=quotes[w.ticker].price; // in memory only — live prices are never saved
+        }
+      });
+      render();
+    }else if(Object.values(logos).some(Boolean)){
+      render(); // re-render even if no quotes, so logos appear
+    }
+  }catch(e){
+    console.warn('fetchAllQuotes:',e);
+  }
+  fetching=false;
+}
+
+function buildSpark(prices,isUp,w=52,h=20){
+  if(!prices||prices.length<3)return'';
+  const color=isUp?'var(--green)':'var(--red)';
+  const pad=2,min=Math.min(...prices),max=Math.max(...prices),range=max-min||1;
+  const pts=prices.map((p,i)=>{
+    const x=pad+(i/(prices.length-1))*(w-pad*2);
+    const y=h-pad-((p-min)/range)*(h-pad*2);
+    return`${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const fillC=isUp?'rgba(34,197,94,0.13)':'rgba(239,68,68,0.13)';
+  const fp=`${pad},${h-pad} ${pts} ${w-pad},${h-pad}`;
+  return`<polygon points="${fp}" fill="${fillC}"/>
+<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+
+// Quote polling started after auth in onAuthStateChanged
+
+// ════════════════════════════════════════════════════════
+// VIEW STATE
+// ════════════════════════════════════════════════════════
+let view='positions'; // every app open/reload lands on the Wheel tab (saved tab ignored at startup)
+let _nyOpen=false;
+let expanded=new Set(JSON.parse(localStorage.getItem('wh-expanded')||'[]'));
+let collapsedWheels=new Set(JSON.parse(localStorage.getItem('wh-collapsedWheels')||'[]')); // wheel cards default to expanded, like LEAP cards
+let collapsedLeaps=new Set(JSON.parse(localStorage.getItem('wh-collapsedLeaps')||'[]')); // LEAP cards default to expanded; only an explicit ▾ tap collapses
+let minimised=new Set(JSON.parse(localStorage.getItem('wh-minimised')||'[]'));
+let hidden=new Set(JSON.parse(localStorage.getItem('wh-hidden')||'[]'));
+let hiddenLeaps=new Set(JSON.parse(localStorage.getItem('wh-hiddenLeaps')||'[]'));
+let showClosed=localStorage.getItem('wh-showClosed')==='true';
+let showClosedLeaps=localStorage.getItem('wh-showClosedLeaps')==='true'||localStorage.getItem('wh-leapStatus')==='closed';
+let showHidden=localStorage.getItem('wh-showHidden')==='true';
+let showHiddenLeaps=localStorage.getItem('wh-showHiddenLeaps')==='true';
+let posSortBy=localStorage.getItem('wh-posSortBy')||'ticker';
+let leapSortBy=localStorage.getItem('wh-leapSortBy')||'dte';
+let logSort={col:'entered',dir:'desc'};
+let logQ='';
+let _focusTid=null; // trade highlighted via goToTrade — sticks until an action is taken on it
+
+function _revealWheel(wheelId){
+  const w=db.wheels.find(x=>x.id===wheelId);
+  if(!w)return;
+  if(w.status==='closed'&&!showClosed)showClosed=true;
+  if(hidden.has(wheelId)&&!showHidden)showHidden=true;
+  minimised.delete(wheelId);
+  collapsedWheels.delete(wheelId);
+  expanded.add(wheelId);
+  _saveUIState();
+}
+function goToWheel(wheelId){
+  _revealWheel(wheelId);
+  switchView('positions');
+  setTimeout(()=>{
+    const el=document.getElementById('rw-'+wheelId);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },80);
+}
+function goToTrade(wheelId,tradeId){
+  _revealWheel(wheelId);
+  _focusTid=tradeId; // sticky highlight — survives re-renders, cleared only when the trade is acted on
+  switchView('positions');
+  setTimeout(()=>{
+    const row=document.querySelector(`[data-tid="${tradeId}"]`);
+    if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
+  },80);
+}
+function _flashTrade(el){
+  if(!el)return;
+  el.classList.remove('nx-flash');
+  void el.offsetWidth;
+  el.classList.add('nx-flash');
+  setTimeout(()=>el.classList.remove('nx-flash'),1600);
+}
+function goToNextExpiry(el){
+  if(!el)return;
+  const kind=el.dataset.kind,id=el.dataset.id,wid=el.dataset.wid,pid=el.dataset.pid;
+  if(kind==='wheel'){
+    if(wid){listShowAll.add(wid);_revealWheel(wid);}
+    switchView('positions');
+    setTimeout(()=>{
+      const row=id&&document.querySelector('[data-tid="'+CSS.escape(id)+'"]');
+      const card=wid&&document.getElementById('rw-'+wid);
+      const t=row||card;
+      if(t){t.scrollIntoView({behavior:'smooth',block:row?'center':'start'});_flashTrade(t);}
+    },80);
+    return;
+  }
+  const L=(db.opts||[]).find(x=>x.id===id);
+  const cardId=pid||(L&&L.parentLeapId)||id;
+  if(cardId){collapsedLeaps.delete(cardId);listShowAll.add(cardId);}
+  if(L&&L.status!=='open')showClosedLeaps=true;
+  if(cardId&&hiddenLeaps.has(cardId)&&!showHiddenLeaps)showHiddenLeaps=true;
+  _saveUIState();
+  switchView('options');
+  setTimeout(()=>{
+    const row=id&&(document.querySelector('[data-pmid="'+CSS.escape(id+':sto')+'"]')||document.querySelector('[data-pmid^="'+CSS.escape(id)+':"]'));
+    const card=cardId&&document.querySelector('[data-leap="'+CSS.escape(cardId)+'"]');
+    const t=row||card;
+    if(t){t.scrollIntoView({behavior:'smooth',block:row?'center':'start'});_flashTrade(t);}
+  },80);
+}
+// Clear the sticky highlight once an action lands on the focused trade (save, delete, expire)
+function _clearFocus(id){if(_focusTid&&(!id||_focusTid===id)){_focusTid=null;}}
+function switchView(v){
+  if((v==='log'||v==='analytics'||v==='report')&&isPhoneLayout())v='dash';
+  view=v;
+  if(!_phoneSwipeHold&&typeof phoneSwipeClear==='function')phoneSwipeClear();
+  document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  if(v==='report'&&typeof otTrack==='function'){try{otTrack('/report');}catch(e){}}
+  render();
+}
+let _phoneSwipeHold=false;
+let _phoneSwipeFrame=0;
+let _phoneSwipePending=null;
+const _phoneSwipeScroll={dash:0,positions:0,options:0};
+const PHONE_SWIPE_TABS=['dash','positions','options'];
+const PHONE_SWIPE_INTENT=14;
+const PHONE_SWIPE_MIN=56;
+const PHONE_SWIPE_RATIO=0.22;
+const PHONE_SWIPE_FLICK=0.45;
+const PHONE_SWIPE_MS=280;
+function phoneSwipeTabIndex(v){return PHONE_SWIPE_TABS.indexOf(v);}
+function phoneSwipeNext(v,dir){
+  const i=phoneSwipeTabIndex(v);
+  if(i<0||!dir)return null;
+  const j=i+dir;
+  if(j<0||j>=PHONE_SWIPE_TABS.length)return null;
+  return PHONE_SWIPE_TABS[j];
+}
+function phoneSwipeDirFromDx(dx){return dx===0?0:(dx>0?-1:1);}
+function phoneSwipeIntent(dx,dy,threshold){
+  const adx=Math.abs(dx),ady=Math.abs(dy),t=threshold==null?PHONE_SWIPE_INTENT:threshold;
+  if(adx<t&&ady<t)return null;
+  if(adx>=t&&adx>ady)return 'h';
+  return 'v';
+}
+function phoneSwipeCommit(dx,vx,width){
+  const dist=Math.abs(dx);
+  const need=Math.max(PHONE_SWIPE_MIN,(width||0)*PHONE_SWIPE_RATIO);
+  if(dist>=need)return true;
+  if(Math.abs(vx)>=PHONE_SWIPE_FLICK&&dist>=PHONE_SWIPE_INTENT*2)return true;
+  return false;
+}
+function phoneSwipeTranslate(dx,hasNeighbor,width){
+  if(!hasNeighbor){
+    const sign=dx<0?-1:1;
+    return sign*Math.min(48,Math.abs(dx)*0.28);
+  }
+  const w=width||Math.abs(dx);
+  return Math.max(-w,Math.min(w,dx));
+}
+function phoneSwipePeekTx(dx,dir,width){
+  return dx+(dir||0)*(width||0);
+}
+function phoneSwipeInHScroll(target){
+  let n=target;
+  while(n&&n.nodeType===1){
+    if((n.scrollWidth||0)>(n.clientWidth||0)+1){
+      let ox='';
+      try{if(typeof getComputedStyle==='function')ox=getComputedStyle(n).overflowX||'';}catch(e){}
+      if(!ox||ox==='auto'||ox==='scroll'||ox==='overlay')return true;
+    }
+    n=n.parentElement;
+  }
+  return false;
+}
+function phoneSwipeBlocked(target){
+  if(!target||!target.closest)return true;
+  try{
+    if(typeof document!=='undefined'&&document.querySelector){
+      if(document.querySelector('.mb.open'))return true;
+      const sel=document.getElementById&&document.getElementById('sel-panel');
+      if(sel&&!sel.hidden)return true;
+      if(document.body&&document.body.classList&&document.body.classList.contains('pc-lock'))return true;
+    }
+  }catch(e){}
+  if(target.closest('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return true;
+  if(target.closest('.mb,#sel-panel,#ii-pop,#tabbar,#topnav,#demo-banner,#demo-cta,#onboard-overlay,#auth-overlay,#loading-overlay,#ret-pop,.wl-wi,.card-more-menu,.card-more,.pc-full'))return true;
+  return phoneSwipeInHScroll(target);
+}
+function phoneSwipeCreate(){return {active:false};}
+function phoneSwipeOnStart(s,info){
+  if(!info||!info.phone||phoneSwipeTabIndex(info.view)<0||info.blocked)return {active:false};
+  return {active:true,x:info.x,y:info.y,t:info.t,id:info.id,intent:null,dx:0,dy:0,vx:0,view:info.view,width:info.width||390};
+}
+function phoneSwipeOnMove(s,info){
+  if(!s||!s.active||!info)return s||{active:false};
+  if(info.id!=null&&s.id!=null&&info.id!==s.id)return s;
+  const dx=info.x-s.x,dy=info.y-s.y;
+  const prevX=s.lx==null?s.x:s.lx,prevT=s.lt==null?s.t:s.lt;
+  const dt=Math.max(1,(info.t||0)-prevT);
+  const vx=(info.x-prevX)/dt;
+  let intent=s.intent;
+  if(!intent){
+    intent=phoneSwipeIntent(dx,dy);
+    if(intent==='v')return {active:false};
+    if(!intent)return Object.assign({},s,{dx,dy,lx:info.x,ly:info.y,lt:info.t});
+  }
+  const dir=phoneSwipeDirFromDx(dx);
+  const next=dir?phoneSwipeNext(s.view,dir):null;
+  const tx=phoneSwipeTranslate(dx,!!next,s.width);
+  return Object.assign({},s,{intent:'h',dx,dy,vx,lx:info.x,ly:info.y,lt:info.t,tx,next,prevent:true});
+}
+function phoneSwipeOnEnd(s,info){
+  if(!s||!s.active)return {active:false,action:'none'};
+  if(s.intent!=='h')return {active:false,action:'none'};
+  const x=info&&info.x!=null?info.x:(s.lx==null?s.x+s.dx:s.lx);
+  const t=info&&info.t!=null?info.t:(s.lt==null?s.t:s.lt);
+  const dx=x-s.x;
+  const prevX=s.lx==null?s.x:s.lx,prevT=s.lt==null?s.t:s.lt;
+  const dt=Math.max(1,t-prevT);
+  const vx=info&&info.x!=null?(x-prevX)/dt:s.vx;
+  const dir=phoneSwipeDirFromDx(dx);
+  const next=dir?phoneSwipeNext(s.view,dir):null;
+  if(next&&phoneSwipeCommit(dx,vx,s.width))return {active:false,action:'commit',view:next,dir,width:s.width};
+  return {active:false,action:'cancel',dir:dir||0,width:s.width};
+}
+function phoneSwipeSaveScroll(v){
+  if(phoneSwipeTabIndex(v)<0)return;
+  try{_phoneSwipeScroll[v]=typeof window!=='undefined'&&window.scrollY||0;}catch(e){}
+}
+function phoneSwipeSavedScroll(v){
+  return _phoneSwipeScroll[v]||0;
+}
+function phoneSwipePeekHtml(v){
+  try{
+    if(v==='dash'&&typeof renderHome==='function')return renderHome();
+    if(v==='positions'&&typeof renderPositions==='function')return renderPositions();
+    if(v==='options'&&typeof renderOptions==='function')return renderOptions();
+  }catch(e){}
+  return '';
+}
+function phoneSwipePortBox(){
+  let top=0,bottom=0;
+  try{
+    const demo=document.getElementById('demo-banner');
+    if(demo&&demo.offsetParent!==null){
+      const r=demo.getBoundingClientRect();
+      if(r.bottom>top)top=r.bottom;
+    }
+    const topnav=document.getElementById('topnav');
+    if(topnav){
+      const r=topnav.getBoundingClientRect();
+      if(r.bottom>top)top=r.bottom;
+    }
+    const tabbar=document.getElementById('tabbar');
+    if(tabbar){
+      const r=tabbar.getBoundingClientRect();
+      bottom=Math.max(0,(typeof window!=='undefined'?window.innerHeight:0)-r.top);
+    }
+  }catch(e){}
+  return {top,bottom};
+}
+function phoneSwipeEnsurePeek(){
+  let p=document.getElementById('swipe-peek');
+  if(p)return p;
+  p=document.createElement('div');
+  p.id='swipe-peek';
+  p.setAttribute('aria-hidden','true');
+  document.body.appendChild(p);
+  return p;
+}
+function phoneSwipeFillPeek(peek,dest,scrollY,box){
+  if(!peek)return peek;
+  if(box){
+    peek.style.top=(box.top||0)+'px';
+    peek.style.bottom=(box.bottom||0)+'px';
+    peek.style.left='0px';
+    peek.style.right='0px';
+  }
+  peek.dataset.view=dest||'';
+  peek.innerHTML=phoneSwipePeekHtml(dest);
+  peek.querySelectorAll('[id]').forEach(el=>{el.id='swipe-peek-'+el.id;});
+  peek.querySelectorAll('[for]').forEach(el=>{const f=el.getAttribute('for');if(f)el.setAttribute('for','swipe-peek-'+f);});
+  peek.scrollTop=scrollY||0;
+  peek.classList.add('on');
+  return peek;
+}
+function phoneSwipeShowNeighbor(dest,dx,dir,width){
+  if(typeof document==='undefined'||!dest)return null;
+  const peek=phoneSwipeEnsurePeek();
+  if(peek.dataset.view!==dest){
+    phoneSwipeFillPeek(peek,dest,phoneSwipeSavedScroll(dest),phoneSwipePortBox());
+    const c=document.getElementById('content');
+    if(c&&typeof getComputedStyle==='function'){
+      const s=getComputedStyle(c);
+      peek.style.paddingTop=s.paddingTop;
+      peek.style.paddingRight=s.paddingRight;
+      peek.style.paddingBottom=s.paddingBottom;
+      peek.style.paddingLeft=s.paddingLeft;
+    }
+    peek.style.background='var(--bg)';
+  }
+  peek.classList.add('on','swipe-drag');
+  peek.classList.remove('swipe-anim');
+  peek.style.transform='translate3d('+phoneSwipePeekTx(dx,dir,width)+'px,0,0)';
+  return peek;
+}
+function phoneSwipeHidePeek(){
+  const peek=typeof document!=='undefined'?document.getElementById('swipe-peek'):null;
+  if(!peek)return;
+  peek.classList.remove('on','swipe-drag','swipe-anim');
+  peek.style.transform='';
+  peek.innerHTML='';
+  peek.dataset.view='';
+}
+function phoneSwipeFlushTx(){
+  _phoneSwipeFrame=0;
+  const p=_phoneSwipePending;
+  if(!p)return;
+  const c=typeof document!=='undefined'?document.getElementById('content'):null;
+  const peek=typeof document!=='undefined'?document.getElementById('swipe-peek'):null;
+  if(c)c.style.transform='translate3d('+p.dx+'px,0,0)';
+  if(peek&&p.hasPeek)peek.style.transform='translate3d('+phoneSwipePeekTx(p.dx,p.dir,p.width)+'px,0,0)';
+}
+function phoneSwipeScheduleTx(dx,dir,width,hasPeek,anim){
+  _phoneSwipePending={dx,dir,width,hasPeek,anim:!!anim};
+  if(anim){
+    if(_phoneSwipeFrame&&typeof cancelAnimationFrame==='function'){cancelAnimationFrame(_phoneSwipeFrame);_phoneSwipeFrame=0;}
+    phoneSwipeFlushTx();
+    return;
+  }
+  if(_phoneSwipeFrame)return;
+  if(typeof requestAnimationFrame==='function')_phoneSwipeFrame=requestAnimationFrame(phoneSwipeFlushTx);
+  else phoneSwipeFlushTx();
+}
+function phoneSwipeClear(){
+  if(_phoneSwipeFrame&&typeof cancelAnimationFrame==='function'){cancelAnimationFrame(_phoneSwipeFrame);_phoneSwipeFrame=0;}
+  _phoneSwipePending=null;
+  const c=typeof document!=='undefined'&&document.getElementById?document.getElementById('content'):null;
+  if(c){
+    c.style.transition='none';
+    c.classList.remove('swipe-drag','swipe-anim');
+    c.style.transform='';
+    void c.offsetWidth;
+    c.style.transition='';
+  }
+  phoneSwipeHidePeek();
+  if(typeof document!=='undefined'&&document.body&&document.body.classList)document.body.classList.remove('swipe-lock');
+}
+function phoneSwipeFinishCommit(dest){
+  _phoneSwipeHold=true;
+  try{if(typeof switchView==='function')switchView(dest);}finally{_phoneSwipeHold=false;}
+  try{if(typeof window!=='undefined')window.scrollTo(0,phoneSwipeSavedScroll(dest));}catch(e){}
+  phoneSwipeClear();
+}
+function phoneSwipeCommitAnim(dest,dir,width){
+  const c=typeof document!=='undefined'?document.getElementById('content'):null;
+  const peek=typeof document!=='undefined'?document.getElementById('swipe-peek'):null;
+  if(!c){phoneSwipeFinishCommit(dest);return;}
+  const w=(c.getBoundingClientRect&&c.getBoundingClientRect().width)||width||390;
+  const end=dir>0?-w:w;
+  const hasPeek=!!(peek&&peek.classList.contains('on'));
+  c.classList.remove('swipe-drag');
+  c.classList.add('swipe-anim');
+  if(hasPeek){
+    peek.classList.remove('swipe-drag');
+    peek.classList.add('swipe-anim');
+  }
+  phoneSwipeScheduleTx(end,dir,w,hasPeek,true);
+  let finished=false;
+  const go=ev=>{
+    if(finished)return;
+    if(ev&&ev.propertyName&&ev.propertyName!=='transform')return;
+    finished=true;
+    c.removeEventListener('transitionend',go);
+    if(peek)peek.removeEventListener('transitionend',go);
+    phoneSwipeFinishCommit(dest);
+  };
+  c.addEventListener('transitionend',go);
+  if(hasPeek)peek.addEventListener('transitionend',go);
+  setTimeout(go,PHONE_SWIPE_MS+40);
+}
+function phoneSwipeCancelAnim(dir,width){
+  const c=typeof document!=='undefined'?document.getElementById('content'):null;
+  const peek=typeof document!=='undefined'?document.getElementById('swipe-peek'):null;
+  if(!c){phoneSwipeClear();return;}
+  const w=(c.getBoundingClientRect&&c.getBoundingClientRect().width)||width||390;
+  const hasPeek=!!(peek&&peek.classList.contains('on'));
+  const peekDir=dir||1;
+  c.classList.remove('swipe-drag');
+  c.classList.add('swipe-anim');
+  if(hasPeek){
+    peek.classList.remove('swipe-drag');
+    peek.classList.add('swipe-anim');
+  }
+  _phoneSwipePending={dx:0,dir:peekDir,width:w,hasPeek};
+  if(c)c.style.transform='translate3d(0,0,0)';
+  if(hasPeek)peek.style.transform='translate3d('+phoneSwipePeekTx(0,peekDir,w)+'px,0,0)';
+  let done=false;
+  const end=ev=>{
+    if(done)return;
+    if(ev&&ev.propertyName&&ev.propertyName!=='transform')return;
+    done=true;
+    c.removeEventListener('transitionend',end);
+    if(peek)peek.removeEventListener('transitionend',end);
+    phoneSwipeClear();
+  };
+  c.addEventListener('transitionend',end);
+  if(hasPeek)peek.addEventListener('transitionend',end);
+  setTimeout(end,PHONE_SWIPE_MS+40);
+}
+function bindPhoneSwipe(){
+  if(typeof document==='undefined'||document._phoneSwipeBound)return;
+  document._phoneSwipeBound=true;
+  let st=phoneSwipeCreate();
+  let suppressClick=false;
+  const stage=()=>document.getElementById('content');
+  const now=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
+  document.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch')return;
+    if(e.button!=null&&e.button!==0)return;
+    const c=stage();
+    if(!c||!(c.contains&&c.contains(e.target)))return;
+    st=phoneSwipeOnStart(st,{
+      x:e.clientX,y:e.clientY,t:now(),id:e.pointerId,
+      phone:typeof isPhoneLayout==='function'&&isPhoneLayout(),
+      view:typeof view!=='undefined'?view:null,
+      width:c.getBoundingClientRect?c.getBoundingClientRect().width:390,
+      blocked:phoneSwipeBlocked(e.target)
+    });
+    if(st.active)phoneSwipeSaveScroll(st.view);
+  },{passive:true});
+  document.addEventListener('pointermove',e=>{
+    if(!st.active||e.pointerId!==st.id)return;
+    st=phoneSwipeOnMove(st,{x:e.clientX,y:e.clientY,t:now(),id:e.pointerId});
+    const c=stage();
+    if(!c||st.intent!=='h')return;
+    suppressClick=true;
+    if(!st.captured){
+      try{if(c.setPointerCapture)c.setPointerCapture(e.pointerId);}catch(err){}
+      c.classList.add('swipe-drag');
+      c.classList.remove('swipe-anim');
+      if(document.body)document.body.classList.add('swipe-lock');
+      st.captured=true;
+    }
+    const dir=st.dx?phoneSwipeDirFromDx(st.dx):0;
+    const next=st.next||null;
+    if(next)phoneSwipeShowNeighbor(next,st.tx,dir,st.width);
+    else if(document.getElementById('swipe-peek')){
+      const peek=document.getElementById('swipe-peek');
+      peek.classList.remove('on','swipe-drag','swipe-anim');
+      peek.dataset.view='';
+    }
+    phoneSwipeScheduleTx(st.tx||0,dir||1,st.width,!!next,false);
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!st.active||st.intent!=='h')return;
+    if(e.cancelable)e.preventDefault();
+  },{passive:false});
+  const finish=e=>{
+    if(!st.active)return;
+    if(e.pointerId!=null&&st.id!=null&&e.pointerId!==st.id)return;
+    const res=phoneSwipeOnEnd(st,{x:e.clientX,y:e.clientY,t:now()});
+    st=phoneSwipeCreate();
+    if(res.action==='commit'){
+      suppressClick=true;
+      phoneSwipeCommitAnim(res.view,res.dir,res.width);
+      return;
+    }
+    if(res.action==='cancel')phoneSwipeCancelAnim(res.dir,res.width);
+  };
+  document.addEventListener('pointerup',finish,{passive:true});
+  document.addEventListener('pointercancel',finish,{passive:true});
+  document.addEventListener('click',e=>{
+    if(!suppressClick)return;
+    suppressClick=false;
+    e.preventDefault();
+    e.stopPropagation();
+  },true);
+}
+bindPhoneSwipe();
+
+// ════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════
+function _saveUIState(){
+  localStorage.setItem('wh-view',view);
+  localStorage.setItem('wh-expanded',JSON.stringify([...expanded]));
+  localStorage.setItem('wh-collapsedWheels',JSON.stringify([...collapsedWheels]));
+  localStorage.setItem('wh-collapsedLeaps',JSON.stringify([...collapsedLeaps]));
+  localStorage.setItem('wh-minimised',JSON.stringify([...minimised]));
+  localStorage.setItem('wh-hidden',JSON.stringify([...hidden]));
+  localStorage.setItem('wh-hiddenLeaps',JSON.stringify([...hiddenLeaps]));
+  localStorage.setItem('wh-showClosed',showClosed);
+  localStorage.setItem('wh-showClosedLeaps',showClosedLeaps);
+  localStorage.setItem('wh-showHidden',showHidden);
+  localStorage.setItem('wh-showHiddenLeaps',showHiddenLeaps);
+  localStorage.setItem('wh-posSortBy',posSortBy);
+  localStorage.setItem('wh-leapSortBy',leapSortBy);
+}
+
+function render(){
+  if((view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())view='dash';
+  const _nwKeep=view==='positions'&&_nwOpen, _nwWas=document.getElementById('new-rot-ticker-top'), _nwTyped=_nwWas?_nwWas.value:'', _nwFocus=document.activeElement===_nwWas;
+  _saveUIState();
+  renderSidebar();
+  const c=document.getElementById('content');
+  if(view==='positions'){const _wf=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.wl-wi')?[document.activeElement.closest('.wl-wi').id,document.activeElement.dataset.wi]:null;c.innerHTML=renderPositions();wlWhatIfRestore(_wf);fetchWheelMarks(false);if(typeof WcBrand!=='undefined')WcBrand.afterPositionsRender((db.wheels||[]).filter(w=>!hidden.has(w.id)||showHidden).filter(w=>w.status==='open'||showClosed).map(w=>w.ticker));if(_nwKeep){showNewWheel();const inp=document.getElementById('new-rot-ticker-top');if(inp){inp.value=_nwTyped;if(_nwFocus)inp.focus();}renderNwList();}}
+  if(view==='log')c.innerHTML=renderActivityHead()+renderLog();
+  if(view==='dash'){c.innerHTML=renderHome();setTimeout(_pnlRedraw,0);}
+  if(view==='analytics')c.innerHTML=`<div class="more-data"><div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>More data</h1><a onclick="switchView('report')">Report →</a></div>`+renderStatsOverview()+renderAnalytics()+`</div>`;
+  if(view==='report')c.innerHTML=renderReport();
+  if(view==='options'){const _wf=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.wl-wi')?[document.activeElement.closest('.wl-wi').id,document.activeElement.dataset.wi]:null;c.innerHTML=renderOptions();wlWhatIfRestore(_wf);leapBrandPaint();fetchOptionMarks(false);}
+  if(typeof selPaint==='function')selPaint();
+  if(typeof scheduleDeltaSpots==='function')scheduleDeltaSpots();
+}
+
+// ════════════════════════════════════════════════════════
+// OPTIONS VIEW — non-wheel positions (data in db.opts / optlegs)
+// ════════════════════════════════════════════════════════
+// ── DEMO MODE (Options tab only) — in-memory sample legs, never written to Firestore, never touches wheel data ──
+let optDemo=/[?&]demo=options\b/.test(location.search)||localStorage.getItem('wh-optDemo')==='1';
+let _realOpts=null; // real legs parked while demo is on
+const DEMO_SPOTS={TSLA:380,NVDA:185,AAPL:245,SPY:670,SPCX:205};
+function optDemoLegs(todayISO,wheels){
+  const T=new Date(todayISO+'T12:00:00Z'),iso=d=>d.toISOString().slice(0,10);
+  const add=n=>{const d=new Date(T);d.setUTCDate(d.getUTCDate()+n);return iso(d);};
+  const fri=minDays=>{const d=new Date(T);d.setUTCDate(d.getUTCDate()+minDays);while(d.getUTCDay()!==5)d.setUTCDate(d.getUTCDate()+1);return iso(d);};
+  const third=months=>{const d=new Date(Date.UTC(T.getUTCFullYear(),T.getUTCMonth()+months,1,12));let c=0;while(true){if(d.getUTCDay()===5&&++c===3)break;d.setUTCDate(d.getUTCDate()+1);}return iso(d);};
+  const wk=fri(3),mo=third(T.getUTCDate()>10?1:0)<=add(20)?third(T.getUTCDate()>10?2:1):third(T.getUTCDate()>10?1:0),mo2=third(3),leap=third(14),past=n=>add(-n);
+  let n=0;const L=(g,o)=>({id:'demo-'+(++n),groupId:'demo-g'+g,status:'open',closePrice:null,closeDate:null,closeFees:0,qty:1,fees:0.65,markSrc:'demo',markAt:new Date().toISOString(),delta:null,theta:null,wheelId:null,notes:'',reviewDate:null,demo:true,type:'C',side:'long',...o});
+  // Four long-dated calls (LEAPs) — Marc's only non-wheel options. AAPL deliberately inside the 270-day review window.
+  const legs=[
+    L(1,{underlying:'TSLA',strike:400,expiry:third(15),entryPrice:78.00,entryDate:past(345),mark:84.20,iv:0.58,qty:2,fees:1.30,notes:'Core TSLA LEAP'}),
+    L(2,{underlying:'TSLA',strike:300,expiry:third(14),entryPrice:118.50,entryDate:past(385),mark:131.40,iv:0.55}),
+    L(3,{underlying:'NVDA',strike:160,expiry:third(15),entryPrice:52.10,entryDate:past(233),mark:47.60,iv:0.44,qty:3,fees:1.95}),
+    L(4,{underlying:'AAPL',strike:250,expiry:third(8),entryPrice:31.20,entryDate:past(401),mark:28.10,iv:0.27,reviewDate:add(30)}),
+    // SpaceX-style LEAP (fake ticker SPCX, fake numbers) with poor man's covered calls sold against it
+    L(5,{underlying:'SPCX',strike:150,expiry:third(18),entryPrice:72.00,entryDate:past(120),mark:81.50,iv:0.62,qty:2,fees:1.30,notes:'PMCC base'}),
+  ];
+  const S=(o)=>L(o.g,{underlying:'SPCX',side:'short',parentLeapId:'demo-5',fees:1.30,qty:2,...o});
+  const s1=S({g:6,strike:240,expiry:past(64),entryPrice:5.10,entryDate:past(100),status:'closed',closePrice:1.15,closeDate:past(70),closeFees:1.30,mark:null});
+  const s2=S({g:12,strike:250,expiry:past(29),entryPrice:4.60,entryDate:past(70),status:'expired',closePrice:0,closeDate:past(29),mark:null});
+  const s3=S({g:7,strike:245,expiry:mo,entryPrice:6.40,entryDate:past(12),mark:3.05,iv:0.66});
+  // a short weekly call on the TSLA 300 LEAP
+  const s4=L(8,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:390,expiry:wk,entryPrice:4.20,entryDate:past(4),mark:6.80,iv:0.6});
+  // expiry-day, in-the-money short on the TSLA 400 LEAP (spot 380 > 360)
+  const s5=L(9,{underlying:'TSLA',side:'short',parentLeapId:'demo-1',strike:360,expiry:add(0),entryPrice:3.10,entryDate:past(6),mark:20.40,iv:0.6,qty:2,fees:1.30});
+  // closed history for the Dashboard's month table: a LEAP sold at a profit, and a short call bought back on the TSLA 300 LEAP
+  const c1=L(10,{underlying:'AAPL',strike:200,expiry:past(-200),entryPrice:38.00,entryDate:past(420),status:'closed',closePrice:52.40,closeDate:past(40),closeFees:0.65,mark:null});
+  const c2=L(11,{underlying:'TSLA',side:'short',parentLeapId:'demo-2',strike:420,expiry:past(18),entryPrice:6.10,entryDate:past(45),status:'closed',closePrice:1.20,closeDate:past(25),closeFees:0.65,mark:null});
+  legs.push(s1,s2,s3,s4,s5,c1,c2);
+  return legs;
+}
+function setOptDemo(on){
+  if(on===optDemo&&(on?_realOpts!==null:true))return render();
+  optDemo=!!on;localStorage.setItem('wh-optDemo',optDemo?'1':'0');
+  if(optDemo){_realOpts=db.opts||[];db.opts=optDemoLegs(new Date().toISOString().slice(0,10),db.wheels);}
+  else{db.opts=_realOpts||[];_realOpts=null;}
+  _optMarksAt=0;render();
+}
+function _demoNotSaved(){_optMarkStatus='Demo — not saved';}
+let optFilter=JSON.parse(localStorage.getItem('wh-optFilter')||'{"status":"open","tenor":"all","side":"all"}');
+let _optMarkStatus='';
+function setOptFilter(k,v){optFilter[k]=v;localStorage.setItem('wh-optFilter',JSON.stringify(optFilter));render();}
+function _optSpots(){const s=optDemo?{...DEMO_SPOTS}:{};Object.keys(quotes).forEach(k=>s[k]=quotes[k].price);return s;}
+function _legLine(l){
+  const side=l.side==='long'?'<span style="color:var(--blue)">L</span>':'<span style="color:var(--yellow)">S</span>';
+  const mk=l.status==='open'?(l.mark!=null&&l.mark!==''?`${(+l.mark).toFixed(2)}<small style="color:var(--text3)">${l.markSrc==='cboe'||l.markSrc==='finnhub'?' ⓓ':l.markSrc==='manual'?' ✎':''}</small>`:'<span style="color:var(--text3)">—</span>'):(l.status==='expired'?'exp':(+l.closePrice||0).toFixed(2));
+  return`<div style="display:flex;gap:0.625rem;font-size:0.75rem;white-space:nowrap">${side} ${l.qty}× ${esc(l.underlying)} ${fmt2(l.strike)}${l.type} <span style="color:var(--text3)">${esc(l.expiry||'')}</span> @ ${(+l.entryPrice||0).toFixed(2)} → ${mk}</div>`;
+}
+function renderOptionsLegacy(){ // multi-leg table view — kept in code, no longer shown (LEAPs view replaced it)
+  const legs=db.opts||[];
+  const today=new Date().toISOString().slice(0,10),spots=_optSpots();
+  const pf=OPTS.portfolio(legs,spots,today);
+  const f=optFilter;
+  let groups=OPTS.groups(legs).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
+  groups=groups.filter(g=>{
+    if(f.status!=='all'&&g.status!==f.status)return false;
+    if(f.side!=='all'&&!g.legs.some(l=>l.side===f.side))return false;
+    if(f.tenor!=='all'&&!g.legs.some(l=>OPTS.tenor(l,today)===f.tenor))return false;
+    return true;
+  }).sort((a,b)=>(a.dte??99999)-(b.dte??99999));
+  const money=n=>n==null?'—':`<span class="${n>=0?'g':'r'}">${fmtMoney(n)}</span>`;
+  const card=(lbl,val,sub='')=>`<div class="dcard"><div style="font-size:0.825rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${lbl}</div><div style="font-size:1.25rem;font-weight:720;margin-top:0.25rem">${val}</div>${sub?`<div style="font-size:0.825rem;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>`;
+  const chip=(k,v,lbl)=>`<button class="btn ${f[k]===v?'btn-primary':'btn-ghost'}" style="padding:0.25rem 0.5625rem;font-size:0.825rem" onclick="setOptFilter('${k}','${v}')">${lbl}</button>`;
+  const wname=id=>{const w=db.wheels.find(w=>w.id===id);return w?`${esc(w.ticker)} · ${esc(wheelLabelDisplay(w.label,w))}`:'(missing wheel)';};
+  const rows=groups.map(g=>{
+    const open=g.legs.filter(l=>l.status==='open');
+    let th=0,thOk=false;open.forEach(l=>{const gk=OPTS.legGreeks(l,spots[l.underlying],today);if(gk){th+=gk.theta;thOk=true;}});
+    const linked=g.legs.find(l=>l.wheelId);
+    const acts=g.status==='open'?`<button class="btn btn-ghost" style="padding:0.1875rem 0.5rem;font-size:0.825rem" onclick="openOptClose('${g.id}','close')">Close</button>`:'';
+    return`<tr>
+      <td><b>${esc(g.legs[0].underlying)}</b><div style="font-size:0.825rem;color:var(--text3)">${esc(g.strategy)}${linked?` · ↳ ${wname(linked.wheelId)}`:''}</div></td>
+      <td>${g.legs.map(_legLine).join('')}</td>
+      <td>${g.dte==null?'—':g.dte<0?'<span class="r">past</span>':g.dte}</td>
+      <td>${g.status==='open'?money(g.unrealized):money(g.realized)}${g.status==='open'&&g.realized?`<div style="font-size:0.825rem;color:var(--text3)">realised ${fmtMoney(g.realized)}</div>`:''}</td>
+      <td>${thOk?money(th)+'<small style="color:var(--text3)">/d</small>':'—'}</td>
+      <td style="white-space:nowrap">${acts}<button class="btn btn-ghost btn-icon" onclick="openOptEdit('${g.id}')">•••</button></td>
+    </tr>`;}).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:2.5rem">${legs.length?'No positions match these filters':'No option positions yet — add one, or import a broker file with buy-to-open fills.'}</td></tr>`;
+  const issues=shownHealth(OPTS.health(legs,db.wheels,today,db.trades));
+  const healthH=issues.length?`<div class="hy-box" style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.25rem 0.75rem 0.5rem"><div style="font-size:0.75rem;color:var(--text3);margin:0.375rem 0">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(healthItemHtml).join('')}</div>`:'';
+  // linked-to-rotation summary (display only; wheel P&L untouched)
+  const byW={};legs.filter(l=>l.wheelId).forEach(l=>{const p=OPTS.legPnL(l);const o=byW[l.wheelId]=byW[l.wheelId]||{r:0,u:0};o.r+=p.realized;if(p.unrealized!=null)o.u+=p.unrealized;});
+  const linkH=Object.keys(byW).length?`<div style="margin-top:0.875rem;font-size:0.75rem;color:var(--text3)">Attached to wheels (shown alongside, never added to wheel P&L): ${Object.entries(byW).map(([id,o])=>`${wname(id)} realised ${fmtMoney(o.r)} / open ${fmtMoney(o.u)}`).join(' · ')}</div>`:'';
+  const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
+  const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample positions shown <b>instead of</b> your real ones. Nothing here is saved; edits, closes and rolls stay in memory only. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
+  return`${err}${demoH}
+  <div class="toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;flex-wrap:wrap">
+    <span style="font-size:0.8125rem;font-weight:480;color:var(--silver)">Options</span>
+    <span class="toolbar-spacer"></span>
+    ${_optMarkStatus?`<span style="font-size:0.825rem;color:var(--text3)">${esc(_optMarkStatus)}</span>`:''}
+    <button class="btn ${optDemo?'btn-primary':'btn-ghost'}" style="padding:0.3125rem 0.625rem;font-size:0.825rem" onclick="setOptDemo(${!optDemo})">${optDemo?'Hide demo positions':'Show demo positions'}</button>
+    <button class="btn btn-ghost" style="padding:0.3125rem 0.625rem;font-size:0.825rem" onclick="exportOptsCSV()">Export</button>
+    <button class="btn btn-primary" style="padding:0.3125rem 0.625rem;font-size:0.825rem" onclick="openOptAdd()">+ Position</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(8.75rem,1fr));gap:0.5rem;margin-bottom:0.625rem">
+    ${card('Open positions',pf.open,`${pf.closed} closed`)}
+    ${card('Unrealised P&L',money(pf.unrealized),pf.unmarked?`${pf.unmarked} leg${pf.unmarked>1?'s':''} unmarked`:'')}
+    ${card('Realised P&L',money(pf.realized),'options only — not wheel income')}
+    ${card('Net delta',(pf.delta>=0?'+':'')+pf.delta.toFixed(0),'share-equivalent')}
+    ${card('Theta / day',money(pf.theta),pf.greeksMissing?`${pf.greeksMissing} leg${pf.greeksMissing>1?'s':''} w/o greeks`:'')}
+    ${card('Premium at risk',fmtMoney(pf.longPremium),`short credit ${fmtMoney(pf.shortPremium)}`)}
+  </div>
+  <div style="display:flex;gap:0.3125rem;flex-wrap:wrap;margin-bottom:0.5rem">
+    ${chip('status','open','Open')}${chip('status','closed','Closed')}${chip('status','all','All')}
+    <span style="width:0.625rem"></span>${chip('tenor','all','Any expiry')}${chip('tenor','weekly','Weekly')}${chip('tenor','monthly','Monthly')}${chip('tenor','longer','2–9 mo')}${chip('tenor','leap','LEAP')}
+    <span style="width:0.625rem"></span>${chip('side','all','Long & short')}${chip('side','long','Long')}${chip('side','short','Short')}
+  </div>
+  <div class="log-wrap"><table class="lt" style="min-width:47.5rem"><thead><tr><th>Underlying</th><th>Legs</th><th>DTE</th><th>P&amp;L</th><th>Theta</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+  ${linkH}${healthH}`;
+}
+// Options-only export (separate from the wheel CSV export)
+function optsToCSV(legs){
+  const F=['groupId','underlying','type','side','strike','expiry','qty','entryPrice','entryDate','fees','status','closePrice','closeDate','closeFees','mark','markSrc','realized','unrealized','wheelId','parentLeapId','rolledFrom','notes'];
+  const q=v=>{v=v==null?'':String(v);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  return[F.join(',')].concat(legs.map(l=>{const p=OPTS.legPnL(l);return F.map(f=>q(f==='realized'?p.realized:f==='unrealized'?p.unrealized:l[f])).join(',');})).join('\n');
+}
+function exportOptsCSV(){
+  const blob=new Blob([optsToCSV(db.opts||[])],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=`optrack-options-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+// ── LEAPs view: one card per long call; everything else listed under "Other options" ──
+function toggleShowClosedLeaps(val){showClosedLeaps=!!val;render();}
+function setLeapStatus(v){toggleShowClosedLeaps(v&&v!=='open');}
+function setLeapSort(val){leapSortBy=val;render();}
+function toggleLeapMinAll(){
+  const all=splitLeapLegs(db.opts||[]).leaps;
+  const ids=(showClosedLeaps?all:all.filter(l=>l.status==='open')).map(l=>l.id);
+  if(ids.some(id=>collapsedLeaps.has(id)))ids.forEach(id=>collapsedLeaps.delete(id));
+  else ids.forEach(id=>collapsedLeaps.add(id));
+  render();
+}
+// A group is a LEAP card only if every leg in it is a long call; mixed/short groups go to "Other options".
+function splitLeapLegs(legs){
+  const byG={};(legs||[]).forEach(l=>(byG[l.groupId||l.id]=byG[l.groupId||l.id]||[]).push(l));
+  const leaps=[],other=[],shorts=[];
+  const isLeapG=g=>g.every(l=>l.side==='long'&&l.type==='C');
+  const leapIds=new Set();Object.values(byG).forEach(g=>{if(isLeapG(g))g.forEach(l=>leapIds.add(l.id));});
+  Object.values(byG).forEach(g=>{
+    if(isLeapG(g))return leaps.push(...g);
+    // short calls sold against a LEAP (poor man's covered calls) hang off the LEAP card
+    if(g.every(l=>l.side==='short'&&l.type==='C'&&l.parentLeapId&&leapIds.has(l.parentLeapId)))return shorts.push(...g);
+    other.push(...g);});
+  return{leaps,other,shorts};
+}
+// LEAP card Unrealised %: the LEAP's own gain ÷ what was paid for it (fees included), like Robinhood's total return. Null without a price.
+function leapUnrealPct(S){if(!S||S.expired||S.pl==null||!(S.cost>0))return null;return Math.round(S.pl/S.cost*10000)/100;}
+function leapStats(l,spot,today){
+  const q=+l.qty||0,mark=l.mark!=null&&l.mark!==''?+l.mark:null,paid=+l.entryPrice||0;
+  const left=OPTS.dte(l.expiry,today),total=l.entryDate?OPTS.dte(l.expiry,l.entryDate):null;
+  const intr=spot>0?Math.max(0,spot-(+l.strike)):null;
+  const tv=mark!=null&&intr!=null?Math.max(0,mark-intr):null;
+  const p=OPTS.legPnL(l),cost=paid*100*q+(+l.fees||0);
+  const expired=l.status==='open'&&left!=null&&left<0; // past expiry but not closed: value unknown until it's closed
+  if(expired)return{q,mark:null,paid,left,total,prog:1,spot,intr:null,tv:null,value:null,cost,pl:null,expired:true,
+    be:(+l.strike)+paid,beDist:spot>0?((+l.strike)+paid)/spot*100-100:null,dsh:null,thd:null};
+  const g=l.status==='open'?OPTS.legGreeks(l,spot,today):null;
+  return{q,mark,paid,left,total,prog:left!=null&&total>0?Math.min(1,Math.max(0,1-left/total)):null,spot,intr,tv,
+    value:mark!=null?mark*100*q:null,cost,pl:l.status==='open'?p.unrealized:p.realized,
+    be:(+l.strike)+paid,beDist:spot>0?((+l.strike)+paid)/spot*100-100:null,dsh:g?g.delta:null,thd:g?g.theta:null};
+}
+// ── Poor man's covered calls: short calls sold against a LEAP (Options data only — never wheel trades) ──
+// A LEAP's shorts are those whose parentLeapId is the LEAP or any LEAP it was rolled from.
+function pmccShortsFor(leap,legs){
+  const ids=new Set([leap.id]);let cur=leap,n=0;const all=legs||[];
+  while(cur&&cur.rolledFrom&&n++<50){ids.add(cur.rolledFrom);cur=all.find(x=>x.id===cur.rolledFrom);}
+  return all.filter(l=>l.side==='short'&&l.type==='C'&&l.parentLeapId&&ids.has(l.parentLeapId));
+}
+function pmccStats(leap,legs,today){
+  const sh=pmccShortsFor(leap,legs),q=+leap.qty||0;
+  let net=0,month=0;const ym=(today||new Date().toISOString()).slice(0,7);
+  sh.forEach(l=>{if(l.status==='open')return;const p=OPTS.legPnL(l);net+=p.realized;if((l.closeDate||l.expiry||'').slice(0,7)===ym)month+=p.realized;}); // month: same rule as Home/Monthly P&L (booked in the month it closed or expired)
+  net=Math.round(net*100)/100;month=Math.round(month*100)/100;
+  const cost=(+leap.entryPrice||0)*100*q+(+leap.fees||0),adj=cost-net,adjPerSh=q?adj/(100*q):0;
+  const adjBe=q>0?Math.round(((+leap.strike||0)+adjPerSh)*100)/100:Math.round(((+leap.strike||0)+(+leap.entryPrice||0))*100)/100;
+  const open=sh.filter(l=>l.status==='open').sort((a,b)=>(a.expiry||'').localeCompare(b.expiry||''));
+  const past=sh.filter(l=>l.status!=='open').sort((a,b)=>(b.closeDate||b.expiry||'').localeCompare(a.closeDate||a.expiry||''));
+  const cur=open[0]||null;
+  const curPnl=cur?OPTS.legPnL(cur).unrealized:null;
+  return{shorts:sh,open,past,cur,curPnl,curDte:cur?OPTS.dte(cur.expiry,today):null,net,month,cost,adj,adjPerSh,adjBe};
+}
+// Build chronological trade events for a LEAP + its poor man's covered calls (newest first, like the wheel).
+// Pure: never writes. Events mirror wheel trade rows: BTO (LEAP), STO/BTC/EXP/ASN (short calls).
+function pmccTradeEvents(leap,legs){
+  const all=legs||[], shorts=pmccShortsFor(leap,all), ev=[];
+  const cashOpen=l=>{const p=OPTS.legPnL(l);return p.openCash;};
+  const cashClose=l=>{if(l.status==='open')return 0;const p=(l.status==='expired'||l.status==='assigned'?0:(+l.closePrice||0));const sign=l.side==='long'?1:-1;return Math.round((sign*p*100*(+l.qty||0)-(+l.closeFees||0))*100)/100;};
+  // LEAP buy
+  ev.push({id:leap.id+':bto',legId:leap.id,action:'BTO',entered:leap.entryDate||'',expiry:leap.expiry||'',strike:+leap.strike||0,premium:+leap.entryPrice||0,qty:+leap.qty||0,fees:+leap.fees||0,total:cashOpen(leap),net:null,open:leap.status==='open',kind:'leap',rolledFrom:null,status:leap.status});
+  if(leap.status==='closed'){
+    const tot=cashClose(leap);const p=OPTS.legPnL(leap);
+    ev.push({id:leap.id+':btc',legId:leap.id,action:'BTC',entered:leap.closeDate||'',expiry:leap.expiry||'',strike:+leap.strike||0,premium:+leap.closePrice||0,qty:+leap.qty||0,fees:+leap.closeFees||0,total:tot,net:p.realized,open:false,kind:'leap',rolledFrom:null,status:'closed'});
+  }else if(leap.status==='expired'||leap.status==='assigned'){
+    const p=OPTS.legPnL(leap);const act=leap.status==='assigned'?'ASN':'EXP';
+    ev.push({id:leap.id+':'+act.toLowerCase(),legId:leap.id,action:act,entered:leap.closeDate||leap.expiry||'',expiry:leap.expiry||'',strike:+leap.strike||0,premium:0,qty:+leap.qty||0,fees:+leap.closeFees||0,total:cashClose(leap),net:p.realized,open:false,kind:'leap',rolledFrom:null,status:leap.status});
+  }
+  shorts.forEach(l=>{
+    const p=OPTS.legPnL(l);
+    ev.push({id:l.id+':sto',legId:l.id,action:'STO',entered:l.entryDate||'',expiry:l.expiry||'',strike:+l.strike||0,premium:+l.entryPrice||0,qty:+l.qty||0,fees:+l.fees||0,total:p.openCash,net:l.status==='open'?p.unrealized:null,open:l.status==='open',kind:'short',rolledFrom:l.rolledFrom||null,status:l.status,leg:l});
+    if(l.status==='closed'){
+      ev.push({id:l.id+':btc',legId:l.id,action:'BTC',entered:l.closeDate||'',expiry:l.expiry||'',strike:+l.strike||0,premium:+l.closePrice||0,qty:+l.qty||0,fees:+l.closeFees||0,total:cashClose(l),net:p.realized,open:false,kind:'short',rolledFrom:l.rolledFrom||null,status:'closed',leg:l});
+    }else if(l.status==='expired'||l.status==='assigned'){
+      const act=l.status==='assigned'?'ASN':'EXP';
+      ev.push({id:l.id+':'+act.toLowerCase(),legId:l.id,action:act,entered:l.closeDate||l.expiry||'',expiry:l.expiry||'',strike:+l.strike||0,premium:0,qty:+l.qty||0,fees:+l.closeFees||0,total:cashClose(l),net:p.realized,open:false,kind:'short',rolledFrom:l.rolledFrom||null,status:l.status,leg:l});
+    }
+  });
+  // same day: newest on top by entry time (ts on opens, closeTs on closes) when both known;
+  // else a leg's close sits above its own open, and another leg's open sits above a close (sell after buy back).
+  function pmccEvTime(e){const l=e.leg;if(!l)return null;return e.action==='STO'?(l.ts||null):(l.closeTs||null);}
+  function pmccSameDayCmp(a,b){
+    const dc=(b.entered||'').localeCompare(a.entered||'');if(dc)return dc;
+    const cl=a=>(a==='BTC'||a==='EXP'||a==='ASN')?0:1;
+    if(a.legId===b.legId)return cl(a.action)-cl(b.action);
+    const ta=pmccEvTime(a),tb=pmccEvTime(b);
+    if(ta&&tb&&ta!==tb)return tb.localeCompare(ta);
+    if(cl(a.action)!==cl(b.action))return cl(b.action)-cl(a.action);
+    return 0;
+  }
+  ev.sort((a,b)=>pmccSameDayCmp(a,b));
+  return ev;
+}
+// Map a PMCC short call optleg → a wheel-shaped trade so renderTradeRow can draw it identically.
+function pmccLegToTrade(c,today){
+  const qty=+c.qty||0, cash=OPTS.legPnL(c).openCash;
+  // Days held (entry → today) for PPD, matching "per day held" on the open face
+  let held=null;if(c.entryDate&&today){held=OPTS.dte(today,c.entryDate);if(held!=null)held=Math.max(0,held);}
+  const days=held!=null?(held||1):null; // 0-day-old still shows a PPD using 1d
+  return{id:c.id,action:'STO',entered:c.entryDate||'',expiry:c.expiry||'',strike:+c.strike||0,premium:+c.entryPrice||0,shares:qty*100,total:cash,fees:+c.fees||0,days,rollId:null,expiredWorthless:false,ticker:c.underlying};
+}
+// Open short call on the LEAP card face — same trade-body / thead / trow / rot-actions as the wheel.
+// Distance from live underlying price to the short call strike.
+// Positive = price must rise to reach strike; negative = already in the money.
+function toStrike(spot,strike){
+  if(!(spot>0)||!(strike>0))return{text:'—',cls:'m',pct:null,dollars:null};
+  const dollars=strike-spot,pct=dollars/spot*100;
+  const cls='m'; // neutral: no warning colours
+  const sign=pct>=0?'+':'';
+  return{text:`${sign}${pct.toFixed(1)}% · $${Math.abs(dollars).toFixed(2)}`,cls,pct,dollars};
+}
+// Shared trade-table header. opts: string lastCol (legacy) or {lastCol, toStrike}.
+// lastCol defaults to AROC% (wheel); LEAP open face passes Captured + toStrike.
+function tradeTableHead(opts){
+  if(typeof opts==='string'||opts==null)opts={lastCol:opts||'AROC%'};
+  const last=opts.lastCol||'AROC%';
+  const extra=opts.toStrike?'<span>To strike</span>':'';
+  return`<div class="thead-row${opts.toStrike?' has-to-strike':''}"><span>Action</span><span>Entered</span><span>Expiry</span><span>Strike</span>${extra}<span>Premium</span><span>Shares</span><span>Total</span><span>Fees</span><span>PPD</span><span>${esc(last)}</span><span></span></div>`;
+}
+// Pure: PMCC open short call Profit = premium received (entry × 100 × qty) + realised net of earlier roll-chain legs − live buy-back (mark × 100 × qty).
+function pmccShortProfit(c,mark,priorNet){if(!c||mark==null||!(+c.entryPrice>0))return null;const q=+c.qty||0;return Math.round(((+c.entryPrice)*100*q+(priorNet||0)-(+c.fees||0)-mark*100*q)*100)/100;}
+// Realised net of the closed legs this open short was rolled from (whole chain, merge rolls included). 0 when not in a chain.
+function pmccChainPriorNet(c,legs){const par=pmccRollParents(legs);const seen=new Set([c.id]);let net=0;const visit=id=>{if(seen.has(id))return;seen.add(id);const l=legs.find(x=>x.id===id);if(!l)return;net+=OPTS.legPnL(l).realized||0;(par[id]||[]).forEach(visit);};(par[c.id]||[]).forEach(visit);return Math.round(net*100)/100;}
+function pmccDeleteShort(id){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  if(!confirm(`Delete short call ${l.underlying} $${fmt2(l.strike)}C ${l.expiry||''}? This cannot be undone.`))return;
+  _deleteOptDoc(id);db.opts=pmccDeleteLegFrom(db.opts,id);closeModal('mPmccLeg');render();
+}
+// PMCC roll parents (read-time only): ONLY the stored rolledFrom, which is written solely by an explicit
+// roll save (pmccRollApply / OPTS.rollLeg). A separate buy back and a separate sell are never linked.
+function pmccRollParents(legs){
+  const sh=(legs||[]).filter(l=>l&&l.side==='short'&&l.type==='C');
+  const byId={};sh.forEach(l=>{byId[l.id]=l;});
+  const par={};
+  sh.forEach(l=>{if(l.rolledFrom&&byId[l.rolledFrom])par[l.id]=[l.rolledFrom];});
+  return par;
+}
+// PMCC: legId → chain index for every short leg in a roll chain of 2+ legs.
+function pmccChainMap(ev){
+  const legs=[];ev.forEach(e=>{if(e.kind==='short'&&e.leg&&!legs.includes(e.leg))legs.push(e.leg);});
+  const par=pmccRollParents(legs);
+  const up={};legs.forEach(l=>{up[l.id]=l.id;});
+  const find=x=>{while(up[x]!==x)x=up[x]=up[up[x]];return x;};
+  Object.entries(par).forEach(([c,ps])=>ps.forEach(p=>{if(up[p]!=null)up[find(c)]=find(p);}));
+  const groups={},order=[];
+  ev.forEach(e=>{if(e.kind!=='short'||!e.leg)return;const r=find(e.leg.id);if(!groups[r]){groups[r]=new Set();order.push(r);}groups[r].add(e.leg.id);});
+  const map={};let k=0;
+  order.forEach(r=>{if(groups[r].size<2)return;groups[r].forEach(id=>{map[id]=k;});k++;});
+  Object.defineProperty(map,'_parents',{value:par});
+  return map;
+}
+// LEAP card trade list: short calls only (the LEAP itself lives in the header), newest first, one row per trade, Edit on every row.
+function pmccShortEvents(leap,legs){return pmccTradeEvents(leap,legs).filter(e=>e.kind==='short');}
+// Realised Captured for a short call. Display only; the leg's P&L is unchanged.
+function pmccClosedCaptured(c){
+  if(!c)return null;
+  const sold=+c.entryPrice||0,net=OPTS.legPnL(c).realized,closeP=c.status==='closed'?(+c.closePrice||0):0;
+  if(sold>0){const pct=Math.round((sold-closeP)/sold*100),cc=capturedCellHtml(pct,net,false);return {html:net!=null?`<div style="white-space:nowrap">${pct}% <span class="cap-at">· at $${(+closeP).toFixed(2)}</span></div><div style="white-space:nowrap"><span class="${net>=0?'g':'r'}">${net>=0?'+':'-'}${fmtMoney(Math.abs(net))}</span></div>`:cc.html,color:cc.color};}
+  if(net!=null){const cc=capturedCellHtml(0,net,false);return {html:cc.html.replace(/^0% /,''),color:cc.color};}
+  return null;
+}
+function cpDate(iso){if(!iso)return'';const d=new Date(iso);return isNaN(+d)?'':d.toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{day:'numeric',month:'short'});}
+function cpEditor(id,value,when,saveFn){const v=value!=null&&value!==''?String(value):'';const whenTxt=v!==''?cpDate(when):'';return `<label class="cp-edit" onclick="event.stopPropagation()">Current price<span>Now $<input id="current-price-${esc(id)}" name="current-price" aria-label="Current price" type="number" step="0.0001" value="${esc(v)}" onchange="${saveFn}('${id}',this.value)">${whenTxt?` · ${esc(whenTxt)}`:''}</span></label>`;}
+function saveWheelCurrentPrice(id,raw){const t=(db.trades||[]).find(x=>x.id===id);if(!t)return;const v=String(raw==null?'':raw).trim();if(v===''){if(t.currentPrice==null)return;delete t.currentPrice;delete t.currentPriceAt;}else{const n=+v;if(!(n>=0))return;if(t.currentPrice!=null&&+t.currentPrice===n)return;t.currentPrice=n;t.currentPriceAt=new Date().toISOString();}_saveTrade(t);render();}
+function saveOptCurrentPrice(id,raw){const i=(db.opts||[]).findIndex(x=>x.id===id);if(i<0)return;const l=db.opts[i];const v=String(raw==null?'':raw).trim();if(v===''){if(l.mark==null||l.mark==='')return;l.mark=null;l.markAt=null;l.markSrc=null;}else{const n=+v;if(!(n>=0))return;if(l.markSrc==='manual'&&l.mark!=null&&+l.mark===n)return;l.mark=n;l.markSrc='manual';l.markAt=new Date().toISOString();l.delta=null;l.theta=null;l.iv=null;}_saveOpt(l);render();}
+function renderPmccListRow(e,spot,today){
+  const c=e.leg;
+  const isSto=e.action==='STO';
+  let ts='—',ppd='—',cap='—',capColor='var(--text3)';
+  if(isSto&&c){
+    const sold=+c.entryPrice||0;
+    if(e.open){
+      ts=toStrike(spot,+c.strike).text;
+      const mark=c.mark!=null&&c.mark!==''?+c.mark:null;
+      if(c.markWhy==='none')cap=`<span title="${esc(c.markNote||'No reliable quote for this contract')}">no quote</span>`;
+      else if(mark!=null&&sold>0){const pct=Math.round((sold-mark)/sold*100),own=pmccShortProfit(c,mark,0),prior=pmccChainPriorNet(c,db.opts||[]),chainPnl=prior?Math.round((own+prior)*100)/100:null,cell=openCapturedHtml(pct,own,mark,chainPnl,c.markNote||('Buy-back price $'+(+mark).toFixed(2)));cap=cell.html;capColor=cell.color;}
+    }else{
+      const end=c.closeDate||c.expiry;let d=end&&c.entryDate?OPTS.dte(end,c.entryDate):null;if(d!=null)d=Math.max(1,d);
+      const net=OPTS.legPnL(c).realized;
+      if(d&&net!=null)ppd=ppdCellHtml(net/d,d);
+      if(c.status!=='closed'){const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}}
+    }
+  }else if(e.action==='BTC'&&c&&c.status==='closed'){
+    const cell=pmccClosedCaptured(c);if(cell){cap=cell.html;capColor=cell.color;}
+  }
+  const closer=e.action==='BTC'||e.action==='EXP'||e.action==='ASN';
+  const _ab=`<span class="ab ab-${e.action}">${e.action}</span>`;
+  const _warn=typeof shortRowWarnTags==='function'&&e.open&&c&&e.action==='STO'?shortRowWarnTags(c.underlying,{isOpen:true,isCall:true,expiry:c.expiry||e.expiry,today,spot,strike:+c.strike||e.strike,mark:c.mark!=null&&c.mark!==''?+c.mark:null}):'';
+  const _entered=fmtDateFull(e.entered);
+  const _expiry=closer?'—':(e.expiry?fmtDateFull(e.expiry):'—');
+  const _strike=(e.strike?'$'+fmt2(e.strike).replace(/\.00$/,''):'—')+(typeof openDeltaBadge==='function'&&e.action==='STO'&&c?openDeltaBadge(c,c.underlying):'');
+  const _prem=e.premium?'$'+fmtPrem(e.premium):'—';
+  const _shares=e.qty?String(e.qty*100):'—';
+  const _total=`<span class="${e.total>=0?'g':'r'}">${fmtMoney(e.total)}</span>`;
+  const _fees=e.fees?'$'+fmt2(e.fees):'—';
+  const _edit=`<button class="btn btn-ghost btn-sm" onclick="openPmccLegEdit('${esc(e.legId)}');event.stopPropagation()">Edit</button>`;
+  return`<div class="trow has-to-strike${e.action==='EXP'?' expired-trade':''}${_sel.has('p:'+e.id)?' sel':''}" data-pmid="${esc(e.id)}" data-sel="p:${esc(e.id)}" data-cash="${selCash(e.action,e.total)}" data-date="${esc(String(e.entered||'').slice(0,10))}" data-tk="${esc((c&&c.underlying)||'')}" data-fee="${+e.fees||0}" data-ct="${+e.qty||0}" data-act="${esc(e.action||'')}" data-strike="${e.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
+    <span class="action-cell">${_ab}${_warn}</span>
+    <span>${_entered}</span>
+    <span>${_expiry}</span>
+    <span>${_strike}</span>
+    <span class="to-strike m">${esc(ts)}</span>
+    <span>${_prem}</span>
+    <span>${_shares}</span>
+    ${_total}
+    <span>${_fees}</span>
+    <span style="white-space:nowrap">${ppd}</span>
+    <span style="color:${capColor}">${cap}</span>
+    <span style="display:flex;justify-content:flex-end">${_edit}</span>
+    ${typeof tradeRowPhoneCard==='function'?tradeRowPhoneCard({ab:_ab,exp:'',warn:_warn,id:_strike,cap:cap,capColor:capColor,entered:_entered,expiry:_expiry,premium:_prem,shares:_shares,fees:_fees,total:_total,ppd:ppd,toStrike:ts,edit:_edit}):''}
+  </div>`;
+}
+// Long trade lists: show the newest `limit` rows only (no DOM for the rest). Open legs always shown; a roll chain is never split.
+const listShowAll=new Set(); // per card, memory only
+function listCut(n,chainIdx,isOpen,limit,all){
+  const all_=[...Array(n).keys()];if(all||n<=limit)return all_;
+  const keep=new Set(all_.slice(0,limit));all_.forEach(i=>{if(isOpen[i])keep.add(i);});
+  const ch=new Set();keep.forEach(i=>{if(chainIdx[i]!=null)ch.add(chainIdx[i]);});
+  all_.forEach(i=>{if(chainIdx[i]!=null&&ch.has(chainIdx[i]))keep.add(i);});
+  return all_.filter(i=>keep.has(i));
+}
+function listMoreBtn(id,n,shown){
+  if(n<=10)return'';const on=listShowAll.has(id);if(!on&&shown>=n)return'';
+  return`<div class="list-more" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" style="color:var(--text3)" onclick="toggleListAll('${esc(id)}')">${on?'Show less':`Show all (${n})`}</button></div>`;
+}
+function toggleListAll(id){listShowAll.has(id)?listShowAll.delete(id):listShowAll.add(id);render();}
+function renderPmcc(leap,today,spot,add){
+  const ev=pmccShortEvents(leap,db.opts||[]);
+  const keep=listCut(ev.length,ev.map(()=>undefined),ev.map(e=>!!e.open),10,listShowAll.has(leap.id)),evS=keep.map(i=>ev[i]);
+  const rows=evS.map(e=>renderPmccListRow(e,spot,today)).join('')+listMoreBtn(leap.id,ev.length,keep.length);
+  return`<div class="trade-body open pmcc-open pmcc-trades">${add?`<div class="lc-acts"><button class="btn btn-primary btn-sm" onclick="openPmccSell('${esc(leap.id)}')">Add trade</button></div>`:''}<div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}
+    ${rows||'<div class="trow trow-empty"><span style="color:var(--text3)">No short calls yet.</span></div>'}
+  </div></div>`;
+}
+// Per-row Edit: one short call leg. Pure helpers never write; UI wrappers save/delete exactly that leg id.
+function pmccDeleteLegFrom(legs,id){return(legs||[]).filter(x=>x.id!==id);}
+function pmccEditLeg(l,f){
+  const strike=parseFloat(f.strike),qty=parseInt(f.qty),price=parseFloat(f.price);
+  if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};if(!(qty>0))return{err:'Enter the contracts'};if(!(price>=0))return{err:'Enter the sell price'};
+  const n={...l,strike,expiry:f.expiry,qty,entryPrice:price,entryDate:f.date||l.entryDate||null,fees:+f.fees||0};
+  if(l.status==='closed'){const cp=parseFloat(f.cprice);if(!(cp>=0))return{err:'Enter the buyback price'};n.closePrice=cp;n.closeDate=f.cdate||l.closeDate;n.closeFees=+f.cfees||0;}
+  if(l.status==='open'&&f.mark!=null){const raw=String(f.mark).trim();if(raw===''){n.mark=null;n.markAt=null;n.markSrc=null;}else if(!(l.mark!=null&&l.mark!==''&&+raw===+l.mark)){n.mark=+raw;n.markSrc='manual';n.markAt=new Date().toISOString();n.delta=null;n.theta=null;n.iv=null;}}
+  return{leg:n};
+}
+function openPmccLegEdit(id){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('pe-id',l.id);v('pe-strike',l.strike);v('pe-expiry',l.expiry);v('pe-qty',l.qty);v('pe-price',l.entryPrice);v('pe-date',l.entryDate);v('pe-fees',l.fees??0);
+  v('pe-cprice',l.closePrice);v('pe-cdate',l.closeDate);v('pe-cfees',l.closeFees??0);v('pe-current-price',l.mark);v('pe-delta',l.deltaAtOpen);
+  setFillTimeField('pe-fill-time','pe-fill-time-hint',l.filledAt);
+  document.getElementById('pe-cp-wrap').style.display=l.status==='open'?'':'none';
+  if(typeof paintPeDeltaHint==='function')paintPeDeltaHint();
+  document.getElementById('pe-close').style.display=l.status==='closed'?'grid':'none';
+  document.getElementById('pe-exp').style.display=l.status==='open'?'':'none';
+  document.getElementById('pe-err').style.display='none';
+  document.getElementById('mPmccLegTitle').textContent=`Edit short call · ${l.underlying} $${fmt2(l.strike).replace(/\.00$/,'')} · ${l.status}`;
+  openModal('mPmccLeg');
+}
+function savePmccLeg(){
+  const g=k=>document.getElementById(k).value,i=(db.opts||[]).findIndex(x=>x.id===g('pe-id'));if(i<0)return;
+  const r=pmccEditLeg(db.opts[i],{strike:g('pe-strike'),expiry:g('pe-expiry'),qty:g('pe-qty'),price:g('pe-price'),date:g('pe-date'),fees:g('pe-fees'),cprice:g('pe-cprice'),cdate:g('pe-cdate'),cfees:g('pe-cfees'),mark:g('pe-current-price')});
+  const e=document.getElementById('pe-err');if(r.err){e.textContent=r.err;e.style.display='block';return;}
+  const _fa=readFilledAtField('pe-date','pe-fill-time','pe-fill-time-hint',db.opts[i].filledAt);if(_fa.error)return;
+  if(_fa.value)r.leg.filledAt=_fa.value;
+  const _dlt=parseFloat(document.getElementById('pe-delta').value);if(isNaN(_dlt)){delete r.leg.deltaAtOpen;}else r.leg.deltaAtOpen=_dlt;
+  db.opts[i]=r.leg;_saveOpt(r.leg);closeModal('mPmccLeg');render();
+}
+function _fdShort(d){return d?new Date(d+'T12:00:00Z').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{day:'numeric',month:'short',year:'2-digit'}):'—';}
+// Pure: share of the LEAP's cost won back by calls sold against it (0–100, whole %).
+function leapPayback(cost,net){return{pct:cost>0?Math.max(0,Math.min(100,Math.round(net/cost*100))):0};}
+function leapPaybackTip(cost,net,pct,closed){const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');return`LEAP payback: ${pct}% of your ${m0(cost)} cost paid back by closed or expired short calls (${m0(Math.max(0,net))} ${closed?'total':'so far'}). Open calls count once closed.`;}
+function leapBarHtml(pb,cost,net,closed){const tip=leapPaybackTip(cost,net,pb.pct,closed);return`<div class="lc-bar-row">${ii(tip)}<div class="lc-bar" aria-hidden="true"><i style="width:${pb.pct}%"></i></div></div>`;}
+// Pure: Cost after calls vs original LEAP cost. Lower = green ▼ (calls paid you back); higher = red ▲.
+function leapAdjMoveHtml(cost,adj){
+  if(!(cost>0)||adj==null||!Number.isFinite(+adj))return '';
+  const pct=(+adj-cost)/cost*100;
+  if(Math.abs(pct)<0.05)return '';
+  const down=pct<0;
+  return ` <span style="color:${down?'var(--green)':'var(--red)'};font-size:0.84rem;font-weight:480">${down?'▼':'▲'}${Math.abs(pct).toFixed(1)}%</span>`;
+}
+// LEAP card header: stock price + today's move (regular session; out of hours it's the last close) + distance from strike. Pure.
+function leapSpotHtml(q,strike,open,sym){
+  if(!q||!(q.price>0))return typeof pricePendingHtml==='function'?pricePendingHtml(sym,'lc-spot'):'';
+  const pct=q.pct!=null&&q.state!=='DELAYED'?q.pct:null,up=pct!=null&&pct>=0;
+  const mv=pct!=null?` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}%</span>`:'';
+  const tag=open?'':' <span class="lc-nw" style="color:var(--text3);font-weight:480">close</span>';
+  const d=strike>0?(q.price-strike)/strike*100:null;
+  const vs=d!=null?` <span class="lc-nw" style="color:var(--text3);font-weight:480">· ${Math.abs(d).toFixed(1)}% ${d>=0?'above':'below'} strike</span>`:'';
+  return `<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${q.price.toFixed(2)}${mv}${tag}${vs}</span>`;
+}
+// LEAP option's own move today. Prefer the quote's previous close (Cboe prev_day_close); else the first mark seen today, kept locally.
+function leapDayOpen(k,mark){try{const d=new Date().toISOString().slice(0,10),key='optrack-optopen';let m=JSON.parse(localStorage.getItem(key)||'{}');if(m.d!==d)m={d};if(m[k]==null&&mark>0){m[k]=mark;localStorage.setItem(key,JSON.stringify(m));}return m[k]??null;}catch(e){return null;}}
+function leapOptHtml(mark,prevClose,dayOpen){
+  if(!(mark>0))return '';const base=prevClose>0?+prevClose:dayOpen>0?+dayOpen:null;
+  let mv='';if(base){const ch=mark-base,pct=ch/base*100,up=ch>=0;mv=` <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}% (${up?'+':'-'}$${Math.abs(ch).toFixed(2)})</span> <span class="lc-nw" style="color:var(--text3);font-weight:480">today</span>`;}
+  return `<span class="lc-opt" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span style="color:var(--text3);font-weight:480">Option</span> $${(+mark).toFixed(2)}${mv}</span>`;
+}
+function leapLogoHtml(sym,open){return rotNumHtml({ticker:sym,sortOrder:String(sym||'?').charAt(0)||'?'},open);}
+function leapHeaderRightHtml(l,open,leapExp,gid){
+  const badge=open?(typeof liveBadgeHtml==='function'?liveBadgeHtml(l.underlying,true):`<span class="rot-badge open">● Live</span>`):`<span class="leap-badge cl">${esc(l.status)}</span>`;
+  const acts=open
+    ?`<span class="card-acts-inline"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openOptClose('${esc(gid)}','close')">Close</button><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></span>`
+    :`<span class="card-acts-inline"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="openLeapEdit('${esc(l.id)}')">Edit</button></span></span>`;
+  const minBtn=leapExp
+    ?`<button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleLeapExpand('${esc(l.id)}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>`
+    :`<button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleLeapExpand('${esc(l.id)}')" title="Expand"><svg class="sq-20" viewBox="0 0 256 256" fill="none" stroke="var(--orange)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M104,104 48,48M48,88V48H88M152,104 208,48M168,48H208V88M104,152 48,208M48,168V208H88M152,152 208,208M168,208H208V168"/></svg></button>`;
+  const hideBtn=`<button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleHideLeap('${esc(l.id)}')" title="Hide"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>`;
+  const more=`<details class="card-more" onclick="event.stopPropagation()"><summary class="card-more-sum" aria-label="More actions">⋯</summary><div class="card-more-menu">${open?`<button type="button" class="card-more-item" onclick="openOptClose('${esc(gid)}','close')">Close</button>`:''}<button type="button" class="card-more-item" onclick="openLeapEdit('${esc(l.id)}')">Edit</button><button type="button" class="card-more-item" onclick="toggleLeapExpand('${esc(l.id)}')">${leapExp?'Minimise':'Expand'}</button><button type="button" class="card-more-item" onclick="toggleHideLeap('${esc(l.id)}')">Hide</button></div></details>`;
+  return`<span class="lc-h-right">${badge}${acts}${minBtn}${hideBtn}${more}</span>`;
+}
+function leapMiniRealisedHtml(open,S,P){
+  let n=null;
+  if(!open){if(S&&S.pl!=null)n=S.pl;}
+  else if(P&&((P.past&&P.past.length)||P.net))n=P.net||0;
+  if(n==null)return '';
+  return `<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span class="${colorN(n)}">${fmtMoney(n)}</span> <span style="color:var(--text3);font-weight:480">realised</span></span>`;
+}
+function leapEarnHtml(l){
+  const shorts=(db.opts||[]).filter(x=>x.parentLeapId===l.id&&x.side==='short'&&x.status==='open'&&x.expiry);
+  if(!shorts.length)return'';
+  if(typeof queueEarnings==='function')queueEarnings(l.underlying);
+  if(typeof queueDividend==='function')queueDividend(l.underlying);
+  const exps=shorts.map(s=>s.expiry);
+  return`<span class="rot-earn-slot" data-sym="${esc(l.underlying)}" data-exps="${esc(exps.join(','))}">${typeof earningsBadge==='function'?earningsBadge(l.underlying,exps):''}</span>`;
+}
+function renderLeapCard(l,spot,today){
+  const S=leapStats(l,spot,today),open=l.status==='open';
+  const rev=open&&l.reviewDate?(l.reviewDate<=today?`Review date ${_fdShort(l.reviewDate)} reached`:`Review ${_fdShort(l.reviewDate)}`):'';
+  const note=rev?`◷ ${rev}`:'';
+  const gid=l.groupId||l.id;
+  if(open){
+    const P=pmccStats(l,db.opts||[],today),pb=leapPayback(P.cost,P.net);
+    const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
+    const nEv=pmccTradeEvents(l,db.opts||[]).length;
+    const leapExp=!collapsedLeaps.has(l.id);
+    const earnH=leapExp?leapEarnHtml(l):'';
+    return`<div class="leap-card lc lcw${leapExp?'':' lc-mini-bar'}" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${(typeof isPhoneLayout==='function'&&isPhoneLayout())?`<span class="lc-nw">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call</span> · <span class="lc-nw">${_fdShort(l.expiry)}</span>${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}${S.expired?' · Expired':S.left!=null?`<span class="lc-nw"> · ${S.left} days left</span>`:''}`:`${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}${S.expired?' · Expired':S.left!=null?` · ${S.left} days left`:''}`}</span>${leapSpotHtml(quotes[l.underlying],l.strike,isRegularSession(),l.underlying)}${open&&typeof leapOptHtml==='function'&&l.markWhy!=='none'?leapOptHtml(l.markSrc&&l.markSrc!=='manual'?l.mark:null,l.prevClose,l.dayOpen):''}${!leapExp?leapMiniRealisedHtml(true,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>${earnH?`<div class="wl-top">${earnH}</div>`:''}
+    ${leapExp?`  ${note?`<div class="lc-note">${note}</div>`:''}
+  <div class="lc-hero"><div><div class="lc-k">Value now</div><div class="lc-v">${S.value!=null?m0(S.value):'—'}</div>${(()=>{if(l.mark==null)return'';if(!(l.markWhy==='none'||(l.markSrc==='manual'&&!isSameMarkDay(l.markAt))))return'';const t=l.markAt?`saved ${cpDate(l.markAt)}`:'saved price';return`<div class="lc-saved">${esc(t)}</div>`;})()}</div>
+    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
+    <div><div class="lc-k">Unrealised ${ii('The LEAP\'s gain or loss at today\'s price, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.expired?'—':S.pl==null?'no mark':(S.pl>=0?'+':'')+m0(S.pl)}</div>${(()=>{const q=leapUnrealPct(S);return q==null?'':`<div class="lc-pct ${colorN(q)}" style="font-size:0.825rem;font-weight:720">${q>=0?'+':''}${q.toFixed(2)}%</div>`;})()}</div>
+    <div><div class="lc-k">Breakeven ${ii(`Strike plus your net cost per share after LEAP fees and closed or expired short calls (original breakeven $${S.be.toFixed(2)}). Open short calls count once closed.`)}</div><div class="lc-v sm">$${P.adjBe.toFixed(2)}</div>${P.net!==0&&Math.abs(P.adjBe-S.be)>=0.005?`<div class="lc-be-orig">orig $${S.be.toFixed(2)}</div>`:''}</div></div>
+  ${leapBarHtml(pb,P.cost,P.net,!open)}
+  <div class="wl-memo" onclick="event.stopPropagation()"><button type="button" class="wl-wi-btn" onclick="event.stopPropagation();wlWhatIf('${esc(l.id)}')">What if?</button></div><div class="wl-wi" id="wi-${esc(l.id)}" hidden onclick="event.stopPropagation()" data-kind="leap" data-cost="${P.cost}" data-net="${P.net}" data-strike="${+l.strike||0}" data-qty="${S.q}"><button type="button" class="wl-wi-x" aria-label="Close" onclick="event.stopPropagation();wlWhatIfClose('${esc(l.id)}')">×</button><div class="wl-wi-in"><label>Strike<input data-wi="k" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 260" oninput="wlWhatIfCalc('${esc(l.id)}')"></label><label>Premium / share<input data-wi="p" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.00" oninput="wlWhatIfCalc('${esc(l.id)}')"></label></div><div data-wi="out"><div class="wl-wi-r"><span>New net cost</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div></div><div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();wlWhatIfLog('${esc(l.id)}')">Log this trade</button></div></div>
+  ${renderPmcc(l,today,spot,true)}
+`:''}</div>`;
+  }
+  const P=pmccStats(l,db.opts||[],today),pb=leapPayback(P.cost,P.net);
+  const m0=n=>fmtMoney(n).replace(/\.\d\d$/,'');
+  const leapExp=!collapsedLeaps.has(l.id);
+  const rq=S.pl!=null&&S.cost>0?Math.round(S.pl/S.cost*10000)/100:null;
+  return`<div class="leap-card lc lcw${leapExp?'':' lc-mini-bar'}" data-leap="${esc(l.id)}" data-ticker="${esc(l.underlying)}" style="--wc-bg:${typeof lcBg==='function'&&typeof WcBrand!=='undefined'?lcBg(l.underlying):'#14161c'};${hiddenLeaps.has(l.id)?'opacity:.5':''}">${typeof wcArtHtml==='function'&&typeof WcBrand!=='undefined'?wcArtHtml(l.underlying):''}<i class="v2-tex lc-tex" aria-hidden="true"></i>
+  <div class="lc-h" style="cursor:pointer" onclick="toggleLeapExpand('${esc(l.id)}')"><div><span class="lc-id"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${leapExp?'▾':'▸'}</span>${typeof leapLogoHtml==='function'?leapLogoHtml(l.underlying,open):''}<span class="lc-tk">${esc(l.underlying)}</span></span><span class="lc-ct">${(typeof isPhoneLayout==='function'&&isPhoneLayout())?`<span class="lc-nw">${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call</span> · <span class="lc-nw">${_fdShort(l.expiry)}</span>${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}${l.closeDate?` · <span class="lc-nw">${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}</span>`:''}`:`${S.q}× $${fmt2(l.strike).replace(/\.00$/,'')} call · ${_fdShort(l.expiry)}${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}${l.closeDate?` · ${l.status==='expired'?'Expired':'Closed'} ${_fdShort(l.closeDate)}`:''}`}</span>${!leapExp?leapMiniRealisedHtml(false,S,P):''}</div>${leapHeaderRightHtml(l,open,leapExp,gid)}</div>
+  ${leapExp?`${note?`<div class="lc-note">${note}</div>`:''}
+  <div class="lc-hero"><div><div class="lc-k">Paid → closed</div><div class="lc-v">$${S.paid.toFixed(2)} → $${(+l.closePrice||0).toFixed(2)}</div></div>
+    <div><div class="lc-k">Cost after calls ${ii(`Calls have paid back ${pb.pct}% of what you paid (${m0(Math.max(0,P.net))} of ${m0(P.cost)}). Cost after calls = what you paid minus the net from calls closed or expired against it. Open calls don't count until closed. The ▲/▼ % is vs what you paid.`)}</div><div class="lc-v lc-mut">${m0(P.adj)}${leapAdjMoveHtml(P.cost,P.adj)}</div></div>
+    <div><div class="lc-k">Realised ${ii('The LEAP\'s gain or loss when it closed or expired, and as a % of what you paid for it. Calls sold against it are not included.')}</div><div class="lc-v sm ${S.pl==null?'':colorN(S.pl)}">${S.pl==null?'—':(S.pl>=0?'+':'')+m0(S.pl)}</div>${rq==null?'':`<div class="lc-pct ${colorN(rq)}" style="font-size:0.825rem;font-weight:480">${rq>=0?'+':''}${rq.toFixed(2)}%</div>`}</div>
+    <div><div class="lc-k">Opened</div><div class="lc-v sm">${_fdShort(l.entryDate)}${typeof openDeltaBadge==='function'?openDeltaBadge(l,l.underlying):''}</div></div></div>
+  ${leapBarHtml(pb,P.cost,P.net,!open)}
+  ${renderPmcc(l,today,spot)}
+`:''}</div>`;
+}
+function goToLeap(id){collapsedLeaps.delete(id);const L=(db.opts||[]).find(x=>x.id===id);if(L&&L.status!=='open')showClosedLeaps=true;if(hiddenLeaps.has(id)&&!showHiddenLeaps)showHiddenLeaps=true;switchView('options');setTimeout(()=>{const e=document.querySelector(`[data-leap="${CSS.escape(id)}"]`);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},50);}
+function renderOptions(){
+  const legs=db.opts||[];
+  const today=new Date().toISOString().slice(0,10),spots=_optSpots();
+  const{leaps,other}=splitLeapLegs(legs);
+  const openL=leaps.filter(l=>l.status==='open');
+  const closedLeaps=leaps.filter(l=>l.status!=='open');
+  const hiddenLeapList=leaps.filter(l=>hiddenLeaps.has(l.id));
+  const shown=(showClosedLeaps?leaps.slice():openL.slice()).filter(l=>!hiddenLeaps.has(l.id)||showHiddenLeaps);
+  const leapPnl=l=>{
+    const q=l.qty||1,cost=(+l.entryPrice||0)*100*q+(+l.fees||0);
+    if(l.status==='open'){
+      if(l.mark==null||l.mark==='')return-Infinity;
+      return(+l.mark)*100*q-cost;
+    }
+    return((+l.closePrice||0)*100*q-(+l.closeFees||0))-cost;
+  };
+  shown.sort((a,b)=>{
+    if(leapSortBy==='ticker')return(a.underlying||'').localeCompare(b.underlying||'')||(a.expiry||'').localeCompare(b.expiry||'');
+    if(leapSortBy==='recent'){const rec=l=>l.status==='open'?(l.entryDate||''):(l.closeDate||l.entryDate||'');return rec(b).localeCompare(rec(a));}
+    if(leapSortBy==='pnl')return leapPnl(b)-leapPnl(a);
+    if(leapSortBy==='dte')return(a.expiry||'').localeCompare(b.expiry||'');
+    return leaps.indexOf(a)-leaps.indexOf(b);
+  });
+  const cards=shown.map(l=>renderLeapCard(l,spots[l.underlying],today)).join('')||`<div class="leap-empty">${showClosedLeaps?'No LEAPs yet. Add one with <b>New LEAP</b>, or import a broker file with buy-to-open call fills.':'No open LEAPs. Add one with <b>New LEAP</b>, or import a broker file with buy-to-open call fills.'}</div>`;
+  // non-long-call legs never vanish silently
+  const og=OPTS.groups(other).map(g=>({...g,...OPTS.groupSummary(g.legs,today)}));
+  const otherH=og.length?`<details class="leap-other"><summary>Other options (${og.length}) — spreads, puts and short legs, kept as recorded</summary>${og.map(g=>`<div style="display:flex;gap:0.625rem;align-items:center;border-top:1px solid var(--border);padding:0.375rem 0;margin-top:0.375rem"><div style="flex:1;min-width:0;overflow-x:auto"><div style="font-size:0.825rem;color:var(--text3)">${esc(g.strategy)} · ${esc(g.status)}</div>${g.legs.map(_legLine).join('')}</div><button class="btn btn-ghost btn-icon" onclick="openOptEdit('${esc(g.id)}')">•••</button></div>`).join('')}</details>`:'';
+  const issues=shownHealth(OPTS.health(legs,db.wheels,today,db.trades));
+  const healthH=issues.length?`<div class="hy-box" style="margin-top:0.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:0.5625rem;padding:0.25rem 0.75rem 0.5rem"><div style="font-size:0.75rem;color:var(--text3);margin:0.375rem 0">Data health · ${issues.length} issue${issues.length>1?'s':''}</div>${issues.map(healthItemHtml).join('')}</div>`:'';
+  const err=_optsLoadError?`<div class="imp-err" style="margin-bottom:0.625rem">Options data couldn't load: ${esc(_optsLoadError)}. Your Firestore rules may need the <code>optlegs</code> collection — see docs/OPTIONS.md.</div>`:'';
+  const demoH=optDemo?`<div style="background:#3b2a05;border:1px solid #b45309;color:#fcd34d;padding:0.5rem 0.75rem;border-radius:0.5rem;margin-bottom:0.625rem;font-size:0.75rem"><b style="letter-spacing:1px">DEMO</b> — sample LEAPs shown <b>instead of</b> your real ones. Nothing here is saved. <a href="#" style="color:#fde68a" onclick="setOptDemo(false);return false">Turn off</a></div>`:'';
+  const leapSortLabels={manual:'Manual',dte:'Expiry',recent:'Recent',ticker:'A–Z',pnl:'P/L'};
+  const leapSortOpts=Object.entries(leapSortLabels).map(([k,v])=>`<button class="sort-dropdown-item ${leapSortBy===k?'active':''}" onclick="setLeapSort('${k}');closeSortMenu()">${v}</button>`).join('');
+  const leapAnyCollapsed=shown.some(l=>collapsedLeaps.has(l.id));
+  return`${err}${demoH}
+  <section class="v2-hero v2-light v2-bar"><div class="v2-copy"><h1>LEAPs</h1><div class="pos-toolbar">
+    <div style="position:relative;display:flex;align-items:center">
+      <button class="rot-header-btn" onclick="toggleSortMenu(event)" title="Sort: ${leapSortLabels[leapSortBy]||'Expiry'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,128a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16h72A8,8,0,0,1,128,128ZM48,72H184a8,8,0,0,0,0-16H48a8,8,0,0,0,0,16Zm56,112H48a8,8,0,0,0,0,16h56a8,8,0,0,0,0-16Zm125.66-21.66a8,8,0,0,0-11.32,0L192,188.69V112a8,8,0,0,0-16,0v76.69l-26.34-26.35a8,8,0,0,0-11.32,11.32l40,40a8,8,0,0,0,11.32,0l40-40A8,8,0,0,0,229.66,162.34Z"/></svg></button>
+      <div class="sort-dropdown" id="sort-dropdown" style="display:none">${leapSortOpts}</div>
+    </div>
+    <button class="rot-header-btn" onclick="toggleLeapMinAll()" title="${leapAnyCollapsed?'Expand all':'Minimise all'}">${leapAnyCollapsed?`<svg class="sq-20" viewBox="0 0 256 256" fill="none" stroke="var(--orange)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M104,104 48,48M48,88V48H88M152,104 208,48M168,48H208V88M104,152 48,208M48,168V208H88M152,152 208,208M168,208H208V168"/></svg>`:`<svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg>`}</button>
+    <div class="nw"><button type="button" class="btn btn-primary btn-sm nw-pill" id="new-leap-btn" onclick="openLeapAdd()">New LEAP</button></div>
+    ${closedLeaps.length?`<label><input type="checkbox" ${showClosedLeaps?'checked':''} onchange="toggleShowClosedLeaps(this.checked)"> Show closed (${closedLeaps.length})</label>`:''}
+    ${hiddenLeapList.length?`<label><input type="checkbox" ${showHiddenLeaps?'checked':''} onchange="toggleShowHiddenLeaps(this.checked)"> Show hidden (${hiddenLeapList.length})</label>`:''}
+  </div></div></section>
+  ${selTipHtml()}
+  <div class="leap-grid">${cards}</div>${otherH}${healthH}
+  <div style="margin-top:0.875rem;font-size:0.825rem;color:var(--text3);display:flex;gap:0.875rem"><a href="#" style="color:var(--text3)" onclick="setOptDemo(${!optDemo});return false">${optDemo?'Hide demo positions':'Show demo positions'}</a><a href="#" style="color:var(--text3)" onclick="exportOptsCSV();return false">Export options CSV</a></div>`;
+}
+// ── + LEAP / edit: single long call ──
+function openLeapAdd(){
+  if(!leapCapOk(1,db.opts)){openUpgrade('unlimited',capMsg('leap'));return;}
+  ['lf-id','lf-und','lf-strike','lf-expiry','lf-price','lf-review','lf-notes','lf-mark','lf-delta'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lf-qty').value='1';document.getElementById('lf-fees').value='0';
+  document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('mLeapTitle').textContent='Add LEAP (long call)';
+  document.getElementById('lf-mark-wrap').style.display='none';document.getElementById('lf-del').style.display='none';document.getElementById('lf-xacts').style.display='none';
+  document.getElementById('lf-paste').value='';document.getElementById('lf-pick').innerHTML='';document.getElementById('lf-scan-msg').style.display='none';
+  document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='flex';
+  switchLeapTab('smartscan');initLeapDrop();openModal('mLeap');
+}
+function openLeapEdit(id){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('lf-id',l.id);v('lf-und',l.underlying);v('lf-strike',l.strike);v('lf-expiry',l.expiry);v('lf-qty',l.qty);v('lf-price',l.entryPrice);
+  v('lf-date',l.entryDate);v('lf-fees',l.fees??0);v('lf-review',l.reviewDate);v('lf-notes',l.notes);v('lf-mark',l.mark);v('lf-delta',l.deltaAtOpen);
+  document.getElementById('mLeapTitle').textContent='Edit LEAP';
+  if(typeof paintLeapDeltaHint==='function')paintLeapDeltaHint();
+  document.getElementById('lf-mark-wrap').style.display=l.status==='open'?'':'none';document.getElementById('lf-del').style.display='';
+  document.getElementById('lf-xacts').style.display='none';
+  document.getElementById('lf-filled').style.display='none';document.getElementById('lf-tabs').style.display='none';switchLeapTab('manual');
+  openModal('mLeap');
+}
+function leapFormLeg(f,old){
+  const und=String(f.und||'').trim().toUpperCase(),strike=parseFloat(f.strike),qty=parseInt(f.qty),price=parseFloat(f.price);
+  if(!und)return{err:'Enter the ticker'};if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};
+  if(!(qty>0))return{err:'Contracts must be at least 1'};if(!(price>=0)||f.price==='')return{err:'Enter the price paid per share'};
+  const id=old?old.id:f.newId;
+  const leg={...(old||{status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,markSrc:null,delta:null,theta:null,iv:null,wheelId:null}),
+    id,groupId:old?(old.groupId||old.id):id,underlying:und,type:'C',side:'long',strike,expiry:f.expiry,qty,entryPrice:price,
+    entryDate:f.date||null,fees:parseFloat(f.fees)||0,reviewDate:f.review||null,notes:String(f.notes||'').trim()};
+  if(f.mark!==''&&f.mark!=null&&(!old||+f.mark!==+old.mark)){leg.mark=+f.mark;leg.markSrc='manual';leg.markAt=new Date().toISOString();leg.delta=null;leg.theta=null;leg.iv=null;}
+  return{leg};
+}
+function saveLeap(){
+  const g=k=>document.getElementById(k).value;const id=g('lf-id');
+  const old=id?(db.opts||[]).find(l=>l.id===id):null;
+  const r=leapFormLeg({und:g('lf-und'),strike:g('lf-strike'),expiry:g('lf-expiry'),qty:g('lf-qty'),price:g('lf-price'),date:g('lf-date'),fees:g('lf-fees'),review:g('lf-review'),notes:g('lf-notes'),mark:g('lf-mark'),newId:uid()},old);
+  if(r.err){alert(r.err);return;}
+  const _dlt=parseFloat(g('lf-delta'));if(isNaN(_dlt)){delete r.leg.deltaAtOpen;}else r.leg.deltaAtOpen=_dlt;
+  if(!old&&!leapCapOk(1,db.opts)){openUpgrade('unlimited',capMsg('leap'));return;}
+  db.opts=db.opts||[];const i=db.opts.findIndex(l=>l.id===r.leg.id);if(i>-1)db.opts[i]=r.leg;else db.opts.push(r.leg);
+  _saveOpt(r.leg);closeModal('mLeap');render();
+}
+function switchLeapTab(tab){
+  const ss=tab==='smartscan';
+  document.getElementById('lf-panel-smartscan').style.display=ss?'block':'none';
+  document.getElementById('lf-panel-manual').style.display=ss?'none':'block';
+  const a=document.getElementById('lf-tab-smartscan'),b=document.getElementById('lf-tab-manual');
+  a.style.background=ss?'var(--orange-safe)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';
+  b.style.background=ss?'var(--bg3)':'var(--orange-safe)';b.style.color=ss?'var(--text2)':'#fff';
+}
+let _leapScan=null;
+function leapRunScan(){
+  const msg=document.getElementById('lf-scan-msg'),pick=document.getElementById('lf-pick');pick.innerHTML='';
+  let r;try{r=leapScan(document.getElementById('lf-paste').value,BCSV);}catch(e){r={calls:[],rejected:[],error:'Parse error: '+e.message};}
+  _leapScan=r;
+  if(!r.calls.length){msg.style.color='var(--red)';msg.textContent=r.error;msg.style.display='block';return;}
+  if(r.calls.length===1&&!r.rejected.length){msg.style.display='none';return leapFillFrom(0);}
+  msg.style.color='var(--text3)';msg.style.display='block';
+  msg.textContent=`Found ${r.calls.length} bought call${r.calls.length>1?'s':''}${r.rejected.length?` (skipped ${r.rejected.length} sold/put/closing trade${r.rejected.length>1?'s':''})`:''} — pick one:`;
+  pick.innerHTML=r.calls.map((c,i)=>`<button class="btn btn-ghost" style="display:flex;width:100%;justify-content:space-between;gap:0.5rem;margin-bottom:0.25rem;font-size:0.75rem;padding:0.375rem 0.625rem" onclick="leapFillFrom(${i})"><span><b style="color:var(--orange2)">${esc(c.ticker)}</b> ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} Call · ${esc(_fdShort(c.expiry))}</span><span style="color:var(--text3)">@ ${c.price!=null?fmt2(c.price):'—'} · ${esc(c.date||'no date')}</span></button>`).join('');
+}
+function leapFillFrom(i){
+  const c=_leapScan&&_leapScan.calls[i];if(!c)return;
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('lf-und',c.ticker);v('lf-strike',c.strike);v('lf-expiry',c.expiry);v('lf-qty',c.qty||1);v('lf-price',c.price);v('lf-date',c.date||new Date().toISOString().slice(0,10));v('lf-fees',c.fees||0);
+  const miss=[c.price==null&&'price',!c.date&&'date'].filter(Boolean);
+  const low=(c.low||[]).filter(k=>!miss.includes(k)),FID={price:'lf-price',date:'lf-date',contracts:'lf-qty',fees:'lf-fees',expiry:'lf-expiry'};
+  Object.values(FID).forEach(id=>document.getElementById(id).style.borderColor='');
+  [...miss,...low].forEach(k=>{const el=FID[k]&&document.getElementById(FID[k]);if(el)el.style.borderColor='var(--yellow)';});
+  const f=document.getElementById('lf-filled');f.style.display='block';
+  f.innerHTML=`✦ Filled from SmartScan — check every field, then Save.${miss.length?` <b style="color:var(--yellow)">Couldn't read: ${miss.join(', ')}.</b>`:''}${low.length?` <b style="color:var(--yellow)">Low confidence: ${low.join(', ')} — double-check ${low.length>1?'these':'this'}.</b>`:''}`;
+  switchLeapTab('manual');
+}
+function leapLoadFile(file){
+  if(!file)return;const ta=document.getElementById('lf-paste'),msg=document.getElementById('lf-scan-msg');
+  msg.style.color='var(--text3)';msg.textContent='Reading '+file.name+'…';msg.style.display='block';
+  if(/\.pdf$/i.test(file.name)||file.type==='application/pdf'){
+    (async()=>{try{
+      if(!_pdfjs){const V='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';_pdfjs=await import(V+'pdf.min.mjs');_pdfjs.GlobalWorkerOptions.workerSrc=V+'pdf.worker.min.mjs';}
+      const doc=await _pdfjs.getDocument({data:await file.arrayBuffer()}).promise;const items=[];
+      for(let n=1;n<=doc.numPages;n++){const tc=await(await doc.getPage(n)).getTextContent();tc.items.forEach(it=>items.push({str:it.str,transform:it.transform,page:n}));}
+      ta.value=BCSV.pdfItemsToLines(items);leapRunScan();
+    }catch(e){msg.style.color='var(--red)';msg.textContent="Couldn't open this PDF ("+(e&&e.message||e)+").";}})();return;}
+  if(/^image\//.test(file.type)){msg.style.color='var(--red)';msg.textContent="Screenshots can't be read — copy the text of the confirmation and paste it instead.";return;}
+  const r=new FileReader();r.onload=()=>{ta.value=r.result;leapRunScan();};r.readAsText(file);
+}
+function initLeapDrop(){
+  const ta=document.getElementById('lf-paste');if(!ta||ta._wired)return;ta._wired=true;
+  ta.addEventListener('dragover',e=>{e.preventDefault();ta.style.borderColor='var(--orange)';});
+  ta.addEventListener('dragleave',()=>{ta.style.borderColor='var(--border2)';});
+  ta.addEventListener('drop',e=>{e.preventDefault();ta.style.borderColor='var(--border2)';const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)leapLoadFile(f);});
+}
+function deleteLeap(){
+  const id=document.getElementById('lf-id').value;if(!id||!confirm('Delete this LEAP?'))return;
+  _deleteOptDoc(id);db.opts=(db.opts||[]).filter(l=>l.id!==id);closeModal('mLeap');render();
+}
+// ── Sell call against a LEAP (PMCC) ──
+let _pmccScan=null;
+function openPmccSell(leapId){
+  if(!pmccRiskOk()){openUpgrade('unlimited',capMsg('leap-risk'));return;}
+  const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
+  const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
+  const v=(k,x)=>document.getElementById(k).value=x??'';
+  v('pcc-leap',leapId);v('pcc-und',L.underlying);['pcc-strike','pcc-expiry','pcc-price','pcc-notes','pcc-paste','pcc-current-price','pcc-fill-time'].forEach(k=>v(k,''));
+  const _pch=document.getElementById('pcc-fill-time-hint');if(_pch){_pch.textContent='';_pch.hidden=true;}
+  v('pcc-qty',Math.max(1,(+L.qty||1)-P.open.reduce((a,l)=>a+(+l.qty||0),0)));v('pcc-fees','0');v('pcc-date',new Date().toISOString().slice(0,10));
+  document.getElementById('mPmccTitle').textContent=`Add trade · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
+  document.getElementById('pcc-ctx').textContent=`LEAP: ${L.qty}× $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)} · adj. cost $${P.adjPerSh.toFixed(2)}/sh`;
+  ['pcc-scan-msg','pcc-filled','pcc-err'].forEach(k=>document.getElementById(k).style.display='none');pmccSide('sto');document.getElementById('pcc-pick').innerHTML='';
+  const pr=document.getElementById('pcc-roll');if(pr){pr.checked=false;document.getElementById('pcc-roll-box').hidden=true;fillLeapRollSelect(L);}
+  ['pcc-price','pcc-date','pcc-qty','pcc-fees','pcc-expiry'].forEach(k=>document.getElementById(k).style.borderColor='');
+  _pmccMode='trade';document.getElementById('pcc-scan-btn').style.display='';
+  pmccTab('smartscan');initPmccDrop();openModal('mPmcc');
+}
+// LEAP Roll (top right): same modal, roll mode. SmartScan takes the two-leg roll; Manual Entry hands over to the Roll position form.
+let _pmccMode='trade';
+function openLeapRoll(leapId){
+  const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
+  openPmccSell(leapId);_pmccMode='roll';
+  document.getElementById('mPmccTitle').textContent=`Roll LEAP · ${L.underlying} $${fmt2(L.strike).replace(/\.00$/,'')}C · ${_fdShort(L.expiry)}`;
+}
+function pmccManualTab(){
+  if(_pmccMode!=='roll')return pmccTab('manual');
+  const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);if(!L)return;
+  closeModal('mPmcc');openOptClose(L.groupId||L.id,'roll');
+}
+function pmccTab(tab){
+  const ss=tab==='smartscan';
+  document.getElementById('pcc-panel-smartscan').style.display=ss?'block':'none';document.getElementById('pcc-panel-manual').style.display=ss?'none':'block';
+  const a=document.getElementById('pcc-tab-smartscan'),b=document.getElementById('pcc-tab-manual');
+  a.style.background=ss?'var(--orange-safe)':'var(--bg3)';a.style.color=ss?'#fff':'var(--text2)';b.style.background=ss?'var(--bg3)':'var(--orange-safe)';b.style.color=ss?'var(--text2)':'#fff';
+}
+// SmartScan on the LEAP card: a sold call (sell to open) or a bought-back call (buy to close). Reuses leapScan, which reads every layout and labels side/effect.
+// action: 'sto' | 'btc'. A bought call with no open/close marker is taken as a buy back (flagged); an explicit buy to open is refused.
+function pmccScan(text,B,today){
+  const r=leapScan(text,B,today),all=[...r.calls,...r.rejected];
+  const calls=all.filter(c=>c.type==='C'&&((c.side!=='buy'&&c.effect!=='close')||(c.side==='buy'&&c.effect!=='open'))).map(c=>{
+    const btc=c.side==='buy';const low=(c.low||[]).filter(k=>!(btc&&k==='expiry'));if(!c.side||(btc&&!c.effect))low.push('side'); // a buy back takes its expiry from the call it closes
+    return{...c,action:btc?'btc':'sto',low:[...new Set(low)]};});
+  if(calls.length)return{calls,error:''};
+  if(!all.length)return{calls:[],error:r.error};
+  const c=all[0];
+  const error=all.length>1?`No sold or bought-back calls found — ${all.length} other trades (buys to open, puts or sells to close) were skipped.`:c.type!=='C'?'This is a put — only calls can be traded against a LEAP.':c.effect==='close'?`This is a sale of a bought $${c.strike!=null?fmt2(c.strike).replace(/\.00$/,''):''} call (sell to close) — that closes a LEAP. Paste the whole roll, or use Close / Roll at the top right of the LEAP card.`:'This is a bought call (buy to open) — add it with New LEAP instead.';
+  return{calls:[],error};
+}
+const PMCC_SIDE={sto:'Sell to open',btc:'Buy to close'};
+function pmccSide(a){
+  document.getElementById('pcc-side').value=a;
+  const on=(id,x)=>{const b=document.getElementById(id);b.style.background=x?'var(--orange-safe)':'var(--bg3)';b.style.color=x?'#fff':'var(--text2)';};
+  on('pcc-side-sto',a==='sto');on('pcc-side-btc',a==='btc');
+  document.getElementById('pcc-price-lbl').textContent=a==='btc'?'Buyback price / share':'Premium / share';
+  document.getElementById('pcc-date-lbl').textContent=a==='btc'?'Date bought':'Date sold';
+  const cp=document.getElementById('pcc-cp-wrap');if(cp)cp.style.display=a==='sto'?'':'none';
+  const ftw=document.getElementById('pcc-fill-time-wrap');if(ftw)ftw.style.display=a==='sto'?'':'none';
+  if(a==='btc'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const open=L?pmccShortsFor(L,db.opts||[]).filter(s=>s.status==='open'):[];if(open.length===1)document.getElementById('pcc-qty').value=open[0].qty;}
+  document.getElementById('pcc-err').style.display='none';
+}
+// Buy to close: find the open short call on this LEAP (strike + expiry; else the only open one when both are blank) and close it with the same OPTS.closeLeg the Close action uses.
+// The open short call a buy back closes: strike + expiry, else the only one at that strike, else the only open call.
+function pmccBtcMatch(f,open){
+  const k=parseFloat(f.strike);
+  if(k>0&&f.expiry){const m=open.find(x=>+x.strike===k&&x.expiry===f.expiry);if(m)return m;}
+  if(k>0){const m=open.filter(x=>+x.strike===k);return m.length===1?m[0]:null;}
+  return open.length===1?open[0]:null;
+}
+function pmccBuyBack(f,leap,legs){
+  if(!leap)return{err:'LEAP not found'};
+  const open=pmccShortsFor(leap,legs).filter(l=>l.status==='open');
+  const price=parseFloat(f.price);if(!(price>=0)||f.price===''||f.price==null)return{err:'Enter the buyback price per share'};
+  const k=parseFloat(f.strike);let l=null;
+  l=pmccBtcMatch(f,open);
+  if(!l)return{err:`No open short call${k>0?' at $'+k:''}${f.expiry?' expiring '+f.expiry:''} on this LEAP to buy back.`};
+  const want=parseInt(f.qty,10),qty=want>0?want:+l.qty;
+  if(qty>+l.qty)return{err:`Only ${l.qty} contract${l.qty===1?'':'s'} of this call are still open.`};
+  let rest=null,leg={...l};
+  if(qty<+l.qty){rest={...l,id:f.newId,qty:+l.qty-qty,fees:0,status:'open',closePrice:null,closeDate:null,closeFees:0,closeTs:null,mark:null,markAt:null,markSrc:null};leg={...leg,qty};}
+  return{leg:OPTS.closeLeg(leg,price,f.date||new Date().toISOString().slice(0,10),f.fees),rest};
+}
+// LEAP card roll: Robinhood two-leg roll paste → {kind:'short'|'long', close, open} or {error}. Reuses detectRollPaste/parseRollTrades.
+function pmccRollScan(text,today){
+  if(!detectRollPaste(text||''))return null;
+  const t=parseRollTrades(String(text).trim(),today);if(!t)return null;
+  if(t.error)return{error:t.error};
+  if(t.some(x=>x.optType==='put'))return{error:'This is a put roll — add it on the wheel card.'};
+  if(t.some(x=>x.optType!=='call'))return{error:'This roll isn\'t two call trades — it can\'t be added to a LEAP.'};
+  const leg=x=>({ticker:x.ticker,action:x.action,strike:x.strike,expiry:x.expiry,qty:x.contracts,price:x.premium,date:x.entered,fees:x.fees});
+  const btc=t.find(x=>x.action==='BTC'),stoc=t.find(x=>x.action==='STOC'),stc=t.find(x=>x.action==='STC'),bto=t.find(x=>x.action==='BTO');
+  if(btc&&stoc)return{kind:'short',close:leg(btc),open:leg(stoc)};
+  if(stc&&bto)return{kind:'long',close:leg(stc),open:leg(bto)};
+  return{error:`This roll has ${t.map(x=>x.action).join(' + ')} — a LEAP roll needs a buy back plus a new sell, or a sale of the LEAP plus a new buy.`};
+}
+// Apply a scanned roll to this LEAP → {save:[legs]} or {err}. Never touches wheel data.
+function pmccRollApply(r,leap,legs,newId,link){
+  if(!leap)return{err:'LEAP not found'};
+  if(r.close.ticker&&r.close.ticker!==leap.underlying)return{err:`The paste is for ${r.close.ticker}, but this LEAP is ${leap.underlying}.`};
+  if(r.kind==='short'){
+    const b=pmccBuyBack(r.close,leap,legs);if(b.err)return{err:b.err};
+    const n=pmccFormLeg({...r.open,newId},leap);if(n.err)return{err:n.err};
+    if(link!==false)n.leg.rolledFrom=b.leg.id;const now=new Date().toISOString();b.leg.closeTs=now;n.leg.ts=now;
+    return{save:[b.leg,n.leg].concat(b.rest?[b.rest]:[])};
+  }
+  if(leap.status!=='open')return{err:'This LEAP is already closed.'};
+  if(+r.close.strike!==+leap.strike||(r.close.expiry&&r.close.expiry!==leap.expiry))return{err:`This roll sells a $${r.close.strike} call expiring ${r.close.expiry||'?'}, but this LEAP is $${leap.strike} expiring ${leap.expiry}.`};
+  if(!(+r.open.strike>0)||!r.open.expiry||!(r.open.price>=0))return{err:'Couldn\'t read the new call\'s strike, expiry or price.'};
+  const [closed,nl]=OPTS.rollLeg(leap,r.close,r.open,newId);
+  return{save:[closed,{...nl,entryDate:r.open.date||r.close.date}]};
+}
+let _pmccRoll=null;
+function pmccRollPreview(r){
+  const card=(x,lbl)=>`<div style="background:var(--bg3);border:1px solid var(--border);border-left:0.1875rem solid ${isCredit(x.action)?'var(--green)':'var(--red)'};border-radius:0.5rem;padding:0.625rem;flex:1;min-width:0;font-size:0.75rem">
+    <div style="display:flex;gap:0.375rem;align-items:center;margin-bottom:0.375rem"><span class="ab ab-${x.action}">${x.action}</span><b style="color:var(--silver)">${esc(lbl)}</b></div>
+    <div>${esc(x.ticker||'')} $${x.strike!=null?fmt2(x.strike).replace(/\.00$/,''):'—'} Call · ${esc(x.expiry?_fdShort(x.expiry):'—')}</div>
+    <div class="t3">${x.qty||'—'}× @ $${x.price!=null?fmt2(x.price):'—'} · ${esc(x.date||'—')} · fees $${fmt2(x.fees||0)}</div></div>`;
+  const nm=r.kind==='short'?['Buy back','Sell new']:['Sell LEAP','Buy new LEAP'];
+  const cash=x=>(x.price||0)*(x.qty||0)*100,net=(cash(r.kind==='short'?r.open:r.close)-cash(r.kind==='short'?r.close:r.open))-(r.close.fees||0)-(r.open.fees||0);
+  return`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem"><span style="border:1px solid var(--orange);color:var(--orange);font-size:0.75rem;font-weight:720;padding:0.1875rem 0.625rem;border-radius:1.25rem">↻ ROLL</span><span style="margin-left:auto;font-weight:720;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit +':'Net debit -'}$${Math.abs(net).toFixed(2)}</span></div>
+  <div style="display:flex;gap:0.5rem;align-items:stretch">${card(r.close,nm[0])}<div style="align-self:center;color:var(--orange)">→</div>${card(r.open,nm[1])}</div>
+  <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save</button>`;
+}
+function pmccSaveRoll(){
+  if(!pmccRiskOk()){openUpgrade('unlimited',capMsg('leap-risk'));return;}
+  const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
+  const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),false);
+  if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
+  db.opts=db.opts||[];
+  a.save.forEach(l=>{const i=db.opts.findIndex(x=>x.id===l.id);if(i>=0)db.opts[i]=l;else db.opts.push(l);_saveOpt(l);});
+  _pmccRoll=null;closeModal('mPmcc');render();
+}
+function pmccRunScan(){
+  const msg=document.getElementById('pcc-scan-msg'),pick=document.getElementById('pcc-pick');pick.innerHTML='';
+  const txt=document.getElementById('pcc-paste').value;let rr=null;try{rr=pmccRollScan(txt);}catch(e){rr=null;}
+  _pmccRoll=null;
+  if(rr&&rr.error){msg.style.color='var(--red)';msg.textContent=rr.error;msg.style.display='block';return;}
+  document.getElementById('pcc-scan-btn').style.display='';
+  if(rr&&rr.kind==='short'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const m=L&&pmccBtcMatch(rr.close,pmccShortsFor(L,db.opts||[]).filter(l=>l.status==='open'));if(m)rr.close.expiry=m.expiry;}
+  if(rr){_pmccRoll=rr;msg.style.display='none';pick.innerHTML=pmccRollPreview(rr);document.getElementById('pcc-scan-btn').style.display='none';return;}
+  if(_pmccMode==='roll'){msg.style.color='var(--red)';msg.textContent='That isn\'t a roll — paste both legs (sell to close the old LEAP and buy to open the new one), or use Manual Entry.';msg.style.display='block';return;}
+  let r;try{r=pmccScan(document.getElementById('pcc-paste').value,BCSV);}catch(e){r={calls:[],error:'Parse error: '+e.message};}
+  _pmccScan=r;
+  if(!r.calls.length){msg.style.color='var(--red)';msg.textContent=r.error;msg.style.display='block';return;}
+  if(r.calls.length===1){msg.style.display='none';return pmccFillFrom(0);}
+  msg.style.color='var(--text3)';msg.style.display='block';msg.textContent=`Found ${r.calls.length} trades — pick one:`;
+  pick.innerHTML=r.calls.map((c,i)=>`<button class="btn btn-ghost" style="display:flex;width:100%;justify-content:space-between;gap:0.5rem;margin-bottom:0.25rem;font-size:0.75rem;padding:0.375rem 0.625rem" onclick="pmccFillFrom(${i})"><span><b style="color:var(--orange2)">${esc(c.ticker)}</b> ${PMCC_SIDE[c.action]} ${c.qty}× $${fmt2(c.strike).replace(/\.00$/,'')} Call · ${esc(_fdShort(c.expiry))}</span><span style="color:var(--text3)">@ ${c.price!=null?fmt2(c.price):'—'} · ${esc(c.date||'no date')}</span></button>`).join('');
+}
+function pmccFillFrom(i){
+  let c=_pmccScan&&_pmccScan.calls[i];if(!c)return;
+  if(c.action==='btc'){const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value);const m=L&&pmccBtcMatch(c,pmccShortsFor(L,db.opts).filter(l=>l.status==='open'));c={...c,expiry:m?m.expiry:c.expiry,low:(c.low||[]).filter(k=>k!=='expiry')};}
+  const v=(k,x)=>document.getElementById(k).value=x??'',und=document.getElementById('pcc-und').value;
+  pmccSide(c.action||'sto');v('pcc-strike',c.strike);v('pcc-expiry',c.expiry);v('pcc-qty',c.qty||1);v('pcc-price',c.price);v('pcc-date',c.date||new Date().toISOString().slice(0,10));v('pcc-fees',c.fees||0);
+  const miss=[c.price==null&&'price',!c.date&&'date'].filter(Boolean),low=(c.low||[]).filter(k=>!miss.includes(k));
+  const FID={price:'pcc-price',date:'pcc-date',contracts:'pcc-qty',fees:'pcc-fees',expiry:'pcc-expiry'};
+  Object.values(FID).forEach(id=>document.getElementById(id).style.borderColor='');
+  [...miss,...low].forEach(k=>{const el=FID[k]&&document.getElementById(FID[k]);if(el)el.style.borderColor='var(--yellow)';});
+  const f=document.getElementById('pcc-filled');f.style.display='block';
+  f.innerHTML=`✦ SmartScan read this as <b>${PMCC_SIDE[c.action||'sto']}</b> — check every field, then Save.${c.ticker&&c.ticker!==und?` <b style="color:var(--red)">The paste is for ${esc(c.ticker)}, but this LEAP is ${esc(und)}.</b>`:''}${miss.length?` <b style="color:var(--yellow)">Couldn't read: ${miss.join(', ')}.</b>`:''}${low.length?` <b style="color:var(--yellow)">Low confidence: ${low.join(', ')} — double-check.</b>`:''}`;
+  pmccTab('manual');
+}
+function pmccFormLeg(f,leap){
+  const strike=parseFloat(f.strike),qty=parseInt(f.qty),price=parseFloat(f.price);
+  if(!leap)return{err:'LEAP not found'};if(!(strike>0))return{err:'Enter the strike'};if(!f.expiry)return{err:'Enter the expiry'};
+  if(!(qty>0))return{err:'Contracts must be at least 1'};if(!(price>=0)||f.price===''||f.price==null)return{err:'Enter the premium received per share'};
+  return{leg:{id:f.newId,groupId:f.newId,parentLeapId:leap.id,underlying:leap.underlying,type:'C',side:'short',strike,expiry:f.expiry,qty,entryPrice:price,entryDate:f.date||null,
+    fees:parseFloat(f.fees)||0,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,markSrc:null,markAt:null,delta:null,theta:null,iv:null,wheelId:null,reviewDate:null,notes:String(f.notes||'').trim()}};
+}
+// Same sell already logged on this LEAP (strike, expiry, date, premium, contracts)? Stops a double-tapped Save or a re-pasted confirmation making a second open copy.
+function pmccDupOf(leg,legs){return(legs||[]).find(x=>x.id!==leg.id&&x.side==='short'&&x.parentLeapId===leg.parentLeapId&&+x.strike===+leg.strike&&x.expiry===leg.expiry&&(x.entryDate||'')===(leg.entryDate||'')&&+x.entryPrice===+leg.entryPrice&&+x.qty===+leg.qty)||null;}
+function savePmcc(){
+  const g=k=>document.getElementById(k).value,L=(db.opts||[]).find(x=>x.id===g('pcc-leap'));
+  const f={strike:g('pcc-strike'),expiry:g('pcc-expiry'),qty:g('pcc-qty'),price:g('pcc-price'),date:g('pcc-date'),fees:g('pcc-fees'),notes:g('pcc-notes'),newId:uid()};
+  const e=document.getElementById('pcc-err');
+  if(g('pcc-side')==='btc'){
+    const r=pmccBuyBack(f,L,db.opts||[]);
+    if(r.err){e.textContent=r.err;e.style.display='block';return;}
+    r.leg.closeTs=new Date().toISOString();const i=db.opts.findIndex(x=>x.id===r.leg.id);db.opts[i]=r.leg;_saveOpt(r.leg);
+    if(r.rest){db.opts.push(r.rest);_saveOpt(r.rest);}
+    closeModal('mPmcc');render();return;
+  }
+  if(!pmccRiskOk()){openUpgrade('unlimited',capMsg('leap-risk'));return;}
+  const r=pmccFormLeg(f,L);
+  if(r.err){e.textContent=r.err;e.style.display='block';return;}
+  const _fa=readFilledAtField('pcc-date','pcc-fill-time','pcc-fill-time-hint',null);if(_fa.error)return;
+  if(_fa.value)r.leg.filledAt=_fa.value;
+  const d=pmccDupOf(r.leg,db.opts);
+  if(d){e.textContent=`This sell is already logged (${d.qty}× $${fmt2(d.strike).replace(/\.00$/,'')} call sold ${d.entryDate||''} at $${fmt2(d.entryPrice)}${d.status!=='open'?', since bought back':''}).`;e.style.display='block';return;}
+  const cpRaw=g('pcc-current-price').trim();
+  if(cpRaw!==''&&+cpRaw>=0){r.leg.mark=+cpRaw;r.leg.markSrc='manual';r.leg.markAt=new Date().toISOString();}
+  r.leg.ts=new Date().toISOString();db.opts=db.opts||[];db.opts.push(r.leg);_saveOpt(r.leg);closeModal('mPmcc');render();
+}
+function pmccClose(id,mode){
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l)return;
+  openOptClose(l.groupId||l.id,mode);
+  document.getElementById('mOptCloseTitle').textContent=mode==='roll'?'Roll short call (buy back + sell new)':'Buy to close short call';
+  // only this leg — not other open shorts that share a roll chain
+  document.querySelectorAll('#oc-legs .oc-leg').forEach(r=>{if(r.dataset.id!==id)r.remove();});
+}
+function pmccExpire(id){
+  const i=(db.opts||[]).findIndex(x=>x.id===id);if(i<0)return;const l=db.opts[i];
+  const today=new Date().toISOString().slice(0,10);
+  if(!confirm(`Mark ${l.underlying} $${fmt2(l.strike)}C ${l.expiry} as expired worthless?${l.expiry>today?' (It hasn\'t reached expiry yet.)':''}`))return;
+  db.opts[i]=OPTS.expireLeg(l);_saveOpt(db.opts[i]);closeModal('mPmccLeg');render();
+}
+function initPmccDrop(){
+  const ta=document.getElementById('pcc-paste');if(!ta||ta._wired)return;ta._wired=true;
+  ta.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;
+    if(/^image\//.test(f.type)){const m=document.getElementById('pcc-scan-msg');m.style.color='var(--red)';m.textContent="Screenshots can't be read — copy the text of the confirmation and paste it instead.";m.style.display='block';return;}
+    const r=new FileReader();r.onload=()=>{ta.value=r.result;pmccRunScan();};r.readAsText(f);});
+  ta.addEventListener('dragover',e=>e.preventDefault());
+}
+// ── LEAP SmartScan: paste/drop a broker fill → one or more long-call candidates (never saves) ──
+// Reuses BCSV.findOption / pickDate / parseStatementText / parseBrokerCSV; only the long-call decision lives here.
+// ── LEAP SmartScan clean-up: unicode, table cells, OCR slips, typo'd labels → plain text the extractors understand ──
+const _LEAP_LABELS=['quantity','contracts','contract','filled','submitted','executed','commission','commissions','regulatory','average','price','position','effect','account','limit','bought','amount'];
+function _lev(a,b){if(Math.abs(a.length-b.length)>2)return 9;const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t;}}return d[b.length];}
+function leapNormalize(text){
+  let s=String(text||'').replace(/\r\n?/g,'\n').replace(/[\u00a0\u2007\u2009\u202f]/g,' ').replace(/[\u2018\u2019\u2032]/g,"'").replace(/[\u201c\u201d]/g,'"')
+    .replace(/[\u2013\u2014]/g,'-').replace(/[•▪●◦∙►▶]/g,' ').replace(/[|\t]/g,'  ').replace(/[＄]/g,'$');
+  // OCR: S310 → $310, Ca11/CaII → Call, Pu7 → Put, 6O.35 → 60.35, 2O27 → 2027, 1l0 → 110
+  s=s.replace(/(^|[\s(:])S(?=\d)/g,'$1$').replace(/\b[Cc][Aa4@][Ll1I|][Ll1I|](s?)\b/g,(m,x)=>(m[0]==='C'&&m[1]==='A'?'CALL':'Call')+x).replace(/\b[Pp][Uu][Tt7](s?)\b/g,(m,x)=>(m===m.toUpperCase()?'PUT':'Put')+x);
+  for(let k=0;k<3;k++)s=s.replace(/(\d[\d,]*\.?)[Oo](?=[\d.,]|\b)/g,'$10').replace(/(^|[\s$])[Oo](?=\d)/g,'$10').replace(/(\d)[lI](?=\d)/g,'$11');
+  // typo'd labels (Quantlty, Fi1led, Comission…) → canonical
+  s=s.replace(/\b[A-Za-z][A-Za-z0-9]{3,11}\b/g,w=>{if(/^\d+$/.test(w)||w===w.toUpperCase()&&w.length<=5)return w;const lw=w.toLowerCase();if(_LEAP_LABELS.includes(lw))return w;
+    for(const L of _LEAP_LABELS){const d=_lev(lw,L);if(d===1&&L.length>=5||d===2&&L.length>=9)return w[0]===w[0].toUpperCase()?L[0].toUpperCase()+L.slice(1):L;}return w;});
+  s=s.replace(/(\d)([CcPp])\b/g,'$1 $2'); // 310c → 310 c
+  return s;
+}
+// Layout-agnostic extractor: finds each field independently anywhere in the text, scores contract candidates,
+// cross-checks price × qty × 100 against cost/amount lines. Returns fields + list of low-confidence ones.
+function leapFuzzy(s,B,today){
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12},pad=n=>String(n).padStart(2,'0');
+  const yr=y=>y.length===2?'20'+y:y,MON='(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\\.?';
+  const valid=(y,m,d)=>m>=1&&m<=12&&d>=1&&d<=31&&+y>=1990&&+y<=2100;
+  const infer=(m,d)=>{let y=+today.slice(0,4);if(`${y}-${pad(m)}-${pad(d)}`>today)y--;return`${y}-${pad(m)}-${pad(d)}`;};
+  // every date in the text, with position
+  const dates=[];const add=(re,fn)=>{for(const m of s.matchAll(re)){const r=fn(m);if(r&&!dates.some(x=>m.index<x.end&&x.i<m.index+m[0].length))dates.push({i:m.index,end:m.index+m[0].length,...r});}};
+  add(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g,m=>valid(m[1],+m[2],+m[3])&&{iso:`${m[1]}-${pad(m[2])}-${pad(m[3])}`,y:1});
+  add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,\\s*|\\s+)\'?(\\d{4}|\\d{2})\\b(?![:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()],y=yr(m[3]);return valid(y,mo,+m[2])&&{iso:`${y}-${pad(mo)}-${pad(m[2])}`,y:1};});
+  add(new RegExp('\\b(\\d{1,2})[\\s-]?'+MON+'[\\s-]?\'?(\\d{4}|\\d{2})\\b(?![:\\d])','gi'),m=>{const mo=MONS[m[2].toLowerCase()],y=yr(m[3]);return valid(y,mo,+m[1])&&{iso:`${y}-${pad(mo)}-${pad(m[1])}`,y:1};});
+  add(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4}|\d{2})\b/g,m=>{let a=+m[1],b=+m[2];if(a>12){const t=a;a=b;b=t;}const y=yr(m[3]);return valid(y,a,b)&&{iso:`${y}-${pad(a)}-${pad(b)}`,y:1};});
+  add(new RegExp('\\b'+MON+'\\s+(\\d{1,2})\\b(?!\\s*[:\\d])','gi'),m=>{const mo=MONS[m[1].toLowerCase()];return valid(2000,mo,+m[2])&&{iso:infer(mo,+m[2]),y:0,mo,d:+m[2]};});
+  const low=[];const num=x=>parseFloat(String(x).replace(/[$,\s]/g,''));
+  const inDate=(a,b)=>dates.some(d=>a<d.end&&d.i<b);
+  let mask=s;dates.forEach(d=>{mask=mask.slice(0,d.i)+' '.repeat(d.end-d.i)+mask.slice(d.end);});
+  // ── contract ──
+  let best=null;
+  const occ=/\b([A-Za-z]{1,6})\s?(\d{2})(\d{2})(\d{2})([CP])(\d{8})\b/.exec(s);
+  if(occ)best={ticker:occ[1].toUpperCase(),expiry:`20${occ[2]}-${occ[3]}-${occ[4]}`,strike:+occ[6]/1000,type:occ[5],score:9,eI:occ.index};
+  const STOP=new Set('BUY SELL SOLD BOUGHT BOT SLD CALL PUT CALLS PUTS OPEN CLOSE TO OF AT THE LIMIT MARKET FILLED ORDER QTY PRICE FEE FEES USD GBP EUR ET EST EDT EDT CST PST GMT BST UTC PM AM AND YOU DAY FOR GOOD TYPE CONTRACT OPTION LONG SHORT BTO STO BTC STC ACCOUNT STATUS TOTAL NET COST DATE TRADE TIME SHS CORP INC CO ON AN A I IN IS WAS YOUR MY NEW ID NO OR VIA BY ROTH IRA ACT DESC SYMBOL CODE COMM C P'.split(' '));
+  const MONW=/^(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*$/i;
+  if(!best)for(const m of s.matchAll(/\b(calls?|puts?)\b|(?<=\d\s?)\b([CP])\b/gi)){
+    const k=m.index,type=(m[1]||m[2])[0].toUpperCase();
+    // strike: number nearest to the call/put word, not part of a date, not a qty
+    let st=null;for(const n of s.matchAll(/(?<![\w.,\/-])(\$?)(\d{1,5}(?:,\d{3})*(?:\.\d{1,3})?)(?![\w\/-]|[.,]\d)/g)){
+      const a=n.index,b=a+n[0].length;if(Math.abs((a<k?k-b:a-(k+m[0].length)))>40||inDate(a,b))continue;
+      const v=num(n[2]);if(!(v>=0.5&&v<=20000))continue;if(!n[1]&&!/\./.test(n[2])&&/^\s*(?:contracts?|x\b|shares?|shs|of\b)/i.test(s.slice(b,b+12))||/(?:price|amount|cost|total|fees?|commission|comm|proceeds|paid|debit|credit)\W{0,4}$/i.test(s.slice(Math.max(0,a-14),a))||/(?:[*#]|\bof\s|\bpage\s|\bref\W*)$/i.test(s.slice(Math.max(0,a-8),a))||/(?:qty|quantity|contracts?|bought|buy|sold|sell|@|at)\W{0,3}$/i.test(s.slice(Math.max(0,a-14),a)))continue;
+      const dist=Math.abs(a<k?k-b:a-(k+m[0].length))-(n[1]?6:0)-(/\./.test(n[2])?4:0);if(!st||dist<st.dist)st={v,dist,a,b};}
+    if(!st)continue;
+    let ex=null;const near=d=>Math.min(Math.abs(d.i-k),Math.abs(d.end-k),Math.abs(d.i-st.b),Math.abs(d.end-st.a));
+    dates.filter(d=>d.y).forEach(d=>{const dist=near(d);if(dist<=45&&(!ex||dist<ex.dist))ex={...d,dist};});
+    // yearless expiry right next to the contract ("$170 Call Nov 13") — year inferred later from the trade date
+    if(!ex)dates.filter(d=>!d.y).forEach(d=>{const dist=near(d);if(dist<=12&&(!ex||dist<ex.dist))ex={...d,dist,yl:true};});
+    let tk=null;const lo=Math.min(k,st.a);
+    for(const t of s.matchAll(/\(?\b([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b\)?/g)){
+      const w=t[1],W=w.toUpperCase(),a=t.index;if(STOP.has(W)||MONW.test(w)||inDate(a,a+t[0].length))continue;
+      const dist=a<lo?lo-a:a-Math.max(k,st.b);if(dist>45)continue;
+      const gap=((a<lo?mask.slice(a+t[0].length,lo):mask.slice(Math.max(k+m[0].length,st.b),a)).match(/\S+/g)||[]).length; // words between, dates don't count
+      const sc=gap*10+(w===W?0:3)+(a>lo?6:0)-(t[0].startsWith('(')?10:0);if(!tk||sc<tk.sc)tk={W,sc};}
+    if(!tk)continue;
+    const score=(ex?3:0)+3-st.dist/20-tk.sc/60-(ex?ex.dist/40:0);
+    if(!best||score>best.score)best={ticker:tk.W,strike:st.v,expiry:ex&&!ex.yl?ex.iso:'',yl:ex&&ex.yl?ex:null,type,score,eI:ex?ex.i:-1};
+  }
+  if(!best)return null;
+  if(!best.expiry&&!best.yl)low.push('expiry');
+  const notExp=d=>d.iso!==best.expiry&&d.i!==best.eI;
+  // ── trade date: labelled > account line (·) > any non-expiry date not after today ──
+  let date='';
+  for(const L of ['filled','trade\\s*date','executed','submitted','date','·','\\bon']){
+    const re=new RegExp(L+'(?:\\s*time)?\\W{0,4}','gi');for(const m of s.matchAll(re)){if(/settle(?:ment)?\W*$|expir\w*\W*$/i.test(s.slice(Math.max(0,m.index-12),m.index)))continue;const e=m.index+m[0].length;const d=dates.find(d=>d.i>=e&&d.i-e<=4&&notExp(d)&&d.iso<=today);if(d){date=d.iso;break;}}
+    if(date)break;}
+  // relative times on app confirmations: "· 30m", "2h ago", "Today", "Yesterday"
+  if(!date){const r=/(?:·|\bfilled|\bsubmitted|\bexecuted)\s*(?:(\d{1,3})\s*(?:m|min|mins|minutes?|h|hr|hrs|hours?|s|sec|secs)\b(?:\s+ago)?|(today|just now)|(yesterday))/i.exec(s);
+    if(r){const t=new Date(today+'T12:00:00Z');if(r[3])t.setUTCDate(t.getUTCDate()-1);date=t.toISOString().slice(0,10);}}
+  if(!date){const d=dates.filter(d=>notExp(d)&&d.iso<=today&&!/settle/i.test(s.slice(Math.max(0,d.i-16),d.i))).sort((a,b)=>a.i-b.i)[0];if(d){date=d.iso;low.push('date');}else low.push('date');}
+  // yearless expiry → next occurrence on/after the trade date (or today); confident (year is unambiguous)
+  if(best.yl){const base=date||today;let y=+base.slice(0,4);const md=`${pad(best.yl.mo)}-${pad(best.yl.d)}`;if(`${y}-${md}`<base)y++;best.expiry=`${y}-${md}`;}
+  // ── contracts ──
+  let qty=null,qsrc='';const ca=[...s.matchAll(/\b(\d{1,4})\s+(?:contracts?\s+)?(?:at|@)\s*\$?(\d[\d,]*(?:\.\d{1,4})?)(?![:\d])/gi)].filter(m=>!inDate(m.index,m.index+m[1].length)).pop(); // not the year of a date
+  if(ca){qty=+ca[1];qsrc='at';}
+  else{const m=/\b(?:quantity|qty|contracts?|filled\s+qty)\W{0,4}(-?\d{1,4})(?![\d.,\/])/i.exec(s)||/\b(?:buy|bought|bot|sell|sold|sld)\s+(?:to\s+open\s+)?(-?\d{1,4})\b(?![\d.,\/])/i.exec(s)||/\b(\d{1,4})\s+contracts?\b/i.exec(s);if(m){qty=Math.abs(+m[1]);qsrc='label';}}
+  if(!qty){qty=1;low.push('contracts');}
+  // ── fees: every fee/commission line ──
+  // each fee/commission label: value right after it, else the next small $ amount within 40 chars (label and value split by a stray line)
+  let fees=0,feeN=0,feeFar=false,feeMiss=false;for(const m of s.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+|contract\s+|clearing\s+|sec\s+|taf\s+|orf\s+)?fees?)\b(?!\s*(?:total|incl))/gi)){
+    const after=s.slice(m.index+m[0].length,m.index+m[0].length+44);const v0=/^\W{0,4}-?\(?\$?(\d+(?:\.\d+)?)/.exec(after),v=v0||/^[^$]{0,40}?\$(\d{1,2}\.\d{2})\b/.exec(after);if(v){fees+=+v[1];feeN++;if(!v0)feeFar=true;}else feeMiss=true;}
+  fees=Math.round(fees*100)/100;
+  if(feeFar||feeMiss||fees>qty*10+10)low.push('fees');
+  // ── price: filled/at/avg > plain price (not limit/est) > @ ──
+  let price=null,psrc='';
+  if(ca){price=num(ca[2]);psrc='at';}
+  else{const m=/(?:avg\.?|average|fill(?:ed)?)\s*(?:fill\s*)?price(?:\s+of)?\W{0,4}\$?([\d,]*\.?\d+)/i.exec(s)||/(?<!(?:limit|stop|est\.?|estimated|mark)\s{0,3})\bprice(?:\s+of)?\W{0,4}\$?([\d,]*\.?\d+)/i.exec(s)||/@\s*\$?([\d,]*\.?\d+)/.exec(s)||/\bat\s+\$([\d,]*\.?\d+)/i.exec(s);if(m){price=num(m[1]);psrc='label';}}
+  // cross-check with cost / amount lines
+  const amts=[...s.matchAll(/\b(?:est\.?\s+cost|cost|net\s+amount|amount|total|principal|proceeds|debit)\W{0,4}-?\(?\$?([\d,]+\.\d{2})/gi)].map(m=>num(m[1]))
+    .concat([...s.matchAll(/(?:^|\s)\$([\d]{1,3}(?:,\d{3})+\.\d{2}|\d{4,}\.\d{2})(?=\s|$)/g)].map(m=>num(m[1])));
+  const fits=p=>amts.some(A=>Math.abs(p*qty*100-A)<=0.02||Math.abs(p*qty*100+fees-A)<=Math.max(0.05,fees*0.05+0.02)||Math.abs(p*qty*100-fees-A)<=0.05);
+  if(price!=null&&!fits(price)&&psrc!=='at'&&amts.length){
+    // a different number in the text might be the real fill — pick one that reconciles
+    const alt=[...s.matchAll(/\$?(\d{1,5}\.\d{2,4})\b/g)].map(m=>num(m[1])).find(p=>p!==price&&fits(p));
+    if(alt!=null){price=alt;}else low.push('price');
+  }else if(price==null){
+    const A=amts.find(A=>A>0);if(A){price=Math.round((A-fees)/(qty*100)*100)/100;low.push('price');}else low.push('price');
+  }else if(!amts.length&&psrc!=='at'&&psrc!=='label')low.push('price');
+  return{ticker:best.ticker,strike:best.strike,expiry:best.expiry,type:best.type,qty,qsrc,price,fees,feeN,date,low};
+}
+function leapScan(text,B,today){
+  today=today||new Date().toISOString().slice(0,10);
+  text=leapNormalize(text);
+  if(text.replace(/\s/g,'').length<8)return{calls:[],rejected:[],error:'Paste a trade confirmation or statement line first.'};
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12},pad=n=>String(n).padStart(2,'0');
+  const num=s=>parseFloat(String(s).replace(/[,$]/g,''));
+  const anyDate=s=>{s=String(s||'');let m=/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i.exec(s);
+    const a=m?m.index:1e9;const m2=/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})\b/i.exec(s);
+    const n=/(\d{4}-\d{2}-\d{2})|\b\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}\b/.exec(s);
+    const c=[[a,m&&`${m[3]}-${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`],[m2?m2.index:1e9,m2&&`${m2[3]}-${pad(MONS[m2[2].slice(0,3).toLowerCase()])}-${pad(m2[1])}`],[n?n.index:1e9,n&&B.pickDate(n[0])]].filter(x=>x[1]).sort((x,y)=>x[0]-y[0]);
+    return c.length?c[0][1]:'';};
+  // contract: shared parser first, then two layouts it doesn't cover ("CALL AAPL 06/16/2028 250.00", "AMZN 2027-12-17 230.00 Call")
+  const findOpt=line=>{
+    const f=B.findOption(line);if(f)return f;
+    let m=/\b(CALL|PUT|Call|Put)\s+([A-Z][A-Z0-9.]{0,5})\s+(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$?(\d+(?:\.\d+)?)/.exec(line);
+    if(m)return{opt:{ticker:m[2],expiry:B.pickDate(m[3]),strike:+m[4],pc:m[1][0].toUpperCase()},start:m.index,end:m.index+m[0].length};
+    m=/\b([A-Z][A-Z0-9.]{0,5})\s+(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$?(\d+(?:\.\d+)?)\s+(Call|CALL|Put|PUT|C|P)\b/.exec(line);
+    if(m)return{opt:{ticker:m[1],expiry:B.pickDate(m[2]),strike:+m[3],pc:m[4][0].toUpperCase()},start:m.index,end:m.index+m[0].length};
+    return null;};
+  // "Filled Jul 23, 4:49 PM" (no year) → latest Jul 23 that isn't after today
+  const yearless=s=>{const m=/\b(?:filled|executed|submitted)\s*:?\s*(?:on\s+)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})\b(?!,?\s*\d{4}\b)/i.exec(s)||/·\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})\b(?!,?\s*\d{4}\b)/i.exec(s);
+    if(!m)return'';let y=+today.slice(0,4);const md=`${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`;if(`${y}-${md}`>today)y--;return`${y}-${md}`;};
+  const sideOf=s=>/\b(?:sell|sold|sld|sto|stc|write|wrote|short)\b/i.test(s)?'sell':/\b(?:buy|bought|bot|bto|btc|purchased?|long)\b/i.test(s)?'buy':'';
+  const effOf=s=>{const pe=/position\s+effect\s*:?\s*(open|close)/i.exec(s);if(pe)return pe[1].toLowerCase()==='open'?'open':'close';return effOf0(s);};
+  const effOf0=s=>/\b(?:to\s+close|closing|btc|stc)\b|code[:\s]+C\b/i.test(s)?'close':/\b(?:to\s+open|opening|bto|sto)\b|code[:\s]+O\b/i.test(s)?'open':'';
+  const verdict=c=>{
+    if(c.type!=='C')return'This is a put, not a call — LEAPs here are bought calls only.';
+    if(c.side==='sell')return c.effect==='close'?'This is a sell-to-close (closing a position) — use Close or Roll at the top right of the LEAP card instead.':'This is a sold call (sell to open) — use Add trade at the top of that LEAP\'s trade table, not New LEAP.';
+    if(c.effect==='close')return'This is a buy-to-close (closing a short call) — not a new LEAP.';
+    if(!c.side)return'Couldn\'t tell whether this was bought or sold.';
+    return'';};
+  const out=[];
+  // CSV export (header row + rows)
+  const first=text.trim().split('\n')[0]||'';
+  if((first.match(/,/g)||[]).length>=3&&text.trim().split('\n').length>=2&&/date/i.test(first)){
+    const r=B.parseBrokerCSV(text);
+    if(!r.error){
+      (r.optionFills||[]).forEach(f=>out.push({ticker:f.ticker,strike:f.strike,expiry:f.expiry,type:f.type,side:'buy',effect:f.effect,qty:f.qty,price:f.price,fees:f.fees,date:f.date,src:r.broker}));
+      (r.rows||[]).forEach(x=>out.push({ticker:x.ticker,strike:x.strike,expiry:x.expiry,type:x.action==='CSP'?'P':'C',side:/^(CSP|STOC|STC)$/.test(x.action)?'sell':'buy',effect:/^(BTC|STC|EXP)$/.test(x.action)?'close':'open',qty:Math.round((x.shares||100)/100),price:x.premium,fees:x.fees,date:x.entered,src:r.broker}));
+    }
+  }else{
+    const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+    const isTab=l=>{const f=findOpt(l);if(!f)return false;const rest=l.slice(0,f.start)+' '+l.slice(f.end);
+      return(rest.match(/(?:^|\s)[-(]?[$£€]?\d[\d,]*(?:\.\d+)?\)?(?=\s|$)/g)||[]).length>=3&&(rest.match(/\b[A-Za-z]{3,}\b/g)||[]).length<=3;};
+    const tab=lines.filter(isTab);
+    if(tab.length){
+      // statement lines (IBKR activity/Trades section style) — numbers from the shared statement parser, direction from the line
+      const P=B.parseStatementText(text),pool=[...(P.rows||[]).map(x=>({ticker:x.ticker,strike:x.strike,expiry:x.expiry,qty:Math.round((x.shares||100)/100),price:x.premium,fees:x.fees,date:x.entered})),
+        ...(P.optionFills||[]).map(f=>({ticker:f.ticker,strike:f.strike,expiry:f.expiry,qty:f.qty,price:f.price,fees:f.fees,date:f.date}))];
+      tab.forEach(l=>{const f=findOpt(l),o=f.opt,rest=l.slice(0,f.start)+' '+l.slice(f.end);
+        const i=pool.findIndex(p=>p.ticker===o.ticker&&+p.strike===+o.strike&&p.expiry===o.expiry);const p=i>-1?pool.splice(i,1)[0]:{};
+        const clean=rest.replace(/\d{4}-\d{2}-\d{2}(?:,?\s+\d{1,2}:\d{2}(?::\d{2})?)?|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ');
+        const q=/(?:^|\s)(-?\d{1,4})(?=\s|$)/.exec(clean);const code=/(?:^|\s)([OC])(?:;[A-Za-z]+)*\s*$/.exec(rest);
+        out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest)||(q?(+q[1]<0?'sell':'buy'):''),
+          effect:effOf(rest)||(code?(code[1]==='O'?'open':'close'):'open'),qty:p.qty||(q?Math.abs(+q[1]):1),price:p.price??null,fees:Math.abs(p.fees||0)||(()=>{let x=0;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?|fees?)\W{0,3}-?\$?(\d+(?:\.\d+)?)/gi))x+=+m[1];return Math.round(x*100)/100;})(),date:p.date||anyDate(rest),src:P.broker||'Statement'});});
+    }else{
+      // single confirmation — fields may be spread over several lines
+      const flat=lines.join(' '),f=findOpt(flat);
+      let fz=null;try{fz=leapFuzzy(flat,B,today);}catch(e){fz=null;}
+      if(!f&&fz&&fz.ticker&&fz.strike&&fz.expiry){
+        out.push({ticker:fz.ticker,strike:fz.strike,expiry:fz.expiry,type:fz.type,side:sideOf(flat),effect:effOf(flat)||'open',qty:fz.qty,price:fz.price,fees:fz.fees,date:fz.date,src:'SmartScan (fuzzy)',low:fz.low.slice()});
+      }
+      if(f){const o=f.opt,rest=flat.slice(0,f.start)+' '+flat.slice(f.end);
+        const ca=[...rest.matchAll(/\b(\d{1,4})\s+contracts?\s+at\s+\$?([\d,]*\.?\d+)/gi)].pop(); // Robinhood "3 contracts at $60.35" (filled, last wins)
+        const qm=ca?[0,ca[1]]:/(?:quantity|qty|contracts?)\s*:?\s*(\d{1,4})\b/i.exec(rest)||/\b(?:buy|bought|bot)\s+(\d{1,4})\b/i.exec(rest)||/\b(\d{1,4})\s+contracts?\b/i.exec(rest);
+        const pm=ca?[0,ca[2]]:/(?:avg\.?|average)\s*(?:fill\s*)?price(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/(?<!limit\s)\bprice(?:\s+of)?\s*:?\s*\$?([\d,]*\.?\d+)/i.exec(rest)||/@\s*\$?([\d,]*\.?\d+)/.exec(rest);
+        let fees=0,feeN=0,feeOdd=false;for(const m of rest.matchAll(/\b(?:comm(?:ission)?s?(?:\s*\/\s*fees?)?|(?:reg(?:ulatory)?\s+|transaction\s+|exchange\s+)?fees?)\s*:?\s*\(?-?\$?(\d+(?:\.\d+)?)/gi)){fees+=+m[1];feeN++;if(!/\./.test(m[1]))feeOdd=true;}
+        const dl=/(?:trade\s*date|filled(?:\s*time)?|executed(?:\s+at[^\d]*?)?|(?<!settle(?:ment)?\s)date)\s*:?\s*(?:on\s+)?((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i.exec(rest);
+        const onD=/\bon\s+((?:[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/i.exec(rest);
+        out.push({ticker:o.ticker,strike:o.strike,expiry:o.expiry,type:o.pc,side:sideOf(rest),effect:effOf(rest)||'open',qty:qm?+qm[1]:1,price:pm?num(pm[1]):null,
+          fees:Math.round(fees*100)/100,date:anyDate(dl?dl[1]:onD?onD[1]:rest)||yearless(rest),src:'Confirmation',low:[]});
+        // fill gaps from the layout-agnostic pass (same contract only)
+        const c=out[out.length-1];
+        if(fz&&fz.ticker===c.ticker&&+fz.strike===+c.strike){
+          if(c.price==null&&fz.price!=null){c.price=fz.price;}if(!c.date&&fz.date)c.date=fz.date;if(!qm&&fz.qsrc)c.qty=fz.qty;if(fz.fees&&fz.feeN>feeN)c.fees=fz.fees;
+          if(c.price!=null&&fz.price!=null&&c.price!==fz.price&&!fz.low.includes('price')&&!ca)c.price=fz.price; // reconciled with the cost/amount line
+          fz.low.forEach(k=>{if(k==='price'&&(pm||ca)||k==='contracts'&&qm||k==='date'&&(dl||onD))return;c.low.push(k);});
+        }
+        if(feeOdd||c.fees>c.qty*10+10)c.low.push('fees');
+        if(!qm&&!(fz&&fz.qsrc))c.low.push('contracts');if(c.price==null)c.low.push('price');if(!c.date)c.low.push('date');
+        c.low=[...new Set(c.low)];}
+    }
+  }
+  const calls=[],rejected=[];
+  out.forEach(c=>{c.why=verdict(c);(c.why?rejected:calls).push(c);});
+  const error=calls.length?'':rejected.length?(rejected.length===1?rejected[0].why:`No bought calls found — ${rejected.length} other option trade${rejected.length>1?'s':''} (sold, puts or closes) were skipped.`)
+    :'Couldn\'t find an option contract (ticker, expiry, strike and Call) in that text.';
+  return{calls,rejected,error};
+}
+// ── Add / edit modal (multi-leg — used for "Other options" edits; builder kept in code) ──
+function _optLegRow(l={}){
+  return`<div class="opt-leg" style="display:grid;grid-template-columns:5rem 4.375rem 1fr 1.3fr 3.75rem 1fr 1.625rem;gap:0.3125rem;margin-bottom:0.3125rem">
+    <select class="ol-side"><option value="long"${l.side!=='short'?' selected':''}>Long</option><option value="short"${l.side==='short'?' selected':''}>Short</option></select>
+    <select class="ol-type"><option value="C"${l.type!=='P'?' selected':''}>Call</option><option value="P"${l.type==='P'?' selected':''}>Put</option></select>
+    <input class="ol-strike" type="number" step="0.01" placeholder="Strike" value="${l.strike??''}">
+    <input class="ol-expiry" type="date" value="${l.expiry||''}">
+    <input class="ol-qty" type="number" step="1" min="1" placeholder="Qty" value="${l.qty??1}">
+    <input class="ol-price" type="number" step="0.0001" placeholder="Price/sh" value="${l.entryPrice??''}">
+    <button class="btn btn-ghost btn-icon" onclick="this.parentNode.remove()" title="Remove leg">✕</button></div>`;
+}
+function _optWheelOptions(sel){return`<option value="">— not attached —</option>`+db.wheels.map(w=>`<option value="${w.id}"${w.id===sel?' selected':''}>${esc(w.ticker)} · ${esc(wheelLabelDisplay(w.label,w))}${w.status!=='open'?' (closed)':''}</option>`).join('');}
+function openOptAdd(){
+  document.getElementById('mOptTitle').textContent='Add option position';
+  document.getElementById('of-group').value='';
+  document.getElementById('of-und').value='';document.getElementById('of-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('of-fees').value='0';document.getElementById('of-notes').value='';document.getElementById('of-paste').value='';
+  document.getElementById('of-wheel').innerHTML=_optWheelOptions('');
+  document.getElementById('of-legs').innerHTML=_optLegRow();
+  document.getElementById('of-mark-wrap').style.display='none';document.getElementById('of-del').style.display='none';
+  document.getElementById('of-addleg').style.display='';
+  openModal('mOpt');
+}
+function openOptEdit(gid){
+  const legs=(db.opts||[]).filter(l=>(l.groupId||l.id)===gid);if(!legs.length)return;
+  document.getElementById('mOptTitle').textContent='Edit position';
+  document.getElementById('of-group').value=gid;
+  document.getElementById('of-und').value=legs[0].underlying;document.getElementById('of-date').value=legs[0].entryDate||'';
+  document.getElementById('of-fees').value=legs.reduce((s,l)=>s+(+l.fees||0),0).toFixed(2);document.getElementById('of-notes').value=legs[0].notes||'';
+  document.getElementById('of-wheel').innerHTML=_optWheelOptions(legs[0].wheelId||'');
+  document.getElementById('of-legs').innerHTML=legs.map(l=>_optLegRow(l).replace('class="opt-leg"',`class="opt-leg" data-id="${l.id}"`)).join('');
+  const mw=document.getElementById('of-mark-wrap');mw.style.display='';
+  mw.innerHTML=legs.filter(l=>l.status==='open').map(l=>`<div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:0.3125rem;margin-bottom:0.25rem;align-items:center" data-mark="${l.id}"><span style="font-size:0.75rem">${l.side} ${fmt2(l.strike)}${l.type} ${esc(l.expiry)}</span><input class="om-mark" type="number" step="0.01" placeholder="Mark/sh" value="${l.mark??''}"><input class="om-iv" type="number" step="0.01" placeholder="IV % (opt.)" value="${l.iv?(l.iv*100).toFixed(1):''}"></div>`).join('')||'<span style="font-size:0.75rem;color:var(--text3)">Position closed</span>';
+  document.getElementById('of-del').style.display='';document.getElementById('of-addleg').style.display='';
+  openModal('mOpt');
+}
+function optAddLeg(){document.getElementById('of-legs').insertAdjacentHTML('beforeend',_optLegRow());}
+function optParsePaste(){
+  const txt=document.getElementById('of-paste').value;if(!txt.trim())return;
+  const p=BCSV.parseStatementText(txt);
+  const fills=(p.optionFills||[]).filter(f=>f.effect==='open');
+  const wheelOpens=(p.rows||[]).filter(r=>r.action==='CSP'||r.action==='STOC').map(r=>({ticker:r.ticker,side:'short',type:r.action==='CSP'?'P':'C',strike:r.strike,expiry:r.expiry,qty:r.shares/100,price:r.premium,fees:r.fees,date:r.entered}));
+  const all=[...fills,...wheelOpens];
+  if(!all.length){alert('Couldn\'t find an opening option fill in that text.');return;}
+  document.getElementById('of-und').value=all[0].ticker;document.getElementById('of-date').value=all[0].date||'';
+  document.getElementById('of-fees').value=all.reduce((s,f)=>s+(+f.fees||0),0).toFixed(2);
+  document.getElementById('of-legs').innerHTML=all.map(f=>_optLegRow({side:f.side,type:f.type,strike:f.strike,expiry:f.expiry,qty:f.qty,entryPrice:f.price})).join('');
+}
+function saveOpt(){
+  const und=document.getElementById('of-und').value.trim().toUpperCase();if(!und){alert('Enter the underlying ticker');return;}
+  const date=document.getElementById('of-date').value,fees=parseFloat(document.getElementById('of-fees').value)||0;
+  const notes=document.getElementById('of-notes').value.trim(),wheelId=document.getElementById('of-wheel').value||null;
+  const rows=[...document.querySelectorAll('#of-legs .opt-leg')];if(!rows.length){alert('Add at least one leg');return;}
+  const gid=document.getElementById('of-group').value||uid();
+  const keep=new Set();
+  const feeSplit=splitFeesCents(fees,rows.length);
+  rows.forEach((r,i)=>{
+    const id=r.dataset.id||uid();keep.add(id);
+    const old=(db.opts||[]).find(l=>l.id===id)||{status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null};
+    const leg={...old,id,groupId:gid,underlying:und,side:r.querySelector('.ol-side').value,type:r.querySelector('.ol-type').value,strike:parseFloat(r.querySelector('.ol-strike').value)||null,expiry:r.querySelector('.ol-expiry').value||null,qty:parseInt(r.querySelector('.ol-qty').value)||1,entryPrice:parseFloat(r.querySelector('.ol-price').value)||0,entryDate:date,fees:feeSplit[i],wheelId,notes};
+    const mr=document.querySelector(`[data-mark="${id}"]`);
+    if(mr){const mv=mr.querySelector('.om-mark').value,iv=mr.querySelector('.om-iv').value;
+      if(mv!==''&&+mv!==+old.mark){leg.mark=+mv;leg.markSrc='manual';leg.markAt=new Date().toISOString();leg.delta=null;leg.theta=null;}
+      leg.iv=iv!==''?(+iv)/100:(leg.markSrc==='manual'?null:leg.iv??null);}
+    const i0=(db.opts=db.opts||[]).findIndex(l=>l.id===id);if(i0>-1)db.opts[i0]=leg;else db.opts.push(leg);
+    _saveOpt(leg);
+  });
+  // legs removed from an existing group
+  (db.opts||[]).filter(l=>(l.groupId||l.id)===gid&&!keep.has(l.id)).forEach(l=>_deleteOptDoc(l.id));
+  db.opts=db.opts.filter(l=>(l.groupId||l.id)!==gid||keep.has(l.id));
+  closeModal('mOpt');render();
+}
+function deleteOptGroup(){
+  const gid=document.getElementById('of-group').value;if(!gid||!confirm('Delete this position and all its legs?'))return;
+  db.opts.filter(l=>(l.groupId||l.id)===gid).forEach(l=>_deleteOptDoc(l.id));
+  db.opts=db.opts.filter(l=>(l.groupId||l.id)!==gid);closeModal('mOpt');render();
+}
+// ── Close / roll / expire ──
+function openOptClose(gid,mode){
+  const legs=(db.opts||[]).filter(l=>(l.groupId||l.id)===gid&&l.status==='open');if(!legs.length)return;
+  document.getElementById('oc-group').value=gid;document.getElementById('oc-mode').value=mode;
+  document.getElementById('mOptCloseTitle').textContent=mode==='roll'?'Roll position':'Close position';
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('oc-legs').innerHTML=legs.map(l=>`<div class="oc-leg" data-id="${l.id}" style="border-top:1px solid var(--border);padding-top:0.375rem;margin-top:0.375rem">
+    <div style="font-size:0.75rem;margin-bottom:0.25rem">${l.side==='long'?'Long':'Short'} ${l.qty}× ${esc(l.underlying)} ${fmt2(l.strike)}${l.type} ${esc(l.expiry)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.3125rem">
+      <div class="fld"><label>Contracts</label><input class="oc-qty" type="number" step="1" min="1" max="${l.qty}" value="${l.qty}"></div>
+      <div class="fld"><label>Close price/sh</label><input class="oc-price" type="number" step="0.0001" value="${l.mark??''}"></div>
+      <div class="fld"><label>Date</label><input class="oc-date" type="date" value="${today}"></div>
+      <div class="fld"><label>Fees</label><input class="oc-fees" type="number" step="0.01" value="0"></div>
+      <div class="fld"><label>Outcome</label><select class="oc-how"><option value="closed">Closed</option><option value="expired">Expired worthless</option><option value="assigned">Assigned/exercised</option></select></div>
+    </div>
+    ${mode==='roll'?`<div style="display:grid;grid-template-columns:1fr 1.3fr 1fr 1fr;gap:0.3125rem;margin-top:0.3125rem">
+      <div class="fld"><label>New strike</label><input class="or-strike" type="number" step="0.01" value="${l.strike}"></div>
+      <div class="fld"><label>New expiry</label><input class="or-expiry" type="date" value="${l.expiry}"></div>
+      <div class="fld"><label>New price/sh</label><input class="or-price" type="number" step="0.0001"></div>
+      <div class="fld"><label>New fees</label><input class="or-fees" type="number" step="0.01" value="0"></div></div>`:''}
+  </div>`).join('');
+  openModal('mOptClose');
+}
+function saveOptClose(){
+  const mode=document.getElementById('oc-mode').value;
+  for(const r of document.querySelectorAll('#oc-legs .oc-leg')){
+    const i=db.opts.findIndex(l=>l.id===r.dataset.id);if(i<0)continue;const l=db.opts[i];
+    const how=r.querySelector('.oc-how').value,price=r.querySelector('.oc-price').value,date=r.querySelector('.oc-date').value,fees=r.querySelector('.oc-fees').value;
+    if(how==='closed'&&price===''){alert('Enter a close price (or choose Expired)');return;}
+    const want=parseInt(r.querySelector('.oc-qty')&&r.querySelector('.oc-qty').value,10)||+l.qty;
+    if(want<1||want>+l.qty){alert(`Enter between 1 and ${l.qty} contracts.`);return;}
+    let src=l;
+    if(want<+l.qty){const rest={...l,id:uid(),qty:+l.qty-want,fees:0,status:'open',closePrice:null,closeDate:null,closeFees:0,closeTs:null,mark:null,markAt:null,markSrc:null};db.opts.push(rest);_saveOpt(rest);src={...l,qty:want};}
+    let closed=how==='expired'?{...OPTS.expireLeg(src),closeDate:date||l.expiry}:OPTS.closeLeg(src,how==='assigned'?0:price,date,fees);
+    if(how==='assigned'){closed.status='assigned';closed.closePrice=0;closed.notes=((l.notes?l.notes+' · ':'')+`Assigned/exercised ${date||l.expiry}`);} // recorded in Options only — no share trades
+    if(mode==='roll'){
+      const np=r.querySelector('.or-price').value;if(np===''){alert('Enter the new leg price');return;}
+      const[c,nl]=OPTS.rollLeg(src,{price:how==='closed'?price:0,date,fees},{strike:r.querySelector('.or-strike').value,expiry:r.querySelector('.or-expiry').value,price:np,fees:r.querySelector('.or-fees').value},uid());
+      closed={...c,status:closed.status};db.opts.push(nl);_saveOpt(nl);
+    }
+    db.opts[i]=closed;_saveOpt(closed);
+  }
+  closeModal('mOptClose');render();
+}
+// ── Wheel card "Profit": live mid of each wheel's open short option via the same optchain proxy. Display-only, never saved. ──
+const _wheelMarks={},_wheelMarkRaw={};let _wheelMarksAt=0;
+// Cboe's free option quotes run ~15 min behind. Bring a delayed mid up to date with the live stock price using the quote's
+// own delta and gamma: mid + Δ·dS + ½Γ·dS². Pure. Falls back to the raw mid when greeks or prices are missing.
+function adjMark(mid,delta,gamma,quoteSpot,liveSpot){
+  if(mid==null||!(mid>=0))return null;
+  if(!(quoteSpot>0)||!(liveSpot>0)||delta==null||isNaN(+delta))return Math.round(mid*100)/100;
+  const dS=liveSpot-quoteSpot,g=isNaN(+gamma)?0:+gamma;
+  return Math.max(0.01,Math.round((mid+(+delta)*dS+0.5*g*dS*dS)*100)/100);
+}
+// US regular session (9:30–16:00 New York, Mon–Fri). Outside it the option quote and the stock price come from different
+// moments (Cboe's out-of-hours spot vs Friday's close), so a delta adjustment would be invented movement. Pure given `now`.
+function isRegularSession(now){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(now||new Date()).map(x=>[x.type,x.value]));
+  if(p.weekday==='Sat'||p.weekday==='Sun')return false;const m=(+p.hour%24)*60+(+p.minute);return m>=570&&m<960;
+}
+// Buy-back price for one exact contract. Pure.
+// c = that contract's quote {bid,ask,last,delta,gamma}; prev = last mark shown (or null); o = {strike,type:'P'|'C',regular}.
+// Preferred quote is a two-sided market (bid>0, ask>=bid, spread ≤ $0.10 or ≤ 60% of mid). A wider two-sided
+// market still uses the mid. If there is no two-sided bid/ask, a last trade > 0 is used. Only a quote with
+// no mid and no last returns null, so the card says "no quote".
+// In the regular session a mid (tight or wide) is brought forward to the live stock with this quote's own
+// delta and gamma. A last trade is not adjusted. A spot gap over 12% is not brought forward; the delayed
+// mid is kept unadjusted rather than dropped. If the delta is missing or the wrong sign, the delayed mid
+// is also kept unadjusted. Outside the regular session the two spots are not the same moment, so the mid
+// is shown unadjusted. Never below intrinsic. Wiggles under max($0.02, 1%) stay put so the figure doesn't flicker.
+function steadyMark(c,quoteSpot,liveSpot,prev,o){
+  o=o||{};const r2=n=>Math.round(n*100)/100;
+  if(!c)return null;
+  const b=+c.bid,a=+c.ask,last=+c.last,two=b>0&&a>=b,mid=two?(a+b)/2:null;
+  const tight=two&&((a-b)<=0.10||(a-b)/mid<=0.6);
+  let m=null,why=null;
+  if(two){
+    m=mid;why=tight?'mid':'wide-mid';
+    if(o.regular&&quoteSpot>0&&liveSpot>0&&liveSpot!==quoteSpot){
+      const gap=Math.abs(liveSpot-quoteSpot)/quoteSpot;
+      if(gap<=0.12){
+        const signOk=o.type==='P'?+c.delta<=0.02:o.type==='C'?+c.delta>=-0.02:true;
+        const dOk=c.delta!=null&&!isNaN(+c.delta)&&Math.abs(+c.delta)<=1&&signOk;
+        if(dOk){
+          let d=+c.delta,g=isNaN(+c.gamma)||+c.gamma<0?0:+c.gamma,dS=liveSpot-quoteSpot;
+          const lo=o.type==='C'?0:-1,hi=o.type==='C'?1:0;
+          if(o.type==='C'||o.type==='P'){d=Math.min(hi,Math.max(lo,d));if(d+g*dS<lo||d+g*dS>hi)g=0;}
+          const adj=adjMark(mid,d,g,quoteSpot,liveSpot),room=Math.abs(dS);
+          m=Math.min(mid+room,Math.max(mid-room,adj));if(r2(m)!==r2(mid))why=tight?'adjusted':'wide-adjusted';
+        }
+      }
+    }
+  }else if(last>0){m=last;why='last';}
+  else return null;
+  if(o.strike>0&&liveSpot>0)m=Math.max(m,o.type==='C'?liveSpot-o.strike:o.strike-liveSpot);
+  m=Math.max(0.01,r2(m));
+  if(prev!=null&&Math.abs(m-prev)<Math.max(0.02,prev*0.01))return{mark:prev,why:'held-small'};
+  return{mark:m,why};
+}
+function _applyWheelMarks(){const reg=isRegularSession();Object.entries(_wheelMarkRaw).forEach(([k,r])=>{const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
+  const s=steadyMark(r.c,r.spot,live,_wheelMarks[k]??null,{strike:r.strike,type:r.type,regular:reg});
+  if(s){_wheelMarks[k]=s.mark;r.why=s.why;}else{_wheelMarks[k]=null;r.why='none';}});}
+function wheelMarkNote(k){const r=_wheelMarkRaw[k];if(!r)return'';if(_wheelMarks[k]==null)return'No reliable quote for this contract';
+  const live=quotes[r.u]&&quotes[r.u].state!=='DELAYED'?quotes[r.u].price:null;
+  return markNote(_wheelMarks[k],r.why,r.u,live,r.c);}
+// Plain words for the buy-back price actually used and where it came from.
+function markNote(mark,why,u,live,c){if(mark==null)return'';const q=c&&c.bid>0&&c.ask>0?` (bid $${(+c.bid).toFixed(2)} / ask $${(+c.ask).toFixed(2)})`:'';
+  const last=c&&c.last>0?` (last $${(+c.last).toFixed(2)})`:'';
+  const closed=isRegularSession()?'':', market closed so not adjusted';
+  const base=`Buy-back price $${(+mark).toFixed(2)}: `;
+  return base+(why==='adjusted'?`15-min delayed option quote${q}, adjusted to ${u} at $${(+live).toFixed(2)}`
+    :why==='held-small'?`15-min delayed option quote${q}; small change ignored to keep it steady`
+    :why==='wide-mid'?`15-min delayed option quote${q}, wide market, mid used${closed}`
+    :why==='wide-adjusted'?`15-min delayed option quote${q}, wide market, mid used, adjusted to ${u} at $${(+live).toFixed(2)}`
+    :why==='last'?`15-min delayed option quote${last||q}, last trade${closed}`
+    :`15-min delayed option quote${q}${closed}`);}
+// New York calendar date (YYYY-MM-DD). Used only to tell a same-session typed price from a previous day's one.
+function markDay(iso){
+  const d=iso instanceof Date?iso:(iso?new Date(iso):new Date());
+  if(isNaN(+d))return'';
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+}
+function isSameMarkDay(iso,now){const a=markDay(iso),b=markDay(now||new Date());return!!a&&a===b;}
+// Buy-back mark for an open wheel CSP/STOC — same priority as wheelListCells Captured.
+function _wheelMarkOf(t){
+  if(!t)return null;
+  const hasTyped=t.currentPrice!=null&&t.currentPrice!=='';
+  const typedFresh=hasTyped&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);
+  if(typedFresh)return+t.currentPrice;
+  const occ=wheelLegOcc(t.ticker||'',t);
+  const _wm=typeof optionMarks==='function'?optionMarks():(typeof _wheelMarks!=='undefined'?_wheelMarks:{});
+  if(_wm&&Object.prototype.hasOwnProperty.call(_wm,occ)){
+    const live=_wm[occ];
+    if(live!=null&&live!=='')return+live;
+  }
+  if(hasTyped)return+t.currentPrice;
+  return null;
+}
+async function fetchOptchain(symbol,contracts){
+  const url=`/.netlify/functions/optchain?symbol=${encodeURIComponent(symbol)}&contracts=${contracts}`;
+  let last=null;
+  for(let i=0;i<2;i++){
+    try{
+      const r=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(40000)});
+      if(r.ok)return r;
+      last=new Error('HTTP '+r.status);
+    }catch(e){last=e;}
+    if(i===0)await new Promise(res=>setTimeout(res,400));
+  }
+  throw last||new Error('optchain failed');
+}
+async function fetchWheelMarks(force){
+  if(typeof liveOptionPricesOn==='function'&&!liveOptionPricesOn())return;
+  if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
+  const byU={};
+  (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const u=String(w.ticker).toUpperCase();openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry).forEach(t=>{(byU[u]=byU[u]||new Set()).add(wheelLegOcc(w.ticker,t));});});
+  let changed=false;
+  for(const[u,set]of Object.entries(byU)){
+    try{
+      const r=await fetchOptchain(u,[...set].join(','));
+      const j=await r.json();
+      set.forEach(k=>{const c=j.contracts&&j.contracts[k]||null;_wheelMarkRaw[k]={u,c,strike:+k.slice(-8)/1000,type:k.slice(-9,-8),spot:j.spot>0?j.spot:null};changed=true;});
+    }catch(e){console.warn('Wheel marks:',u,e.message);}
+  }
+  _applyWheelMarks();
+  if(changed&&view==='positions')render();
+}
+// ── Live marks: CBOE delayed chain via Netlify proxy; graceful fallback to manual marks + local BS greeks ──
+let _optMarksAt=0;
+function _markStamp(l){return String(l.markAt||'').slice(0,10)+'|'+(l.mark==null?'':l.mark)+'|'+(l.markSrc||'');}
+async function fetchOptionMarks(force, onlyId){
+  if(typeof liveOptionPricesOn==='function'&&!liveOptionPricesOn()){if(!onlyId)_optMarkStatus='';return;}
+  let open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
+  if(onlyId)open=open.filter(l=>l.id===onlyId);
+  if(!open.length){if(!onlyId)_optMarkStatus='';return;}
+  if(!onlyId){
+    if(!force&&Date.now()-_optMarksAt<60e3)return;_optMarksAt=Date.now();
+  }
+  const byU={};open.forEach(l=>(byU[l.underlying]=byU[l.underlying]||[]).push(l));
+  let ok=0,miss=0,failU=[],changed=false;
+  const noteFail=l=>{if(l.markWhy!=='none'){l.markWhy='none';l.markNote='No reliable quote for this contract';changed=true;}};
+  for(const[u,ls]of Object.entries(byU)){
+    try{
+      const r=await fetchOptchain(u,ls.map(OPTS.occ).join(','));
+      const j=await r.json();
+      if(j.spot>0)quotes[u]=quotes[u]||{price:j.spot,prev:j.spot,change:null,pct:null,state:'DELAYED'};
+      ls.forEach(l=>{
+        // the quote fetch is async: if the leg was bought back/edited meanwhile, write onto the CURRENT copy, never the stale open one
+        const cur=(db.opts||[]).find(x=>x.id===l.id);if(!cur||cur.status!=='open')return;l=cur;
+        // a price typed today (New York session date) stays until Refresh. A previous day's typed price does not block today's quote.
+        if(!force&&l.markSrc==='manual'&&l.markAt&&isSameMarkDay(l.markAt))return;
+        const c=j.contracts&&j.contracts[OPTS.occ(l)];
+        const live=quotes[u]&&quotes[u].state!=='DELAYED'?quotes[u].price:null;
+        const prevM=l.mark!=null&&l.mark!==''?+l.mark:null;
+        const sm=c?steadyMark(c,j.spot,live,prevM,{strike:+l.strike,type:l.type,regular:isRegularSession()}):null;
+        if(!sm){noteFail(l);miss++;return;} // keep the last price; the card says there is no fresh quote
+        const before=_markStamp(l);
+        l.markWhy=sm.why;l.markNote=markNote(sm.mark,sm.why,u,live,c);
+        Object.assign(l,{mark:sm.mark,markSrc:c.src||'cboe',markAt:j.asOf||new Date().toISOString(),prevClose:c.prevClose>0?+c.prevClose:null,dayOpen:typeof leapDayOpen==='function'?leapDayOpen(OPTS.occ(l),sm.mark):null,iv:c.iv>0?c.iv:l.iv,delta:c.delta??null,theta:c.theta??null});
+        if(_markStamp(l)!==before){_saveOpt(l);changed=true;}
+        ok++;
+      });
+    }catch(e){failU.push(u);ls.forEach(l=>{const cur=(db.opts||[]).find(x=>x.id===l.id);if(cur)noteFail(cur);});console.warn('Option marks:',u,e.message);}
+  }
+  _optMarkStatus=failU.length&&!ok?'Using the last saved price':`Marks: ${ok} updated${miss?`, ${miss} not found`:''}${failU.length?`, ${failU.join('/')} failed`:''}`;
+  if(changed||view==='options')render();
+}
+async function refreshLegMark(id){await fetchOptionMarks(true,id);}
+
+function renderSidebar(){
+  document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
+  // Health badge on the Dashboard nav item — visible from any view
+  document.querySelectorAll('.nav-health-badge').forEach(_hb=>{
+    const _hi=openHealth();
+    if(_hi.length){
+      const worst=_hi.some(i=>i.sev==='red')?'var(--red)':'var(--text3)';
+      _hb.innerHTML=`<span title="${_hi.length} data health issue${_hi.length>1?'s':''}" style="margin-left:auto;background:${worst};color:#0d0f12;font-size:0.75rem;font-weight:720;border-radius:0.5625rem;padding:1px 0.4375rem;line-height:1.4">${_hi.length}</span>`;
+    }else _hb.innerHTML='';
+  });
+}
+
+function renderPositions(){
+  let wheels=[...db.wheels];
+  if(!wheels.length)return`<div class="empty" id="wheel-empty"><h3>No wheels yet</h3><p>Add your first trade, or paste a confirmation. The free plan includes your first wheel.</p><div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem"><button class="btn btn-primary" onclick="openNewPos()">+ Start a wheel</button><button class="btn btn-ghost" onclick="openImport()">Import broker file</button></div></div>`;
+
+  // Sort
+  if(posSortBy==='ticker') wheels.sort((a,b)=>(a.ticker||'').localeCompare(b.ticker||''));
+  else if(posSortBy==='recent'){
+    const lastTrade=w=>{const ts=db.trades.filter(t=>t.wheelId===w.id).map(t=>t.entered).sort();return ts.length?ts[ts.length-1]:'0';};
+    wheels.sort((a,b)=>lastTrade(b).localeCompare(lastTrade(a)));
+  }
+  else if(posSortBy==='pnl'){
+    wheels.sort((a,b)=>calcWheel(b).realisedPnL-calcWheel(a).realisedPnL);
+  }
+  else if(posSortBy==='dte'){
+    const nearestDTE=w=>{const op=buildOpenPosition(db.trades.filter(t=>t.wheelId===w.id));return op?op.dte:9999;};
+    wheels.sort((a,b)=>nearestDTE(a)-nearestDTE(b));
+  }
+  else wheels.sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+
+  // Filter
+  const closedWheels=wheels.filter(w=>w.status!=='open');
+  const hiddenWheels=wheels.filter(w=>hidden.has(w.id));
+  const visibleWheels=wheels.filter(w=>{
+    if(hidden.has(w.id)&&!showHidden)return false;
+    if(w.status!=='open'&&!showClosed)return false;
+    return true;
+  });
+
+  // Toolbar
+  const sortLabels={manual:'Manual',dte:'Expiry',recent:'Recent',ticker:'A–Z',pnl:'P/L'};
+  const sortOpts=Object.entries(sortLabels).map(([k,v])=>`<button class="sort-dropdown-item ${posSortBy===k?'active':''}" onclick="setPosSort('${k}');closeSortMenu()">${v}</button>`).join('');
+  const toolbar=`<section class="v2-hero v2-light v2-bar"><div class="v2-copy"><h1>Wheels</h1><div class="pos-toolbar">
+    <div style="position:relative;display:flex;align-items:center">
+      <button class="rot-header-btn" onclick="toggleSortMenu(event)" title="Sort: ${sortLabels[posSortBy]||'Manual'}"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,128a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16h72A8,8,0,0,1,128,128ZM48,72H184a8,8,0,0,0,0-16H48a8,8,0,0,0,0,16Zm56,112H48a8,8,0,0,0,0,16h56a8,8,0,0,0,0-16Zm125.66-21.66a8,8,0,0,0-11.32,0L192,188.69V112a8,8,0,0,0-16,0v76.69l-26.34-26.35a8,8,0,0,0-11.32,11.32l40,40a8,8,0,0,0,11.32,0l40-40A8,8,0,0,0,229.66,162.34Z"/></svg></button>
+      <div class="sort-dropdown" id="sort-dropdown" style="display:none">${sortOpts}</div>
+    </div>
+    <button class="rot-header-btn" onclick="toggleMinAll()" title="${minimised.size>0?'Expand all':'Minimise all'}">${minimised.size>0?'<svg class="sq-20" viewBox="0 0 256 256" fill="none" stroke="var(--orange)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M104,104 48,48M48,88V48H88M152,104 208,48M168,48H208V88M104,152 48,208M48,168V208H88M152,152 208,208M168,208H208V168"/></svg>':'<svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M144,104V64a8,8,0,0,1,16,0V84.69l42.34-42.35a8,8,0,0,1,11.32,11.32L171.31,96H192a8,8,0,0,1,0,16H152A8,8,0,0,1,144,104Zm-40,40H64a8,8,0,0,0,0,16H84.69L42.34,202.34a8,8,0,0,0,11.32,11.32L96,171.31V192a8,8,0,0,0,16,0V152A8,8,0,0,0,104,144Zm67.31,16H192a8,8,0,0,0,0-16H152a8,8,0,0,0-8,8v40a8,8,0,0,0,16,0V171.31l42.34,42.35a8,8,0,0,0,11.32-11.32ZM104,56a8,8,0,0,0-8,8V84.69L53.66,42.34A8,8,0,0,0,42.34,53.66L84.69,96H64a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,104,56Z"/></svg>'}</button>
+    <div class="nw" id="new-wheel"><button type="button" class="btn btn-primary btn-sm nw-pill" id="new-wheel-btn" onclick="openNewWheel()">New wheel</button><div class="nw-box" id="new-wheel-box" hidden><input class="nw-pill" id="new-rot-ticker-top" type="text" placeholder="Ticker or company" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="new-wheel-list" oninput="nwInput()" onkeydown="nwKey(event)" onblur="nwBlur()"><div class="nw-list" id="new-wheel-list" hidden></div></div></div>
+    <span class="toolbar-spacer"></span>
+    ${closedWheels.length?`<label><input type="checkbox" ${showClosed?'checked':''} onchange="toggleShowClosed(this.checked)"> Show closed (${closedWheels.length})</label>`:''}
+    ${hiddenWheels.length?`<label><input type="checkbox" ${showHidden?'checked':''} onchange="toggleShowHidden(this.checked)"> Show hidden (${hiddenWheels.length})</label>`:''}
+  </div></div></section>${selTipHtml()}`;
+
+  // Render each wheel
+  const cards=visibleWheels.map(w=>{
+    if(minimised.has(w.id))return renderRotationMini(w);
+    return renderRotationWindow(w);
+  }).join('');
+
+  const legal=typeof WcBrand!=='undefined'&&WcBrand.logosEnabled&&WcBrand.logosEnabled()?`<p class="wc-legal"><a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provided by Logo.dev</a>. Not affiliated with or endorsed by the companies shown.</p>`:'';
+  return toolbar+cards+legal;
+}
+
+function rotNumHtml(wheel,isOpen){
+  const logoUrl=logoUrlFor(wheel.ticker);
+  if(logoUrl)return`<img src="${logoUrl}" class="rot-logo ${isOpen?'':'cn'}" alt="${esc(wheel.ticker)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rot-num ${isOpen?'':'cn'}" style="display:none">${wheel.sortOrder||'?'}</div>`;
+  return`<div class="rot-num ${isOpen?'':'cn'}">${wheel.sortOrder||'?'}</div>`;
+}
+
+function renderRotationMini(wheel){
+  const m=calcWheel(wheel);
+  const isOpen=wheel.status==='open';
+  const liveQ=quotes[wheel.ticker];
+  const rawP=liveQ?liveQ.price:(wheel.lastPrice||null);
+  const chg=liveQ?liveQ.change:null;
+  const chgPct=liveQ?liveQ.pct:null;
+  const chgColor=chg!=null?(chg>=0?'var(--green)':'var(--red)'):'var(--text3)';
+  const openPos=buildOpenPosition(m.trades);
+  const isHidden=hidden.has(wheel.id);
+  const dated=m.trades.filter(t=>!t.expiredWorthless).map(t=>t.entered).sort();
+  const lastDate=dated.length?dated[dated.length-1]:String(wheel.createdAt||'').slice(0,10);
+  let detail;
+  if(!isOpen){
+    detail='Closed'+(lastDate?` · ${fmtMonYear(lastDate)}`:'');
+  }else if(openPos){
+    const kind=openPos.action==='CSP'?'Put':'Call';
+    const k=openPos.strike!=null?` · $${fmt2(openPos.strike).replace(/\.00$/,'')} ${kind.toLowerCase()}`:'';
+    const dte=openPos.dte!=null?` · ${openPos.dte}d`:'';
+    detail=`${kind} open${k}${dte}`;
+  }else if(m.sharesHeld>0){
+    detail=`Holding ${m.sharesHeld} shares · no call yet`;
+  }else if(m.trades.some(t=>t.action==='OUT')){
+    detail='Called away';
+  }else{
+    detail='Waiting for a put';
+  }
+  const priceH=rawP!=null
+    ?`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480">$${rawP.toFixed(2)}${quoteChangeReady(chg,chgPct)?` <span style="color:${chgColor}">${chg>=0?'▲':'▼'}${Math.abs(chgPct).toFixed(2)}%</span> <span class="lc-nw" style="color:var(--text3);font-weight:480">today</span>`:''}</span>`
+    :pricePendingHtml(wheel.ticker,'lc-spot');
+  const pnlH=`<span class="lc-spot" style="margin-left:0.75rem;font-size:0.84rem;font-weight:480"><span class="${colorN(m.realisedPnL)}">${fmtMoney(m.realisedPnL)}</span> <span style="color:var(--text3);font-weight:480">realised</span></span>`;
+  return`<div class="rotation-window wc rot-mini-bar ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" data-ticker="${esc(wheel.ticker||'')}" style="--wc-bg:${wcBg(wheel.ticker)};${isHidden?'opacity:.5':''}">
+    ${wcArtHtml(wheel.ticker)}
+    <div class="lc-h" style="cursor:pointer" onclick="toggleMinimise('${wheel.id}')"><div class="rot-mini-main"><span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">▸</span>${rotNumHtml(wheel,isOpen)}<span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span><span class="lc-ct">${esc(detail)}</span>${priceH}${pnlH}</div>${typeof liveBadgeHtml==='function'?liveBadgeHtml(wheel.ticker,isOpen):`<span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span>`}<span class="lc-lacts-wrap card-acts-inline" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span></span><details class="card-more" onclick="event.stopPropagation()"><summary class="card-more-sum" aria-label="More actions">⋯</summary><div class="card-more-menu"><button type="button" class="card-more-item" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button type="button" class="card-more-item" onclick="openEditWheel('${wheel.id}')">Edit</button></div></details></div>
+  </div>`;
+}
+
+function fmtDateShort(d){
+  if(!d)return'—';
+  const[,m,day]=d.split('-');
+  return dateFmt==='us'?`${m}/${day}`:`${day}/${m}`;
+}
+function fmtMonYear(d){
+  if(!d)return'—';
+  const[y,m]=d.split('-');
+  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return`${mn[parseInt(m,10)-1]} ${y}`;
+}
+function wheelLabelDisplay(label,wheel){
+  const raw=String(label==null?'':label).trim();
+  let s=raw.replace(/^(Rotation|Wheel)\s+\d+(?:\s*[—–\-]+\s*)?/i,'').trim();
+  s=s.replace(/^[A-Z][A-Z0-9.\-]{0,9}\s*[—–\-]+\s*(Rotation|Wheel)\s+\d+\s*$/i,'').trim();
+  if(s)return s;
+  const d=wheel?fmtMonYear(String(wheel.createdAt||'').slice(0,10)):'';
+  return(d&&d!=='—')?d:(raw||'—');
+}
+
+
+// ── Single source of truth for open option legs ──
+// Share-aware lifecycle walk — mirrors runDataHealth's pairing exactly, minus the issue
+// detection. Legs carry `_rem` (remaining shares); BTC/STC/IN/OUT consume shares, not
+// whole legs, so partial assignments and partial closes leave the correct remainder open.
+// Returns {open, pairs}: open legs (with `_rem`) plus a map of closerId → [{legId, shares}]
+// recording exactly which opener legs each closer consumed — the raw material for roll chains.
+// Legacy STC-as-short-buy-back is normalised before walkLegPairs in premium/Captured paths; see normWheelShortStcClosers.
+function walkLegPairs(wheelTrades){
+  const closing=a=>(a==='BTC'||a==='STC'||a==='IN'||a==='OUT')?1:0; // same-day: openers first
+  const sorted=[...wheelTrades].sort((a,b)=>
+    (a.entered||'').localeCompare(b.entered||'')||closing(a.action)-closing(b.action));
+  const open=[]; // includes expiredWorthless legs so closers pair identically to the health engine
+  const pairs={}; // closer trade id → [{legId, shares consumed}]
+  const record=(closer,leg,shares)=>{(pairs[closer.id]=pairs[closer.id]||[]).push({legId:leg.id,shares});};
+  for(const t of sorted){
+    if(t.action==='CSP'||t.action==='STOC'){
+      open.push({...t,_rem:Number(t.shares)||0});
+    }else if(t.action==='BTC'){
+      const ks=Number(t.strike);
+      const live=o=>!o.expiry||o.expiry>=t.entered; // a leg can only be closed while it still exists
+      const nk=o=>!(t.rollId&&o.rollId===t.rollId); // a roll closer never consumes its own replacement opener
+      const findLeg=()=>{
+        let j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&live(o)&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>nk(o)&&Number(o.strike)===ks);
+        if(j<0&&(t.strike==null||t.strike===''))j=open.findLastIndex(o=>nk(o));
+        return j;
+      };
+      let rem=Number(t.shares)||0;
+      if(rem<=0){ // closer with no share count: consume one whole leg
+        const j=findLeg();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
+      }else{
+        while(rem>0){
+          const j=findLeg();
+          if(j<0)break; // orphan closer (strike present, no match) eats nothing
+          const o=open[j];
+          const take=Math.min(rem,o._rem||rem);
+          record(t,o,take);
+          o._rem-=take;rem-=take;
+          if(o._rem<=0)open.splice(j,1);
+        }
+      }
+    }else if(t.action==='IN'){
+      if(t.openMarket)continue; // open-market share buy (IN_MKT) — not assignment; never closes a CSP
+      // Assignment consumes the CSP behind it — settles at strike × shares
+      let ks=Number(t.strike);
+      if((!ks||isNaN(ks))&&t.shares&&t.total)ks=Math.round((Number(t.total)/Number(t.shares))*100)/100;
+      const bestAssignable=pred=>{ // prefer the CSP whose expiry most recently passed on/before the assignment date
+        let best=-1,bestExp='';
+        open.forEach((o,idx)=>{
+          if(o.action!=='CSP'||!pred(o))return;
+          const e=o.expiry||'';
+          if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+        });
+        return best;
+      };
+      const findCSP=()=>{
+        let j=bestAssignable(o=>!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless&&Number(o.strike)===ks);
+        if(j<0)j=bestAssignable(o=>!o.expiredWorthless);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless);
+        if(j<0)j=bestAssignable(o=>Number(o.strike)===ks);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP'&&Number(o.strike)===ks);
+        if(j<0)j=bestAssignable(()=>true);
+        if(j<0)j=open.findIndex(o=>o.action==='CSP');
+        return j;
+      };
+      let inRem=Number(t.shares)||0;
+      if(inRem<=0){
+        const j=findCSP();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
+      }else{
+        while(inRem>0){ // partial assignments consume shares across legs
+          const j=findCSP();
+          if(j<0)break;
+          const o=open[j];
+          const take=Math.min(inRem,o._rem||inRem);
+          record(t,o,take);
+          o._rem-=take;inRem-=take;
+          if(o._rem<=0)open.splice(j,1);
+        }
+      }
+    }else if(t.action==='OUT'){
+      // Called away resolves the covered call — only pair when strike matches
+      const sh=Number(t.shares)||0;
+      let oks=Number(t.strike);
+      if((!oks||isNaN(oks))&&sh&&t.total)oks=Math.round((Number(t.total)/sh)*100)/100;
+      if(oks){
+        const bestCallable=pred=>{ // prefer the STOC whose expiry most recently passed on/before the call-away date
+          let best=-1,bestExp='';
+          open.forEach((o,idx)=>{
+            if(o.action!=='STOC'||Number(o.strike)!==oks||!pred(o))return;
+            const e=o.expiry||'';
+            if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+          });
+          return best;
+        };
+        const findSTOC=()=>{
+          let j=bestCallable(o=>!o.expiredWorthless);
+          if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+          if(j<0)j=bestCallable(()=>true);
+          if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+          return j;
+        };
+        let outRem=sh;
+        if(outRem<=0){
+          const j=findSTOC();if(j>=0){record(t,open[j],open[j]._rem);open.splice(j,1);}
+        }else{
+          while(outRem>0){
+            const j=findSTOC();
+            if(j<0)break; // no matching STOC = plain manual sale — legitimate, consumes nothing
+            const o=open[j];
+            const take=Math.min(outRem,o._rem||outRem);
+            record(t,o,take);
+            o._rem-=take;outRem-=take;
+            if(o._rem<=0)open.splice(j,1);
+          }
+        }
+      }
+    }
+  }
+  return{open,pairs};
+}
+// Legacy imports sometimes logged a wheel short buy-back as STC; shallow copies that pair like BTC are treated as BTC for sums (stored trades unchanged).
+function normWheelShortStcClosers(trades){
+  if(!trades||!trades.length)return trades||[];
+  const stcIds=new Set(trades.filter(t=>t.action==='STC').map(t=>t.id));
+  if(!stcIds.size)return trades;
+  const probe=trades.map(t=>t.action==='STC'?{...t,action:'BTC'}:{...t});
+  const{pairs}=walkLegPairs(probe);
+  const flip=new Set(Object.keys(pairs).filter(cid=>stcIds.has(cid)));
+  if(!flip.size)return trades;
+  return trades.map(t=>flip.has(t.id)?{...t,action:'BTC'}:t);
+}
+
+function openOptionLegs(wheelTrades){
+  const today=new Date().toISOString().slice(0,10);
+  // Open = unflagged, unexpired, with shares still unresolved (or no share count recorded at all)
+  return walkLegPairs(wheelTrades).open
+    .filter(o=>!o.expiredWorthless&&o.expiry&&o.expiry>=today&&(o._rem>0||!Number(o.shares)));
+}
+
+// ── Roll-chain campaign P&L ──
+// A rollId couples one closer (BTC/STC) to its replacement opener. The chain behind a
+// rolled leg is its full ancestry: this opener ← its roll's closer ← the leg(s) that
+// closer actually consumed (from walkLegPairs) ← their rolls ← ... and so on to the
+// original fresh entry. Chains can MERGE — one 8-lot closer consuming two 4-lot legs —
+// so ancestry is a tree walked with a seen-set, not a simple linked list.
+// Returns {trades, rolls, net, live, breakeven} or null if the leg isn't part of a chain.
+// Stored rollIds only. A buy-to-close and a later sell are not a roll unless the user said Yes.
+function strikeStep(k){k=Math.abs(+k)||0;return k<25?1:k<200?5:10;}
+function nearStrike(a,b){a=+a;b=+b;if(!(a>0&&b>0))return a===b;return Math.abs(a-b)<=Math.max(strikeStep(a),strikeStep(b))+1e-9;}
+// Smallest subset of items whose sizes add to exactly target (first 12 candidates), else null.
+function exactSubset(items,size,target){
+  const n=Math.min(items.length,12);let best=null;
+  for(let m=1;m<(1<<n);m++){let sum=0;const c=[];for(let i=0;i<n;i++)if(m&(1<<i)){sum+=size(items[i]);c.push(items[i]);}
+    if(Math.abs(sum-target)<1e-9&&(!best||c.length<best.length))best=c;}
+  return best;
+}
+const _effRollCache=new WeakMap();
+// Returns copies of wheelTrades carrying their effective rollId (stored or inferred); ._rid maps id → rollId.
+function withInferredRolls(wheelTrades){
+  if(_effRollCache.has(wheelTrades))return _effRollCache.get(wheelTrades);
+  const rid={};wheelTrades.forEach(t=>{if(t.rollId)rid[t.id]=t.rollId;});
+  const out=wheelTrades.map(t=>t);
+  out._rid=rid;
+  _effRollCache.set(wheelTrades,out);
+  return out;
+}
+function buildRollChain(wheelTrades,tipId){
+  wheelTrades=withInferredRolls(wheelTrades);
+  const byId={};wheelTrades.forEach(t=>{byId[t.id]=t;});
+  const tip=byId[tipId];
+  if(!tip||!tip.rollId||!(tip.action==='CSP'||tip.action==='STOC'))return null;
+  const{open,pairs}=walkLegPairs(wheelTrades);
+  const closersByRoll={}; // rollId → every closer in that roll (merge rolls have several)
+  wheelTrades.forEach(t=>{if(t.rollId&&(t.action==='BTC'||t.action==='STC'))(closersByRoll[t.rollId]=closersByRoll[t.rollId]||[]).push(t);});
+  const seen=new Set(),chain=[];let rolls=0;
+  const visit=opener=>{
+    if(!opener||seen.has(opener.id))return;
+    seen.add(opener.id);chain.push(opener);
+    if(!opener.rollId)return; // root — the original fresh entry
+    const cl=(closersByRoll[opener.rollId]||[]).filter(c=>!seen.has(c.id));
+    if(!cl.length)return;
+    rolls++;
+    cl.forEach(c=>{seen.add(c.id);chain.push(c);});
+    cl.forEach(c=>(pairs[c.id]||[]).forEach(p=>visit(byId[p.legId]))); // branches on merged chains
+  };
+  visit(tip);
+  if(rolls===0)return null; // rollId present but pair incomplete — nothing to sum
+  // The campaign includes its ending: any plain (non-roll) closer that consumed the tip —
+  // the final buyback that took the chain off the books.
+  Object.entries(pairs).forEach(([cid,arr])=>{
+    const c=byId[cid];
+    if(c&&!c.rollId&&!seen.has(cid)&&arr.some(p=>p.legId===tipId)){seen.add(cid);chain.push(c);}
+  });
+  const net=chain.reduce((s,t)=>s+(isCredit(t.action)?(t.total||0):-(t.total||0)),0);
+  const today=new Date().toISOString().slice(0,10);
+  const liveLeg=open.find(o=>o.id===tipId&&!o.expiredWorthless&&o.expiry&&o.expiry>=today&&o._rem>0);
+  // Breakeven buyback: the per-share price at which closing the live leg leaves the whole
+  // campaign at exactly zero. Close cheaper and the chain is green.
+  const breakeven=liveLeg&&liveLeg._rem>0?net/liveLeg._rem:null;
+  return{trades:chain,rolls,net,live:!!liveLeg,breakeven};
+}
+
+// A leg is a chain TIP when nothing rolled onward from it: it's either still open, or it
+// was closed by a plain (non-roll) closer. Only tips display the chain summary line.
+// Wheel: trade id → chain index for every trade in a roll chain, in list order of the tips.
+const _chainMapCache=new WeakMap();
+function wheelChainMap(wheelTrades){
+  if(_chainMapCache.has(wheelTrades))return _chainMapCache.get(wheelTrades);
+  const map={};let k=0;
+  [...withInferredRolls(wheelTrades)].sort((a,b)=>(b.entered||'').localeCompare(a.entered||'')).forEach(t=>{
+    if(!t.rollId||!isChainTip(wheelTrades,t))return;
+    const c=buildRollChain(wheelTrades,t.id);if(!c)return;
+    c.trades.forEach(x=>{if(map[x.id]==null)map[x.id]=k;});k++;
+  });
+  _chainMapCache.set(wheelTrades,map);
+  return map;
+}
+function isChainTip(wheelTrades,leg){
+  wheelTrades=withInferredRolls(wheelTrades);
+  leg=wheelTrades.find(x=>x.id===leg.id)||leg;
+  if(!leg.rollId||!(leg.action==='CSP'||leg.action==='STOC'))return false;
+  const{pairs}=walkLegPairs(wheelTrades);
+  for(const t of wheelTrades){
+    if(t.rollId&&t.rollId!==leg.rollId&&(t.action==='BTC'||t.action==='STC')
+      &&(pairs[t.id]||[]).some(p=>p.legId===leg.id))return false; // a later roll consumed it
+  }
+  return true;
+}
+
+function buildOpenPosition(trades){
+  const legs=openOptionLegs(trades);
+  if(!legs.length)return null;
+  // Header shows the nearest-expiry live leg
+  const t=[...legs].sort((a,b)=>a.expiry.localeCompare(b.expiry))[0];
+  return{action:t.action,strike:t.strike,expiry:t.expiry,shares:t._rem>0?t._rem:t.shares,dte:dteDays(t.expiry)};
+}
+
+// Pure (READ-ONLY): the wheel's most recent OPEN short option (latest entered; ties → later in the list), with its OCC symbol.
+// Pure: OCC symbol for a wheel CSP/STOC trade.
+function wheelLegOcc(ticker,t){return`${String(ticker||'').toUpperCase()}${String(t.expiry||'').replace(/-/g,'').slice(2)}${t.action==='CSP'?'P':'C'}${String(Math.round((+t.strike)*1000)).padStart(8,'0')}`;}
+function wheelCurrentOption(ticker,trades){
+  const legs=openOptionLegs(trades).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry&&t.shares>0);
+  if(!legs.length)return null;
+  let t=legs[0];legs.forEach(x=>{if(String(x.entered||'')>=String(t.entered||''))t=x;});
+  const type=t.action==='CSP'?'P':'C';
+  const baseSh=+t.shares||0,openSh=t._rem>0?t._rem:baseSh,contracts=openSh/100;
+  const gross=(+t.premium)*openSh,proFees=(+t.fees||0)*(baseSh?openSh/baseSh:1);
+  let openCredit=null;
+  if(baseSh>0){const tot=t.total;if(tot!=null&&tot!==''&&!isNaN(+tot)&&((+tot)>0||proFees>=gross))openCredit=Math.round((+tot)*(openSh/baseSh)*100)/100;else openCredit=Math.round((gross-proFees)*100)/100;}
+  const occ=`${String(ticker||'').toUpperCase()}${String(t.expiry).replace(/-/g,'').slice(2)}${type}${String(Math.round((+t.strike)*1000)).padStart(8,'0')}`; // same as wheelLegOcc
+  return{id:t.id,action:t.action,type,strike:t.strike,expiry:t.expiry,contracts,occ,premium:+t.premium||null,openCredit,openSh,baseSh};
+}
+// Pure: live buy-back cost = mid per share × 100 × contracts; null without a live mid
+function wheelCurrentValue(opt,mid){return opt&&mid!=null&&mid>=0?Math.round(mid*100*opt.contracts*100)/100:null;}
+// Pure: % of the sold premium still kept = (premium received − current value) ÷ premium received × 100. + = cheaper to buy back.
+// Pure: open-option profit now = premium received − live buy-back cost; null without premium or quote.
+function wheelCurrentProfit(opt,curVal){if(!opt||curVal==null)return null;if(!(opt.premium>0))return null;if(opt.openCredit!=null)return Math.round((opt.openCredit-curVal)*100)/100;return Math.round((opt.premium*100*opt.contracts-curVal)*100)/100;}
+// Pure: chain-aware Profit. When the open leg tips a roll chain: chain net − live buy-back;
+// % = that ÷ every sell-to-open premium received across the chain. Null when the leg is not in a chain.
+function wheelChainProfit(trades,opt,curVal){
+  if(!opt||curVal==null)return null;
+  const c=buildRollChain(trades,opt.id);if(!c)return null;
+  const rec=c.trades.filter(t=>t.action==='CSP'||t.action==='STOC').reduce((a,t)=>a+(t.total||0),0);
+  const profit=Math.round((c.net-curVal)*100)/100;
+  return{profit,pct:rec>0?profit/rec*100:null,net:c.net,received:rec};
+}
+function wheelCurrentPct(opt,curVal){if(!opt||!(opt.premium>0)||curVal==null)return null;const rec=opt.premium*100*opt.contracts;return (rec-curVal)/rec*100;}
+
+// Pure: wheel step 0 Put · 1 Assigned · 2 Call · 3 Called away.
+// Pure (READ-ONLY): cost-basis summary for a wheel card. Breakeven comes from calcWheel (m.breakeven) — no new maths here.
+function wheelCardSummary(o){
+  const held=o.sharesHeld>0&&o.breakeven!=null;
+  const sellAbove=held?Math.ceil(Math.round(o.breakeven*1e6)/1e4)/100:null; // breakeven rounded UP to the cent
+  const call=held&&o.openPos&&o.openPos.action==='STOC'?Number(o.openPos.strike):null;
+  const below=call!=null&&call<o.breakeven;
+  const total=o.closed?Math.round(((o.premiumNet||0)+(o.sharesRealised||0)+(o.divs||0))*100)/100:null;
+  return{held,breakeven:held?o.breakeven:null,assignedAt:held&&o.openShares>0?o.openCost/o.openShares:null,sellAbove,callStrike:call,below,total,showAddButtons:!o.closed};
+}
+function wheelStage(sharesHeld,openAction,hasOut){
+  if(sharesHeld>0)return openAction==='STOC'?2:1;
+  if(openAction==='CSP')return 0;
+  return hasOut?3:0;
+}
+// Earnings + ex-div flags. Next dates cached per session (_earn / _exdiv).
+// Header earnings badge stays within 14 days; the trade-row tag shows any known date on or before that option's expiry.
+const _earn={};
+const _exdiv={};
+function earningsDays(date,today){if(!date)return null;return Math.round((Date.parse(date+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5);}
+function earningsBeforeExpiry(date,expiry,today){return !!(date&&expiry&&today&&date>=today&&date<=expiry);}
+function fmtDayMon(d){if(!d)return'';const[,m,day]=d.split('-');return`${parseInt(day,10)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m,10)-1]}`;}
+function earlyAssignmentFlag(o){
+  o=o||{};
+  const exDate=o.exDate,amount=o.amount,expiry=o.expiry,today=o.today,spot=o.spot,strike=o.strike,mark=o.mark;
+  if(!exDate||!expiry||!today)return null;
+  if(!(exDate>=today&&exDate<expiry))return null;
+  if(!(spot>0)||!(strike>0)||!(spot>strike))return null;
+  const amt=amount==null||amount===''||isNaN(+amount)?null:+amount;
+  const mk=mark==null||mark===''||isNaN(+mark)?null:+mark;
+  if(mk==null||amt==null||!(amt>0))return{kind:'exdiv',date:exDate,amount:amt};
+  const tv=Math.round((mk-(spot-strike))*100)/100;
+  if(tv<amt)return{kind:'risk',date:exDate,amount:amt,tv};
+  return{kind:'exdiv',date:exDate,amount:amt};
+}
+function earningsBadge(sym,openExpiries){
+  const e=_earn[sym];if(!e||e.date===undefined)return'';
+  const today=new Date().toISOString().slice(0,10);
+  const n=earningsDays(e.date,today);
+  if(n==null||n<0||n>14)return'';
+  const before=Array.isArray(openExpiries)&&openExpiries.some(exp=>earningsBeforeExpiry(e.date,exp,today));
+  const when=n===0?'today':n===1?'tomorrow':'in '+n+'d';
+  return`<span class="rot-earn" title="Next earnings ${esc(e.date)}${before?' — falls before an open option expires':''}">● Earnings ${when}${before?' · before expiry':''}</span>`;
+}
+function shortRowWarnInner(sym,opts){
+  opts=opts||{};
+  const today=opts.today||new Date().toISOString().slice(0,10);
+  const expiry=opts.expiry||'';
+  if(!sym||!expiry)return'';
+  let html='';
+  const e=_earn[sym];
+  if(e&&e.date&&earningsBeforeExpiry(e.date,expiry,today)){
+    html+=`<span class="row-tag" title="Earnings fall before this option expires">Earnings ${fmtDayMon(e.date)}</span>`;
+  }
+  if(opts.isCall){
+    const d=_exdiv[sym];
+    if(d&&d.date!==undefined){
+      const f=earlyAssignmentFlag({exDate:d.date,amount:d.amount,expiry,today,spot:opts.spot,strike:opts.strike,mark:opts.mark});
+      if(f&&f.kind==='risk'){
+        const tv=Math.max(0,+f.tv||0);
+        html+=`<span class="row-tag row-tag-risk" title="${esc(`Ex-dividend ${fmtDayMon(f.date)}, dividend $${fmt2(f.amount)}. This call is in the money with only $${fmt2(tv)} of time value left, so it may be assigned early the day before.`)}">Early assignment risk</span>`;
+      }else if(f&&f.kind==='exdiv'){
+        html+=`<span class="row-tag" title="${esc('Ex-dividend '+fmtDayMon(f.date)+(f.amount!=null?`, dividend $${fmt2(f.amount)}`:''))}">Ex-div ${fmtDayMon(f.date)}</span>`;
+      }
+    }
+  }
+  return html;
+}
+function shortRowWarnTags(sym,opts){
+  opts=opts||{};
+  if(!opts.isOpen||!sym||!opts.expiry)return'';
+  queueEarnings(sym);
+  if(opts.isCall)queueDividend(sym);
+  const spot=opts.spot,strike=opts.strike,mark=opts.mark;
+  return`<span class="row-warn" data-sym="${esc(sym)}" data-expiry="${esc(opts.expiry)}" data-call="${opts.isCall?1:0}" data-spot="${spot==null||spot===''?'':+spot}" data-strike="${strike==null||strike===''?'':+strike}" data-mark="${mark==null||mark===''?'':+mark}">${shortRowWarnInner(sym,opts)}</span>`;
+}
+function refreshEarnWarn(){
+  document.querySelectorAll('.rot-earn-slot').forEach(x=>{
+    const exps=(x.dataset.exps||'').split(',').filter(Boolean);
+    x.innerHTML=earningsBadge(x.dataset.sym,exps);
+  });
+  document.querySelectorAll('.row-warn').forEach(x=>{
+    const mark=x.dataset.mark,spot=x.dataset.spot,strike=x.dataset.strike;
+    x.innerHTML=shortRowWarnInner(x.dataset.sym,{expiry:x.dataset.expiry,isCall:x.dataset.call==='1',spot:spot===''?null:+spot,strike:strike===''?null:+strike,mark:mark===''?null:+mark});
+  });
+}
+function queueEarnings(sym){
+  if(!sym||_earn[sym])return;_earn[sym]={};
+  fetch(`/.netlify/functions/earnings?symbol=${encodeURIComponent(sym)}`,{signal:AbortSignal.timeout(30000)}).then(r=>r.ok?r.json():null)
+    .then(j=>{_earn[sym]={date:j&&j.date||null};refreshEarnWarn();})
+    .catch(()=>{_earn[sym]={date:null};});
+}
+function queueDividend(sym){
+  if(!sym||_exdiv[sym])return;_exdiv[sym]={};
+  fetch(`/.netlify/functions/dividends?symbol=${encodeURIComponent(sym)}`,{signal:AbortSignal.timeout(30000)}).then(r=>r.ok?r.json():null)
+    .then(j=>{_exdiv[sym]={date:j&&j.date||null,amount:j&&j.amount!=null?j.amount:null};refreshEarnWarn();})
+    .catch(()=>{_exdiv[sym]={date:null,amount:null};});
+}
+// Wheel card look (design A, display only): per-company brand gradient behind the whole card, big angled logo bleeding off the right.
+// Logo marks are single-colour SVGs (Wikimedia Commons, trademarks of their owners). Tickers without a mark get big angled ticker letters.
+function safeBrandMarks(){try{if(typeof WcBrand!=='undefined'&&WcBrand.setMarks&&typeof WC_MARKS!=='undefined')WcBrand.setMarks(WC_MARKS);}catch(e){console.warn('WC_MARKS init failed',e);}}
+const WC_MARKS={"AMD":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"606 0 194 191\"><path d=\"M187.88 178.12H143.52l-13.57-32.73H56.00l-12.36 32.73H0L66.66 12.77h47.76zM91.15 52.28L66.91 116.53h50.91zm257.90-39.51h35.88v165.34h-41.21V74.84l-44.60 51.87h-6.30l-44.60-51.87V178.12h-41.21V12.77h35.88l53.09 61.33zm140.31 0c60.36 0 91.39 37.57 91.39 82.90 0 47.51-30.05 82.43-96 82.43h-68.36V12.77zm-31.76 135.04h26.90c41.45 0 53.82-28.12 53.82-52.37 0-28.36-15.27-52.36-54.30-52.36h-26.42v104.74zm205.15-95.83L610.79 0H800v189.21l-51.97-51.97V51.98zm-.061 10.41L609.2 115.90v74.89h74.88l53.50-53.50h-74.88z\"/></svg>","KO":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 615.08 192.94\"><path d=\"M430.88,14.81s-11.53,4.59-24.94,19.37S384.72,65.58,390.5,70c2.22,1.68,7.34,2,16.63-6.4a73.4,73.4,0,0,0,19.66-27.26c6-14.63,4.09-21.35,4.09-21.51M504.27,41.4c-14.9-7.64-25.79-17-37.12-22.79-10.81-5.55-17.8-7.87-26.54-6.7a27.08,27.08,0,0,0-3.6.9S441.51,28.18,423.6,54C405.46,80.18,389,80,384.32,72.81c-4.9-7.59,1.43-23.06,12-36.83,11.07-14.4,30.51-26.34,30.51-26.34s-6.2-3.79-21.42,4.84C390.56,22.86,365,42.86,341.28,76.59s-28.42,52.29-31.82,66.9-.31,30.26,15.89,30.26,35.06-24.71,40.38-33.3c9.89-16,16.34-40.54,2.88-37.17-6.63,1.66-12,9-15.39,16.07a68.75,68.75,0,0,0-4.88,14.2,56,56,0,0,0-13.13,7.64,97.09,97.09,0,0,0-12.46,11s.06-11.68,9.37-30.58,26.4-27.53,36.08-28.34c8.72-.7,20.07,6.7,10.45,34s-38,60.49-67.81,60.9c-27.51.38-45.51-34.73-7.22-96C346,24.48,395.71,3.71,411.85,1.4s21.39,4.81,21.39,4.81a69.43,69.43,0,0,1,30.69-5.06C483.64,2.48,498.88,16.43,519,26.23c-5.23,5-10.22,10.25-14.72,15.17m88.54-22.79c-13.66,8.76-32.56,16.7-50.72,15-4.6,4.75-9.52,10.25-14.45,16.25,31.49,6.23,59.08-13.28,73.75-29.89A97.91,97.91,0,0,0,615.08.3a122.82,122.82,0,0,1-22.27,18.31m-41.93,88.72a6.86,6.86,0,0,0,.58-1.31,3.18,3.18,0,0,0-2.89-2.76c-3-.14-7.09.43-17.82,12.31a161.54,161.54,0,0,0-22.81,32.36c-6.14,11.22-8.63,19.58-5.1,21.74a5.09,5.09,0,0,0,3.72.38c2.39-.57,5.1-2.81,9.22-7.58,1.93-2.24,4.07-5.41,6.63-8.92,7.1-9.66,24.94-40.07,28.47-46.22M439.42,120.25c1.79-4.68,4.07-13.87-.67-17.48-5.09-3.83-18.07,5.16-18.14,14.38-.09,9.44,9.14,13.71,11.35,14.31,1.26.34,1.7.29,2.31-.72a84.17,84.17,0,0,0,5.15-10.49m-9.82,17.17a39.24,39.24,0,0,1-8.92-5.69A28.6,28.6,0,0,1,414,123.6c-.18-.3-.36-.07-.56.2s-1,1-7.92,11.14-17.55,31.15-7.93,34.73c6.16,2.29,16.41-8.5,22-15.65a133.53,133.53,0,0,0,10.33-15.72c.29-.61,0-.75-.31-.88m109.12,24.27c-2.61,4.18-5.59,12.2,3,7.21,10.51-6.07,25.48-28.78,25.48-28.78H574a227.6,227.6,0,0,1-20.58,27c-10.65,11.8-23.64,22.52-32.79,21.46-10.69-1.25-7.34-15.28-7.34-15.28S498,189.58,487.42,188.41c-14.29-1.58-9.93-19.24-9.93-19.24S461.33,189,450.32,188.39c-17.26-1-12.92-22-8.12-36.79,2.57-7.91,4.95-14.12,4.95-14.12s-1.71.45-5.39,1c-1.92.27-5.42.47-5.42.47s-7.19,12.68-12.94,20.3-30.19,33.89-44.57,28.63c-13.3-4.86-8.9-25.22-1.16-41.4,11.3-23.59,43.08-57.48,61.41-53,19,4.61.43,39.28.43,39.28s0,.13.2.22c.38.14,1.37.25,3.66-.2a41.13,41.13,0,0,0,6.95-2.07s19.1-40,40.2-66.17S553.71-6.7,570.23,4.2c4,2.68,2.2,11.91-3.24,23.11a74.1,74.1,0,0,1-7.46,2c3.64-6.61,6.05-12.18,6.77-16.07,2.49-13.52-29.08,15-51.64,45.64a425.28,425.28,0,0,0-36.1,58.43A98.92,98.92,0,0,0,490.2,109a333.22,333.22,0,0,0,28.64-26.74,311.87,311.87,0,0,0,24.38-28.14,66.14,66.14,0,0,0,7.17-.74,308.92,308.92,0,0,1-26.9,31.78c-9,9.1-18.74,18.89-27.2,26a226.54,226.54,0,0,1-23.86,17.73s-19.73,39.79-9,42.34c6.31,1.52,18.77-17.67,18.77-17.67s16.26-24.81,26.06-36c13.37-15.2,24.88-24,36.38-24.16,6.7-.12,10.65,7,10.65,7l3.15-4.88h19.4s-36.23,61.48-39.13,66.11M592.81,18.61c-13.66,8.76-32.56,16.7-50.72,15-4.6,4.75-9.52,10.25-14.45,16.25,31.49,6.23,59.08-13.28,73.75-29.89A97.91,97.91,0,0,0,615.08.3a122.82,122.82,0,0,1-22.27,18.31M320.36,48.77H301.91L291.48,65.62l18.45,0ZM233,107.12c7.85-10.76,29.51-48.47,29.51-48.47a3.17,3.17,0,0,0-2.88-2.76c-3-.14-8,.87-17.93,13.3s-17.64,22.32-23.26,32.61c-6.16,11.23-8.85,19.15-5.31,21.3a5.26,5.26,0,0,0,3.71.38c2.3-.58,5.31-2.89,9.44-7.64,1.94-2.22,4.14-5.21,6.72-8.72m-99-51c-5.1-3.85-18.07,5.16-18.14,14.36-.08,9.45,11.67,12.34,13.19,12.41a2.31,2.31,0,0,0,1.29-.27,1.54,1.54,0,0,0,.62-.68,89.27,89.27,0,0,0,3.72-8.34c1.79-4.68,4.06-13.87-.68-17.48m-7.69,32.53a43,43,0,0,1-10-4.6,20.82,20.82,0,0,1-7.14-7.91c-.18-.3-.38-.07-.56.2s-1.22,1.57-8.16,11.75-17.22,31-7.59,34.58C99,125,109.37,114.12,115,107a185.55,185.55,0,0,0,11.66-17.46c.23-.61,0-.75-.34-.86M277,94.92h6.76s-33.87,49-53,46.72c-10.68-1.25-7.51-14.43-7.51-14.43s-15,17.56-28.78,14c-12.5-3.21-4.43-24-4.43-24-1.42.57-28.47,31.06-47.48,23.75-19.89-7.68-9.56-33.21-5.78-40.89,3.21-6.47,6.76-12.77,6.76-12.77s-3.05.86-5,1.3-4.77,1-4.77,1-9.41,15.29-15.16,22.92-30.19,33.85-44.59,28.63-10.83-25.37-2.74-41.37c13.12-25.95,44.25-57.84,63-53,18.94,4.83,3.26,35.55,3.26,35.55s3.77.49,12.8-5.67c13-8.87,30.16-32.73,48.74-29.93C207.84,48.05,216,57,204.84,74c-3.56,5.46-9.53,10.34-14.1,5.51-2.85-3-.36-8.47,2.63-12.21a11.7,11.7,0,0,1,10-4.58s3.07-7-4.74-6.9c-6.32.12-22.32,14.85-31.35,29.73-8.28,13.66-20.83,36.93-8.23,42,11.55,4.66,33.53-21.43,43.71-35.1S236.14,47.8,255.6,46.56c6.7-.44,10.69,5.67,10.69,5.67l2.25-3.56H288s-36.65,61.16-39.51,65.79c-2.25,3.62-5.24,11.76,3,7.2S277,94.92,277,94.92m-10.59,98a80.59,80.59,0,0,0-48.9-14.27,30,30,0,0,0-23.86,12.93c-7.42-12.95-22.09-20.9-44.77-20.72-36.65.42-73,17.32-101.8,17.3C19.48,188.16-.65,170.81,0,140,1.21,85.93,46.9,37.24,81,15.33,100.66,2.74,117.1-1,127.85.21c7.84.87,17.27,9.93,11.32,23.28C130.43,43,118.36,41.4,118.81,32.07c.25-6.07,4.29-9.89,7.33-12,1.93-1.33,5.34-1.71,7.12-1.75,1.73-1.46,3-12.14-11-8.63S91.26,27,75.12,44.83,33.85,96.36,27.64,131.75c-2.9,16.41-1,46.34,37.91,46,33-.27,81.64-22,126.34-21.55,17.35.17,32.45,4.85,44.22,12.11,11.56,7.12,25.42,17.52,30.34,24.62\"/></svg>","NVDA":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 45.3 30.1\" style=\"fill-rule:evenodd;clip-rule:evenodd\"><path d=\"M16.88,8.98L16.88,6.28C17.15,6.26 17.41,6.24 17.68,6.23C25.08,6.00 29.94,12.59 29.94,12.59C29.94,12.59 24.69,19.87 19.07,19.87C18.33,19.88 17.59,19.76 16.88,19.52L16.88,11.32C19.76,11.67 20.34,12.94 22.08,15.83L25.93,12.58C25.93,12.58 23.12,8.89 18.38,8.89C17.86,8.89 17.37,8.93 16.88,8.98ZM16.88,0.04L16.88,4.09C17.15,4.06 17.42,4.05 17.68,4.04C27.97,3.69 34.68,12.48 34.68,12.48C34.68,12.48 26.98,21.84 18.95,21.84C18.22,21.84 17.53,21.77 16.88,21.66L16.88,24.16C17.44,24.23 18.01,24.27 18.61,24.27C26.07,24.27 31.47,20.46 36.70,15.94C37.57,16.64 41.12,18.33 41.85,19.07C36.87,23.23 25.29,26.58 18.72,26.58C18.11,26.58 17.5,26.55 16.88,26.49L16.88,30L45.26,30L45.26,0.04L16.88,0.04ZM16.88,19.52L16.88,21.66C9.98,20.43 8.06,13.25 8.06,13.25C8.06,13.25 11.38,9.58 16.88,8.98L16.88,11.32L16.87,11.32C13.98,10.97 11.73,13.67 11.73,13.67C11.73,13.67 12.99,18.22 16.88,19.52ZM4.62,12.94C4.62,12.94 8.71,6.90 16.88,6.28L16.88,4.08C7.83,4.81 0,12.48 0,12.48C0,12.48 4.43,25.31 16.88,26.48L16.88,24.16C7.75,23.01 4.62,12.94 4.62,12.94Z\"/></svg>","SOFI":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 -2.2 162.2 47.3\" id=\"svg8\"><defs id=\"defs2\"><linearGradient gradientUnits=\"userSpaceOnUse\" y2=\"5.11\" x2=\"4.79\" y1=\"43.00\" x1=\"40.12\" id=\"paint0_linear\"><stop id=\"stop821\" stop-color=\"#515254\" /><stop id=\"stop823\" stop-color=\"#48494B\" offset=\"0.19\" /><stop id=\"stop825\" stop-color=\"#313233\" offset=\"0.50\" /><stop id=\"stop827\" stop-color=\"#0C0C0C\" offset=\"0.89\" /><stop id=\"stop829\" offset=\"1\" /></linearGradient><style id=\"style851\">.cls-1{fill:#231f20;}.cls-2{fill:#0080c5;}</style><linearGradient id=\"linear-gradient\" x1=\"0.03\" y1=\"36.13\" x2=\"36.13\" y2=\"0.03\" gradientUnits=\"userSpaceOnUse\"><stop id=\"stop874\" offset=\"0\" stop-color=\"#0074f5\" /><stop id=\"stop876\" offset=\"1\" stop-color=\"#03aaff\" /></linearGradient><polygon points=\"24.21,17 0.79,17 0.79,0.53 24.21,0.53 \" id=\"vector-svg@1x-a\" /><polygon points=\"1.10,1.31 0,1.31 0,0 1.10,0 \" id=\"vector-svg@1x-c\" /><polygon points=\"1.70,1.31 0.30,1.31 0.30,0 1.70,0 \" id=\"vector-svg@1x-e\" /></defs><g id=\"layer1\" transform=\"translate(-54.18,-93.25)\"><g id=\"g1256\" transform=\"matrix(1.95,0,0,1.93,53.20,91.38)\"><path id=\"path1222\" d=\"m 24.7,7.1 c -4.4,0 -8,3.6 -8,8 0,4.4 3.6,8 8,8 4.4,0 8,-3.6 8,-8 0,-4.4 -3.6,-8 -8,-8 z m 3.9,7.9 c 0,2.2 -1.7,4 -3.8,4 -2.1,0 -3.8,-1.8 -3.8,-4 0,-2.2 1.7,-4 3.8,-4 2.1,0 3.8,1.8 3.8,4 z M 52.7,7.4 C 52.6,7.3 52.5,7.3 52.4,7.3 h -3.2 c -0.2,0 -0.4,0.2 -0.4,0.4 v 14.5 c 0,0.1 0,0.2 0.1,0.3 0.1,0.1 0.2,0.1 0.3,0.1 h 3.2 c 0.2,0 0.4,-0.2 0.4,-0.4 V 7.7 c 0,-0.1 0,-0.2 -0.1,-0.3 z m -1.9,-2 C 52,5.4 53,4.4 53,3.2 53.1,2 52,1 50.8,1 c -1.2,0 -2.2,1 -2.2,2.2 0,1.3 1,2.2 2.2,2.2 z M 46.5,1.3 H 34.8 c -0.2,0 -0.4,0.2 -0.4,0.4 v 20.5 c 0,0.1 0,0.2 0.1,0.3 0.1,0.1 0.2,0.1 0.3,0.1 H 38 c 0.2,0 0.4,-0.2 0.4,-0.4 v -8.3 h 7.2 c 0.1,0 0.2,0 0.3,-0.1 C 46,13.7 46,13.6 46,13.5 v -3 c 0,-0.2 -0.2,-0.4 -0.4,-0.4 h -7.2 v -5 h 8.1 c 0.1,0 0.2,0 0.3,-0.1 0.1,-0.1 0.1,-0.2 0.1,-0.3 v -3 C 46.9,1.5 46.7,1.3 46.5,1.3 Z M 9.2,10.2 C 6,8.8 5,8.2 5,7 5,5.4 6.5,4.9 7.9,4.9 c 1.5,0 3.1,0.8 3.1,3 0,0.2 0.1,0.3 0.3,0.3 h 3.5 C 14.9,8.1 15,8 15,7.9 15,3.9 12.1,1 7.9,1 3.7,1 1,3.4 1,7 c 0,4.3 3.2,5.6 6.3,6.8 l 0.2,0.1 c 2.9,1.1 3.9,1.6 3.9,3 0,1.9 -2,2.2 -3.1,2.2 -2.1,0 -3.7,-1.5 -3.7,-3.5 V 15.4 C 4.6,15.2 4.5,15.1 4.3,15.1 H 0.8 c -0.1,0 -0.3,0.1 -0.3,0.3 v 0.3 c 0,4.4 3.2,7.4 7.7,7.4 4.3,0 7.2,-2.5 7.2,-6.1 0.1,-3.7 -1.8,-5 -6.2,-6.8 z M 83.5,22 c 0,0.6 -0.4,1 -1,1 -0.6,0 -1,-0.4 -1,-1 0,-0.6 0.4,-1 1,-1 0.6,0 1,0.4 1,1 z m -1.8,0 c 0,0.5 0.3,0.8 0.8,0.8 0.5,0 0.8,-0.3 0.8,-0.8 0,-0.5 -0.3,-0.8 -0.8,-0.8 -0.5,0 -0.8,0.3 -0.8,0.8 z m 1.2,-0.2 c 0,0.1 -0.1,0.2 -0.2,0.3 l 0.2,0.4 h -0.3 l -0.2,-0.4 h -0.1 v 0.4 h -0.2 v -1 h 0.4 c 0.2,0 0.4,0.1 0.4,0.3 z M 82.4,21.7 V 22 h 0.1 c 0.1,0 0.2,-0.1 0.2,-0.1 0,-0.1 -0.1,-0.1 -0.2,-0.1 H 82.4 Z M 78.3,1.9 c 1.4,0 2.5,1.1 2.5,2.5 0,1.4 -1.1,2.5 -2.5,2.5 -1.4,0 -2.5,-1.1 -2.5,-2.5 0,-1.4 1.1,-2.5 2.5,-2.5 M 78.3,1 C 76.4,1 74.8,2.6 74.8,4.5 74.8,6.4 76.4,8 78.3,8 80.2,8 81.8,6.4 81.8,4.5 81.8,2.6 80.2,1 78.3,1 Z\" style=\"fill:#00a2c7\" /><circle id=\"ellipse1224\" transform=\"rotate(-28.53,78.28,12.00)\" cx=\"78.30\" cy=\"12\" r=\"3.5\" style=\"fill:#00a2c7\" /><circle id=\"ellipse1226\" transform=\"rotate(-28.53,78.27,19.51)\" cx=\"78.30\" cy=\"19.5\" r=\"3.5\" style=\"fill:#00a2c7\" /><path id=\"path1228\" d=\"m 70.8,9.5 c 0.7,0 1.3,0.3 1.8,0.7 0.5,0.5 0.7,1.1 0.7,1.8 0,1.4 -1.1,2.5 -2.5,2.5 -0.7,0 -1.3,-0.3 -1.8,-0.7 -0.5,-0.5 -0.7,-1.1 -0.7,-1.8 -0.1,-1.4 1.1,-2.5 2.5,-2.5 m 0,-1 c -1.9,0 -3.5,1.6 -3.5,3.5 0,1.9 1.6,3.5 3.5,3.5 1.9,0 3.5,-1.6 3.5,-3.5 0,-1.9 -1.6,-3.5 -3.5,-3.5 z\" style=\"fill:#00a2c7\" /><circle id=\"ellipse1230\" transform=\"rotate(-66.11,63.26,12.00)\" cx=\"63.29\" cy=\"12\" r=\"3.5\" style=\"fill:#00a2c7\" /><circle id=\"ellipse1232\" transform=\"rotate(-66.11,70.77,4.49)\" cx=\"70.80\" cy=\"4.5\" r=\"3.5\" style=\"fill:#00a2c7\" /><circle id=\"ellipse1234\" transform=\"rotate(-66.11,63.26,4.49)\" cx=\"63.29\" cy=\"4.5\" r=\"3.5\" style=\"fill:#00a2c7\" /><circle id=\"ellipse1236\" transform=\"rotate(-66.11,70.77,19.51)\" cx=\"70.80\" cy=\"19.5\" r=\"3.5\" style=\"fill:#00a2c7\" /><path id=\"path1238\" d=\"m 63.3,17 c 0.7,0 1.3,0.3 1.8,0.7 0.5,0.5 0.7,1.1 0.7,1.8 0,1.4 -1.1,2.5 -2.5,2.5 -1.4,0 -2.5,-1.1 -2.5,-2.5 -0.1,-1.4 1.1,-2.5 2.5,-2.5 m 0,-1 c -1.9,0 -3.5,1.6 -3.5,3.5 0,1.9 1.6,3.5 3.5,3.5 1.9,0 3.5,-1.6 3.5,-3.5 0,-1.9 -1.6,-3.5 -3.5,-3.5 z\" style=\"fill:#00a2c7\" /></g></g><style id=\"style1000\" type=\"text/css\"> .st0{fill:#E16A2D;} .st1{fill:#555759;} .st2{fill:#FFFFFF;} .st3{fill:#E16B2A;} </style></svg>","SPCX":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1014 200\"><g fill=\"none\" stroke=\"#fff\" stroke-width=\"17\" fill-rule=\"nonzero\"><path d=\"M119.5 68.5 H34.5 Q18.5 68.5 18.5 84.5 V89.0 Q18.5 105.0 34.5 105.0 H103.5 Q119.5 105.0 119.5 121.0 V125.5 Q119.5 141.5 103.5 141.5 H18.5\" /><path d=\"M160.5 150 V68.5 H237.5 Q253.5 68.5 253.5 84.5 V93.0 Q253.5 109.0 237.5 109.0 H160.5\" /><path d=\"M291.1 150 L350.0 66.8 L408.9 150\" stroke-linejoin=\"miter\" /><path d=\"M543.5 68.5 H462.5 Q446.5 68.5 446.5 84.5 V125.5 Q446.5 141.5 462.5 141.5 H543.5\" /><path d=\"M680 68.5 H584.5 V141.5 H680 M584.5 105.0 H672\" /><path d=\"M708 60 L840 150\" /><path stroke=\"none\" fill=\"#fff\" d=\"M698 150 Q781.0 58 994 12 Q802.0 80 728 150 Z\" /></g></svg>","TSLA":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1000 1000\"><path fill=\"#fff\" d=\"M0 101Q500-86 1000 101L975 164Q500-21 25 164Z M43 183Q213 122 400 98L500 220L600 98Q787 122 957 183Q905 255 822 292C815 255 790 228 642 221L511 992Q500 1006 489 992L358 221C210 228 185 255 178 292Q95 255 43 183Z\"/></svg>","AMZN":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"-4 -4 436 123\"><path fill=\"#fff\" d=\"M6 20C80 120 280 160 382 50Q392 41 383 37C262 99 92 77 13 7Q-1 7 6 20Z\"/><path fill=\"none\" stroke=\"#fff\" stroke-width=\"18\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M347 20Q394 9 418 12Q422 20 416 38Q408 62 390 80\"/></svg>"};
+safeBrandMarks();
+// box w, h, right, top (px at desktop), rotation, colour, opacity
+function wcKey(tk){return WcBrand.key(tk);}
+function wcBg(tk){return WcBrand.bgSync(tk);}
+function wcAccent(tk){return WcBrand.accent(tk);}
+function wcArtHtml(tk){return WcBrand.artHtml(tk);}
+// LEAP card headers (direction A): brand G1 behind the card, same marks as the wheel cards. AAPL graphite and MSFT blue are pinned.
+const LC_BG={AAPL:'radial-gradient(60% 120% at 92% 18%,rgba(255,255,255,.16) 0%,rgba(255,255,255,0) 70%),linear-gradient(104deg,#161313 0%,#221e1e 28%,#332c2e 56%,#3d3638 80%,#433b3d 100%)',
+  MSFT:'radial-gradient(60% 120% at 92% 18%,rgba(0,120,212,.28) 0%,rgba(0,120,212,0) 70%),linear-gradient(104deg,#001331 0%,#002953 28%,#003d88 56%,#004399 80%,#004599 100%)'};
+function lcBg(tk){const k=String(tk||'').trim().toUpperCase();return LC_BG[k]||wcBg(k);}
+function leapBrandPaint(){
+  try{
+    if(typeof WcBrand==='undefined'||typeof document==='undefined')return;
+    const tks=[...new Set([...document.querySelectorAll('.leap-card.lcw[data-ticker]')].map(e=>e.dataset.ticker))];
+    if(!tks.length)return;
+    WcBrand.loadOverrides().then(()=>WcBrand.prime(tks)).then(()=>document.querySelectorAll('.leap-card.lcw[data-ticker]').forEach(el=>{
+      const tk=el.dataset.ticker;el.style.setProperty('--wc-bg',lcBg(tk));
+      const a=el.querySelector(':scope>.wc-art');if(a){const w=document.createElement('div');w.innerHTML=wcArtHtml(tk);if(w.firstChild)a.replaceWith(w.firstChild);}
+    })).catch(e=>console.warn('leapBrandPaint failed',e));
+  }catch(e){console.warn('leapBrandPaint failed',e);}
+}
+function renderRotationWindow(wheel){
+  const m=calcWheel(wheel);
+  const exp=!collapsedWheels.has(wheel.id);
+  const isOpen=wheel.status==='open';
+
+  // Active option DTE
+  let activeDTE=null,activeDTEExpiry=null;
+  const openLegForDTE=buildOpenPosition(m.trades);
+  if(openLegForDTE){activeDTE=openLegForDTE.dte;activeDTEExpiry=openLegForDTE.expiry;}
+  // Expired legs awaiting confirmation
+  const expiredLegs=m.trades.filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.expiry&&!t.expiredWorthless&&dteDays(t.expiry)!==null&&dteDays(t.expiry)<0);
+
+  // Header elements — live price between ticker and label
+  const liveQ=quotes[wheel.ticker];
+  const rawP=liveQ?liveQ.price:(wheel.lastPrice||null);
+  const chg=liveQ?liveQ.change:null;
+  const chgPct=liveQ?liveQ.pct:null;
+  const chgSign=chg!=null&&chg>=0?'+':'';
+  const chgColor=chg!=null?(chg>=0?'var(--green)':'var(--red)'):'var(--text3)';
+  const headerPriceHtml=rawP!=null
+    ?`<span class="rot-header-price" style="flex-direction:row;align-items:baseline;gap:0.375rem">
+        <span style="color:var(--silver);font-size:0.8125rem;font-weight:480">$${rawP.toFixed(2)}</span>
+        ${quoteChangeReady(chg,chgPct)?`<span style="color:${chgColor};font-size:0.825rem;font-weight:480">${chgSign}${chg.toFixed(2)} (${chgSign}${chgPct.toFixed(2)}%)</span>`:''}
+      </span>`
+    :pricePendingHtml(wheel.ticker);
+  const shares=(m.sharesHeld>0?m.sharesHeld:0)+' shares';
+  const _wTrades=m.trades.filter(t=>!t.expiredWorthless);
+  const _entered=_wTrades.map(t=>t.entered).sort();
+  const _firstDate=_entered.length?_entered[0]:null;
+  const _lastDate=_entered.length?_entered[_entered.length-1]:null;
+  const _dateSpan=_firstDate?(isOpen?fmtMonYear(_firstDate)+' → Present':(_lastDate&&_lastDate!==_firstDate?fmtMonYear(_firstDate)+' → '+fmtMonYear(_lastDate):fmtMonYear(_firstDate))):'—';
+  const _strike=openLegForDTE?.strike;
+  const _pctToStrike=rawP!=null&&_strike?((_strike-rawP)/rawP*100):null; // move needed from current price to reach strike
+  const _pctCol='var(--silver)'; // neutral — sign shows which side of the strike; red/green was misleading for CCs
+  const _pctHtml=_pctToStrike!==null?`<span class="rot-to-strike" style="font-size:0.825rem;font-weight:480"><span style="color:${_pctCol}">${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}%</span> <span style="font-size:0.75rem;font-weight:480;color:var(--silver)">To Strike</span></span>`:'';
+  const _dteColor='var(--silver)';
+  const dteBadge=activeDTE!==null
+    ?`<span class="rot-dte-badge" style="color:${_dteColor};border-color:${_dteColor}">${activeDTEExpiry?fmtDateShort(activeDTEExpiry):''} (${activeDTE}d)</span>`
+    :'';
+
+  const openCSP=buildOpenPosition(m.trades);
+  const cspCollateral=(m.sharesHeld===0&&openCSP&&openCSP.action==='CSP'&&openCSP.strike&&openCSP.shares)?openCSP.strike*openCSP.shares:null;
+
+  // Open position — currently live leg
+  const openPos=buildOpenPosition(m.trades);
+  const _rss=rotationShareStats(wheel,db.trades,_priceOf);
+  const _stage=wheelStage(m.sharesHeld,openPos?openPos.action:null,m.trades.some(t=>t.action==='OUT'));
+  const _stepNames=['Put','Assigned','Call','Called away'];
+  const _steps=`<div class="wl-steps">${_stepNames.map((n,i)=>`<div class="wl-st${i<_stage?' d':i===_stage?' n':''}"><b></b><span class="wl-sl">${n}</span>${i===_stage&&openPos?`<span class="wl-leg">${openPos.action==='CSP'?'Put':'Call'} $${fmt2(openPos.strike).replace(/\.00$/,'')} · ${openPos.dte}d<span class="wl-leg-ts">${_pctToStrike!=null?` · ${_pctToStrike>=0?'+':''}${_pctToStrike.toFixed(1)}% to strike`:''}</span></span>`:''}</div>`).join('')}</div>`;
+  const _fact=(l,v,c='')=>`<div class="wl-f"><span>${l}</span><b class="${c}">${v}</b></div>`;
+  const _divs=m.trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0);
+  const _cs=wheelCardSummary({sharesHeld:m.sharesHeld,breakeven:m.breakeven,openShares:_rss.openShares,openCost:_rss.openCost,openPos,premiumNet:m.premiumRealised,sharesRealised:_rss.realised,divs:_divs,closed:!isOpen});
+  const _f2=_cs.held
+    ?`<div class="wl-f wl-be"><span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>${_cs.assignedAt!=null?`<small>Assigned at $${fmt2(_cs.assignedAt)}</small>`:''}</div>`
+    :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
+  const _curOpt=isOpen?wheelCurrentOption(wheel.ticker,m.trades):null,_wm=typeof optionMarks==='function'?optionMarks():_wheelMarks,_markKnown=!!(_curOpt&&Object.prototype.hasOwnProperty.call(_wm,_curOpt.occ));
+  const _curVal=_markKnown&&_wm[_curOpt.occ]!=null?wheelCurrentValue(_curOpt,_wm[_curOpt.occ]):null;
+  let _curPct=wheelCurrentPct(_curOpt,_curVal);
+  const _curChain=wheelChainProfit(m.trades,_curOpt,_curVal);
+  const _curPft=_curChain?_curChain.profit:wheelCurrentProfit(_curOpt,_curVal);
+  if(_curChain)_curPct=_curChain.pct;
+  const _fCur=_curPft!=null&&_curPct!=null?`<div class="wl-f wl-cur"><span>Profit</span><b class="${_curPft>=0?'g':'r'}">${_curPft>=0?'+':'-'}${fmtMoney(Math.abs(_curPft))}</b><small class="${_curPct>=0?'g':'r'}">${_curPct>=0?'+':'-'}${Math.round(Math.abs(_curPct))}%</small></div>`:(_markKnown?`<div class="wl-f wl-cur"><span>Profit</span><b class="m">no quote</b></div>`:'');
+  const _f3=m.sharesHeld>0
+    ?_fact('Unrealised',_rss.unrealised==null?'no price':fmtMoney(_rss.unrealised),_rss.unrealised==null?'m':colorN(_rss.unrealised))
+    :'';
+  const _fTot=_cs.total!=null?_fact('Total result',(_cs.total>=0?'+':'')+fmtMoney(_cs.total),colorN(_cs.total)):'';
+  const _cr=cycleReturn(wheel,m,_rss,m.trades.filter(t=>t.action==='DIV').reduce((a,t)=>a+(t.total||0),0));
+  const _cyRoc=_cr&&(isOpen&&_cr.days<14?_cr.raw:_cr.ann!=null?_cr.ann:_cr.raw);
+  const _fAroc=_cr?_fact(isOpen&&_cr.days<14?'ROC':(_cr.ann!=null?'AROC':'Cycle return'),(_cyRoc!=null?_cyRoc:_cr.raw).toFixed(1)+'%',colorN(_cr.raw)):'';
+  const _memo=_cs.held?`<div class="wl-memo">Sell calls above <b>$${fmt2(_cs.sellAbove)}</b> ${ii(`Your breakeven after all premium and dividends. Calls struck above this lock in a profit if called away.`)}<button type="button" class="wl-wi-btn" onclick="event.stopPropagation();wlWhatIf('${wheel.id}')">What if?</button></div><div class="wl-wi" id="wi-${wheel.id}" hidden onclick="event.stopPropagation()" data-be="${m.breakeven}" data-shares="${m.sharesHeld}" data-oshares="${_rss.openShares}" data-ocost="${_rss.openCost}" data-prem="${m.premiumNet}" data-real="${_rss.realised||0}" data-divs="${_divs}"><button type="button" class="wl-wi-x" aria-label="Close" onclick="event.stopPropagation();wlWhatIfClose('${wheel.id}')">×</button><div class="wl-wi-in"><label>Strike<input data-wi="k" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 190" oninput="wlWhatIfCalc('${wheel.id}')"></label><label>Premium / share<input data-wi="p" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.00" oninput="wlWhatIfCalc('${wheel.id}')"></label></div><div data-wi="out"><div class="wl-wi-r"><span>New cost basis</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>If called away</span><span class="wl-wi-v">—</span></div></div><div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();wlWhatIfLog('${wheel.id}')">Log this trade</button></div></div>`:'';
+  const _cap=(m.sharesHeld>0&&openPos&&openPos.action==='STOC'&&_rss.openShares>0)?calledAwayProfit(openPos.strike,_rss.openShares,_rss.openCost,m.premiumNet,_rss.realised,_divs):null;
+  const _fCall=_cap!=null?_fact('Profit if called',(_cap>=0?'+':'')+fmtMoney(_cap).replace(/\.00$/,''),colorN(_cap)):'';
+  const _fPrem=_fact('Realised premium',fmtMoney(m.premiumRealised).replace(/\.00$/,''),colorN(m.premiumRealised)); // realised only; was gross 'Premium collected' incl. open sells
+  const _fDays=_cr?_fact('Days in cycle',String(_cr.days)):'';
+  // Part-covered shares: held minus shares under open covered calls (skipped if any call has no share count)
+  const _idle=(()=>{if(_stage!==2||!isOpen||!(m.sharesHeld>0))return 0;const calls=openOptionLegs(m.trades).filter(o=>o.action==='STOC');if(!calls.length||calls.some(o=>!(o._rem>0)&&!Number(o.shares)))return 0;const cov=calls.reduce((a,o)=>a+(o._rem>0?o._rem:Number(o.shares)),0);return Math.max(0,m.sharesHeld-cov);})();
+  const wheelCardBody=`<div class="wl-body">
+    <div class="wl-top"><span class="wl-stage${(_stage===0&&!openPos)||_stage===1||_idle>0?'':' wl-stage-open'}">${_stage===0&&!openPos?(isOpen?'Waiting for a put':'Closed'):_stage===1?`Holding ${m.sharesHeld} shares · no call yet`:_stepNames[_stage]+(_stage===3?'':' open')+(_idle>0?` · ${_idle} shares idle`:'')}</span>${isOpen?(queueEarnings(wheel.ticker),`<span class="rot-earn-slot" data-sym="${esc(wheel.ticker||'')}" data-exps="${esc((isOpen?openOptionLegs(m.trades):[]).filter(o=>o.expiry).map(o=>o.expiry).join(','))}">${earningsBadge(wheel.ticker,(isOpen?openOptionLegs(m.trades):[]).map(o=>o.expiry).filter(Boolean))}</span>`):''}</div>
+    ${_steps}${_memo}
+    <div class="wl-facts">${_f2}${_fCur}${_f3}${_fCall}${_fTot}${_fAroc}${_fPrem}${_fDays}</div>
+  </div>`;
+  // Expanded trade table
+  let expandedHtml='';
+  if(exp){
+    expandedHtml=`<div class="trade-body open pmcc-open wheel-list">
+      ${_cs.showAddButtons?`<div class="lc-acts" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm" onclick="openPasteTrade('${wheel.id}')">Add trade</button></div>`:''}
+      ${m.trades.length?'':`<p style="margin:0.35rem 0.75rem 0.15rem;color:var(--text2);font-size:0.8125rem">No trades yet. Add your first one above — Manual Entry, or paste a confirmation into SmartScan. The free plan includes it.</p>`}
+      <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
+    const _wp=walkLegPairs(m.trades).pairs;
+    const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
+    const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:typeof optionMarks==='function'?optionMarks():_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
+    {const keep=listCut(_ord.length,_ord.map(()=>undefined),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);expandedHtml+=_S.map(t=>renderTradeRow(t,m.trades,{list:_L})).join('')+listMoreBtn(wheel.id,_ord.length,keep.length);}
+    expandedHtml+=`</div></div>`;
+  }
+
+  return`
+  <div class="rotation-window wc ${isOpen?'rot-open':'rot-closed'}" id="rw-${wheel.id}" data-ticker="${esc(wheel.ticker||'')}" style="--wc-bg:${wcBg(wheel.ticker)};${hidden.has(wheel.id)?'opacity:.5':''}">
+    ${wcArtHtml(wheel.ticker)}
+    <div class="rot-header" onclick="toggleExpand('${wheel.id}')">
+      <span class="lc-arr" style="color:var(--text3);margin-right:0.25rem">${exp?'▾':'▸'}</span>${rotNumHtml(wheel,isOpen)}
+      <span class="rot-ticker ${isOpen?'':'cn'}">${esc(wheel.ticker||'—')}</span>
+      ${headerPriceHtml}
+      <span class="rot-label">${_dateSpan}</span>
+      <span class="rot-shares">${shares}</span>
+      ${_pctHtml}
+      ${typeof liveBadgeHtml==='function'?liveBadgeHtml(wheel.ticker,isOpen):`<span class="rot-badge ${isOpen?'open':'closed'}">${isOpen?'● Live':'Closed'}</span>`}
+      <span class="card-acts-inline" onclick="event.stopPropagation()"><span class="lc-lacts"><button class="btn btn-ghost btn-sm" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button class="btn btn-ghost btn-sm" onclick="openEditWheel('${wheel.id}')">Edit</button></span></span>
+      ${posSortBy==='manual'?`<button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();moveWheel('${wheel.id}',-1)" title="Move up"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" transform="rotate(180 128 128)"/></svg></button>
+      <button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();moveWheel('${wheel.id}',1)" title="Move down"><svg viewBox="0 0 256 256" fill="var(--orange)" style="width:1rem;height:1rem"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></button>`:``}
+      <button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleMinimise('${wheel.id}')" title="Minimise"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M213.66,53.66,163.31,104H192a8,8,0,0,1,0,16H144a8,8,0,0,1-8-8V64a8,8,0,0,1,16,0V92.69l50.34-50.35a8,8,0,0,1,11.32,11.32ZM112,136H64a8,8,0,0,0,0,16H92.69L42.34,202.34a8,8,0,0,0,11.32,11.32L104,163.31V192a8,8,0,0,0,16,0V144A8,8,0,0,0,112,136Z"/></svg></button>
+      <button class="rot-header-btn card-acts-inline" onclick="event.stopPropagation();toggleHide('${wheel.id}')" title="Hide"><svg class="sq-20" viewBox="0 0 256 256" fill="var(--orange)"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg></button>
+      <details class="card-more" onclick="event.stopPropagation()"><summary class="card-more-sum" aria-label="More actions">⋯</summary><div class="card-more-menu"><button type="button" class="card-more-item" onclick="toggleStatus('${wheel.id}')">${isOpen?'Close':'Reopen'}</button><button type="button" class="card-more-item" onclick="openEditWheel('${wheel.id}')">Edit</button>${posSortBy==='manual'?`<button type="button" class="card-more-item" onclick="moveWheel('${wheel.id}',-1)">Move up</button><button type="button" class="card-more-item" onclick="moveWheel('${wheel.id}',1)">Move down</button>`:''}<button type="button" class="card-more-item" onclick="toggleMinimise('${wheel.id}')">Minimise</button><button type="button" class="card-more-item" onclick="toggleHide('${wheel.id}')">Hide</button></div></details>
+    </div>
+    ${wheelCardBody}
+    ${expandedHtml}
+  </div>`;
+}
+
+
+function calcTradeROC(t,net,endDate){
+  // Annualised ROC% for a CLOSED CSP/STOC: (realised net / collateral) * (365/days) * 100. Open sells (net==null): no ROC.
+  if((t.action!=='CSP'&&t.action!=='STOC')||!t.strike||!t.shares||net==null)return null;
+  const collateral=t.strike*t.shares;if(!collateral)return null;
+  const days=endDate&&t.entered?daysBetweenUTC(t.entered,endDate):Math.max(1,t.days||0);
+  if(!days)return null;
+  return((net/collateral)*(365/days)*100);
+}
+// Shared list formats (wheel + LEAP): strike trims .00 ($170, $19.5, $142.50); debit totals show with a minus (display only).
+// Shared trade-list cells (wheel + LEAP cards). Captured: % kept, with profit $ beside it.
+function openCapturedHtml(pct,openPnl,px,chainPnl,title){
+  const sign=openPnl>0?'g':openPnl<0?'r':'';
+  const dol=openPnl!=null?` <span class="${openPnl>=0?'g':'r'}">${openPnl>=0?'+':'-'}${fmtMoney(Math.abs(openPnl))}</span>`:'';
+  const at=px!=null?` <span class="cap-at">· at $${(+px).toFixed(2)}</span>`:'';
+  const tip=title?` title="${esc(title)}"`:'';
+  const pctHtml=pct==null?'':(sign?`<span class="${sign}">${pct}%</span>`:`${pct}%`);
+  let html=`<div style="white-space:nowrap"${tip}>${pctHtml} ·${dol}${at}</div>`;
+  if(chainPnl!=null)html+=`<div style="white-space:nowrap">Chain <span class="${chainPnl>=0?'g':'r'}">${chainPnl>=0?'+':'-'}${fmtMoney(Math.abs(chainPnl))}</span></div>`;
+  const color=openPnl>0?'var(--green)':openPnl<0?'var(--red)':'var(--text2)';
+  return{html,color};
+}
+function capturedCellHtml(pct,dollars,open){
+  if(pct==null)return{html:'—',color:'var(--text3)'};
+  const color=open?(pct>=40?'var(--green)':pct>=0?'var(--text2)':'var(--red)'):(pct>=0?'var(--green)':'var(--red)');
+  let html=pct+'%';if(dollars!=null)html+=` <span class="${dollars>=0?'g':'r'}">${dollars>=0?'+':'-'}${fmtMoney(Math.abs(dollars))}</span>`;
+  return{html,color};
+}
+function ppdCellHtml(v,d){return v!=null&&d>0?`${fmtMoney(v)}<span>/d (${d}d)</span>`:'—';}
+// Pure (READ-ONLY): closed wheel sells (CSP/STOC) → {kept %, realised net $, end date}. Open or part-closed sells are absent.
+// Bought back: net = sell total − buy-back total; expired / assigned / called away: whole premium kept.
+function wheelSellOutcomes(trades){
+  trades=normWheelShortStcClosers(trades||[]);
+  const{pairs}=walkLegPairs(trades);const byId={};trades.forEach(t=>{byId[t.id]=t;});const acc={},out={};
+  for(const[cid,ps]of Object.entries(pairs)){const c=byId[cid];if(!c)continue;
+    ps.forEach(p=>{const s=byId[p.legId];if(!s||s.expiredWorthless)return;const o=acc[s.id]||(acc[s.id]={cost:0,pxSh:0,sh:0,end:''});
+      const frac=+c.shares>0?p.shares/(+c.shares):1;
+      if(c.action==='BTC'){o.cost+=(+c.total||0)*frac;o.pxSh+=(+c.premium||0)*(p.shares||0);o.saw=1;}
+      o.sh+=p.shares||0;if((c.entered||'')>o.end)o.end=c.entered||'';});}
+  trades.forEach(s=>{
+    if(s.action!=='CSP'&&s.action!=='STOC')return;const prem=+s.premium||0;
+    if(s.expiredWorthless){out[s.id]={kept:prem>0?100:null,net:Math.round((+s.total||0)*100)/100,end:s.expiry||'',px:0};return;}
+    const o=acc[s.id];if(!o)return;if(+s.shares&&o.sh<+s.shares)return;
+    const px=o.sh?o.pxSh/o.sh:0;
+    out[s.id]={kept:prem>0?Math.round((prem-px)/prem*100):null,net:Math.round(((+s.total||0)-o.cost)*100)/100,end:o.end,px:o.saw?Math.round(px*100)/100:null};
+  });
+  return out;
+}
+// Same-day order for wheel trade lists, newest on top (LEAP rule): timestamps when both known;
+// a leg's own close sits above its open; otherwise an open sits above another leg's close; then later-saved first.
+function wheelListCmp(a,b,pairs,idx){
+  const dc=(b.entered||'').localeCompare(a.entered||'');if(dc)return dc;
+  if(a.ts&&b.ts&&a.ts!==b.ts)return String(b.ts).localeCompare(String(a.ts));
+  const ate=(c,o)=>(pairs[c.id]||[]).some(p=>p.legId===o.id);
+  if(ate(a,b))return -1;if(ate(b,a))return 1;
+  const cl=x=>['BTC','STC','IN','OUT','EXP'].includes(x.action)?0:1;
+  if(cl(a)!==cl(b))return cl(b)-cl(a);
+  return (idx(b))-(idx(a));
+}
+// Closed Captured markup. Same words and colours wherever it is drawn.
+function closedCapturedHtml(o){
+  const c=capturedCellHtml(o.kept,o.net,false);
+  const at=o.px!=null?` <span class="cap-at">· at $${(+o.px).toFixed(2)}</span>`:'';
+  const html=o.kept!=null&&o.net!=null?`<div style="white-space:nowrap">${o.kept}%${at}</div><div style="white-space:nowrap"><span class="${o.net>=0?'g':'r'}">${o.net>=0?'+':'-'}${fmtMoney(Math.abs(o.net))}</span></div>`:c.html;
+  return{html,color:c.color};
+}
+// One buy-back's share of a sale, plus an expiry of whatever is left. Display only.
+// A full buy-back of one sale is the whole premium against that buy-back. A partial buy-back
+// is only its own contracts; the rest stays open, or expires on its own for the remaining premium.
+function wheelCloseSlices(trades,today){
+  today=today||new Date().toISOString().slice(0,10);
+  const nt=normWheelShortStcClosers(trades||[]);
+  const{open,pairs}=walkLegPairs(nt);const byId={};nt.forEach(t=>{byId[t.id]=t;});
+  const rem={};open.forEach(o=>{rem[o.id]=o._rem;});
+  const byCloser={},consumed={};
+  for(const[cid,ps]of Object.entries(pairs)){
+    const c=byId[cid];if(!c||c.action!=='BTC')continue;
+    ps.forEach(p=>{
+      const s=byId[p.legId];if(!s||(s.action!=='CSP'&&s.action!=='STOC'))return;
+      const sh=+p.shares||0,S=+s.shares||0;if(!(sh>0)||!(S>0))return;
+      const credit=(+s.total||0)*(sh/S),cost=(+c.total||0)*((+c.shares>0)?sh/(+c.shares):1);
+      const prem=+s.premium||0,px=+c.premium||0;
+      const slice={legId:s.id,kept:prem>0?Math.round((prem-px)/prem*100):null,net:Math.round((credit-cost)*100)/100,px,shares:sh};
+      (byCloser[c.id]=byCloser[c.id]||[]).push(slice);
+      consumed[s.id]=(consumed[s.id]||0)+sh;
+    });
+  }
+  const remainder={};
+  (trades||[]).forEach(s=>{
+    if(s.action!=='CSP'&&s.action!=='STOC')return;
+    const S=+s.shares||0,used=consumed[s.id]||0;if(!(S>0)||!(used>0)||used>=S-1e-6)return;
+    const left=S-used;
+    if(!((s.expiry&&s.expiry<today)||s.expiredWorthless))return;
+    remainder[s.id]={kept:(+s.premium>0)?100:null,net:Math.round((+s.total||0)*(left/S)*100)/100,px:0,shares:left};
+  });
+  return{byCloser,remainder,rem,consumed};
+}
+// Wording for a sale that still has contracts left after a buy-back: "3 open of 5", or "3 expired of 5".
+function wheelRemainLabel(t,trades,today){
+  if(!t||(t.action!=='CSP'&&t.action!=='STOC'))return'';
+  const{rem}=wheelCloseSlices(trades||[],today),S=+t.shares||0,left=rem[t.id];
+  if(!(S>0)||left==null||left>=S-1e-6)return'';
+  const n=v=>S%100===0&&left%100===0?v/100:v,word=(t.expiry&&t.expiry<today)||t.expiredWorthless?'expired':'open';
+  return`${n(left)} ${word} of ${n(S)}`;
+}
+// Which openers have a matched buy-to-close row. Display only: the outcome numbers stay on the sell.
+// Expiries and assignments have no BTC row, so they are not moved.
+function wheelCapturedOnClose(trades){
+  const nt=normWheelShortStcClosers(trades||[]);
+  const{pairs}=walkLegPairs(nt);const byId={};nt.forEach(t=>{byId[t.id]=t;});
+  const hide=new Set(),best={};
+  for(const[cid,ps]of Object.entries(pairs)){
+    const c=byId[cid];if(!c||c.action!=='BTC')continue;
+    ps.forEach(p=>{
+      const s=byId[p.legId];if(!s||s.expiredWorthless||(s.action!=='CSP'&&s.action!=='STOC'))return;
+      hide.add(s.id);
+      const cur=best[s.id];
+      if(!cur||String(c.entered||'')>=String(cur.entered||''))best[s.id]={id:c.id,entered:c.entered||''};
+    });
+  }
+  const onClose={};
+  Object.entries(best).forEach(([leg,b])=>{(onClose[b.id]=onClose[b.id]||[]).push(leg);});
+  return{hide,onClose};
+}
+// Wheel trade-list cells (To strike, PPD, Captured) — same meaning as the LEAP card's short-call list.
+function wheelListCells(t,L){
+  const r={ts:'—',ppd:'—',cap:'—',capColor:'var(--text3)'};
+  const slices=wheelCloseSlices(L.trades||[],L.today);
+  if(t.action==='BTC'||t.action==='STC'){
+    const parts=slices.byCloser[t.id]||[];
+    if(parts.length){const cells=parts.map(closedCapturedHtml);r.cap=cells.map(c=>c.html).join('');r.capColor=cells[cells.length-1].color;}
+    return r;
+  }
+  if(t.action!=='CSP'&&t.action!=='STOC')return r;
+  const prem=+t.premium||0,dd=(a,b)=>{if(!a||!b)return null;const d=Math.round((Date.parse(a)-Date.parse(b))/864e5);return isNaN(d)?null:Math.max(1,d);};
+  const left=slices.rem[t.id],baseSh=+t.shares||0,openSh=left!=null?left:baseSh;
+  if(L.openIds.has(t.id)){
+    r.ts=toStrike(L.spot,+t.strike).text;
+    const occ=wheelLegOcc(L.ticker,t),known=!!(L.marks&&Object.prototype.hasOwnProperty.call(L.marks,occ));
+    const mark=L.marks?L.marks[occ]:null;
+    const hasTyped=t.currentPrice!=null&&t.currentPrice!=='';
+    const typedFresh=hasTyped&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);
+    const openCreditOf=()=>{const gross=prem*openSh,proFees=(+t.fees||0)*(baseSh?openSh/baseSh:1);if(baseSh>0){const tot=t.total;if(tot!=null&&tot!==''&&!isNaN(+tot)&&((+tot)>0||proFees>=gross))return Math.round((+tot)*(openSh/baseSh)*100)/100;return Math.round((gross-proFees)*100)/100;}return Math.round((gross-proFees)*100)/100;};
+    if(hasTyped&&prem>0&&(typedFresh||mark==null)){const px=+t.currentPrice;const opt={id:t.id,premium:prem,contracts:openSh/100,openCredit:openCreditOf()};const cv=Math.round(px*openSh*100)/100;const pf=wheelCurrentProfit(opt,cv);const ch=wheelChainProfit(L.trades,opt,cv);const pct=Math.round((prem-px)/prem*100),cell=openCapturedHtml(pct,pf,px,ch?ch.profit:null);r.cap=cell.html;r.capColor=cell.color;return r;}
+    if(mark==null&&known){r.cap=`<span title="${esc(typeof wheelMarkNote==='function'?wheelMarkNote(occ):'No reliable quote for this contract')}">no quote</span>`;return r;}
+    if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:openSh/100,openCredit:openCreditOf()};const cv=wheelCurrentValue(opt,mark);
+      const ch=wheelChainProfit(L.trades,opt,cv);const pf=wheelCurrentProfit(opt,cv);
+      const pct=Math.round((prem-mark)/prem*100),cell=openCapturedHtml(pct,pf,mark,ch?ch.profit:null,typeof wheelMarkNote==='function'?wheelMarkNote(occ):'');r.cap=cell.html;r.capColor=cell.color;}
+    else if(mark==null&&!hasTyped){const cue=typeof optPriceCueHtml==='function'?optPriceCueHtml():'';if(cue)r.cap=(r.cap&&r.cap!=='—'?r.cap:'—')+cue;}
+    return r;
+  }
+  const rest=slices.remainder[t.id];
+  if(rest){const d=dd(t.expiry||t.entered,t.entered);if(d&&rest.net!=null)r.ppd=ppdCellHtml(rest.net/d,d);const cell=closedCapturedHtml(rest);r.cap=cell.html;r.capColor=cell.color;return r;}
+  const o=L.outcomes[t.id];if(!o)return r;
+  const d=dd(o.end,t.entered);if(d&&o.net!=null)r.ppd=ppdCellHtml(o.net/d,d);
+  if((slices.consumed[t.id]||0)>0)return r;
+  const cell=closedCapturedHtml(o);r.cap=cell.html;r.capColor=cell.color;
+  return r;
+}
+function isPhoneLayout(){return typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(max-width:700px)').matches;}
+function isUsMarketOpen(){
+  try{
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+    const wd=parts.find(p=>p.type==='weekday')?.value;
+    const h=Number(parts.find(p=>p.type==='hour')?.value);
+    const m=Number(parts.find(p=>p.type==='minute')?.value);
+    if(wd==='Sat'||wd==='Sun')return false;
+    const mins=h*60+m;
+    return mins>=570&&mins<960;
+  }catch(e){return true;}
+}
+function quoteChangeReady(chg,chgPct){return chg!=null&&chgPct!=null;}
+function demoSamplePriceBadge(short){
+  const label=short?'Sample':'Sample prices';
+  return`<span class="rot-badge closed demo-sample-badge" style="color:var(--text3);border-color:rgba(91,93,98,.35);background:rgba(91,93,98,.1)">${label}</span>`;
+}
+function quoteLiveBadge(sym,open){
+  // Presentation only: hide the Live pill when a non-delayed quote is present; show a status when not live.
+  if(!open)return`<span class="rot-badge closed">Closed</span>`;
+  if(APP_DEMO&&!isUsMarketOpen())return demoSamplePriceBadge(isPhoneLayout());
+  const q=typeof quotes!=='undefined'?quotes[sym]:null;
+  if(q&&q.price>0&&q.state!=='DELAYED')return '';
+  if(typeof isPricePending==='function'&&isPricePending(sym))return '';
+  const label=(!q||!(q.price>0))?'No quote':'Delayed';
+  return`<span class="rot-badge closed">${label}</span>`;
+}
+function liveBadgeHtml(sym,open){
+  if(!open)return`<span class="rot-badge closed">Closed</span>`;
+  if(APP_DEMO&&!isUsMarketOpen()){
+    return`<span class="live-desk">${demoSamplePriceBadge(false)}</span><span class="live-phone">${demoSamplePriceBadge(true)}</span>`;
+  }
+  const badge=quoteLiveBadge(sym,open);
+  return`<span class="live-desk">${badge}</span><span class="live-phone">${badge}</span>`;
+}
+function tradeRowPhoneCard(p){
+  const mid=xs=>xs.filter(Boolean).join('<span class="tr-dot">·</span>');
+  const nz=v=>v&&v!=='—';
+  const cap=p.cap==null||p.cap===''?'—':p.cap;
+  const warn=p.warn||'';
+  const ts=nz(p.toStrike)?`<span class="tr-to">To strike ${p.toStrike}</span>`:'';
+  return`<div class="tr-card"><div class="tr-l1"><span class="tr-ab">${p.ab}${p.exp||''}</span><span class="tr-id">${p.id||'—'}</span><span class="tr-cap" style="color:${p.capColor||'var(--text3)'}">${cap}</span><span class="tr-edit">${p.edit||''}</span></div><div class="tr-l2"><span class="tr-dates">${p.entered||'—'} → ${p.expiry||'—'}</span><span class="tr-prem">${p.premium||'—'}</span></div><div class="tr-l3">${mid([nz(p.shares)?`<span>Shares ${p.shares}</span>`:'',p.total?`<span>Total ${p.total}</span>`:'',ts,warn])}</div></div>`;
+}
+
+
+function renderTradeRow(t,wheelTrades,opts){
+  // opts (optional): {rocHtml, rocColor, editOnclick, noEdit, extraAfterStrike} — LEAP open face passes To strike HTML; wheel omits it
+  opts=opts||{};
+  const fmtStrike=k=>'$'+fmt2(k).replace(/\.00$/,''),fmtRowTotal=t=>{const v=+t.total||0;return isCredit(t.action)?fmtMoney(v):fmtMoney(-Math.abs(v));};
+  if(opts.list){const lc=wheelListCells(t,opts.list);opts={...opts,rocHtml:lc.cap,rocColor:lc.capColor,ppdHtml:lc.ppd,extraAfterStrike:`<span class="to-strike m">${esc(lc.ts)}</span>`,editBtn:true};}
+  const _o=wheelTrades?wheelSellOutcomes(wheelTrades)[t.id]:null;
+  const roc=calcTradeROC(t,_o?_o.net:null,_o?_o.end:null);
+  const rocDisplay=opts.rocHtml!=null?opts.rocHtml:(roc!==null?roc.toFixed(1)+'%':'—');
+  const rocColor=opts.rocColor!=null?opts.rocColor:arocColor(roc);
+  // PPD — income velocity: net dollars per day. Credit opens (incl. PMCC STO).
+  const isOpenLeg=t.action==='CSP'||t.action==='STOC'||t.action==='STO';
+  const ppd=isOpenLeg&&t.days>0&&t.total?t.total/t.days:null;
+  const ppdDisplay=opts.ppdHtml!=null?opts.ppdHtml:ppd!==null?`${fmtMoney(ppd)}<span>/d (${t.days}d)</span>`:'—';
+  const rowCls=t.expiredWorthless?'expired-trade':'';
+  const expBadge=t.expiredWorthless?'<span class="exp-badge">EXP</span>':'';
+  const editOn=opts.editOnclick||`openEditTrade('${t.id}')`;
+  const hasExtra=opts.extraAfterStrike!=null;
+  const _ab=`<span class="ab ab-${t.action}">${t.action}</span>`;
+  const _warn=typeof shortRowWarnTags==='function'&&opts.list&&opts.list.openIds&&opts.list.openIds.has(t.id)&&(t.action==='CSP'||t.action==='STOC')?shortRowWarnTags(opts.list.ticker||t.ticker,{isOpen:true,isCall:t.action==='STOC',expiry:t.expiry,today:opts.list.today,spot:opts.list.spot,strike:t.strike,mark:(()=>{const live=opts.list.marks&&opts.list.marks[wheelLegOcc(opts.list.ticker,t)];const typed=t.currentPrice!=null&&t.currentPrice!=='';const fresh=typed&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);return typed&&(fresh||live==null)?+t.currentPrice:live;})()}):'';
+  const _entered=fmtDateFull(t.entered);
+  const _expiry=(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—';
+  const _strike=(t.strike?fmtStrike(t.strike):'—')+(typeof openDeltaBadge==='function'&&(t.action==='CSP'||t.action==='STOC'||t.action==='STO')?openDeltaBadge(t,t.ticker):'');
+  const _prem=t.premium?'$'+fmtPrem(t.premium):'—';
+  const _shares=opts.list?(()=>{const lab=wheelRemainLabel(t,wheelTrades,opts.list.today);return lab?esc(lab):(t.shares||'—');})():(t.shares||'—');
+  const _total=`<span class="${isCredit(t.action)?'g':'r'}">${fmtRowTotal(t)}</span>`;
+  const _fees=t.fees?'$'+fmt2(t.fees):'—';
+  const _edit=opts.noEdit?'':opts.editBtn?`<button class="btn btn-ghost btn-sm" onclick="${editOn};event.stopPropagation()">Edit</button>`:`<button class="btn btn-ghost btn-icon" onclick="${editOn};event.stopPropagation()">•••</button>`;
+  const _roll=typeof tradeRollChip==='function'?tradeRollChip(t):'';
+  const _tsText=hasExtra?String(opts.extraAfterStrike||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim():'';
+  return`<div class="trow ${rowCls}${hasExtra?' has-to-strike':''}${t.id===_focusTid?' trow-focus':''}${_sel.has('w:'+t.id)?' sel':''}" data-tid="${t.id}" data-sel="w:${esc(t.id)}" data-cash="${selCash(t.action,t.total)}" data-date="${esc(String(t.entered||'').slice(0,10))}" data-tk="${esc(t.ticker||'')}" data-fee="${+t.fees||0}" data-ct="${selCt(t.action,t.shares)}" data-act="${esc(t.action||'')}" data-strike="${t.strike||''}"><span class="sel-mark" aria-hidden="true"></span>
+    <span class="action-cell">${_ab}${_roll}${expBadge}${_warn}</span>
+    <span>${_entered}</span>
+    <span>${_expiry}</span>
+    <span>${_strike}</span>
+    ${hasExtra?opts.extraAfterStrike:''}
+    <span>${_prem}</span>
+    <span style="white-space:nowrap">${_shares}</span>
+    ${_total}
+    <span>${_fees}</span>
+    <span style="white-space:nowrap">${ppdDisplay}</span>
+    <span style="color:${rocColor}">${rocDisplay}</span>
+    <span style="display:flex;gap:0.1875rem;justify-content:flex-end">${_edit}</span>
+    ${typeof tradeRowPhoneCard==='function'?tradeRowPhoneCard({ab:_ab,exp:(_roll||'')+(expBadge||''),warn:_warn,id:_strike,cap:rocDisplay,capColor:rocColor,entered:_entered,expiry:_expiry,premium:_prem,shares:_shares,fees:_fees,total:_total,ppd:ppdDisplay,toStrike:_tsText,edit:_edit}):''}
+  </div>`;
+}
+
+// ── LOG ──
+function renderActivityHead(){
+  // Opens the white header box; renderLog closes it after the filter pills and totals strip.
+  return`<section class="v2-hero v2-light act-hero"><div class="v2-copy act-head"><div><h1>Activity</h1><p>Every trade, plus getting trades in and out.</p></div>
+    <div class="act-btns v2-acts"><button class="btn btn-ghost" onclick="openImport()">Import CSV / PDF</button>
+    <button class="btn btn-ghost" onclick="exportCSV()">Export trades CSV</button>
+    <button class="btn btn-ghost" onclick="exportOptsCSV()">Export LEAPs CSV</button></div></div>`;
+}
+// Option legs (LEAPs, PMCC short calls, other long/short options) as Activity rows: one open row, plus one close row once closed/expired.
+function optLegLogRows(opts){
+  const out=[];
+  for(const l of opts||[]){
+    if(!l||l.demo)continue;
+    const short=l.side==='short',n=(+l.qty||0)*100,tk=String(l.underlying||'').toUpperCase(),ef=+l.fees||0;
+    const base={ticker:tk,expiry:l.expiry||null,strike:+l.strike||null,shares:n,legId:l.id,opt:true,wheelId:null,side:l.side||'',type:l.type||''};
+    if(l.entryDate){const g=(+l.entryPrice||0)*n;out.push({...base,id:l.id+':o',action:short?'STO':'BTO',entered:l.entryDate,premium:+l.entryPrice||0,fees:ef,total:short?g-ef:g+ef,ts:l.ts||null});}
+    if(l.status!=='open'&&l.closeDate){const cp=+l.closePrice||0,cf=+l.closeFees||0,g=cp*n;
+      if(l.status==='expired'||cp===0)out.push({...base,id:l.id+':x',action:'EXP',entered:l.closeDate,premium:0,fees:0,total:0,ts:l.closeTs||null});
+      else out.push({...base,id:l.id+':c',action:short?'BTC':'STC',entered:l.closeDate,premium:cp,fees:cf,total:short?g+cf:g-cf,ts:l.closeTs||null});}
+  }
+  return out;
+}
+// Same-day tie-break, newest on top: timestamps when both have one, else sells/opens above buy backs/closes/expiries.
+function logSameDayCmp(a,b){
+  if(a.ts&&b.ts&&a.ts!==b.ts)return String(b.ts).localeCompare(String(a.ts));
+  const r=x=>({EXP:0,BTC:1,STC:1}[x.action]??2);return r(b)-r(a);
+}
+const ACT_KINDS=[['csp','Cash-secured puts'],['cc','Covered calls'],['leap','LEAPs'],['other','Other']];
+let logKinds=new Set();
+function actKind(t,opener){
+  if(t.opt){
+    if(t.side==='long'&&t.type==='C')return 'leap';
+    if(t.side==='short'&&t.type==='C')return 'cc';
+    if(t.side==='short'&&t.type==='P')return 'csp';
+    return 'other';
+  }
+  if(t.action==='CSP')return 'csp';
+  if(t.action==='STOC')return 'cc';
+  if(t.action==='BTC'||t.action==='STC')return opener==='CSP'?'csp':opener==='STOC'?'cc':'other';
+  return 'other';
+}
+function actAnnotate(trades){
+  const wheel=(trades||[]).filter(t=>!t.opt);
+  let pairs={};try{pairs=(walkLegPairs(wheel).pairs)||{};}catch(e){}
+  const byId={};wheel.forEach(t=>{byId[t.id]=t;});
+  return (trades||[]).map(t=>{
+    let opener=null;
+    if(!t.opt&&(t.action==='BTC'||t.action==='STC')){const o=byId[((pairs[t.id]||[])[0]||{}).legId];opener=o&&o.action;}
+    return {...t,kind:actKind(t,opener)};
+  });
+}
+function actPnl(rows){
+  const by={csp:0,cc:0,leap:0,other:0},n={csp:0,cc:0,leap:0,other:0};let net=0,fees=0;
+  (rows||[]).forEach(t=>{const c=selCash(t.action,t.total);net+=c;fees+=+t.fees||0;const k=t.kind||'other';by[k]+=c;n[k]++;});
+  const r=x=>Math.round(x*100)/100;
+  ['csp','cc','leap','other'].forEach(k=>{by[k]=r(by[k]);});
+  return {net:r(net),fees:r(fees),by,n,count:(rows||[]).length};
+}
+// Market value to add to the cash total. Shares: FIFO lots still held, from the rows shown, priced with priceOf(ticker).
+// No price → value them at what was paid. Open long LEAP calls: today's mark × 100 × qty when the leg already has one.
+// Open shorts (wheel CSP/STOC still live, and short option legs including PMCC): live/last-close mark from shortMarkOf, else the typed currentPrice.
+// A short with no price is left out and listed on unpriced. Read-only. Premiums stay inside the cash total and are not added again.
+function actHeldValue(rows,priceOf,legs,shortMarkOf){
+  const sr=shareRealisations(rows||[]),tickerOf={};
+  (rows||[]).forEach(t=>{if(t.wheelId)tickerOf[t.wheelId]=t.ticker||'';});
+  let shares=0;const atCost=[],shareBy={};
+  Object.entries(sr.open).forEach(([k,o])=>{
+    if(!(o.shares>0))return;
+    const ticker=k.indexOf('tk:')===0?k.slice(3):(tickerOf[k]||'');
+    const px=priceOf?priceOf(ticker):null;
+    const v=px>0?px*o.shares:o.cost;
+    if(!(px>0)&&ticker)atCost.push(ticker);
+    shares+=v;
+    if(!ticker)return;
+    const p=shareBy[ticker]||(shareBy[ticker]={ticker,shares:0,value:0});
+    p.shares+=o.shares;p.value+=v;
+  });
+  let leaps=0,leapPlain=0;const seen=new Set(),leapBy={};
+  (rows||[]).forEach(t=>{
+    if(!t.opt||t.side!=='long'||t.type!=='C'||!t.legId||seen.has(t.legId))return;
+    seen.add(t.legId);
+    const leg=(legs||[]).find(l=>l.id===t.legId);
+    if(!leg||leg.status!=='open'||leg.side!=='long'||leg.type!=='C')return;
+    const mark=leg.mark!=null&&leg.mark!==''?+leg.mark:null;
+    if(!(mark>0)){leapPlain++;return;}
+    const v=mark*100*(+leg.qty||0);
+    leaps+=v;
+    const ticker=String(leg.underlying||t.ticker||'').toUpperCase();
+    if(!ticker)return;
+    const p=leapBy[ticker]||(leapBy[ticker]={ticker,value:0});
+    p.value+=v;
+  });
+  let closeCost=0;const shortBy={},unpriced=[];
+  const wheelRows=(rows||[]).filter(t=>!t.opt);
+  const today=new Date().toISOString().slice(0,10);
+  const openW=typeof openOptionLegs==='function'?openOptionLegs(wheelRows)
+    :(typeof walkLegPairs==='function'?walkLegPairs(wheelRows).open.filter(o=>!o.expiredWorthless&&o.expiry&&o.expiry>=today&&(o._rem>0||!Number(o.shares))):[]);
+  const priced=v=>v!=null&&v!==''&&!isNaN(+v)&&+v>=0;
+  const addShort=(ticker,type,v)=>{const k=ticker+'|'+type;const p=shortBy[k]||(shortBy[k]={ticker,type,value:0});p.value+=v;};
+  openW.forEach(t=>{
+    const left=t._rem>0?t._rem:(+t.shares||0);if(!(left>0))return;
+    const live=shortMarkOf?shortMarkOf(t):null;
+    const px=priced(live)?+live:priced(t.currentPrice)?+t.currentPrice:null;
+    const ticker=String(t.ticker||'').toUpperCase(),type=t.action==='CSP'?'P':'C';
+    if(px==null){unpriced.push({ticker,type});return;}
+    const v=px*left;closeCost+=v;if(ticker)addShort(ticker,type,v);
+  });
+  const shortLegIds=new Set((rows||[]).filter(t=>t.opt&&t.legId).map(t=>t.legId));
+  (legs||[]).forEach(l=>{
+    if(!l||l.status!=='open'||l.side!=='short')return;
+    if(!shortLegIds.has(l.id))return;
+    const px=priced(l.mark)?+l.mark:null;
+    const ticker=String(l.underlying||'').toUpperCase(),type=l.type==='P'?'P':'C';
+    if(px==null){unpriced.push({ticker,type});return;}
+    const v=px*100*(+l.qty||0);closeCost+=v;if(ticker)addShort(ticker,type,v);
+  });
+  const r=x=>Math.round(x*100)/100;
+  const rnd=arr=>arr.map(p=>{const o={ticker:p.ticker,value:r(p.value)};if(p.shares!=null)o.shares=r(p.shares);if(p.type)o.type=p.type;return o;});
+  const seenU=new Set(),unpricedParts=[];
+  unpriced.forEach(u=>{const k=(u.ticker||'')+'|'+(u.type||'');if(!u.ticker||seenU.has(k))return;seenU.add(k);unpricedParts.push({ticker:u.ticker,type:u.type});});
+  return {shares:r(shares),leaps:r(leaps),closeCost:r(closeCost),atCost,leapPlain,shareParts:rnd(Object.values(shareBy)),leapParts:rnd(Object.values(leapBy)),shortParts:rnd(Object.values(shortBy)),unpriced:unpricedParts};
+}
+function actMoneyPlain(n){
+  const x=Math.round((+n||0)*100)/100,neg=x<0,abs=Math.abs(x);
+  const[w,f]=abs.toFixed(2).split('.');
+  return(neg?'-':'')+'$'+w.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(f==='00'?'':'.'+f);
+}
+function actAndList(parts){
+  parts=(parts||[]).filter(Boolean);
+  if(parts.length<=1)return parts[0]||'';
+  if(parts.length===2)return parts[0]+' and '+parts[1];
+  return parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1];
+}
+// Plain line naming what Total return adds (held shares, open LEAPs) and takes off (open short buy-backs).
+function actReturnNote(held){
+  held=held||{};
+  const open=(held.shareParts||[]).length+(held.leapParts||[]).length+(held.shortParts||[]).length+(held.unpriced||[]).length;
+  if(!open)return 'Nothing open, so total return equals net cash flow.';
+  let note="Total return adds shares and LEAPs you still hold at today's value, and takes off what it would cost to buy back options you've sold.";
+  const bits=[];
+  if((held.atCost||[]).length)bits.push(`shares valued at cost for ${actAndList([...new Set(held.atCost)].sort())}`);
+  if(held.leapPlain)bits.push(`${held.leapPlain===1?'One LEAP is':held.leapPlain+' LEAPs are'} unmarked and excluded from market value`);
+  if((held.unpriced||[]).length)bits.push('unpriced short options excluded from buy-back cost');
+  if(bits.length)note+=' '+actAndList(bits)+'.';
+  return note;
+}
+function setLogKind(k){
+  if(k==='all')logKinds.clear();
+  else if(logKinds.has(k))logKinds.delete(k);else logKinds.add(k);
+  render();
+}
+function renderLog(){
+  const q=logQ.toLowerCase();
+  const tagged=actAnnotate([...db.trades,...optLegLogRows(db.opts)]);
+  const haveOther=tagged.some(t=>t.kind==='other');
+  let trades=tagged.filter(t=>{
+    if(logKinds.size&&!logKinds.has(t.kind))return false;
+    if(!q)return true;
+    return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
+  }).sort((a,b)=>{
+    let va=a[logSort.col]??'',vb=b[logSort.col]??'';
+    if(typeof va==='number')return logSort.dir==='asc'?va-vb:vb-va;
+    const c=logSort.dir==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+    if(c||logSort.col!=='entered')return c;
+    const d=logSameDayCmp(a,b);return logSort.dir==='asc'?-d:d;
+  });
+  function th(col,lbl){const cls=logSort.col===col?(logSort.dir==='asc'?'sa':'sd'):'';return`<th class="${cls}" onclick="sortLog('${col}')">${lbl}</th>`;}
+  const rows=trades.map(t=>{
+    const ppd=t.days>0?'$'+(t.total/t.days).toFixed(2):'—';
+    const wh=db.wheels.find(w=>w.id===t.wheelId);
+    return`<tr>
+      <td style="font-weight:720" class="${wh?.status==='open'?'o':'m'}">${esc(t.ticker)}</td>
+      <td><span class="ab ab-${t.action}">${t.action}</span></td>
+      <td style="font-size:0.75rem;color:var(--text3)">${esc(wh?wheelLabelDisplay(wh.label,wh):'—')}</td>
+      <td>${fmtDateFull(t.entered)}</td>
+      <td>${(t.action==='BTC'||t.action==='STC')?'—':t.expiry?fmtDateFull(t.expiry):'—'}</td>
+      <td>${t.strike?'$'+fmt2(t.strike):'—'}</td>
+      <td>${t.premium?'$'+fmt2(t.premium,4):'—'}</td>
+      <td>${t.fees?'$'+fmt2(t.fees):'—'}</td>
+      <td>${t.shares||'—'}</td>
+      <td class="${isCredit(t.action)?'g':'r'}">${fmtMoney(t.total)}</td>
+      <td>
+        ${t.opt?'':`<button class="btn btn-ghost btn-icon" onclick="openEditTrade('${t.id}')">•••</button>`}
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="11" style="text-align:center;color:#444;padding:3.125rem">No trades</td></tr>';
+  const pnl=actPnl(trades);
+  const priceOf=tk=>{const q=typeof quotes!=='undefined'&&quotes[tk];if(q&&q.price>0)return q.price;const w=(db.wheels||[]).find(x=>String(x.ticker||'').toUpperCase()===String(tk||'').toUpperCase()&&x.lastPrice!=null);return w?+w.lastPrice:null;};
+  const shortMarkOf=t=>{
+    const occ=typeof wheelLegOcc==='function'?wheelLegOcc(t.ticker,t):'';
+    const _wm=typeof optionMarks==='function'?optionMarks():(typeof _wheelMarks!=='undefined'?_wheelMarks:{});
+    const m=occ&&_wm&&Object.prototype.hasOwnProperty.call(_wm,occ)?_wm[occ]:null;
+    return m!=null&&m!==''?+m:null;
+  };
+  const held=actHeldValue(trades,priceOf,db.opts||[],shortMarkOf);
+  const totalRet=Math.round((pnl.net+held.shares+held.leaps-(held.closeCost||0))*100)/100;
+  const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));
+  const kindsShown=ACT_KINDS.filter(([k])=>haveOther||k!=='other');
+  const pills=[['all','All'],...kindsShown].map(([k,lbl])=>{
+    const on=k==='all'?!logKinds.size:logKinds.has(k);
+    return `<button type="button" class="act-pill${on?' on':''}" onclick="setLogKind('${k}')">${lbl}</button>`;
+  }).join('');
+  const split=ACT_KINDS.filter(([k])=>pnl.n[k]).map(([k,lbl])=>`${lbl} ${money(pnl.by[k])}`);
+  const pnlHtml=`<div class="act-pnl"><div class="act-figs"><div><span class="act-k">Net cash flow</span><span class="act-net ${pnl.net<0?'r':'g'}">${money(pnl.net)}</span></div><div><span class="act-k">Total return</span><span class="act-net ${totalRet<0?'r':'g'}">${money(totalRet)}</span></div></div><span class="act-net-sub">${pnl.count} trade${pnl.count===1?'':'s'} · fees ${fmtMoney(pnl.fees)} · net is cash in and out</span>${split.length>1?`<span class="act-split">${split.join(' · ')}</span>`:''}<span class="act-note">${esc(actReturnNote(held))}</span></div>`;
+  return`
+  <div class="v2-strip act-filter">${pnlHtml}<div class="act-tools"><div class="act-pills">${pills}</div><div class="act-search"><input class="search-inp" type="search" placeholder="Search…" value="${esc(logQ)}" oninput="setLogQ(this.value)"><span class="t3-s">${trades.length}</span></div></div></div></section>
+  <div class="log-wrap">
+    <table class="lt">
+      <thead><tr>
+        ${th('ticker','Ticker')}${th('action','Action')}<th>Wheel</th>
+        ${th('entered','Entered')}${th('expiry','Expiry')}
+        ${th('strike','Strike')}${th('premium','Premium')}<th>Fees</th>
+        ${th('shares','Shares')}${th('total','Total')}
+        <th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ── DASHBOARD — redesigned ──
+// ── DATA HEALTH ──
+// Detects inconsistent trade records. Detect-and-ask only — never mutates anything.
+// One lifecycle walk per wheel: tracks open option legs + a running share ledger.
+// wheel health (unchanged) + options-position health, merged for the badge and Dashboard panel
+function allDataHealth(){
+  let o=[];try{o=OPTS.health(db.opts||[],db.wheels,new Date().toISOString().slice(0,10),db.trades).map(i=>({...i,text:(optDemo?'Options (DEMO) · ':'Options · ')+i.text}));}
+  catch(e){console.warn('options health',e);o=[{sev:'amber',text:'Options · LEAP/options checks could not run — those positions were not checked. Reload to retry.'}];}
+  // never report "all clear" when the options legs never loaded — say they weren't checked
+  if(_optsLoadError)o.unshift({sev:'amber',text:`Options · Your LEAP/options positions couldn't load (${esc(_optsLoadError)}), so they weren't checked. Reload to retry.`});
+  const order={red:0,amber:1,grey:2};
+  return runDataHealth().concat(o).sort((a,b)=>order[a.sev]-order[b.sev]);
+}
+// One sentence each: what is already i.text, then why it happened, then how to fix it.
+function explainHealth(text){
+  const t=String(text||'').replace(/^Options( \(DEMO\))? · /,'');
+  const row=(why,how,act)=>({why,how,act});
+  if(/couldn't load|could not run|weren't checked/.test(t))return row('The options list did not load, so those checks were skipped.','Reload the page. If it keeps happening, the connection needs a look.','reload');
+  if(/has no underlying/.test(t))return row('This was saved without a ticker.','Edit the position and enter the ticker.','edit-leg');
+  if(/has no strike/.test(t))return row('The strike was blank when this was saved or imported.','Edit it and enter the strike. Collateral and profit need it.','edit');
+  if(/has no share count/.test(t))return row('The share count was blank, so collateral and profit cannot be worked out.','Edit the trade and enter how many shares.','edit-trade');
+  if(/has no expiry/.test(t))return row('No expiry was recorded, so a close or assignment cannot be matched to it.','Edit it and set the expiry date.','edit');
+  if(/has no contract quantity/.test(t))return row('The number of contracts was blank.','Edit the position and enter the contracts.','edit-leg');
+  if(/neither call nor put/.test(t))return row('It was not saved as a call or a put.','Edit the position and choose call or put.','edit-leg');
+  if(/no long\/short side/.test(t))return row('It is not marked long or short, so profit is calculated the wrong way.','Edit the position and set long or short.','edit-leg');
+  if(/no entry premium/.test(t))return row('The price paid or received was not recorded.','Edit the position and enter the premium.','edit-leg');
+  if(/LEAP expired — close it/.test(t))return row('The expiry date has passed and the LEAP is still open.','Close it, or mark it expired, so it leaves your open positions.','close-leap');
+  if(/still open/.test(t))return row('The expiry has passed but nothing recorded the outcome.','Close it, mark it expired, or record the assignment.','edit-leg');
+  if(/no close price/.test(t))return row('It is marked closed but the close price or date is missing.','Edit it and fill in the close.','edit-leg');
+  if(/closed before it was opened/.test(t))return row('The close date is earlier than the open date.','Edit the dates so the close is on or after the open.','edit-leg');
+  if(/opened after its expiry/.test(t))return row('The open date is after the expiry, which cannot happen.','Edit the dates.','edit-leg');
+  if(/no longer exists/.test(t)&&/LEAP/.test(t))return row('This call was sold against a LEAP that has been deleted.','Edit the call and attach it to a LEAP, or close it.','edit-leg');
+  if(/(rotation|wheel) that no longer exists/.test(t))return row('It points at a wheel that was deleted.','Edit it and clear or change the wheel.','edit-leg');
+  if(/different underlying/.test(t))return row('The option ticker and the wheel ticker are not the same.','Edit the link so both use the same ticker.','edit-leg');
+  if(/identical details/.test(t))return row('The same details were saved more than once, often by importing twice.','Delete the extra copy, or leave it if they are real partial fills.','edit');
+  if(/same fill recorded twice/.test(t))return row('A wheel trade and an option leg share the ticker, strike, expiry and day.','Check both and delete the one you did not mean to keep. Nothing is removed for you.','edit');
+  if(/closes nothing|orphan/.test(t))return row('This close has no matching open option.','Edit the strike, expiry or date so it matches the open trade, or delete it if it was a bad import.','edit-trade');
+  if(/can't be both/.test(t))return row('It is flagged expired-worthless and also closed or assigned. Only one of those is true.','Edit the trade and clear the flag that is wrong.','edit-trade');
+  if(/shares appeared from nowhere|no open CSP/.test(t))return row('Shares were added without a put that was assigned.','Edit the assignment so it matches the put, or add the missing put.','edit-trade');
+  if(/only \d+ held/.test(t))return row('More shares were sold than this wheel held on that date.','Edit the share count, or add the missing buy.','edit-trade');
+  if(/never closed, assigned, or marked expired/.test(t))return row('The expiry passed and nothing recorded what happened to the option.','Open the trade and mark it expired, closed, or assigned.','edit-trade');
+  return row('Something in this record does not add up.','Open it and correct the field that is wrong.','edit');
+}
+function healthKey(i){
+  const t=String(i.text||'').replace(/<[^>]+>/g,'').replace(/\d+d ago/g,'Nd ago').replace(/^Options( \(DEMO\))? · /,'');
+  return (i.tradeId||i.legId||'')+'|'+t;
+}
+function shownHealth(list){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  const d=new Set(raw);
+  return (list||[]).filter(i=>!d.has(healthKey(i)));
+}
+function openHealth(){return shownHealth(allDataHealth());}
+// Dismissed but not fixed: still listed as Pending, and the app never says All clear while any remain.
+function pendingHealth(){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  const d=new Set(raw);
+  return allDataHealth().filter(i=>d.has(healthKey(i)));
+}
+function _healthDismissMerged(remote){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  return [...new Set([...raw,...(remote||[])])].slice(-200);
+}
+async function loadHealthDismiss(uid){
+  if(APP_DEMO||!_fsDb||!uid)return;
+  try{
+    const sn=await listenServer(doc(_fsDb,'users',uid,'prefs','health'));
+    const merged=_healthDismissMerged(sn.exists()?sn.data().dismiss:null);
+    localStorage.setItem('wh-health-dismiss',JSON.stringify(merged));
+  }catch(e){console.warn('Health dismiss load failed:',e.message);}
+}
+function persistHealthDismiss(){
+  if(APP_DEMO||!_fsDb||!_confirmedUid)return;
+  let dismiss=[];try{dismiss=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){return;}
+  _fsSetDoc(_fsDoc(_fsDb,'users',_confirmedUid,'prefs','health'),{dismiss:[...new Set(dismiss)].slice(-200)},{merge:true})
+    .catch(e=>console.warn('Health dismiss save failed:',e.message));
+}
+function dismissHealth(key){
+  let raw=[];try{raw=JSON.parse(localStorage.getItem('wh-health-dismiss')||'[]');}catch(e){}
+  const s=new Set(raw);s.add(key);
+  localStorage.setItem('wh-health-dismiss',JSON.stringify([...s].slice(-200)));
+  persistHealthDismiss();
+  _nyOpen=true;render();
+}
+function healthAction(i){
+  const e=explainHealth(i.text);
+  const q=s=>String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  if(e.act==='reload')return {label:'Reload',fn:'location.reload()'};
+  if(e.act==='edit-trade'&&i.tradeId)return {label:'Edit trade',fn:`openEditTrade('${q(i.tradeId)}')`};
+  if(i.legId){
+    const l=(db.opts||[]).find(x=>x.id===i.legId);
+    if(l&&e.act==='close-leap')return {label:'Close it',fn:`openOptClose('${q(l.groupId||l.id)}','close')`};
+    if(l&&l.side==='long'&&l.type==='C'&&!l.parentLeapId)return {label:'Edit LEAP',fn:`openLeapEdit('${q(l.id)}')`};
+    if(l)return {label:'Edit position',fn:`openOptEdit('${q(l.groupId||l.id)}')`};
+    return {label:'Edit position',fn:`goToOpt('${q(i.legId)}')`};
+  }
+  if(i.tradeId)return {label:'Edit trade',fn:`openEditTrade('${q(i.tradeId)}')`};
+  return null;
+}
+function healthItemHtml(i,pending){
+  const e=explainHealth(i.text);
+  const act=healthAction(i);
+  const key=healthKey(i).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const dot=i.sev==='red'?'r':i.sev==='amber'?'a':'g';
+  return `<div class="hy open${pending?' hy-pend':''}"><div class="hy-sum" style="cursor:default"><span class="ny-dot ${pending?'g':dot}"></span><span class="hy-what">${pending?'<span class="hy-tag">Pending</span> ':''}${esc(i.text)}</span></div><div class="hy-more"><div>${esc(e.why)}</div><div>${esc(e.how)}</div><div class="hy-acts">${act?`<button type="button" class="btn btn-primary btn-sm" onclick="${act.fn}">${esc(act.label)}</button>`:''}${pending?'':`<button type="button" class="btn btn-ghost btn-sm" onclick="dismissHealth('${key}')">Dismiss</button>`}</div></div></div>`;
+}
+function goToOpt(legId){const l=(db.opts||[]).find(x=>x.id===legId);switchView('options');if(l)openOptEdit(l.groupId||l.id);}
+function runDataHealth(){
+  const issues=[]; // {sev:'red'|'amber'|'grey', tradeId, text}
+  const today=new Date().toISOString().slice(0,10);
+  const closing=a=>(a==='BTC'||a==='STC'||a==='IN'||a==='OUT')?1:0; // same-day: openers first (mirrors openOptionLegs)
+  db.wheels.forEach(w=>{
+    const trades=db.trades.filter(t=>t.wheelId===w.id);
+    const sorted=[...trades].sort((a,b)=>(a.entered||'').localeCompare(b.entered||'')||closing(a.action)-closing(b.action));
+    const open=[]; // every open option leg, including expired-flagged ones (so contradictions are visible)
+    let sharesHeld=0;
+    sorted.forEach(t=>{
+      const tk=esc(t.ticker||w.ticker||'?');
+      if(t.action==='CSP'||t.action==='STOC'){
+        if(!t.strike)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action} entered ${fmtDateFull(t.entered)} has no strike — collateral and P&L maths break without it`});
+        if(!t.shares)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action} entered ${fmtDateFull(t.entered)} has no share count — collateral and P&L maths break without it`});
+        if(!t.expiry)issues.push({sev:'amber',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action} entered ${fmtDateFull(t.entered)} has no expiry date`});
+        open.push({...t,_rem:Number(t.shares)||0}); // legs carry remaining shares — partial assigns/closes consume shares, not whole legs
+      }else if(t.action==='BTC'||t.action==='STC'){
+        const ks=Number(t.strike);
+        // An option can only be bought/sold to close while it still exists —
+        // a leg whose expiry predates the closer is never the right pair.
+        const live=o=>!o.expiry||o.expiry>=t.entered;
+        const nk=o=>!(t.rollId&&o.rollId===t.rollId); // a roll closer never consumes its own replacement opener (mirrors walkLegPairs)
+        // Tiers: prefer unflagged, then live-at-close, then strike match; degrade gracefully.
+        const findLeg=()=>{
+          let j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&live(o)&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&!o.expiredWorthless&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&t.expiry&&o.expiry===t.expiry&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&live(o)&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>nk(o)&&Number(o.strike)===ks);
+          if(j<0&&(t.strike==null||t.strike===''))j=open.findLastIndex(o=>nk(o));
+          return j;
+        };
+        const i=findLeg();
+        const closeFlagMsg=o=>issues.push({sev:'red',wheelId:w.id,tradeId:o.id,text:`${tk} ${o.action} $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but a ${t.action} closed it on ${fmtDateFull(t.entered)} — it can't be both`});
+        let rem=Number(t.shares)||0;
+        if(rem<=0){ // closer with no share count: consume one whole leg
+          if(i<0){
+            issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action}${t.strike?' $'+fmt2(t.strike):''} on ${fmtDateFull(t.entered)} closes nothing — no matching open position (orphan closer)`});
+          }else{
+            const o=open[i];if(o.expiredWorthless)closeFlagMsg(o);open.splice(i,1);
+          }
+        }else{
+          let consumedAny=false;
+          while(rem>0){
+            const j=findLeg();
+            if(j<0)break;
+            const o=open[j];
+            if(o.expiredWorthless)closeFlagMsg(o);
+            consumedAny=true;
+            const take=Math.min(rem,o._rem||rem);
+            o._rem-=take;rem-=take;
+            if(o._rem<=0)open.splice(j,1);
+          }
+          if(!consumedAny)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} ${t.action}${t.strike?' $'+fmt2(t.strike):''} on ${fmtDateFull(t.entered)} closes nothing — no matching open position (orphan closer)`});
+        }
+      }else if(t.action==='IN'){
+        if(t.openMarket){
+          sharesHeld+=Number(t.shares)||0;
+        }else{
+        // Assignments settle at strike × shares — derive the strike when it wasn't recorded
+        let ks=Number(t.strike);
+        if((!ks||isNaN(ks))&&t.shares&&t.total)ks=Math.round((Number(t.total)/Number(t.shares))*100)/100;
+        // Assignment happens at expiry — among candidate legs, always prefer the one whose
+        // expiry most recently passed on/before the assignment date, at every tier.
+        const bestAssignable=pred=>{
+          let best=-1,bestExp='';
+          open.forEach((o,idx)=>{
+            if(o.action!=='CSP'||!pred(o))return;
+            const e=o.expiry||'';
+            if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+          });
+          return best;
+        };
+        const findCSP=()=>{
+          let j=bestAssignable(o=>!o.expiredWorthless&&Number(o.strike)===ks);
+          if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless&&Number(o.strike)===ks);
+          if(j<0)j=bestAssignable(o=>!o.expiredWorthless);
+          if(j<0)j=open.findIndex(o=>o.action==='CSP'&&!o.expiredWorthless);
+          return j;
+        };
+        let inRem=Number(t.shares)||0;
+        if(inRem<=0){ // assignment with no share count: consume one whole leg
+          const j=findCSP();
+          if(j<0)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} assignment (IN) on ${fmtDateFull(t.entered)} has no open CSP behind it — shares appeared from nowhere`});
+          else open.splice(j,1);
+        }else{
+          let consumedAny=false;
+          while(inRem>0){ // partial assignments are real broker behaviour — consume shares across legs
+            const j=findCSP();
+            if(j<0)break;
+            const o=open[j];
+            consumedAny=true;
+            const take=Math.min(inRem,o._rem||inRem);
+            o._rem-=take;inRem-=take;
+            if(o._rem<=0)open.splice(j,1);
+          }
+          if(!consumedAny)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} assignment (IN) on ${fmtDateFull(t.entered)} has no open CSP behind it — shares appeared from nowhere`});
+        }
+        sharesHeld+=Number(t.shares)||0;
+        }
+      }else if(t.action==='OUT'){
+        const sh=Number(t.shares)||0;
+        if(sh>sharesHeld)issues.push({sev:'red',wheelId:w.id,tradeId:t.id,text:`${tk} OUT of ${sh} shares on ${fmtDateFull(t.entered)} but only ${sharesHeld} held at that point`});
+        sharesHeld-=sh;
+        // Called away resolves the covered call — the STOC mirror of CSP assignment.
+        // Only pair when the strike matches (given, or derived from total/shares: call-aways
+        // settle at exactly strike × shares; a manual market sale almost never lands on a strike).
+        let oks=Number(t.strike);
+        if((!oks||isNaN(oks))&&sh&&t.total)oks=Math.round((Number(t.total)/sh)*100)/100;
+        if(oks){
+          const bestCallable=pred=>{ // prefer the STOC whose expiry most recently passed on/before the call-away date
+            let best=-1,bestExp='';
+            open.forEach((o,idx)=>{
+              if(o.action!=='STOC'||Number(o.strike)!==oks||!pred(o))return;
+              const e=o.expiry||'';
+              if(e&&e<=t.entered&&e>=bestExp){best=idx;bestExp=e;}
+            });
+            return best;
+          };
+          const callFlagMsg=o=>issues.push({sev:'red',wheelId:w.id,tradeId:o.id,text:`${tk} STOC $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} is marked expired-worthless, but shares were called away against it on ${fmtDateFull(t.entered)} — it can't be both`});
+          let outRem=sh||0;
+          if(outRem<=0){ // no share count: consume one whole matching leg
+            let j=bestCallable(o=>!o.expiredWorthless);
+            if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+            if(j<0)j=bestCallable(()=>true);
+            if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+            if(j>=0){const o=open[j];if(o.expiredWorthless)callFlagMsg(o);open.splice(j,1);}
+          }else{
+            while(outRem>0){ // share-aware: partial call-aways consume shares across legs
+              let j=bestCallable(o=>!o.expiredWorthless);
+              if(j<0)j=open.findIndex(o=>o.action==='STOC'&&!o.expiredWorthless&&Number(o.strike)===oks);
+              if(j<0)j=bestCallable(()=>true);
+              if(j<0)j=open.findIndex(o=>o.action==='STOC'&&Number(o.strike)===oks);
+              if(j<0)break; // no matching STOC = plain manual sale — perfectly legitimate, no issue
+              const o=open[j];
+              if(o.expiredWorthless)callFlagMsg(o);
+              const take=Math.min(outRem,o._rem||outRem);
+              o._rem-=take;outRem-=take;
+              if(o._rem<=0)open.splice(j,1);
+            }
+          }
+        }
+      }
+    });
+    // Anything still open with expiry in the past = lapsed leg awaiting your verdict
+    open.forEach(o=>{
+      if(o.expiredWorthless)return; // manually resolved — fine
+      if(o.expiry&&o.expiry<today){
+        const daysAgo=Math.max(1,Math.round((new Date(today)-new Date(o.expiry))/86400000));
+        const partial=o._rem&&o.shares&&o._rem<Number(o.shares)?` (${o._rem} of ${o.shares} shares unresolved)`:'';
+        issues.push({sev:'amber',wheelId:w.id,tradeId:o.id,text:`${esc(o.ticker||w.ticker||'?')} ${o.action} $${fmt2(o.strike)} entered ${fmtDateFull(o.entered)} expired ${daysAgo}d ago — never closed, assigned, or marked expired${partial}`});
+      }
+    });
+  });
+  // Duplicate suspects — identical fingerprint incl. total (partial fills usually differ on total)
+  const seen={};
+  db.trades.forEach(t=>{
+    const fp=`${t.ticker}|${t.action}|${t.entered}|${t.strike||''}|${t.shares||''}|${t.total||''}|${(t.comment||'').trim()}`; // differing comments (e.g. 'Partial assignment') = intentionally distinct entries
+    (seen[fp]=seen[fp]||[]).push(t);
+  });
+  Object.values(seen).forEach(arr=>{
+    if(arr.length>1)issues.push({sev:'grey',wheelId:arr[0].wheelId,tradeId:arr[0].id,text:`${esc(arr[0].ticker)} ${arr[0].action} on ${fmtDateFull(arr[0].entered)} appears ${arr.length}× with identical details — duplicates, or genuine partial fills?`});
+  });
+  const order={red:0,amber:1,grey:2};
+  return issues.sort((a,b)=>order[a.sev]-order[b.sev]);
+}
+
+function getWheelPhase(wheel){
+  const m=calcWheel(wheel);
+  const legs=openOptionLegs(m.trades);
+  if(m.sharesHeld>0){
+    const hasCC=legs.some(t=>t.action==='STOC');
+    return hasCC?{phase:'CC',label:'Covered Call',cls:'d-phase-cc'}:{phase:'HOLD',label:'Holding Stock',cls:'d-phase-hold'};
+  }
+  const hasCSP=legs.some(t=>t.action==='CSP');
+  return hasCSP?{phase:'CSP',label:'Cash-Secured Put',cls:'d-phase-csp'}:{phase:'IDLE',label:'No Open Leg',cls:'d-phase-idle'};
+}
+
+
+function renderStatsOverview(){
+  const today=new Date().toISOString().slice(0,10),scope=moreScope();
+  const pyAll=calcProjectedYearly(db.trades,db.opts||[],today);
+  const pyWheel=calcProjectedYearly(db.trades,[],today);
+  const pyPmcc=calcProjectedYearly([],db.opts||[],today);
+  const py=scope==='wheel'?pyWheel:scope==='pmcc'?pyPmcc:pyAll;
+  const M=moreLedgerStats(scope,db.wheels,db.trades,db.opts||[],today);
+  const openWheels=db.wheels.filter(w=>w.status==='open').sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+
+  // ── Data Health panel ──
+  const health=openHealth();const _pendH=pendingHealth();
+  const hRed=health.filter(i=>i.sev==='red').length;
+  const hAmber=health.filter(i=>i.sev==='amber').length;
+  const hGrey=health.filter(i=>i.sev==='grey').length;
+  const healthBadge=[hRed?`<span style="color:var(--red);font-size:0.825rem;font-weight:720">${hRed} critical</span>`:'',
+      hAmber?`<span style="color:var(--text3);font-size:0.825rem;font-weight:720">${hAmber} warning${hAmber>1?'s':''}</span>`:'',
+      hGrey?`<span style="color:var(--text3);font-size:0.825rem;font-weight:720">${hGrey} note${hGrey>1?'s':''}</span>`:''].filter(Boolean).join('');
+  const healthRows=health.map(i=>{
+    const t=db.trades.find(x=>x.id===i.tradeId);
+    return`<div style="padding:0 1rem;border-top:1px solid var(--border)">${healthItemHtml(i)}
+      ${t?renderTradeRow(t).replace('class="trow ','class="trow trow-health '):''}
+    </div>`;
+  }).join('');
+  const healthPanel=`<div class="d-panel" id="health-panel">
+    <div class="d-panel-hdr">
+      <span class="d-panel-title">Data Health</span>
+      <span style="display:flex;gap:0.75rem;align-items:center">${health.length?healthBadge+(_pendH.length?`<span style="color:var(--text3);font-size:0.825rem;font-weight:720">${_pendH.length} pending</span>`:''):_pendH.length?`<span style="color:var(--text3);font-size:0.825rem;font-weight:720">${_pendH.length} pending</span>`:`<span style="color:var(--green);font-size:0.825rem;font-weight:720">✓ All clear</span>`}</span>
+    </div>
+    ${health.length?`<div class="d-panel-body">
+      ${health.some(i=>db.trades.some(x=>x.id===i.tradeId))?tradeTableHead():''}
+      ${healthRows}
+    </div>`:`<div style="padding:0.875rem 1rem;font-size:0.75rem;color:var(--text3);border-top:1px solid var(--border)">All ${db.trades.length} trades${(db.opts||[]).length?` and ${(db.opts||[]).length} option legs`:''} checked — no lapsed legs, contradictions, orphans, or duplicates.</div>`}
+  </div>`;
+
+  // Action count
+
+
+  // ── KPI cards ──
+  function kpi(label,val,sub,col,accent,explain){
+    const hasX=!!explain;
+    const xt=hasX?` data-xt="${label.replace(/"/g,'&quot;')}"`:'' ;
+    const xb=hasX?` data-xb="${explain.replace(/"/g,'&quot;')}"`:'' ;
+    const xIcon=hasX?`<span class="dcard-info" onmouseenter="showXpop(this)" onmouseleave="hideXpop()">?</span>`:'';
+    return`<div class="d-kpi${accent?' d-kpi-accent':''}" ${xt}${xb}>
+      <div class="d-kpi-label">${label}${xIcon}</div>
+      <div class="d-kpi-val" style="color:${col}">${val}</div>
+      <div class="d-kpi-sub">${sub}</div>
+    </div>`;
+  }
+
+  // k1 and k3 share one total and one day count (from the first trade this year, or 1 January)
+  const scopeName=scope==='wheel'?'Wheel ':scope==='pmcc'?'LEAPs & PMCC ':'';
+  const pyDay=py.yearly!=null&&py.days>0?py.total/py.days:null;
+  const k1Tip=scope==='wheel'
+    ?'Wheel total realised this year: option income, share sales and dividends. Per day and per week use the same days as Projected Yearly. Open positions are not included.'
+    :scope==='pmcc'
+    ?'LEAPs & PMCC total realised this year: short-call option income and closed LEAPs. Per day and per week use the same days as Projected Yearly. Open positions are not included.'
+    :'Total realised this year: option income from wheels and PMCC short calls, share sales, dividends and closed LEAPs. Per day and per week use the same days as Projected Yearly. Open positions are not included.';
+  const k1=kpi(scopeName+'Realised P&L '+new Date().getFullYear(),fmtMoney(py.total),pyDay!=null?`${fmtMoney(pyDay)}/day · ${fmtMoney(pyDay*7)}/wk`:'no trades yet',py.total>=0?'var(--green)':'var(--red)',true,k1Tip);
+  const moCompare=M.hasMonths?M.month-M.lastMonth:null;
+  const k2Tip=scope==='wheel'
+    ?'Closed trades, net of buybacks: wheel option income this calendar month from puts and calls that were bought back, expired or assigned. Not gross credits opened.'
+    :scope==='pmcc'
+    ?'Closed trades, net of buybacks: PMCC option income this calendar month from short calls that were bought back or expired. Not gross credits opened. Closed LEAPs are not included.'
+    :'Closed trades, net of buybacks: option income this calendar month across wheels and PMCC short calls. Not gross credits opened. Same figure as Options P&L this month on Home. Closed LEAPs and share sales are not included.';
+  const k2=kpi('Option Income This Month',M.hasMonths?fmtMoney(M.month):'—',moCompare!=null?`${moCompare>=0?'▲':'▼'} ${fmtMoney(Math.abs(moCompare))} vs last month`:'first month',M.hasMonths&&M.month<0?'var(--red)':'var(--green)',false,k2Tip);
+  const pySub=py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`;
+  const pyCol=py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)';
+  const pyTip=scope==='wheel'
+    ?'Wheel realised income this year — option premium, stock sales and dividends — scaled to 365 days from your first wheel trade this year, or from 1 January if you started earlier. PMCC short calls, closed LEAPs and open positions are not included.'
+    :scope==='pmcc'
+    ?'LEAPs & PMCC realised income this year — short-call premium and closed LEAPs — scaled to 365 days from your first LEAP or call this year, or from 1 January if you started earlier. Wheels and open positions are not included.'
+    :'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.';
+  const k3=kpi('Projected Yearly',py.yearly!=null?fmtMoney(py.yearly):'—',pySub,pyCol,false,pyTip);
+
+  // AROC on positions still open, weighted by capital × days held (OT_LEDGER.weightedAROC)
+  const pctS=v=>v==null?'—':v===Infinity?'∞':v.toFixed(1)+'%';
+  const k5Val=M.arocOpen[scope==='wheel'?'wheel':scope==='pmcc'?'pmcc':'all'];
+  const k5Sub=scope==='all'?`Wheel ${pctS(M.arocOpen.wheel)} · PMCC ${pctS(M.arocOpen.pmcc)}`:scope==='wheel'?`${M.openWheels} open wheel${M.openWheels!==1?'s':''}`:`${M.openLeaps} open LEAP${M.openLeaps!==1?'s':''}`;
+  const k5=kpi('AROC (Open)',pctS(k5Val),k5Sub,k5Val!=null&&k5Val<0?'var(--red)':'var(--green)',false,'Annualised return on capital, realised only, for positions still open: open wheels, and short calls written against LEAPs you still hold. Weighted by capital × days held, so a big position counts for more than a small one: Σ P&L ÷ Σ (capital × days) × 365. Premium on open options is not counted.');
+
+
+  // ── Positions table ──
+  const posCols='minmax(4.375rem,0.8fr) minmax(6.875rem,1.2fr) minmax(6.875rem,1.2fr) minmax(5rem,0.9fr) minmax(4.6875rem,0.8fr) minmax(5.625rem,1fr) minmax(5.3125rem,0.9fr) minmax(5rem,1fr)';
+  const posHdr=`<div class="d-table-hdr" style="grid-template-columns:${posCols};gap:0.75rem">
+    <span>Ticker</span><span>Phase</span><span>Strike / DTE</span><span>% to Strike</span><span>Price</span><span>Premium</span><span>Cost Basis</span><span style="text-align:right">Unrealised</span>
+  </div>`;
+  const posRows=openWheels.map(w=>{
+    const m=calcWheel(w);const ph=getWheelPhase(w);
+    const price=(quotes[w.ticker]?.price)||(w.lastPrice)||null;
+    const openLeg=buildOpenPosition(m.trades);
+    const dte=openLeg?.dte??null;
+    const dteCol=dte===null?'var(--text3)':dte<=3?'var(--red)':dte<=14?'var(--yellow)':'var(--green)';
+    const strike=openLeg?.strike;
+    const pctToStrike=price!=null&&strike?((strike-price)/price*100):null;
+    const pctCol=pctToStrike===null?'var(--text3)':pctToStrike<0?'var(--red)':pctToStrike<5?'var(--yellow)':'var(--green)';
+    const basis=m.sharesHeld>0&&m.breakeven!=null?'$'+fmt2(m.breakeven):'—';
+    return`<div class="d-table-row" style="grid-template-columns:${posCols};gap:0.75rem;cursor:pointer" onclick="goToWheel('${w.id}')" title="Go to wheel">
+      <span style="font-weight:720;color:var(--orange)">${esc(w.ticker)}</span>
+      <span><span class="d-phase ${ph.cls}">${ph.label}</span></span>
+      <span class="t2-nw">${strike?'$'+fmt2(strike):'—'}${dte!==null?`<span style="color:${dteCol};font-weight:720;margin-left:0.375rem">/ ${dte}d</span>`:''}</span>
+      <span style="color:${pctCol};font-weight:720">${pctToStrike!==null?(pctToStrike>=0?'+':'')+pctToStrike.toFixed(1)+'%':'—'}</span>
+      <span style="color:var(--silver);white-space:nowrap">${price!=null?'$'+price.toFixed(2):'—'}</span>
+      <span class="${colorN(m.premiumRealised)}" style="white-space:nowrap">${fmtMoney(m.premiumRealised)}</span>
+      <span class="t2-nw">${basis}</span>
+      ${(()=>{const u=rotationShareStats(w,db.trades,_priceOf).unrealised;return`<span style="text-align:right;white-space:nowrap" class="${u==null?'m':colorN(u)}">${u==null?'no price':u===0&&m.sharesHeld<=0?'—':fmtMoney(u)}</span>`;})()}
+    </div>`;
+  }).join('')||`<div style="padding:2rem 1rem;text-align:center;color:var(--text3);font-size:0.75rem">No open positions</div>`;
+
+  // ── Open LEAPs & short calls (LEAPs & PMCC scope, and All) ──
+  const OL=openLeapPositions(db.opts||[],today);
+  const leapCols='minmax(4.375rem,0.8fr) minmax(7.5rem,1.3fr) minmax(6.875rem,1.2fr) minmax(5.625rem,1fr) minmax(5rem,1fr)';
+  const leapHdr=`<div class="d-table-hdr" style="grid-template-columns:${leapCols};gap:0.75rem">
+    <span>Ticker</span><span>Position</span><span>Strike / DTE</span><span>Cost / Credit</span><span style="text-align:right">Unrealised</span>
+  </div>`;
+  const leapLine=(r,what,sub)=>{
+    const dCol=r.dte===null?'var(--text3)':r.dte<=3?'var(--red)':'var(--text3)';
+    return`<div class="d-table-row${sub?' ol-sub':''}" style="grid-template-columns:${leapCols};gap:0.75rem;cursor:pointer" onclick="goToLeap('${esc(sub&&r.leg.parentLeapId?r.leg.parentLeapId:r.id)}')" title="Go to LEAP">
+      <span style="font-weight:720;color:var(--orange)">${sub?'':esc(r.ticker)}</span>
+      <span${sub?' style="color:var(--text3)"':''}>${sub?'↳ ':''}${what}</span>
+      <span class="t2-nw">$${fmt2(r.strike)}${r.dte!==null?`<span style="color:${dCol};font-weight:720;margin-left:0.375rem">/ ${r.dte}d</span>`:''}</span>
+      <span class="t2-nw">${fmtMoney(r.cost)}</span>
+      <span style="text-align:right;white-space:nowrap" class="${r.unrealised==null?'m':colorN(r.unrealised)}">${r.unrealised==null?'no mark':fmtMoney(r.unrealised)}</span>
+    </div>`;};
+  const leapRows=OL.leaps.map(r=>leapLine(r,'LEAP call'+(r.shorts.length?` · ${r.shorts.length} short call${r.shorts.length!==1?'s':''}`:''),false)+r.shorts.map(x=>leapLine(x,'short call',true)).join('')).join('')
+    +OL.other.map(x=>leapLine(x,'short '+(x.type==='P'||x.type==='put'?'put':'call')+' (no LEAP)',false)).join('');
+  const leapPanel=`<div class="d-panel">
+      <div class="d-panel-hdr">
+        <span class="d-panel-title">Open LEAPs &amp; Short Calls</span>
+        <span class="d-panel-count">${OL.leaps.length} LEAP${OL.leaps.length!==1?'s':''} · ${OL.shortCount} short call${OL.shortCount!==1?'s':''}</span>
+      </div>
+      <div class="d-panel-body">${leapRows?leapHdr+leapRows:`<div style="padding:2rem 1rem;text-align:center;color:var(--text3);font-size:0.75rem">No open LEAPs or short calls.</div>`}</div>
+    </div>`;
+
+  return`<div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
+
+    <!-- KPI Row -->
+    <div class="ms-kpis"><div class="ms-scope" role="group" aria-label="More data scope"><button type="button" class="pc-r${scope==='all'?' on':''}" aria-pressed="${scope==='all'?'true':'false'}" onclick="setMoreScope('all')">All</button><button type="button" class="pc-r${scope==='wheel'?' on':''}" aria-pressed="${scope==='wheel'?'true':'false'}" onclick="setMoreScope('wheel')">Wheels</button><button type="button" class="pc-r${scope==='pmcc'?' on':''}" aria-pressed="${scope==='pmcc'?'true':'false'}" onclick="setMoreScope('pmcc')">LEAPs &amp; PMCC</button></div>
+    <div class="d-grid d-grid-4">${k1}${k2}${k3}${k5}</div></div>
+
+    <!-- Alert strip -->
+
+    <!-- Data Health -->
+    ${healthPanel}
+
+    <!-- Open Positions — full width; follows the scope (wheels, LEAPs & short calls, or both) -->
+    ${scope!=='pmcc'?`<div class="d-panel">
+      <div class="d-panel-hdr">
+        <span class="d-panel-title">${scope==='wheel'?'Open Positions':'Open Wheels'}</span>
+        <span class="d-panel-count">${openWheels.length} active</span>
+      </div>
+      <div class="d-panel-body">${posHdr}${posRows}</div>
+    </div>`:''}
+    ${scope!=='wheel'?leapPanel:''}
+
+  </div>`;
+}
+
+
+// ═══ HOME (Direction A) — read-only figures built from the Monthly P&L rows ═══
+// Pure: rows from calcMonthlyRealised; returns this month (wheel vs PMCC short calls) and this year; LEAP-leg P&L never included.
+function homeFigures(rows,today){
+  // Options only — same figures as the Monthly P&L table: wheel premium + PMCC short calls (collected − loss). No shares, dividends or LEAPs.
+  const ym=today.slice(0,7),yr=today.slice(0,4),rd=n=>Math.round(n*100)/100;
+  const prof=r=>(r.collected||0)-(r.loss||0),wheelOf=r=>r.premium||0;
+  const m=rows.find(r=>r.ym===ym),y=rows.filter(r=>r.ym.startsWith(yr));
+  const f=list=>{const t=list.reduce((a,r)=>a+prof(r),0),w=list.reduce((a,r)=>a+wheelOf(r),0);return{wheel:rd(w),pmcc:rd(t-w),total:rd(t)};};
+  return{month:f(m?[m]:[]),year:f(y)};
+}
+// Pure: soonest open expiry across wheel legs [{ticker,strike,type,expiry}] and open option legs.
+function nextExpiry(wheelLegs,legs,today){
+  const all=[...(wheelLegs||[]).map(l=>({kind:'wheel',id:l.id,wheelId:l.wheelId,ticker:l.ticker,what:(l.action==='CSP'?'put':'call')+' $'+(+l.strike||0),expiry:l.expiry})),
+    ...(legs||[]).filter(l=>l.status==='open'&&l.expiry).map(l=>({kind:'leap',id:l.id,parentLeapId:l.parentLeapId||null,ticker:l.underlying||l.und||l.ticker||'',what:(l.side==='long'?'LEAP':'call')+' $'+(+l.strike||0),expiry:l.expiry}))]
+    .filter(x=>x.expiry&&x.expiry>=today).sort((a,b)=>a.expiry.localeCompare(b.expiry));
+  if(!all.length)return null;
+  const d=Math.round((new Date(all[0].expiry+'T12:00:00')-new Date(today+'T12:00:00'))/864e5);
+  return{...all[0],dte:d};
+}
+function renderHome(){
+  const today=new Date().toISOString().slice(0,10);
+  const legs=db.opts||[];
+  const rows=calcMonthlyRealised(db.trades,monthlyExtraSources(legs));
+  const F=homeFigures(rows,today);
+  const un=calcAllUnrealised(db.wheels,db.trades,_priceOf,legs,_wheelMarkOf);
+  const wheelLegs=db.wheels.filter(w=>w.status==='open').flatMap(w=>openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).map(l=>({...l,ticker:l.ticker||w.ticker,wheelId:w.id})));
+  const nx=nextExpiry(wheelLegs,legs,today);
+  const health=openHealth();const _pend=pendingHealth();
+  const mName=new Date().toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'long'});
+  const wl=calcWinLoss();
+  const caw=currentCapitalAtWork();
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
+  const monthlyCap=OT_LEDGER.monthlyDeployedCapital(db.wheels,db.trades,legs,{today});
+  const rsH=homeReturnSettings(rs); // Free: the target line / progress is Pro-only; the return itself always shows
+  const rBase=monthReturnCapital(rs,today.slice(0,7),monthlyCap),mr=monthReturnPct(F.month.total,rBase,rsH.target);
+  const tpl=tickerPnL(db.trades,db.wheels,legs,today.slice(0,4));
+  const sgn=n=>(n>0?'+':n<0?'−':'')+fmtMoney(Math.abs(n)).replace(/\.\d\d$/,'');
+  const cls=n=>n>0?'pos':n<0?'neg':'';
+  return`<div class="home">
+  <section class="v2-hero v2-light v2-home"><div class="v2-copy home-head"><div><h1>Overview</h1><p>Your options P&amp;L at a glance.</p><p class="home-more"><a onclick="switchView('analytics')">More data</a> · <a onclick="switchView('report')">Report</a></p></div></div><div class="v2-strip">
+  <div class="hk-grid">
+    <div class="hk big"><div class="hk-l">Options P&amp;L this month ${ii(`Premium kept minus buyback losses on wheel and PMCC calls closed in ${mName}. Realised only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.month.total)}">${sgn(F.month.total)}</div>
+      <div class="hk-s">Wheel ${sgn(F.month.wheel)} · PMCC calls ${sgn(F.month.pmcc)}</div></div>
+    <div class="hk"><div class="hk-l">This year ${ii(`Same as this month, since 1 January. Realised options only; no shares or LEAPs.`)}</div><div class="hk-v ${cls(F.year.total)}">${sgn(F.year.total)}</div><div class="hk-s">Wheel ${sgn(F.year.wheel)} · PMCC calls ${sgn(F.year.pmcc)}</div></div>
+    <div class="hk"><div class="hk-l">Unrealised ${ii(`Not banked yet: open shares and LEAPs at today's price, plus mark-to-market P&L on open wheel options (premium minus buy-back cost), not gross premium collected.`)}</div><div class="hk-v ${cls(un.value)}">${sgn(un.value)}</div><div class="hk-s hk-s3"><span class="hk-nw">Shares ${sgn(un.shares)}</span> · <span class="hk-nw">Wheel options ${sgn(un.premium)}</span> · <span class="hk-nw">LEAPs ${sgn(un.leaps)}</span>${un.unpriced>0?` · <span class="hk-nw">${un.unpriced} unpriced</span>`:''}</div></div>
+    <div class="hk hk-rel"><button type="button" class="hk-cog" aria-label="Return settings" title="Account size and monthly target" onclick="event.stopPropagation();openRetCfg(this)"><svg width="16" height="16" viewBox="0 0 256 256" fill="var(--orange)"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg></button><div class="hk-l">${caw.pct!=null?'Account size':'Capital at work'} ${ii(caw.pct!=null?`The account size you set here. The line below shows how much of it is tied up in open puts, shares and LEAPs.`:`Open put collateral, open shares and open LEAP cost.`)}</div><div class="hk-v">${caw.pct!=null?fmtMoney(rs.account).replace(/\.\d\d$/,''):fmtMoney(caw.total).replace(/\.\d\d$/,'')}</div><div class="hk-s">${caw.pct!=null?`${fmtMoney(caw.total).replace(/\.\d\d$/,'')} at work (${caw.pct.toFixed(0)}%) · Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`:`Wheel ${fmtMoney(caw.wheel).replace(/\.\d\d$/,'')} · LEAPs ${fmtMoney(caw.leaps).replace(/\.\d\d$/,'')}`}</div></div>
+    <div class="hk"><div class="hk-l">Win rate ${ii(`Closed sold options only, incl. PMCC calls. A win kept the premium or was bought back cheaper. Open options don’t count.`)}</div><div class="hk-v">${wl.wr!=null?wl.wr+'%':'—'}</div><div class="hk-s">${wl.wins} W / ${wl.losses} L</div></div>
+    <div class="hk${nx?' hk-nx':''}"${nx?` role="button" tabindex="0" aria-label="Go to next expiry, ${esc(nx.ticker+' '+nx.what)}" data-kind="${esc(nx.kind||'')}" data-id="${esc(nx.id||'')}" data-wid="${esc(nx.wheelId||'')}" data-pid="${esc(nx.parentLeapId||'')}" onclick="goToNextExpiry(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToNextExpiry(this)}"`:''}><div class="hk-l">Next expiry ${ii(`Soonest open option, wheel or LEAPs.`)}</div><div class="hk-v">${nx?(nx.dte===0?'Today':nx.dte===1?'Tomorrow':nx.dte+' days'):'—'}</div><div class="hk-s">${nx?esc(nx.ticker+' '+nx.what)+' · '+fmtDateShort(nx.expiry):'Nothing open'}</div></div>
+  </div>
+  <div class="hk-grid hk-row2">
+    <div class="hk${(health.length||_pend.length)?' hk-need':''}" style="cursor:pointer" onclick="const p=document.getElementById('ny-panel');if(p){p.hidden=!p.hidden;_nyOpen=!p.hidden}"><div class="hk-l">Needs you ${ii(`Data issues only: missing or mismatched data, sync problems. Click to see the list.`)}</div><div class="hk-v ${health.some(i=>i.sev==='red')?'r':health.length?'y':_pend.length?'':'g'}">${health.length?health.length+' item'+(health.length>1?'s':''):_pend.length?_pend.length+' pending':'✓ All clear'}</div><div class="hk-s">${health.length?health.length+' data issue'+(health.length>1?'s':'')+(_pend.length?` · ${_pend.length} pending`:''):_pend.length?'dismissed, not fixed yet':'nothing to do'}</div></div>
+    <div class="hk"><div class="hk-l">Return this month ${ii(`This month's options P&L as a % of ${rs.base==='account'?'your account size':'this month\'s peak deployed capital'}.${rsH.target?` Target ${rsH.target}%.`:''} Change this with the cog.`)}</div><div class="hk-v ${mr?(mr.ok!=null?(mr.ok?'pos':(mr.pct<0?'neg':'')):cls(mr.pct)):''}">${mr?(mr.pct>=0?'+':'−')+Math.abs(mr.pct).toFixed(2)+'%':'—'}</div><div class="hk-s">${rBase>0?`of ${fmtMoney(rBase).replace(/\.\d\d$/,'')} ${rs.base==='account'?'account':'deployed'}`:''}${rBase>0&&rsH.target?` · target ${rsH.target}%`:rsH.target?`target ${rsH.target}%`:''}</div></div>
+    <div class="hk"><div class="hk-l">Avg win / loss ${ii(`Closed trades only, same as Win rate. Average premium kept on wins, and average extra paid on losing buybacks.`)}</div>${(T=>`<div class="hk-wl"><div><span>Avg win</span><b class="${T.winCls}">${T.win}</b></div><div><span>Avg loss</span><b class="${T.lossCls}">${T.loss}</b></div></div><div class="hk-s">${T.sub}</div>`)(avgWinLossText(wl))}</div>
+  </div>
+  </div></section>
+  <div class="hcard ny-panel" id="ny-panel" ${_nyOpen?'':'hidden'}><div class="hc-h"><h2>Needs you</h2><span class="hc-note"><span class="ny-desk"><a onclick="switchView('analytics')">More data →</a> · <a onclick="switchView('report')">Report →</a> · </span><a onclick="_nyOpen=false;document.getElementById('ny-panel').hidden=true">Close</a></span></div>${!health.length&&!_pend.length?`<div class="ny-none">Nothing needs you right now.</div>`:''}${health.length?`<div class="ny-hd">Data issues</div>${health.slice(0,8).map(healthItemHtml).join('')}${health.length>8?`<div class="ny-row"><span></span><span class="m">+${health.length-8} more</span><a class="ny-desk" onclick="goToHealth()">See all</a></div>`:''}`:''}${_pend.length?`<div class="ny-hd">Pending</div>${_pend.slice(0,8).map(i=>healthItemHtml(i,true)).join('')}`:''}</div>
+  <div class="a-chart-box pc-box home-chart" id="pnl-curve">${pnlCurveHtml()}</div>
+  <div id="home-monthly">${renderMonthlyForMeasure(pnlMeasure)}</div>
+  ${tpl.length?`<div class="hcard tk-pnl"><div class="hc-h"><h2>P&amp;L by ticker ${ii(`Realised only: premium from closed, expired or assigned options + share sales (first in, first out) + dividends + closed LEAPs &amp; calls, by ticker.`)}</h2><span class="hc-note">realised · wheel + LEAPs &amp; calls</span></div>
+    <div class="tk-row tk-hd"><span>Ticker</span><span>${today.slice(0,4)}</span><span>All time</span></div>
+    ${tpl.map(t=>`<div class="tk-row"><span class="tk-sym">${esc(t.ticker)}</span><span class="tk-year ${cls(t.year)}" data-lbl="${esc(today.slice(0,4))}">${sgn(t.year)}</span><span class="tk-all ${cls(t.all)}">${sgn(t.all)}</span></div>`).join('')}</div>`:''}
+</div>`;
+}
+
+// Extra realised-P&L sources for the Monthly P&L table (e.g. LEAPs & short calls once the options code lands).
+// Each entry: {key,label,byMonth:{'YYYY-MM':number}}. Empty on this branch. Read-only.
+function monthlyExtraSources(legs){
+  legs=legs===undefined?(typeof db!=='undefined'?db.opts:[]):legs;
+  if(!legs||!legs.length)return [];
+  const O=optsMonthly(legs);return [{key:'leaps',label:'LEAPs &amp; calls',byMonth:O.byMonth,gain:O.gain,loss:O.loss,lgain:O.lgain,lloss:O.lloss}];
+}
+// Unrealised = open wheel shares, mark-to-market wheel shorts, open LEAPs & short calls. Read-only.
+function calcAllUnrealised(wheels,trades,priceOf,legs,wheelMarkOf){
+  const today=new Date().toISOString().slice(0,10);
+  const wm=wheelMarkOf!==undefined?wheelMarkOf:(typeof _wheelMarkOf==='function'?_wheelMarkOf:null);
+  const wheelsNorm=(wheels||[]).map(w=>{
+    if(!w||w.ticker)return w||{};
+    const t=(trades||[]).find(x=>x.wheelId===w.id&&x.ticker);
+    return t?{...w,ticker:t.ticker}:{...w,ticker:w.id||''};
+  });
+  const byTicker={};wheelsNorm.forEach(w=>{if(w&&w.ticker)byTicker[String(w.ticker).toUpperCase()]=w;});
+  const po=typeof priceOf==='function'?tk=>{const w=byTicker[String(tk||'').toUpperCase()];return w!=null?priceOf(w):priceOf(tk);}:()=>null;
+  const ledger=OT_LEDGER.buildLedger(wheelsNorm,trades||[],legs||[],{today,priceOf:po,wheelMarkOf:wm});
+  const r2=n=>Math.round(n*100)/100;
+  let value=0,shares=0,leaps=0,premium=0;
+  ledger.open.forEach(o=>{
+    if(!o.priced)return;
+    const u=o.unrealised||0;
+    value+=u;
+    if(o.kind==='shares')shares+=u;
+    else if(o.kind==='csp'||o.kind==='cc')premium+=u;
+    else if(o.kind==='leap'||o.kind==='pmcc_call')leaps+=u;
+  });
+  return{value:r2(value),shares:r2(shares),leaps:r2(leaps),premium:r2(premium),unpriced:ledger.unpricedCount};
+}
+
+// Monthly Realised P&L: Premium + Shares Realised P&L (FIFO) + Dividends (+ any extra sources), by month. Read-only.
+function calcMonthlyRealised(trades,extras,today){
+  extras=extras||[];
+  const mo={};
+  const row=ym=>mo[ym]||(mo[ym]={ym,premium:0,shares:0,divs:0,extra:{},collected:0,loss:0,shareGain:0,shareLoss:0,leapGain:0,leapLoss:0});
+  trades.forEach(t=>{
+    if(!t.entered)return;const ym=t.entered.slice(0,7),v=t.total||0;
+    if(t.action==='DIV'){const r=row(ym);r.divs+=v;}
+  });
+  // Wheel option income from OT_LEDGER (net per closed trade, same as Home and the chart). Gross credit and buyback kept as columns.
+  const _wh=typeof db!=='undefined'&&db&&db.wheels?db.wheels:[];
+  OT_LEDGER.buildLedger(_wh,trades,[],{today}).events.forEach(e=>{if(e.bucket!=='income'||!e.date)return;const r=row(e.date.slice(0,7));r.premium+=e.amount;r.collected+=e.grossIn||0;r.loss+=(e.grossIn||0)-e.amount;});
+  shareRealisations(trades).events.forEach(e=>{if(!e.date)return;const r=row(e.date.slice(0,7));r.shares+=e.pnl;if(e.pnl>=0)r.shareGain+=e.pnl;else r.shareLoss-=e.pnl;r.shareSales=(r.shareSales||0)+1;});
+  extras.forEach(x=>Object.entries(x.byMonth||{}).forEach(([ym,v])=>{const r=row(ym);r.extra[x.key]=(r.extra[x.key]||0)+v;
+    if(x.gain||x.loss){r.collected+=(x.gain||{})[ym]||0;r.loss+=(x.loss||{})[ym]||0;r.leapGain+=(x.lgain||{})[ym]||0;r.leapLoss+=(x.lloss||{})[ym]||0;}else if(v>=0)r.collected+=v;else r.loss-=v;}));
+  const rd=n=>Math.round(n*100)/100;
+  return Object.values(mo).sort((a,b)=>b.ym.localeCompare(a.ym)).map(r=>{
+    const total=rd(r.premium+r.shares+r.divs+Object.values(r.extra).reduce((a,v)=>a+v,0));
+    const profit=rd(r.collected-r.loss),leapNet=rd(r.leapGain-r.leapLoss);
+    return{...r,premium:rd(r.premium),shares:rd(r.shares),divs:rd(r.divs),collected:rd(r.collected),loss:rd(r.loss),shareGain:rd(r.shareGain),shareLoss:rd(r.shareLoss),leapGain:rd(r.leapGain),leapLoss:rd(r.leapLoss),total,profit,leapNet};
+  });
+}
+
+
+
+// ════════════════════════════════════════════════════════
+// Delta at open (display only). Estimates Black-Scholes delta from the fill
+// premium and the underlying at open. Does not change P&L, realised, win/loss,
+// parsers or pricing. Fill time, when stored as filledAt, uses an intraday bar;
+// otherwise the daily close is used. createdAt and optleg ts are not fill times.
+// ════════════════════════════════════════════════════════
+const _HIST_LS='ot-histclose-v1';
+let _histCache={};
+try{_histCache=JSON.parse(localStorage.getItem(_HIST_LS)||'{}')||{};}catch(e){_histCache={};}
+let _deltaFetchGen=0,_deltaFetchBusy=false,_histTried=new Set();
+
+function _histPersist(){try{localStorage.setItem(_HIST_LS,JSON.stringify(_histCache));}catch(e){}}
+function histSpotOf(ticker,date,filledAt){
+  const sym=String(ticker||'').toUpperCase();
+  const pack=_histCache[sym];if(!pack)return null;
+  if(filledAt&&pack.ats&&pack.ats[filledAt]&&pack.ats[filledAt].price>0)return pack.ats[filledAt];
+  const d=String(date||filledAt||'').slice(0,10);
+  if(d&&pack.days&&pack.days[d]&&pack.days[d].price>0)return pack.days[d];
+  if(!d||!pack.days)return null;
+  for(let i=1;i<=10;i++){
+    const dt=new Date(d+'T12:00:00Z');dt.setUTCDate(dt.getUTCDate()-i);
+    const k=dt.toISOString().slice(0,10);
+    if(pack.days[k]&&pack.days[k].price>0)return pack.days[k];
+  }
+  return null;
+}
+function openDeltaLookups(){
+  const out=[];
+  (db.trades||[]).forEach(t=>{
+    if(!t||(t.action!=='CSP'&&t.action!=='STOC'&&t.action!=='STO'))return;
+    if(!t.ticker||!t.strike||!t.expiry||!(+t.premium>0))return;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(t):null;
+    out.push({ticker:t.ticker,date:t.entered,filledAt});
+  });
+  (db.opts||[]).forEach(l=>{
+    if(!l||l.demo)return;
+    if(!l.underlying||!l.strike||!l.expiry||!(+l.entryPrice>0))return;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(l):null;
+    out.push({ticker:l.underlying,date:l.entryDate,filledAt});
+  });
+  return out;
+}
+function _histMerge(sym,json){
+  const pack=_histCache[sym]||(_histCache[sym]={days:{},ats:{}});
+  if(!pack.days)pack.days={};if(!pack.ats)pack.ats={};
+  const closes=json&&json.closes||{};
+  Object.keys(closes).forEach(d=>{
+    const v=closes[d];
+    const price=v&&typeof v==='object'?+v.price:+v;
+    if(price>0)pack.days[d]={price,precision:(v&&v.precision)||'day',bar:(v&&v.bar)||'1d',date:(v&&v.date)||d};
+  });
+  const spots=json&&json.spots||{};
+  Object.keys(spots).forEach(at=>{
+    const v=spots[at];
+    if(v&&v.price>0)pack.ats[at]=v;
+  });
+}
+async function ensureDeltaSpots(){
+  if(typeof DeltaOpen==='undefined')return false;
+  const need=openDeltaLookups();
+  const missing={};
+  need.forEach(n=>{
+    const sym=String(n.ticker||'').toUpperCase();if(!sym)return;
+    if(n.filledAt&&histSpotOf(sym,n.date,n.filledAt))return;
+    if(!n.filledAt&&histSpotOf(sym,n.date,null))return;
+    const dateK=n.date?sym+'|d:'+String(n.date).slice(0,10):null;
+    const atK=n.filledAt?sym+'|t:'+n.filledAt:null;
+    if((atK&&_histTried.has(atK))||(!n.filledAt&&dateK&&_histTried.has(dateK)))return;
+    const g=missing[sym]||(missing[sym]={dates:new Set(),ats:new Set()});
+    if(n.date)g.dates.add(String(n.date).slice(0,10));
+    if(n.filledAt)g.ats.add(n.filledAt);
+  });
+  const syms=Object.keys(missing);
+  if(!syms.length)return false;
+  await Promise.all(syms.map(async sym=>{
+    const g=missing[sym];
+    const qs=new URLSearchParams({symbol:sym});
+    if(g.dates.size)qs.set('dates',[...g.dates].sort().join(','));
+    if(g.ats.size)qs.set('at',[...g.ats].join(','));
+    try{
+      const r=await fetch('/.netlify/functions/histclose?'+qs.toString(),{signal:AbortSignal.timeout(12000)});
+      if(!r.ok)return;
+      const j=await r.json();
+      _histMerge(sym,j);
+    }catch(e){}
+    g.dates.forEach(d=>_histTried.add(sym+'|d:'+d));
+    g.ats.forEach(a=>_histTried.add(sym+'|t:'+a));
+  }));
+  _histPersist();
+  return true;
+}
+function scheduleDeltaSpots(){
+  if(typeof DeltaOpen==='undefined')return;
+  const gen=++_deltaFetchGen;
+  if(_deltaFetchBusy)return;
+  _deltaFetchBusy=true;
+  ensureDeltaSpots().then(changed=>{
+    _deltaFetchBusy=false;
+    if(gen!==_deltaFetchGen){scheduleDeltaSpots();return;}
+    if(!changed){paintOpenDeltaHints();return;}
+    if(document.querySelector('.mb.open')){paintOpenDeltas();paintOpenDeltaHints();refreshAnalyticsDelta();return;}
+    if(typeof view!=='undefined'&&view==='analytics')refreshAnalyticsDelta();
+    else paintOpenDeltas();
+    paintOpenDeltaHints();
+  }).catch(()=>{_deltaFetchBusy=false;});
+}
+function openDeltaBadge(row,ticker){
+  if(typeof DeltaOpen==='undefined'||!row)return'';
+  const typ=DeltaOpen.optionTypeFromTrade(row);
+  if(!typ)return'';
+  const filledAt=DeltaOpen.fillTimestamp(row);
+  const spot=histSpotOf(ticker||row.ticker||row.underlying,row.entered||row.entryDate,filledAt);
+  const r=DeltaOpen.resolveOpenDelta(row,spot&&spot.price);
+  if(!r||r.absDelta==null)return'';
+  const title=DeltaOpen.precisionHover(r.src||'estimated',spot&&spot.precision,spot&&spot.bar);
+  return`<small class="tr-delta" title="${esc(title)}">${esc(DeltaOpen.formatDelta(r.absDelta))}</small>`;
+}
+function paintOpenDeltas(){
+  // Badges are baked into row HTML; a quiet re-render of visible lists would
+  // be heavier. When a modal is closed we let the next render pick them up.
+  if(typeof view!=='undefined'&&view!=='report'&&!document.querySelector('.mb.open')&&typeof render==='function'){
+    // Avoid a loop: scheduleDeltaSpots is called from render, but cache is warm
+    // so ensureDeltaSpots returns false and we stop here if we re-enter via render.
+    const prev=_deltaFetchGen;
+    render();
+    _deltaFetchGen=prev;
+  }
+}
+function readFilledAtField(dateId,timeId,hintId,previous){
+  const dateEl=document.getElementById(dateId),timeEl=document.getElementById(timeId),hint=hintId?document.getElementById(hintId):null;
+  const r=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveFilledAt(dateEl&&dateEl.value,timeEl&&timeEl.value,previous):{value:previous||null,blank:true};
+  if(hint){if(r.error){hint.textContent=DeltaOpen.fillTimeHintText(r.error);hint.hidden=false;}else{hint.textContent='';hint.hidden=true;}}
+  return r;
+}
+function paintFillTimeHint(dateId,timeId,hintId){readFilledAtField(dateId,timeId,hintId,null);}
+function setFillTimeField(timeId,hintId,filledAt){
+  const el=document.getElementById(timeId);if(!el)return;
+  el.value=(typeof DeltaOpen!=='undefined'&&filledAt)?(DeltaOpen.fillTimeFromFilledAt(filledAt)||''):'';
+  const hint=hintId?document.getElementById(hintId):null;if(hint){hint.textContent='';hint.hidden=true;}
+}
+function filledAtFromOpenForm(dateId,timeId,previous){
+  const timeEl=document.getElementById(timeId);
+  const dateEl=document.getElementById(dateId);
+  if(typeof DeltaOpen==='undefined')return previous||null;
+  const r=DeltaOpen.resolveFilledAt(dateEl&&dateEl.value,timeEl&&timeEl.value,previous);
+  return r.error?previous||null:r.value||null;
+}
+function paintTradeDeltaHint(){
+  const hint=document.getElementById('tf-delta-hint');if(!hint||typeof DeltaOpen==='undefined')return;
+  const typed=(document.getElementById('tf-delta').value||'').trim();
+  if(typed){hint.textContent='optional — typed value is used';hint.title='Delta at open, typed on the trade.';return;}
+  const id=(document.getElementById('tf-id')||{}).value;
+  const old=(db.trades||[]).find(x=>x.id===id)||{};
+  const t={action:typeof actionFromSelect==='function'?actionFromSelect(document.getElementById('tf-action').value):document.getElementById('tf-action').value,strike:document.getElementById('tf-strike').value,expiry:document.getElementById('tf-expiry').value,entered:document.getElementById('tf-entered').value,premium:document.getElementById('tf-premium').value,ticker:document.getElementById('tf-ticker').value,filledAt:filledAtFromOpenForm('tf-entered','tf-fill-time',old.filledAt)};
+  const spot=histSpotOf(t.ticker,t.entered,DeltaOpen.fillTimestamp(t));
+  const r=DeltaOpen.resolveOpenDelta(t,spot&&spot.price);
+  if(r.absDelta!=null){hint.textContent='optional · estimated '+r.absDelta.toFixed(2);hint.title=DeltaOpen.precisionHover('estimated',spot&&spot.precision,spot&&spot.bar);}
+  else{hint.textContent='optional';hint.title='';}
+}
+function paintLeapDeltaHint(){
+  const hint=document.getElementById('lf-delta-hint');if(!hint||typeof DeltaOpen==='undefined')return;
+  const typed=(document.getElementById('lf-delta').value||'').trim();
+  if(typed){hint.textContent='optional — typed value is used';hint.title='Delta at open, typed on the trade.';return;}
+  const id=(document.getElementById('lf-id')||{}).value;
+  const old=(db.opts||[]).find(x=>x.id===id)||{};
+  const l={type:'C',side:'long',strike:document.getElementById('lf-strike').value,expiry:document.getElementById('lf-expiry').value,entryDate:document.getElementById('lf-date').value,entryPrice:document.getElementById('lf-price').value,underlying:document.getElementById('lf-und').value,filledAt:old.filledAt,deltaAtOpen:old.deltaAtOpen};
+  const spot=histSpotOf(l.underlying,l.entryDate,DeltaOpen.fillTimestamp(l));
+  const r=DeltaOpen.resolveOpenDelta(l,spot&&spot.price);
+  if(r.absDelta!=null){hint.textContent='optional · estimated '+r.absDelta.toFixed(2);hint.title=DeltaOpen.precisionHover('estimated',spot&&spot.precision,spot&&spot.bar);}
+  else{hint.textContent='optional';hint.title='';}
+}
+function paintPeDeltaHint(){
+  const hint=document.getElementById('pe-delta-hint');if(!hint||typeof DeltaOpen==='undefined')return;
+  const typed=(document.getElementById('pe-delta').value||'').trim();
+  if(typed){hint.textContent='optional — typed value is used';hint.title='Delta at open, typed on the trade.';return;}
+  const id=(document.getElementById('pe-id')||{}).value;
+  const l=(db.opts||[]).find(x=>x.id===id);if(!l){hint.textContent='optional';return;}
+  const cur={...l,deltaAtOpen:null,strike:document.getElementById('pe-strike').value,expiry:document.getElementById('pe-expiry').value,entryDate:document.getElementById('pe-date').value,entryPrice:document.getElementById('pe-price').value,filledAt:filledAtFromOpenForm('pe-date','pe-fill-time',l.filledAt)};
+  const spot=histSpotOf(l.underlying,cur.entryDate,DeltaOpen.fillTimestamp(cur));
+  const r=DeltaOpen.resolveOpenDelta(cur,spot&&spot.price);
+  if(r.absDelta!=null){hint.textContent='optional · estimated '+r.absDelta.toFixed(2);hint.title=DeltaOpen.precisionHover('estimated',spot&&spot.precision,spot&&spot.bar);}
+  else{hint.textContent='optional';hint.title='';}
+}
+function paintOpenDeltaHints(){
+  if(document.getElementById('mTrade')&&document.getElementById('mTrade').classList.contains('open'))paintTradeDeltaHint();
+  if(document.getElementById('mLeap')&&document.getElementById('mLeap').classList.contains('open'))paintLeapDeltaHint();
+  if(document.getElementById('mPmccLeg')&&document.getElementById('mPmccLeg').classList.contains('open'))paintPeDeltaHint();
+}
+// Display-only: same close matching as reportWinLossItems, plus the opening trade
+// so a delta can be attached. Win flag and amount are unchanged.
+function reportDeltaSoldItems(wheels,trades,legs,spotOf){
+  // Same closed sold options (and amounts) as reportWinLossItems, with the opening trade or leg for delta at open.
+  const tradeById={},legById={};
+  (trades||[]).forEach(t=>{if(t&&t.id)tradeById[t.id]=t;});(legs||[]).forEach(l=>{if(l&&l.id)legById[l.id]=l;});
+  return reportWinLossItems(wheels,trades,legs).map(it=>{
+    const e=it.ev,open=(e.strategy==='pmcc'?legById[e.legId]:tradeById[e.legId])||null;
+    if(!open)return{...it,open:null,absDelta:null,src:null,precision:null,bar:null};
+    const tk=e.strategy==='pmcc'?(open.underlying||open.ticker):open.ticker,on=e.strategy==='pmcc'?open.entryDate:open.entered;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(open):null;
+    const spot=spotOf?spotOf(tk,on,filledAt):null;
+    const d=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveOpenDelta(open,spot&&spot.price):{absDelta:null};
+    return{...it,open,absDelta:d.absDelta,src:d.src,precision:spot&&spot.precision,bar:spot&&spot.bar};
+  });
+}
+function reportDeltaLeapItems(legs,spotOf){
+  return (legs||[]).filter(l=>l&&l.side==='long'&&(l.type==='C'||l.type==='call')&&!l.parentLeapId&&l.status!=='open'&&!l.demo).map(l=>{
+    const r=OPTS.legPnL(l).realized;
+    const filledAt=typeof DeltaOpen!=='undefined'?DeltaOpen.fillTimestamp(l):null;
+    const spot=spotOf?spotOf(l.underlying||l.ticker,l.entryDate,filledAt):null;
+    const d=typeof DeltaOpen!=='undefined'?DeltaOpen.resolveOpenDelta(l,spot&&spot.price):{absDelta:null};
+    return{date:l.closeDate||l.expiry||'',win:r>=0,amount:r,open:l,absDelta:d.absDelta,src:d.src,precision:spot&&spot.precision,bar:spot&&spot.bar};
+  });
+}
+function reportDeltaTable(title,intro,items){
+  const B=typeof DeltaOpen!=='undefined'?DeltaOpen.bucketItems(items):{rows:[],best:null,noDelta:0};
+  const money=n=>{
+    if(n==null||isNaN(n))return'—';
+    const abs=Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    const cls=n<0?'r':'g';
+    return`<span class="${cls}">${n<0?'-':'+'}$${abs}</span>`;
+  };
+  let html=`<h2>${esc(title)}</h2><p>${esc(intro)}</p>`;
+  if(!items.length){
+    html+=`<p class="rep-nodelta">No closed trades in this group yet.</p>`;
+    return{html,lines:[title+'. No closed trades in this group yet.'],best:null};
+  }
+  html+=`<table><thead><tr><th>Delta at open</th><th>Trades</th><th>Win rate</th><th>Total P&amp;L</th><th>Avg P&amp;L</th></tr></thead><tbody>`;
+  const lines=[title+'.'];
+  B.rows.forEach(b=>{
+    const wr=b.wr!=null?b.wr+'%':'—';
+    const nodelta=b.key==='No delta'?' class="rep-nodelta"':'';
+    html+=`<tr${nodelta}><td>${esc(b.label)}</td><td data-l="Trades">${b.count}</td><td data-l="Win rate">${wr}</td><td data-l="Total P&amp;L">${money(b.totalPnl)}</td><td data-l="Avg P&amp;L">${money(b.avgPnl)}</td></tr>`;
+    lines.push(b.label+': '+b.count+' trade'+(b.count===1?'':'s')+', win rate '+(b.wr!=null?b.wr+'%':'—')+', total '+(typeof reportMoney==='function'?reportMoney(b.totalPnl):b.totalPnl)+', average '+(typeof reportMoney==='function'?reportMoney(b.avgPnl):b.avgPnl)+'.');
+  });
+  html+='</tbody></table>';
+  if(B.best){
+    const sentence='The '+B.best.label+' bucket had the best average P&L, at '+(typeof reportMoney==='function'?reportMoney(B.best.avgPnl):B.best.avgPnl)+' a trade.';
+    html+=`<p>${sentence.replace(/([+-]\$[\d,]+(?:\.\d{2})?)/g,(m,n)=>'<span class="'+(n.charAt(0)==='-'?'r':'g')+'">'+n+'</span>')}</p>`;
+    lines.push(sentence);
+  }
+  if(B.noDelta){
+    const note=B.noDelta+' trade'+(B.noDelta===1?' has':'s have')+' no delta — the stock price on the open date was missing, or the premium could not be solved for implied vol.';
+    html+=`<p class="rep-nodelta">${esc(note)}</p>`;
+    lines.push(note);
+  }
+  return{html,lines,best:B.best};
+}
+function reportDeltaSection(){
+  const spotOf=(ticker,date,filledAt)=>histSpotOf(ticker,date,filledAt);
+  const sold=reportDeltaSoldItems(db.wheels,db.trades,db.opts,spotOf);
+  const leaps=reportDeltaLeapItems(db.opts,spotOf);
+  const soldBlock=reportDeltaTable('Delta at open','Closed sold options (cash-secured puts and covered calls), grouped by the option\'s absolute delta when it was opened. Estimated from the fill premium and the stock price at open — the 1-minute or 5-minute bar when a fill time is stored, otherwise the hourly bar or the daily close — unless you typed a delta on the trade.',sold);
+  const leapBlock=leaps.length||true?reportDeltaTable('LEAPs (bought calls)','Closed long calls only, using the same realised P&L and win rule as the rest of this Report.',leaps):{html:'',lines:[]};
+  // Always show the LEAP table when it's simple; empty state is fine.
+  const html=`<div class="rep-delta" id="report-delta">${soldBlock.html}${leapBlock.html}</div>`;
+  return{html,lines:soldBlock.lines.concat(leapBlock.lines||[])};
+}
+function analyticsDeltaTable(title,items,tip){
+  const money=n=>{
+    if(n==null||isNaN(n))return'—';
+    const abs=Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    const cls=n<0?'r':'g';
+    return`<span class="${cls}">${n<0?'-':'+'}$${abs}</span>`;
+  };
+  const rocStr=n=>n==null||isNaN(n)?'—':n.toFixed(1)+'%';
+  const tipHtml=tip&&typeof ii==='function'?ii(tip):'';
+  let html=`<div class="a-chart-box"><div class="a-chart-title">${esc(title)}${tipHtml}</div>`;
+  if(!items||!items.length){
+    html+=`<p class="a-empty">No closed trades to show yet.</p></div>`;
+    return html;
+  }
+  const B=typeof DeltaOpen!=='undefined'?DeltaOpen.bucketItems(items):{rows:[]};
+  // AROC per bucket: OT_LEDGER.weightedAROC over the bucket's closed trades (capital × days weighted)
+  const evByKey={};
+  items.forEach(it=>{
+    const key=typeof DeltaOpen!=='undefined'?DeltaOpen.bucketKey(it.absDelta):'No delta';
+    if(it.ev)(evByKey[key]=evByKey[key]||[]).push(it.ev);
+  });
+  html+=`<div class="a-table-wrap"><table class="a-table a-table-nums stack-table"><thead><tr><th>Delta at open</th><th>Trades</th><th>Win rate</th><th>Total P&amp;L</th><th>Avg P&amp;L</th><th>Avg AROC</th></tr></thead><tbody>`;
+  (B.rows||[]).forEach(b=>{
+    const wr=b.wr!=null?b.wr+'%':'—';
+    const avgRoc=evByKey[b.key]?OT_LEDGER.weightedAROC(evByKey[b.key]):null;
+    const nodelta=b.key==='No delta'?' class="nodelta"':'';
+    html+=`<tr${nodelta}><td>${esc(b.label)}</td><td data-l="Trades">${b.count}</td><td data-l="Win rate">${wr}</td><td data-l="Total P&amp;L">${money(b.totalPnl)}</td><td data-l="Avg P&amp;L">${money(b.avgPnl)}</td><td data-l="Avg AROC">${rocStr(avgRoc)}</td></tr>`;
+  });
+  html+='</tbody></table></div></div>';
+  return html;
+}
+function analyticsDeltaSectionHtml(){
+  const spotOf=(ticker,date,filledAt)=>typeof histSpotOf==='function'?histSpotOf(ticker,date,filledAt):null;
+  const sold=typeof reportDeltaSoldItems==='function'?reportDeltaSoldItems(db.wheels,db.trades,db.opts,spotOf):[];
+  const wheelItems=sold.filter(it=>it.open&&(it.open.action==='CSP'||it.open.action==='STOC'));
+  const leapShort=sold.filter(it=>it.open&&it.open.side==='short');
+  const tip='Estimated from the fill premium and the stock price at fill time, unless you typed a delta.';
+  const scope=typeof moreScope==='function'?moreScope():'all';
+  return`<div id="analytics-delta">${scope!=='pmcc'?analyticsDeltaTable('Performance by Delta',wheelItems,tip):''}${scope!=='wheel'?analyticsDeltaTable('LEAP short calls',leapShort):''}</div>`;
+}
+function refreshAnalyticsDelta(){
+  const el=document.getElementById('analytics-delta');if(!el)return;
+  el.outerHTML=analyticsDeltaSectionHtml();
+}
+function refreshReportDelta(){refreshAnalyticsDelta();}
+
+
+// Report: display-only. Calls existing monthly/return functions and aggregates their outputs.
+// Does not change any financial formula, parser or business logic.
+function reportClosedLegPnLs(legs,wheels,trades){
+  const out=(legs||[]).filter(l=>l&&l.status!=='open'&&!l.demo).map(l=>{
+    const p=OPTS.legPnL(l);
+    return{ticker:l.underlying||l.und||l.ticker||'',side:l.side,type:l.type,strike:l.strike,date:l.closeDate||l.expiry||'',realized:p.realized};
+  });
+  // Wheel puts and calls too: each closed slice from OT_LEDGER, so a losing wheel CSP is found as well as a LEAP.
+  if(trades&&trades.length){
+    const byId={};trades.forEach(t=>{if(t&&t.id)byId[t.id]=t;});
+    OT_LEDGER.buildLedger(wheels||[],trades,[],{}).events.forEach(e=>{
+      if(e.strategy!=='wheel'||e.bucket!=='income')return;
+      const o=byId[e.legId]||{};
+      out.push({ticker:e.ticker||o.ticker||'',side:'short',type:e.kind==='csp'?'P':'C',strike:o.strike,date:e.date||'',realized:Math.round(e.amount*100)/100,wheel:true});
+    });
+  }
+  return out;
+}
+// Pure: period, sums and averages of already-computed monthly rows (profit = wheel + PMCC short calls;
+// leapNet = closed long LEAPs). Complete months exclude the current calendar month. Return uses the
+// same numerator as Home (short premium). Manual mode divides the average by the entered account size;
+// Auto mode averages each complete month's % against that month's peak deployed capital.
+function reportFigures(rows,today,cawTotal,rs,closedLegs,monthlyCap){
+  const rd=n=>Math.round(n*100)/100;
+  const optOf=r=>(r.profit||0)+(r.leapNet||0),premOf=r=>r.profit||0;
+  const sorted=[...(rows||[])].filter(r=>r&&r.ym).sort((a,b)=>a.ym.localeCompare(b.ym));
+  if(!sorted.length)return{empty:true};
+  const firstYm=sorted[0].ym,lastYm=sorted[sorted.length-1].ym,todayYm=(today||'').slice(0,7);
+  const by={};sorted.forEach(r=>by[r.ym]=r);
+  const months=[];
+  let y=+firstYm.slice(0,4),m=+firstYm.slice(5,7);
+  const endY=+lastYm.slice(0,4),endM=+lastYm.slice(5,7);
+  while(y<endY||(y===endY&&m<=endM)){
+    const ym=y+'-'+String(m).padStart(2,'0');
+    const r=by[ym]||{ym,profit:0,leapNet:0};
+    months.push({ym,options:rd(optOf(r)),premium:rd(premOf(r)),realised:rd(r.total!=null?r.total:optOf(r))});
+    m++;if(m>12){m=1;y++;}
+  }
+  const n=months.length,sum=list=>list.reduce((a,r)=>a+r,0);
+  const options=rd(sum(months.map(r=>r.options))),premium=rd(sum(months.map(r=>r.premium)));
+  const complete=months.filter(r=>r.ym<todayYm);
+  const optionsComplete=rd(sum(complete.map(r=>r.options))),premiumComplete=rd(sum(complete.map(r=>r.premium)));
+  const avg=(tot,c)=>c?rd(tot/c):null;
+  const best=months.reduce((a,r)=>!a||r.options>a.options?r:a,null);
+  const worst=months.reduce((a,r)=>!a||r.options<a.options?r:a,null);
+  let loser=null;
+  (closedLegs||[]).forEach(l=>{if(l&&l.realized!=null&&l.realized<0&&(!loser||l.realized<loser.realized))loser=l;});
+  const optionsEx=loser?rd(options-loser.realized):null;
+  // Total realised = option income + closed LEAPs + share sales + dividends (the row total); this month = option income so far
+  const realised=rd(sum(months.map(r=>r.realised))),realisedEx=loser?rd(realised-loser.realized):null;
+  const thisMonth=rd(premOf(by[todayYm]||{}));
+  const bestIncome=months.reduce((a,r)=>!a||r.premium>a.premium?r:a,null);
+  const worstIncome=months.reduce((a,r)=>!a||r.premium<a.premium?r:a,null);
+  const cap=returnBase(rs,cawTotal);
+  const manual=rs&&rs.base==='account'&&rs.account>0;
+  let ret=null,retMonths=0;
+  if(manual){
+    const avgForRet=complete.length?avg(premiumComplete,complete.length):avg(premium,n);
+    ret=monthReturnPct(avgForRet,cap,rs&&rs.target);
+    retMonths=complete.length||n;
+  }else{
+    const auto=averageAutoMonthReturn(months,todayYm,monthlyCap,r=>r.premium,rs&&rs.target);
+    if(auto){ret={pct:auto.pct,ok:auto.ok};retMonths=auto.n;}
+  }
+  return{empty:false,firstYm,lastYm,months:n,completeMonths:complete.length,
+    options,optionsAvg:avg(options,n),optionsComplete,optionsCompleteAvg:avg(optionsComplete,complete.length),
+    premium,premiumAvg:avg(premium,n),premiumComplete,premiumCompleteAvg:avg(premiumComplete,complete.length),
+    best,worst,loser,optionsEx,capital:cap,target:rs&&rs.target,ret,base:rs&&rs.base,retMonths,
+    realised,realisedAvg:avg(realised,n),realisedEx,thisMonth,bestIncome,worstIncome};
+}
+// Display-only period bounds. Last month / last year are the previous full calendar month and year.
+function reportLastYm(today){
+  const y=+today.slice(0,4),m=+today.slice(5,7);
+  return m===1?(y-1)+'-12':y+'-'+String(m-1).padStart(2,'0');
+}
+function reportMonthEnd(ym){
+  const y=+ym.slice(0,4),m=+ym.slice(5,7);
+  return ym+'-'+String(new Date(Date.UTC(y,m,0)).getUTCDate()).padStart(2,'0');
+}
+function reportYmInPeriod(ym,key,today){
+  if(!ym)return false;
+  if(key==='total')return true;
+  const y=today.slice(0,4);
+  if(key==='ytd')return ym.slice(0,4)===y&&ym<=today.slice(0,7);
+  if(key==='lastMonth')return ym===reportLastYm(today);
+  if(key==='lastYear')return ym.slice(0,4)===String(+y-1);
+  return false;
+}
+function reportDateInPeriod(date,key,today){
+  if(key==='total')return true;
+  if(!date)return false;
+  const y=today.slice(0,4),lastM=reportLastYm(today);
+  if(key==='ytd')return date>=y+'-01-01'&&date<=today;
+  if(key==='lastMonth')return date>=lastM+'-01'&&date<=reportMonthEnd(lastM);
+  if(key==='lastYear')return date>=String(+y-1)+'-01-01'&&date<=String(+y-1)+'-12-31';
+  return false;
+}
+// Sum already-computed monthly rows (profit, leapNet, collected, premium) into the four report periods.
+function reportPeriods(rows,today,winItems){
+  const rd=n=>Math.round(n*100)/100;
+  const y=today.slice(0,4),lastM=reportLastYm(today),lastY=String(+y-1);
+  const keys=[
+    {key:'ytd',label:'Year to date'},
+    {key:'lastMonth',label:'Last month ('+reportMonthName(lastM)+')'},
+    {key:'lastYear',label:'Last year ('+lastY+')'},
+    {key:'total',label:'Total'}
+  ];
+  return keys.map(k=>{
+    const list=(rows||[]).filter(r=>r&&reportYmInPeriod(r.ym,k.key,today));
+    const profit=rd(list.reduce((a,r)=>a+(r.profit||0),0));
+    const leaps=rd(list.reduce((a,r)=>a+(r.leapNet||0),0));
+    const collected=rd(list.reduce((a,r)=>a+(r.collected||0),0));
+    const wheelOnly=rd(list.reduce((a,r)=>a+(r.premium||0),0));
+    const realised=rd(list.reduce((a,r)=>a+(r.total!=null?r.total:(r.profit||0)+(r.leapNet||0)),0));
+    const closedItems=(winItems||[]).filter(i=>reportDateInPeriod(i.date,k.key,today));
+    const wins=closedItems.filter(i=>i.win).length,losses=closedItems.filter(i=>!i.win).length,closed=wins+losses;
+    // wheel = short premium (wheel + covered calls), same as profit; wheel + LEAPs = options P&L
+    return{key:k.key,label:k.label,options:rd(profit+leaps),premium:profit,collected,wheel:profit,leaps,closed,wins,losses,wr:closed?((wins/closed)*100).toFixed(1):null,
+      income:profit,wheelOnly,pmcc:rd(profit-wheelOnly),realised};
+  });
+}
+function reportPeriodLine(p){
+  const realised=p.realised!=null?p.realised:p.options;
+  const empty=!p.closed&&!p.options&&!p.collected&&!p.wheel&&!p.leaps&&!realised;
+  if(empty)return p.label+': $0. No closed trades.';
+  const trades=p.closed?p.closed+' closed trade'+(p.closed===1?'':'s')+', win rate '+p.wr+'%':'No closed trades';
+  const inc=p.income!=null?p.income:p.premium;
+  const wheel=p.wheelOnly!=null?p.wheelOnly:inc,pmcc=p.pmcc!=null?p.pmcc:0;
+  const split=(wheel||pmcc)?' (wheel '+reportMoney(wheel)+', PMCC calls '+reportMoney(pmcc)+')':'';
+  const prem=p.collected?reportMoney(p.collected):'$0';
+  return p.label+': '+(inc?reportMoney(inc):'$0')+' option income'+split+', '+(realised?reportMoney(realised):'$0')+' total realised, '+trades+', premium collected '+prem+'.';
+}
+
+// Display-only: same closed sold-option outcomes as calcWinLoss, with the close date so periods can be bucketed.
+// Does not change calcWinLoss. Long LEAPs are excluded, matching Home.
+function reportWinLossItems(wheels,trades,legs){
+  // Closed sold options straight from OT_LEDGER (wheel puts/calls and PMCC short calls), same rule as calcWinLoss and Home.
+  return OT_LEDGER.buildLedger(wheels||[],trades||[],legs||[],{}).events.filter(e=>e.bucket==='income')
+    .map(e=>({date:String(e.date||'').slice(0,10),win:e.amount>=0,amount:e.amount,ev:e}));
+}
+function reportMoney(n){
+  if(n==null||isNaN(n))return'—';
+  const abs=Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return(n<0?'-':'+')+'$'+abs;
+}
+function reportMonthName(ym){
+  return new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'long',year:'numeric'});
+}
+function reportLegKind(l){
+  const typ=String(l.type||'').toLowerCase();
+  const put=typ==='p'||typ==='put';
+  const call=typ==='c'||typ==='call';
+  const side=l.side==='long'?'LEAP ':l.side==='short'?'short ':'';
+  const what=put?'put':call?'call':'option';
+  const strike=l.strike!=null&&l.strike!==''?' $'+String(l.strike).replace(/\.0+$/,''):'';
+  return(side+what+strike).trim();
+}
+function reportSentences(F){
+  if(!F||F.empty)return['No realised P&L yet. Log a trade and it will show up here.'];
+  // Same two terms as Home and More data: Option income (closed sold options, net of buybacks) and Total realised (adds closed LEAPs, share sales and dividends)
+  const out=[];
+  const span=F.months===1?`One month, ${reportMonthName(F.firstYm)}.`:`${F.months} months, ${reportMonthName(F.firstYm)} to ${reportMonthName(F.lastYm)}.`;
+  out.push(span+' Realised only. Option income is wheel and PMCC short premium net of buybacks; total realised adds closed LEAPs, share sales and dividends.');
+  let inc=`Option income: ${reportMoney(F.premium)}, about ${reportMoney(F.premiumAvg)} a month`;
+  if(F.completeMonths>0&&F.completeMonths!==F.months&&F.premiumCompleteAvg!=null)
+    inc+=`, or ${reportMoney(F.premiumCompleteAvg)} over ${F.completeMonths} complete month${F.completeMonths===1?'':'s'}`;
+  out.push(inc+'.');
+  out.push(`Option income this month so far: ${reportMoney(F.thisMonth)}.`);
+  if(F.ret){
+    const pct=(F.ret.pct>=0?'+':'−')+Math.abs(F.ret.pct).toFixed(2)+'%';
+    const of=F.base==='account'?'your account size':'each month\'s peak deployed capital';
+    const n=F.base==='account'?(F.completeMonths||0):(F.retMonths||0);
+    const over=n>0?` over ${n} complete month${n===1?'':'s'}`:'';
+    let s=`Average monthly return on option income${over} is ${pct} of ${of}`;
+    if(F.target>0)s+=F.ret.ok?`, meeting your ${F.target}% target`:`, against your ${F.target}% target`;
+    s+='.';
+    out.push(s);
+  }else{
+    out.push('Capital at work is the cost basis of open puts, shares and LEAPs. A monthly return percentage is not shown because there is no capital figure to measure against.');
+  }
+  out.push(`Total realised: ${reportMoney(F.realised)}, about ${reportMoney(F.realisedAvg)} a month.`);
+  if(F.loser){
+    const when=F.loser.date?`, closed ${typeof fmtDate==='function'?fmtDate(F.loser.date):F.loser.date}`:'';
+    const tk=F.loser.ticker?F.loser.ticker+' ':'';
+    out.push(`Your biggest losing closed option is ${tk}${reportLegKind(F.loser)}${when}, at ${reportMoney(F.loser.realized)}. Without that trade, total realised is ${reportMoney(F.realisedEx)}.`);
+  }
+  const B=F.bestIncome,W=F.worstIncome;
+  if(B&&W){
+    if(B.ym===W.ym)out.push(`That month's option income was ${reportMoney(B.premium)}.`);
+    else out.push(`Best month for option income was ${reportMonthName(B.ym)} at ${reportMoney(B.premium)}. Worst was ${reportMonthName(W.ym)} at ${reportMoney(W.premium)}.`);
+  }
+  return out;
+}
+function renderReport(){
+  const today=new Date().toISOString().slice(0,10);
+  const legs=db.opts||[];
+  const rows=calcMonthlyRealised(db.trades,monthlyExtraSources(legs),today);
+  const caw=currentCapitalAtWork();
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,legs);
+  const monthlyCap=OT_LEDGER.monthlyDeployedCapital(db.wheels,db.trades,legs,{today});
+  // Wired to OT_LEDGER: rows (calcMonthlyRealised), closed-trade wins and the biggest loser (wheel trades and db.opts) all come from the ledger
+  const F=reportFigures(rows,today,caw.total,rs,reportClosedLegPnLs(legs,db.wheels,db.trades),monthlyCap);
+  const periods=reportPeriods(rows,today,reportWinLossItems(db.wheels,db.trades,legs));
+  const periodLines=periods.map(reportPeriodLine);
+  const sentences=reportSentences(F);
+  const copy=sentences.concat(periodLines).join('\n\n');
+  const paint=s=>s.replace(/([+-]\$[\d,]+(?:\.\d{2})?)/g,(m,n)=>`<span class="${n.charAt(0)==='-'?'r':'g'}">${n}</span>`)
+    .replace(/([+−]\d+\.\d{2}%)/g,(m,n)=>`<span class="${n.charAt(0)==='−'||n.charAt(0)==='-'?'r':'g'}">${n}</span>`);
+  const paras=sentences.map(s=>`<p>${paint(esc(s))}</p>`).join('');
+  const periodHtml=`<div class="rep-periods">`+periodLines.map(s=>`<p>${paint(esc(s))}</p>`).join('')+`</div>`;
+  return`<div class="ms-head"><a onclick="switchView('dash')">← Home</a><h1>Report</h1><a onclick="switchView('analytics')">More data →</a></div>
+  <div class="rep-wrap"><div class="rep-card" id="report-text" data-copy="${esc(copy).replace(/\n/g,'&#10;')}">${paras}${periodHtml}
+    <button type="button" class="btn btn-ghost rep-copy" id="report-copy" onclick="copyReport()">Copy summary</button>
+    <p class="rep-note">Same realised figures as Home and More data. Option income (and the monthly return) is wheel and PMCC short premium net of buybacks; total realised adds closed LEAPs, share sales and dividends. Closed-trade counts and win rate use the same sold-option rule as Home. Nothing is sent off this device.</p>
+  </div></div>`;
+}
+function copyReport(){
+  const el=document.getElementById('report-text');
+  const text=el?(el.getAttribute('data-copy')||''):'';
+  if(!text)return;
+  const done=()=>{const b=document.getElementById('report-copy');if(!b)return;const o=b.textContent;b.textContent='Copied';setTimeout(()=>{if(b.textContent==='Copied')b.textContent=o;},1200);};
+  const fallback=()=>{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){}document.body.removeChild(ta);};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done).catch(fallback);
+  else fallback();
+}
+
+
+// ════════════════════════════════════════════════════════
+// INTERACTIONS
+// ════════════════════════════════════════════════════════
+function toggleExpand(id){collapsedWheels.has(id)?collapsedWheels.delete(id):collapsedWheels.add(id);_saveUIState();render();}
+function toggleLeapExpand(id){collapsedLeaps.has(id)?collapsedLeaps.delete(id):collapsedLeaps.add(id);_saveUIState();render();}
+function toggleHideLeap(id){hiddenLeaps.has(id)?hiddenLeaps.delete(id):hiddenLeaps.add(id);render();}
+function toggleShowHiddenLeaps(val){showHiddenLeaps=!!val;render();}
+function toggleMinimise(id){
+  if(minimised.has(id)){minimised.delete(id);}
+  else{minimised.add(id);expanded.delete(id);}
+  render();
+}
+function toggleHide(id){hidden.has(id)?hidden.delete(id):hidden.add(id);render();}
+function toggleMinAll(){
+  const allIds=db.wheels.map(w=>w.id);
+  if(minimised.size>0){minimised.clear();}
+  else{allIds.forEach(id=>minimised.add(id));expanded.clear();}
+  render();
+}
+function toggleShowClosed(val){showClosed=val;render();}
+function toggleShowHidden(val){showHidden=val;render();}
+function setPosSort(val){posSortBy=val;render();}
+let _logQTimer=null;
+function setLogQ(val){
+  logQ=val;
+  clearTimeout(_logQTimer);
+  _logQTimer=setTimeout(()=>{
+    render();
+    const inp=document.querySelector('.search-inp');
+    if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
+  },300);
+}
+function cyclePosSort(){
+  const modes=['ticker','recent','pnl','dte'];
+  const i=modes.indexOf(posSortBy);
+  posSortBy=modes[(i+1)%modes.length];
+  render();
+}
+function toggleSortMenu(e){
+  e.stopPropagation();
+  const dd=document.getElementById('sort-dropdown');
+  if(!dd)return;
+  const show=dd.style.display==='none';
+  dd.style.display=show?'block':'none';
+  if(show){document.addEventListener('click',closeSortMenu,{once:true});}
+}
+function closeSortMenu(){
+  const dd=document.getElementById('sort-dropdown');
+  if(dd)dd.style.display='none';
+}
+function toggleAnalyticsSec(id,hdr){
+  const el=document.getElementById(id);if(!el)return;
+  const chev=hdr.querySelector('.a-sec-chevron');
+  el.classList.toggle('collapsed');
+  if(chev)chev.classList.toggle('open');
+}
+function goToRotation(id){
+  view='positions';
+  document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view==='positions'));
+  render();
+  setTimeout(()=>{
+    const el=document.getElementById('rw-'+id);
+    if(el){
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+      el.style.borderColor='var(--orange)';
+      setTimeout(()=>{el.style.borderColor='';},2000);
+    }
+  },50);
+}
+function sortLog(col){logSort.dir=logSort.col===col?(logSort.dir==='asc'?'desc':'asc'):'asc';logSort.col=col;render();}
+
+let _nwOpen=false,_nwTimer=0,_nwSeq=0,_nwHits=[],_nwHi=-1,_nwState='';
+function nwTicker(s){const t=String(s||'').toUpperCase().trim();return /^[A-Z][A-Z0-9.\-]{0,9}$/.test(t)?t:'';}
+function openNewWheel(){_nwOpen=true;_nwHits=[];_nwHi=-1;_nwState='';showNewWheel();const inp=document.getElementById('new-rot-ticker-top');if(inp){inp.value='';inp.focus();}}
+function showNewWheel(){const b=document.getElementById('new-wheel-btn'),box=document.getElementById('new-wheel-box');if(b)b.hidden=true;if(box)box.hidden=false;}
+function closeNewWheel(){_nwOpen=false;clearTimeout(_nwTimer);_nwSeq++;_nwHits=[];_nwHi=-1;const b=document.getElementById('new-wheel-btn'),box=document.getElementById('new-wheel-box'),list=document.getElementById('new-wheel-list');if(b)b.hidden=false;if(box)box.hidden=true;if(list)list.hidden=true;}
+function nwRank(q,remote){if(window.POPULAR&&POPULAR.rank)return POPULAR.rank(q,remote);const seen=new Set();return (remote||[]).filter(h=>{const s=String(h.symbol||'').toUpperCase();if(!/^[A-Z][A-Z0-9]{0,9}$/.test(s)||seen.has(s))return false;seen.add(s);return true;}).slice(0,8);}
+function renderNwList(){const list=document.getElementById('new-wheel-list');if(!list)return;
+  if(!_nwOpen){list.hidden=true;return;}
+  const inp=document.getElementById('new-rot-ticker-top');const q=inp?inp.value.trim():'';
+  if(!q){list.hidden=true;list.innerHTML='';return;}
+  list.hidden=false;
+  if(_nwState==='err'&&!_nwHits.length){list.innerHTML=`<div class="nw-note">${nwTicker(q)?"Couldn't look up names. Press Enter to use the ticker.":"Couldn't look up names."}</div>`;return;}
+  if(!_nwHits.length){if(_nwState!=='ok'){list.hidden=true;return;}list.innerHTML=`<div class="nw-note">No matches${nwTicker(q)?' — press Enter to use '+esc(nwTicker(q)):''}</div>`;return;}
+  list.innerHTML=_nwHits.map((h,i)=>`<button type="button" class="nw-item${i===_nwHi?' on':''}" onmousedown="event.preventDefault()" onclick="commitNewWheel('${esc(h.symbol)}')"><span class="nw-sym">${esc(h.symbol)}</span><span class="nw-name">${esc(h.name||'')}</span></button>`).join('');
+}
+function nwInput(){const inp=document.getElementById('new-rot-ticker-top');const q=inp?inp.value.trim():'';clearTimeout(_nwTimer);const seq=++_nwSeq;
+  const local=q?nwRank(q,[]):[];_nwHits=local;_nwHi=local.length?0:-1;_nwState=local.length?'ok':'';
+  renderNwList();
+  if(q.length<1)return;
+  _nwTimer=setTimeout(()=>nwSearch(q,seq),300);
+}
+async function nwSearch(q,seq){try{const r=await fetch('/.netlify/functions/symbol?q='+encodeURIComponent(q),{signal:AbortSignal.timeout(8000)});if(seq!==_nwSeq)return;if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(seq!==_nwSeq)return;if(j.error)throw new Error('lookup');_nwHits=nwRank(q,Array.isArray(j.results)?j.results:[]);_nwHi=_nwHits.length?0:-1;_nwState='ok';}catch(e){if(seq!==_nwSeq)return;if(!_nwHits.length){_nwHi=-1;_nwState='err';}}renderNwList();}
+function nwKey(e){if(e.key==='Escape'){e.preventDefault();closeNewWheel();return;}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){if(!_nwHits.length)return;e.preventDefault();_nwHi=e.key==='ArrowDown'?Math.min(_nwHits.length-1,_nwHi+1):Math.max(0,_nwHi-1);renderNwList();return;}
+  if(e.key==='Enter'){e.preventDefault();commitNewWheel();}}
+function nwBlur(){setTimeout(()=>{const inp=document.getElementById('new-rot-ticker-top');if(!inp||document.activeElement===inp)return;const box=document.getElementById('new-wheel-box');if(box&&box.contains(document.activeElement))return;if(!inp.value.trim())closeNewWheel();},160);}
+async function commitNewWheel(symbol){
+  if(symbol){quickAddRotation(symbol);return;}
+  const inp=document.getElementById('new-rot-ticker-top');const typed=inp?inp.value.trim():'';if(!typed)return;
+  if(_nwTimer){clearTimeout(_nwTimer);_nwTimer=0;await nwSearch(typed,_nwSeq);}
+  const hit=_nwHi>=0&&_nwHits[_nwHi]?_nwHits[_nwHi].symbol:(_nwHits[0]&&_nwHits[0].symbol);
+  const sym=hit||nwTicker(typed);
+  if(!sym){if(_nwState!=='err')_nwState='ok';renderNwList();return;}
+  quickAddRotation(sym);
+}
+function quickAddRotation(symbol){
+  const inp=document.getElementById('new-rot-ticker-top');
+  const ticker=nwTicker(symbol!=null&&symbol!==''?symbol:(inp&&inp.value)||'');
+  if(!ticker){if(inp)inp.focus();return;}
+  if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
+  const now=new Date();
+  const label=fmtMonYear(now.toISOString().slice(0,10));
+  const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
+  const wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:now.toISOString().slice(0,10),sortOrder:mo+1};
+  db.wheels.push(wheel);
+  _saveWheel(wheel);
+  closeNewWheel();
+  startPriceFill(ticker,wheel);
+}
+function openNewPos(){
+  if(!wheelCapOk(null,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
+  document.getElementById('wf-id').value='';
+  document.getElementById('wf-ticker').value='';
+  document.getElementById('wf-label').value='';
+  document.getElementById('wf-status').value='open';
+  document.getElementById('wf-price').value='';
+  document.getElementById('wf-notes').value='';
+  document.getElementById('mWheelTitle').textContent='New Wheel';
+  // Hide non-essential fields for new wheel
+  document.querySelectorAll('.wf-edit-only').forEach(el=>el.style.display='none');
+  openModal('mWheel');
+  setTimeout(()=>document.getElementById('wf-ticker').focus(),100);
+}
+function markExpiredWorthless(wheelId,tradeId){
+  const t=db.trades.find(x=>x.id===tradeId);
+  if(!t)return;
+  t.expiredWorthless=true;
+  _saveTrade(t);render();
+}
+function markExpiredFromModal(){
+  const id=document.getElementById('tf-id').value;if(!id)return;
+  const t=db.trades.find(x=>x.id===id);if(!t)return;
+  t.expiredWorthless=!t.expiredWorthless; // toggle: allows correcting a mistaken expired click
+  _clearFocus(id);_saveTrade(t);closeModal('mTrade');render();
+}
+function openEditWheel(id){
+  const w=db.wheels.find(x=>x.id===id);if(!w)return;
+  document.getElementById('wf-id').value=w.id;
+  document.getElementById('wf-ticker').value=w.ticker;
+  document.getElementById('wf-label').value=w.label||'';
+  document.getElementById('wf-status').value=w.status;
+  document.getElementById('wf-price').value=w.lastPrice||'';
+  document.getElementById('wf-notes').value=w.notes||'';
+  document.getElementById('mWheelTitle').textContent='Edit: '+(wheelLabelDisplay(w.label,w)||w.ticker);
+  // Show all fields for editing
+  document.querySelectorAll('.wf-edit-only').forEach(el=>el.style.display='');
+  openModal('mWheel');
+}
+function saveWheel(){
+  const id=document.getElementById('wf-id').value;
+  const ticker=document.getElementById('wf-ticker').value.toUpperCase().trim();
+  if(!ticker){alert('Ticker required');return;}
+  const data={ticker,label:document.getElementById('wf-label').value.trim(),
+    status:document.getElementById('wf-status').value,
+    lastPrice:parseFloat(document.getElementById('wf-price').value)||null,
+    notes:document.getElementById('wf-notes').value.trim()};
+  let wheel;
+  if(id){wheel=db.wheels.find(x=>x.id===id);if(data.status==='open'&&wheel.status!=='open'&&!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}Object.assign(wheel,data);}
+  else{
+    if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}
+    if(!data.label){
+      data.label=fmtMonYear(new Date().toISOString().slice(0,10));
+    }
+    data.status='open';
+    const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
+    wheel={id:uid(),createdAt:new Date().toISOString().slice(0,10),sortOrder:mo+1,...data};
+    db.wheels.push(wheel);
+    // Auto-fetch price and logo in background
+    fetchSymbol(ticker).then(()=>{
+      if(quotes[ticker]){wheel.lastPrice=quotes[ticker].price;render();}
+    }).catch(()=>{});
+    fetchLogo(ticker).then(()=>render()).catch(()=>{});
+  }
+  _saveWheel(wheel);closeModal('mWheel');render();
+}
+function moveWheel(id,dir){
+  posSortBy='manual';localStorage.setItem('wh-posSortBy','manual');
+  const sorted=db.wheels.slice().sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  const idx=sorted.findIndex(w=>w.id===id);if(idx<0)return;
+  const swapIdx=idx+dir;if(swapIdx<0||swapIdx>=sorted.length)return;
+  const a=sorted[idx],b=sorted[swapIdx];
+  const tmp=a.sortOrder;a.sortOrder=b.sortOrder;b.sortOrder=tmp;
+  _saveWheel(a);_saveWheel(b);render();
+}
+function toggleStatus(id){const w=db.wheels.find(x=>x.id===id);if(!w)return;w.status=w.status==='open'?'closed':'open';_saveWheel(w);render();}
+function deleteWheel(id){
+  if(!confirm('Delete this wheel and ALL its trades? Cannot be undone.'))return;
+  db.trades.filter(t=>t.wheelId===id).forEach(t=>_deleteTradeDoc(t.id));
+  _deleteWheelDoc(id);
+  db.wheels=db.wheels.filter(w=>w.id!==id);
+  db.trades=db.trades.filter(t=>t.wheelId!==id);
+  expanded.delete(id);render();
+}
+
+function wheelRunSpan(w){
+  const dates=(db.trades||[]).filter(t=>t&&t.wheelId===w.id&&!t.expiredWorthless&&t.entered).map(t=>String(t.entered).slice(0,10)).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  const start=dates[0]||String(w.createdAt||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(start))return '';
+  if(w.status!=='closed')return fmtMonYear(start)+' – ongoing';
+  const end=dates.length?dates[dates.length-1]:start;
+  return fmtMonYear(start)+' – '+fmtMonYear(end);
+}
+function wheelFace(w){
+  const tk=String(w.ticker||'').toUpperCase();
+  let co=String(w.company||'').trim();
+  if(!co||/^(rotation|wheel)\b/i.test(co)){const row=(window.POPULAR&&POPULAR.rows||[]).find(r=>String(r[0]).toUpperCase()===tk);co=row&&row[1]?String(row[1]):'';}
+  const name=co&&co!==tk?co+' / '+tk:(tk||'Wheel');
+  const span=wheelRunSpan(w);
+  return span?name+' · '+span:name;
+}
+function wheelLogoHtml(ticker){const u=logoUrlFor(ticker);return u?`<img src="${esc(u)}" class="rot-logo" alt="" onerror="this.style.display='none'">`:'';}
+function wheelPickItems(wheels){
+  return [{id:'new',ticker:'',text:'+ New wheel'}].concat((wheels||[]).map(w=>({id:w.id,ticker:w.ticker,text:wheelFace(w)})));
+}
+function pickWheelDefault(selectedId,ticker){
+  if(selectedId&&(selectedId==='new'||(db.wheels||[]).some(w=>w.id===selectedId)))return selectedId;
+  if(ticker){const op=(db.wheels||[]).find(w=>w.ticker===ticker&&w.status==='open');if(op)return op.id;}
+  return 'new';
+}
+function fillWheelPick(id,items,selectedId){
+  const hidden=document.getElementById(id);if(!hidden)return;
+  const root=hidden.closest('.wh-pick');if(!root)return;
+  const value=items.some(i=>i.id===selectedId)?selectedId:(items[0]?items[0].id:'new');
+  hidden.value=value;
+  root.querySelector('.wh-pick-list').innerHTML=items.map(i=>`<button type="button" class="wh-opt${i.id===value?' on':''}" data-id="${esc(i.id)}" onclick="chooseWheelPick('${esc(id)}','${esc(i.id)}')">${wheelLogoHtml(i.ticker)}<span>${esc(i.text)}</span></button>`).join('');
+  const cur=items.find(i=>i.id===value);
+  root.querySelector('.wh-pick-face').innerHTML=cur?wheelLogoHtml(cur.ticker)+`<span>${esc(cur.text)}</span>`:'';
+}
+function toggleWheelPick(btn){
+  const list=btn.parentElement.querySelector('.wh-pick-list');
+  const willOpen=list.hidden;
+  document.querySelectorAll('.wh-pick-list').forEach(l=>l.hidden=true);
+  document.querySelectorAll('.wh-pick-btn').forEach(b=>b.setAttribute('aria-expanded','false'));
+  if(!willOpen)return;
+  list.hidden=false;btn.setAttribute('aria-expanded','true');
+  const close=e=>{if(btn.parentElement.contains(e.target))return;list.hidden=true;btn.setAttribute('aria-expanded','false');document.removeEventListener('click',close,true);};
+  setTimeout(()=>document.addEventListener('click',close,true),0);
+}
+function chooseWheelPick(id,value){
+  const hidden=document.getElementById(id);if(!hidden)return;
+  const root=hidden.closest('.wh-pick');
+  hidden.value=value;
+  root.querySelectorAll('.wh-opt').forEach(b=>b.classList.toggle('on',b.dataset.id===value));
+  const on=root.querySelector('.wh-opt.on');
+  root.querySelector('.wh-pick-face').innerHTML=on?on.innerHTML:'';
+  root.querySelector('.wh-pick-list').hidden=true;
+  root.querySelector('.wh-pick-btn').setAttribute('aria-expanded','false');
+  if(id==='tf-wheel')fillRollSelect('tf-roll-from',value,document.getElementById('tf-id').value);
+  if(id==='pm-wheel')fillRollSelect('pm-roll-from',value);
+  if(id==='paste-wheel-sel')fillRollSelect('paste-roll-from',value);
+}
+function warmWheelLogos(){
+  const need=[...new Set((db.wheels||[]).map(w=>String(w.ticker||'').toUpperCase()).filter(t=>t&&logos[t]===undefined))];
+  if(!need.length)return;
+  Promise.all(need.map(fetchLogo)).then(()=>{
+    document.querySelectorAll('.wh-pick').forEach(root=>{
+      root.querySelectorAll('.wh-opt').forEach(b=>{
+        if(b.querySelector('img'))return;
+        const w=(db.wheels||[]).find(x=>x.id===b.dataset.id);
+        const logo=wheelLogoHtml(w&&w.ticker);
+        if(logo)b.insertAdjacentHTML('afterbegin',logo);
+      });
+      const on=root.querySelector('.wh-opt.on');
+      if(on)root.querySelector('.wh-pick-face').innerHTML=on.innerHTML;
+    });
+  });
+}
+function populateWheelSelect(selectedId,ticker){
+  const wheels=[...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  fillWheelPick('tf-wheel',wheelPickItems(wheels),pickWheelDefault(selectedId,ticker));
+  fillRollSelect('tf-roll-from',document.getElementById('tf-wheel').value,document.getElementById('tf-id').value);
+  warmWheelLogos();
+}
+function openAddTrade(wheelId){
+  document.getElementById('tf-id').value='';
+  document.getElementById('tf-action').value='CSP';
+  document.getElementById('tf-entered').value=new Date().toISOString().slice(0,10);
+  ['tf-expiry','tf-strike','tf-delta','tf-premium','tf-shares','tf-total','tf-days','tf-ppd','tf-comment','tf-fill-time'].forEach(id=>document.getElementById(id).value='');
+  const _tfh=document.getElementById('tf-fill-time-hint');if(_tfh){_tfh.textContent='';_tfh.hidden=true;}
+  document.getElementById('tf-fees').value='0';
+  const tr=document.getElementById('tf-roll');if(tr)tr.checked=false;
+  document.getElementById('tf-delete-btn').style.display='none';
+  document.getElementById('tf-expired-btn').style.display='none';
+  document.getElementById('tg-created-at').style.display='none';
+  document.getElementById('tg-current-price').style.display='none';
+  document.getElementById('current-price').value='';
+  document.getElementById('mTradeTitle').textContent='Add Trade';
+  const w=wheelId?db.wheels.find(x=>x.id===wheelId):null;
+  document.getElementById('tf-ticker').value=w?.ticker||'SOFI';
+  populateWheelSelect(wheelId,w?.ticker||'SOFI');
+  onActionChange();openModal('mTrade');
+}
+function openEditTrade(id){
+  const t=db.trades.find(x=>x.id===id);if(!t)return;
+  const actSel=t.action==='IN'&&t.openMarket?'IN_MKT':t.action;
+  if(![...document.getElementById('tf-action').options].some(o=>o.value===actSel)){
+    alert(`Action ${t.action} can't be edited here yet.`);return; // never silently convert
+  }
+  document.getElementById('tf-id').value=t.id;document.getElementById('tf-ticker').value=t.ticker;
+  document.getElementById('tf-action').value=actSel;document.getElementById('tf-entered').value=t.entered;
+  setFillTimeField('tf-fill-time','tf-fill-time-hint',t.filledAt);
+  document.getElementById('tf-expiry').value=t.expiry||'';document.getElementById('tf-strike').value=t.strike||'';
+  document.getElementById('tf-delta').value=t.delta||'';
+  document.getElementById('tf-premium').value=t.premium||'';document.getElementById('tf-shares').value=t.shares||'';
+  document.getElementById('tf-fees').value=t.fees||0;document.getElementById('tf-total').value=t.total||'';
+  document.getElementById('tf-days').value=t.days||'';document.getElementById('tf-ppd').value=t.ppd||'';
+  document.getElementById('tf-comment').value=t.comment||'';
+  const tr=document.getElementById('tf-roll');if(tr)tr.checked=!!(t.roll||t.rollId);
+  document.getElementById('tf-delete-btn').style.display='inline-flex';
+  document.getElementById('mTradeTitle').textContent='Edit Trade';
+  const _expBtn=document.getElementById('tf-expired-btn');
+  if((t.action==='CSP'||t.action==='STOC')&&!t.expiredWorthless){
+    // Not yet marked: offer ★ Expired, enabled only once expiry has passed
+    _expBtn.style.display='inline-flex';
+    _expBtn.textContent='★ Expired';
+    _expBtn.style.borderColor='var(--green)';_expBtn.style.color='var(--green)';_expBtn.style.background='rgba(34,197,94,.12)';
+    const _liveDTE=t.expiry?Math.max(0,dteDays(t.expiry)||0):99;const _canExpire=_liveDTE===0;
+    _expBtn.disabled=!_canExpire;_expBtn.style.opacity=_canExpire?'1':'0.35';_expBtn.style.cursor=_canExpire?'pointer':'not-allowed';
+  }else if((t.action==='CSP'||t.action==='STOC')&&t.expiredWorthless){
+    // Already marked: offer the undo
+    _expBtn.style.display='inline-flex';
+    _expBtn.textContent='✕ Un-mark Expired';
+    _expBtn.style.borderColor='var(--yellow)';_expBtn.style.color='var(--yellow)';_expBtn.style.background='rgba(251,191,36,.10)';
+    _expBtn.disabled=false;_expBtn.style.opacity='1';_expBtn.style.cursor='pointer';
+  }else{
+    _expBtn.style.display='none';
+  }
+  const cpOpen=(t.action==='CSP'||t.action==='STOC')&&!t.expiredWorthless&&walkLegPairs((db.trades||[]).filter(x=>x.wheelId===t.wheelId)).open.some(o=>o.id===t.id&&o._rem>0);
+  const cpBox=document.getElementById('tg-current-price');cpBox.style.display=cpOpen?'':'none';
+  document.getElementById('current-price').value=t.currentPrice!=null&&t.currentPrice!==''?t.currentPrice:'';
+  const caDiv=document.getElementById('tg-created-at');
+  if(t.createdAt){const caDate=t.createdAt.slice(0,10);document.getElementById('tf-created-at').value=fmtDateFull(caDate)+' ('+new Date(t.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+')';caDiv.style.display='';}
+  else{caDiv.style.display='none';}
+  populateWheelSelect(t.wheelId,t.ticker);onActionChange();openModal('mTrade');
+  if(typeof paintTradeDeltaHint==='function')paintTradeDeltaHint();
+}
+function onTickerInput(){const tk=document.getElementById('tf-ticker').value.toUpperCase().trim();populateWheelSelect(null,tk);}
+function onActionChange(){
+  const a=document.getElementById('tf-action').value;const isOpt=OPTIONS.has(a);
+  const isSellOpt=(a==='CSP'||a==='STOC');
+  document.getElementById('tg-expiry').style.opacity=isOpt?'1':'0.4';
+  document.getElementById('tg-strike').style.opacity=isOpt?'1':'0.4';
+  document.getElementById('tg-delta').style.opacity=isSellOpt?'1':'0.4';
+  document.getElementById('tf-prem-lbl').textContent=STOCKS.has(a)?'Price per Share':'Premium per Share';
+  autoCalcTotal();
+  if(typeof paintTradeDeltaHint==='function')paintTradeDeltaHint();
+}
+function autoCalcTotal(){
+  const a=actionFromSelect(document.getElementById('tf-action').value);
+  const p=parseFloat(document.getElementById('tf-premium').value)||0;
+  const s=parseFloat(document.getElementById('tf-shares').value)||0;
+  const f=parseFloat(document.getElementById('tf-fees').value)||0;
+  document.getElementById('tf-total').value=computeTotal(a,p,s,f).toFixed(2);autoCalcPPD();
+}
+function autoCalcPPD(){
+  const t=parseFloat(document.getElementById('tf-total').value)||0;
+  const d=parseFloat(document.getElementById('tf-days').value)||0;
+  document.getElementById('tf-ppd').value=d>0?(t/d).toFixed(2):'';
+}
+function autoCalcDTE(){
+  const en=document.getElementById('tf-entered').value;
+  const ex=document.getElementById('tf-expiry').value;
+  if(en&&ex){const d=Math.round((new Date(ex)-new Date(en))/86400000);if(d>=0){document.getElementById('tf-days').value=d;autoCalcPPD();}}
+}
+function parseRollFlag(v){
+  if(v===true||v===1)return true;
+  const s=String(v==null?'':v).trim().toLowerCase();
+  return s==='true'||s==='yes'||s==='1'||s==='y'||s==='roll';
+}
+function tradeIsRoll(t){return !!(t&&(t.roll===true||t.rollId));}
+function isRollCloser(action){return action==='BTC'||action==='STC';}
+function isRollOpener(action){return action==='CSP'||action==='STOC'||action==='STO';}
+function tradeRollDay(t){
+  if(!t)return'';
+  if(t.filledAt)return String(t.filledAt).slice(0,10);
+  return String(t.entered||'').slice(0,10);
+}
+function tradeRollStamp(t){
+  if(!t)return'';
+  if(t.filledAt)return String(t.filledAt).slice(0,16);
+  return tradeRollDay(t);
+}
+function sameRollStamp(a,b){
+  if(!a||!b)return false;
+  const ta=(a.ticker||'').toUpperCase(),tb=(b.ticker||'').toUpperCase();
+  if(!ta||ta!==tb)return false;
+  if(a.filledAt&&b.filledAt)return String(a.filledAt).slice(0,16)===String(b.filledAt).slice(0,16);
+  return !!(tradeRollDay(a)&&tradeRollDay(a)===tradeRollDay(b));
+}
+function isRollPair(a,b){
+  if(!a||!b||a===b||(a.id&&b.id&&a.id===b.id))return false;
+  const ac=isRollCloser(a.action),ao=isRollOpener(a.action),bc=isRollCloser(b.action),bo=isRollOpener(b.action);
+  if(!((ac&&bo)||(ao&&bc)))return false;
+  return sameRollStamp(a,b);
+}
+function findRollMate(trade,trades){
+  const list=trades||[];
+  const cands=list.filter(o=>o&&o!==trade&&o.id!==trade.id&&isRollPair(trade,o)&&(!o.rollId||o.rollId===trade.rollId));
+  const same=cands.filter(o=>!trade.wheelId||o.wheelId===trade.wheelId);
+  return same[0]||cands[0]||null;
+}
+function autoLinkRollBatch(trades,opts){
+  opts=opts||{};
+  const mk=opts.uid||(typeof uid==='function'?uid:()=>'roll');
+  const list=trades||[];
+  const by={};
+  list.forEach(t=>{if(t&&t.rollId)(by[t.rollId]=by[t.rollId]||[]).push(t);});
+  Object.keys(by).forEach(id=>by[id].forEach(t=>{t.roll=true;}));
+  const used=new Set();
+  for(let i=0;i<list.length;i++){
+    const a=list[i];if(!a||used.has(a)||a.rollId)continue;
+    let mate=null;
+    for(let j=i+1;j<list.length;j++){
+      const b=list[j];if(!b||used.has(b)||b.rollId)continue;
+      if(!isRollPair(a,b))continue;
+      if(opts.enteredTogether||(a.roll&&b.roll)){mate=b;break;}
+    }
+    if(mate){
+      const id=mk();
+      a.roll=true;a.rollId=id;
+      mate.roll=true;mate.rollId=id;
+      used.add(a);used.add(mate);
+    }
+  }
+  list.forEach(t=>{if(t&&(t.roll===true)&&!t.rollId)t.rollId=mk();});
+  return list;
+}
+function applyTradeRollFromForm(trade,checked,allTrades){
+  if(!trade)return trade;
+  if(!checked){delete trade.roll;delete trade.rollId;return trade;}
+  trade.roll=true;
+  if(trade.rollId)return trade;
+  const mate=findRollMate(trade,allTrades||[]);
+  const id=(mate&&mate.rollId)||(typeof uid==='function'?uid():('roll_'+Date.now()));
+  trade.rollId=id;
+  if(mate&&!mate.rollId){
+    mate.roll=true;mate.rollId=id;
+    if(typeof _saveTrade==='function')_saveTrade(mate);
+  }
+  return trade;
+}
+function applyImportRoll(nt,row){
+  if(!nt)return nt;
+  const flagged=parseRollFlag(row&&row.roll)||!!(row&&row.rollId);
+  if(!flagged)return nt;
+  nt.roll=true;
+  if(row.rollId)nt.rollId=String(row.rollId);
+  return nt;
+}
+function tradeRollMate(t,trades){
+  if(!t||!t.rollId)return null;
+  const list=trades||(typeof db!=='undefined'&&db.trades)||[];
+  return list.find(o=>o&&o.id!==t.id&&o.rollId===t.rollId)||null;
+}
+function tradeRollChip(t){
+  if(!tradeIsRoll(t))return'';
+  return '<span class="roll-chip">Roll</span>';
+}
+function saveTrade(){
+  const id=document.getElementById('tf-id').value;
+  if(id)_clearFocus(id); // editing the focused trade counts as acting on it
+  const ticker=document.getElementById('tf-ticker').value.toUpperCase().trim();
+  const entered=document.getElementById('tf-entered').value;
+  if(!ticker){alert('Ticker required');return;}if(!entered){alert('Entry date required');return;}
+  const _oldTrade=id?(db.trades||[]).find(t=>t.id===id):null;
+  const _fa=readFilledAtField('tf-entered','tf-fill-time','tf-fill-time-hint',_oldTrade&&_oldTrade.filledAt);
+  if(_fa.error)return;
+  const selAction=document.getElementById('tf-action').value;
+  const action=actionFromSelect(selAction);
+  const expiry=document.getElementById('tf-expiry').value||null;
+  if(OPTIONS.has(action)&&!expiry){alert('Enter the expiry');return;}
+  let wheelId=document.getElementById('tf-wheel').value;
+  if(wheelId==='new'||!wheelId){
+    const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
+    if(ex){wheelId=ex.id;}else{if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
+  }
+  if(!id&&isOpenRisk(action,!!(document.getElementById('tf-roll')&&document.getElementById('tf-roll').checked))&&!wheelRiskOk()){openUpgrade('unlimited',capMsg('wheel-risk'));return;}
+  const openMarket=selAction==='IN_MKT';
+  const deltaRaw=parseFloat(document.getElementById('tf-delta').value);
+  const premium=parseFloat(document.getElementById('tf-premium').value)||0;
+  const fees=parseFloat(document.getElementById('tf-fees').value)||0;
+  const shares=parseFloat(document.getElementById('tf-shares').value)||0;
+  const total=parseFloat(document.getElementById('tf-total').value)||computeTotal(action,premium,shares,fees);
+  const data={wheelId,ticker,action,entered,
+    expiry,strike:parseFloat(document.getElementById('tf-strike').value)||null,
+    delta:isNaN(deltaRaw)?null:deltaRaw,
+    premium,fees,shares,total,
+    days:parseFloat(document.getElementById('tf-days').value)||0,ppd:parseFloat(document.getElementById('tf-ppd').value)||0,
+    verified:false,comment:document.getElementById('tf-comment').value.trim()};
+  if(_fa.value)data.filledAt=_fa.value;
+  if(action==='IN'){if(openMarket)data.openMarket=true;else delete data.openMarket;}
+  if(id){
+    const idx=db.trades.findIndex(t=>t.id===id);
+    if(idx>=0){
+      const old=db.trades[idx];
+      const updated={id,...data,createdAt:old.createdAt||new Date().toISOString()};
+      if(old.rollId)updated.rollId=old.rollId;
+      applyTradeRollFromForm(updated,!!(document.getElementById('tf-roll')&&document.getElementById('tf-roll').checked),db.trades);
+      if(old.expiredWorthless)updated.expiredWorthless=true;   // preserve manual expiry flag
+      updated.verified=old.verified||false;                    // preserve verification status
+      if(old.currentPrice!=null&&old.currentPrice!==''){updated.currentPrice=old.currentPrice;updated.currentPriceAt=old.currentPriceAt||null;}
+      if(action==='CSP'||action==='STOC'){const raw=document.getElementById('current-price').value.trim();if(raw===''){delete updated.currentPrice;delete updated.currentPriceAt;}else if(!(old.currentPrice!=null&&+old.currentPrice===+raw)){updated.currentPrice=+raw;updated.currentPriceAt=new Date().toISOString();}}
+      if(action==='IN'){if(openMarket)updated.openMarket=true;else delete updated.openMarket;}
+      db.trades[idx]=updated;
+    }
+  }
+  else{
+    const newTrade={id:uid(),createdAt:new Date().toISOString(),...data};
+    applyTradeRollFromForm(newTrade,!!(document.getElementById('tf-roll')&&document.getElementById('tf-roll').checked),db.trades);
+    const _firstTrade=!db.trades.length;
+    db.trades.push(newTrade);
+    expanded.add(wheelId);
+    _saveTrade(newTrade);closeModal('mTrade');render();
+    if(_firstTrade)noteFirstTrade();
+    return;
+  }
+  const updatedTrade=db.trades.find(t=>t.id===id);
+  if(updatedTrade)_saveTrade(updatedTrade);
+  closeModal('mTrade');render();
+}
+function deleteTrade(id){if(!confirm('Delete this trade?'))return;_clearFocus(id);_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);render();}
+function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;if(!id)return;if(!confirm('Delete this trade?'))return;_clearFocus(id);_deleteTradeDoc(id);db.trades=db.trades.filter(t=>t.id!==id);closeModal('mTrade');render();}
+
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.mb').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);});});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mb.open').forEach(el=>closeModal(el.id));});
+
+function openImport(){openModal('mImport');initImportDrop();}
+const ACTION_MAP={'csp: cash secured put':'CSP','btc: buy to close':'BTC','stoc: sell to open call':'STOC','stc: sell to close':'STC','in: buy shares':'IN','out: sell shares':'OUT','div: dividend':'DIV','stop: sell to open put':'CSP','acc: assigned covered call':'OUT','acp: assigned cash put':'IN','exp: expired worthless':'EXP','csp':'CSP','btc':'BTC','stoc':'STOC','stc':'STC','in':'IN','out':'OUT','div':'DIV','stop':'CSP','acc':'OUT','acp':'IN','exp':'EXP'};
+const VALID_ACTIONS=new Set(['CSP','BTC','STOC','STC','IN','OUT','DIV','EXP']);
+function parseCSVLine(line){const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur.trim());cur='';}else cur+=ch;}r.push(cur.trim());return r;}
+function normDate(s){
+  if(!s)return'';
+  s=s.replace(/['"]/g,'').trim();
+  if(!s)return'';
+  const pad=n=>String(n).padStart(2,'0');
+  const today=new Date();
+  let m;
+  // ISO: 2025-09-15
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  // "15 Sep 2025" / "15 September 2025" / "15 Sep"
+  m=new RegExp(`^(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[2].slice(0,3).toLowerCase()];if(mon){const yr=m[3]?parseInt(m[3]):today.getFullYear();return`${yr}-${pad(mon)}-${pad(parseInt(m[1]))}`;}};
+  // "Sep 15, 2025" / "September 15 2025"
+  m=new RegExp(`^(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2}),?\\s+(\\d{4})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(mon)return`${m[3]}-${pad(mon)}-${pad(parseInt(m[2]))}`;}
+  // "Sep 15" (no year)
+  m=new RegExp(`^(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(mon)return`${today.getFullYear()}-${pad(mon)}-${pad(parseInt(m[2]))}`;}
+  // "15Sep2025" (IBKR compact)
+  m=new RegExp(`^(\\d{1,2})(${MON_PAT})(\\d{4})$`,'i').exec(s);
+  if(m){const mon=MON_MAP[m[2].toLowerCase()];if(mon)return`${m[3]}-${pad(mon)}-${pad(parseInt(m[1]))}`;}
+  // MM/DD/YYYY (US)
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[mo,d,y]=s.split('/');return`${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;}
+  // MM/DD/YY (US short)
+  if(/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(s)){const[mo,d,y]=s.split('/');return`${2000+parseInt(y)}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;}
+  // DD-MM-YYYY or DD.MM.YYYY (UK/EU)
+  m=/^(\d{1,2})[-.](\d{1,2})[-.](\d{4})$/.exec(s);
+  if(m){const d=parseInt(m[1]),mo=parseInt(m[2]);if(d>12&&mo<=12)return`${m[3]}-${pad(mo)}-${pad(d)}`;if(mo>12&&d<=12)return`${m[3]}-${pad(d)}-${pad(mo)}`;return`${m[3]}-${pad(mo)}-${pad(d)}`;}
+  // YYYY/MM/DD
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(s)){const[y,mo,d]=s.split('/');return`${y}-${mo}-${d}`;}
+  return s;
+}
+// ── Broker-agnostic CSV import (pure; tested from node via tests/brokerimport.test.js) ──
+function brokerCSVLib(){
+  const MONS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  const pad=n=>String(n).padStart(2,'0');
+  let _dmy=false;
+  // whole-document day-first detection: any a/b/yyyy with a>12, or UK/EU broker
+  const sniffDMY=t=>{let dm=false,md=false;for(const m of String(t).matchAll(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/g)){if(+m[1]>12)dm=true;if(+m[2]>12)md=true;}return dm&&!md?true:md?false:/trading ?212|etoro|\bgbp\b|£/i.test(t);};
+  const yr=y=>{y=parseInt(y,10);return y<100?2000+y:y;};
+  // Full-text CSV parser: quotes, "" escapes, commas/newlines inside quotes, CRLF, BOM
+  function parseCSVText(text){
+    text=String(text||'').replace(/^\uFEFF/,'');
+    const rows=[];let row=[],cur='',q=false;
+    for(let i=0;i<text.length;i++){
+      const ch=text[i];
+      if(q){
+        if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}
+        else cur+=ch;
+      }else if(ch==='"')q=true;
+      else if(ch===','){row.push(cur.trim());cur='';}
+      else if(ch==='\n'||ch==='\r'){
+        if(ch==='\r'&&text[i+1]==='\n')i++;
+        row.push(cur.trim());rows.push(row);row=[];cur='';
+      }else cur+=ch;
+    }
+    if(cur!==''||row.length){row.push(cur.trim());rows.push(row);}
+    return rows.filter(r=>r.some(c=>c!==''));
+  }
+  // "$1,234.50" "(12.00)" "-3" → number, or NaN
+  function num(s){
+    if(s==null)return NaN;s=String(s).trim();if(!s||s==='--')return NaN;
+    let neg=false;
+    if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1);}
+    s=s.replace(/[$£€,\s]/g,'');
+    if(s.endsWith('-')){neg=!neg;s=s.slice(0,-1);}
+    const n=parseFloat(s);return isNaN(n)?NaN:(neg?-n:n);
+  }
+  // Pull the first date out of "01/10/2025 as of 01/09/2025", "2025-01-10, 10:32", "20250110;103211", ISO times
+  // dmy (optional): true = day-first, false = month-first for this call; omitted = the file's sniffed setting
+  function pickDate(s,dmy){
+    s=String(s||'').trim();if(!s)return'';
+    const D=typeof dmy==='boolean'?dmy:_dmy;
+    let m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
+    m=/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/.exec(s);if(m){let a=+m[1],b=+m[2];if(a>12||(D&&b<=12)){const t=a;a=b;b=t;}return`${yr(m[3])}-${pad(a)}-${pad(b)}`;}
+    m=/^(\d{4})(\d{2})(\d{2})\b/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
+    const d=normDate(s.split(/[,;T]/)[0]);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
+  }
+  // Option contract from OCC symbols or human descriptions → {ticker,expiry,strike,pc}
+  function parseOption(s){
+    if(!s)return null;s=String(s).trim();let m;
+    const T='([A-Z][A-Z0-9.]{0,9})';
+    // OCC: "AAPL  250117P00150000" / "AAPL250117P00150000" / ".AAPL250117P150" / "-AAPL250117P150"
+    m=new RegExp('^[-.]?'+T+'\\s*(\\d{2})(\\d{2})(\\d{2})([CP])(\\d{8}|\\d+(?:\\.\\d+)?)$').exec(s.toUpperCase());
+    if(m){const k=m[6].length===8&&!m[6].includes('.')?parseInt(m[6],10)/1000:parseFloat(m[6]);return{ticker:m[1],expiry:`${yr(m[2])}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
+    const PC='(PUT|CALL|P|C)';
+    const fin=(t,y,mo,d,k,pc)=>({ticker:t.toUpperCase(),expiry:`${yr(y)}-${pad(mo)}-${pad(d)}`,strike:parseFloat(String(k).replace(/[$,]/g,'')),pc:pc.toUpperCase()[0]});
+    const U=s.toUpperCase();
+    // "AAPL 01/17/2025 150.00 P" / "AAPL 1/17/2025 Put $150.00" / "AAPL 01/17/25 150 P"
+    m=new RegExp('^'+T+'\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\s+(?:'+PC+'\\s+\\$?([\\d.,]+)|\\$?([\\d.,]+)\\s+'+PC+')\\b').exec(U);
+    if(m)return fin(m[1],m[4],m[2],m[3],m[6]||m[7],m[5]||m[8]);
+    // "AAPL $150 Put 1/17/2025"
+    m=new RegExp('^'+T+'\\s+\\$([\\d.,]+)\\s+(PUT|CALL)\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\b').exec(U);
+    if(m)return fin(m[1],m[6],m[4],m[5],m[2],m[3]);
+    // IBKR "AAPL 17JAN25 150 P"
+    m=new RegExp('^'+T+'\\s+(\\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\\d{2,4})\\s+\\$?([\\d.]+)\\s+'+PC+'\\b').exec(U);
+    if(m)return fin(m[1],m[4],MONS[m[3].toLowerCase()],m[2],m[5],m[6]);
+    // E*Trade "AAPL Jan 17 '25 $150 Put"
+    m=new RegExp('^'+T+"\\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\\w*\\s+(\\d{1,2}),?\\s+'?(\\d{2,4})\\s+\\$?([\\d.]+)\\s+"+PC+'\\b').exec(U);
+    if(m)return fin(m[1],m[4],MONS[m[2].toLowerCase()],m[3],m[5],m[6]);
+    // Robinhood app "TSLA $310 Call Mar 19, 2027" / "TSLA 152.5 Put Jan 15 2027" / "TSLA $310 Call Mar 19 '27"
+    m=new RegExp('^'+T+"\\s+\\$?([\\d.,]+)\\s+(PUT|CALL)\\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\\.?\\s+(\\d{1,2})(?:,\\s*|\\s+)'?(\\d{4}|\\d{2})\\b(?![:\\d])").exec(U);
+    if(m)return fin(m[1],m[6],MONS[m[4].toLowerCase()],m[5],m[2],m[3]);
+    // Fidelity "... PUT (AAPL) APPLE INC JAN 17 25 $150 (100 SHS)"
+    m=/\b(PUT|CALL)\s+\(([A-Z][A-Z0-9.]{0,9})\).*?\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{1,2})\s+(\d{2,4})\s+\$([\d.,]+)/.exec(U);
+    if(m)return fin(m[2],m[5],MONS[m[3].toLowerCase()],m[4],m[6],m[1]);
+    return null;
+  }
+  const norm=h=>String(h||'').toLowerCase().replace(/\(\$\)/g,'').replace(/\s+/g,' ').trim();
+  const SYN={
+    date:['activity date','trade date','run date','transactiondate','transaction date','date/time','tradedate','filled time','date','time','trade time'],
+    symbol:['symbol','instrument','ticker','security','contract','financial instrument'],
+    underlying:['underlying symbol','underlying','root symbol','root'],
+    desc:['description','name','security description'],
+    action:['trans code','action','transaction type','transactiontype','activity','sub type','type','side','buy/sell','open/close','code','activity type'],
+    qty:['quantity','qty','filled','contracts','shares'],
+    price:['price','average price','avg price','t. price','trade price','tradeprice','execution price'],
+    fees:['fees','commission','commissions','comm/fee','fees & comm','ibcommission','reg fee','fee'],
+    amount:['amount','net amount','proceeds','value','net cash','netcash','total'],
+    expiry:['expiration date','expiration','expiry','exp date','expiry date'],
+    strike:['strike price','strike'],
+    pc:['call or put','put/call','put call','option type','right','call/put'],
+    status:['status']
+  };
+  const MULTI=new Set(['action','fees']);
+  function mapCols(hdr){
+    const h=hdr.map(norm),C={};
+    for(const k in SYN){
+      const idx=[];
+      SYN[k].forEach(s=>{h.forEach((x,i)=>{if(x===s&&!idx.includes(i))idx.push(i);});});
+      C[k]=MULTI.has(k)?idx:(idx.length?idx[0]:-1);
+    }
+    // prefer filled over total qty, avg price over limit price
+    return C;
+  }
+  function detectBroker(hdr,firstCell){
+    const h=hdr.map(norm),has=s=>h.includes(s);
+    if(has('ticker')&&has('action')&&has('entered'))return'CoveredWheel';
+    if(firstCell==='trades'||has('t. price')||has('comm/fee')||has('ibcommission'))return'Interactive Brokers';
+    if(has('trans code')&&has('instrument'))return'Robinhood';
+    if(has('underlying symbol')||(has('sub type')&&has('instrument type')))return'Tastytrade';
+    if(has('fees & comm'))return'Schwab';
+    if(has('run date'))return'Fidelity';
+    if(has('transactiondate')||has('transactiontype'))return'E*Trade';
+    if(has('filled time')||(has('side')&&has('placed time')))return'Webull';
+    if(has('price / share')||has('no. of shares'))return'Trading 212';
+    if(has('position id')||(has('units')&&has('details')))return'eToro';
+    return'Generic';
+  }
+  function findHeader(rows){
+    let best=-1,bestScore=0;
+    const all=new Set([].concat(...Object.values(SYN)).concat(['ticker','entered']));
+    for(let i=0;i<Math.min(rows.length,40);i++){
+      const r=rows[i];const cells=(r[0]==='Trades'&&r[1]==='Header')?r.slice(2):r;
+      const score=cells.filter(c=>all.has(norm(c))).length;
+      if(score>bestScore&&cells.length>=3){best=i;bestScore=score;}
+    }
+    return bestScore>=3?best:-1;
+  }
+  // Decide WheelHouse action from broker wording; returns action code, 'SKIP:<why>', or ''
+  function classify(text,opt,qty,broker){
+    let t=' '+String(text||'').toLowerCase().replace(/[_]/g,' ').replace(/\s+/g,' ')+' ';
+    const pc=opt?opt.pc:'';
+    const w=re=>re.test(t);
+    if(!opt){
+      if(w(/dividend|\bcdiv\b|\bdiv\b/))return'SKIP:dividend';
+      if(w(/transfer|deposit|withdraw|\bach\b|journal|interest|wire|\bfee\b|sweep|\bacati?s?\b/))return'SKIP:cash/transfer';
+      return'SKIP:not an option trade';
+    }
+    if(w(/\boexp\b|expir|\bep\b/))return'EXP';
+    if(w(/\boasgn\b|assign|exercis/)||(broker==='Interactive Brokers'&&w(/\ba\b/)))return pc==='P'?'IN':'OUT';
+    // shorthand codes
+    t=t.replace(/\bsto\b/g,' sell to open ').replace(/\bbtc\b/g,' buy to close ').replace(/\bbto\b/g,' buy to open ').replace(/\bstc\b/g,' sell to close ');
+    const sell=w(/\bsell|\bsold\b|\bshort\b/),buy=w(/\bbuy|\bbought\b/);
+    let open=w(/\bopen(ing)?\b/),close=w(/\bclos(e|ing)\b/);
+    if(broker==='Interactive Brokers'&&!open&&!close){if(w(/\bo\b/))open=true;if(w(/\bc\b/))close=true;}
+    let isSell=sell&&!buy,isBuy=buy&&!sell;
+    if(!isSell&&!isBuy&&!isNaN(qty)&&qty!==0){isSell=qty<0;isBuy=qty>0;}
+    if(!open&&!close&&(broker==='Webull'||broker==='Statement')){open=isSell;close=isBuy;}
+    if(isSell&&open)return pc==='P'?'CSP':'STOC';
+    if(isBuy&&close)return'BTC';
+    if(isSell&&close)return'STC';
+    if(isBuy&&open)return'BTO'; // long option — routed to Options positions, never to the wheel
+    return'';
+  }
+  function parseNative(text){
+    const rows=[],bad=[];
+    const lines=text.split('\n');
+    const hdr=lines[0].split(',').map(h=>h.replace(/['"]/g,'').trim().toLowerCase().replace(/:$/,''));
+    const col=n=>hdr.indexOf(n);
+    const C={ticker:col('ticker'),action:col('action'),entered:col('entered'),expiry:col('expiry')>-1?col('expiry'):col('expirey'),strike:col('strike price')>-1?col('strike price'):col('strike'),premium:col('premium/price')>-1?col('premium/price'):col('premium'),fees:col('fees'),shares:col('shares'),total:col('total'),days:col('days'),verified:col('verified'),comment:col('comment'),roll:col('roll'),rollId:col('roll id')>-1?col('roll id'):(col('rollid')>-1?col('rollid'):col('roll_id'))};
+    for(let i=1;i<lines.length;i++){
+      const line=lines[i].trim();if(!line)continue;
+      const v=parseCSVLine(line);
+      const get=(c,def='')=>c>-1&&c<v.length?v[c].replace(/^"|"$/g,'').trim():def;
+      const ticker=get(C.ticker).toUpperCase();if(!ticker){bad.push({line:i+1,raw:line,reason:'no ticker'});continue;}
+      const rawAction=get(C.action).toLowerCase();
+      const action=ACTION_MAP[rawAction]||rawAction.toUpperCase();
+      if(!VALID_ACTIONS.has(action)){bad.push({line:i+1,raw:line,reason:'unknown action'});continue;}
+      const entered=normDate(get(C.entered));if(!entered){bad.push({line:i+1,raw:line,reason:'no date'});continue;}
+      const strike=parseFloat(get(C.strike))||null,shares=parseFloat(get(C.shares))||0;
+      const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
+      const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
+      const row={ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days:parseFloat(get(C.days))||0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)};
+      const _rf=get(C.roll).toLowerCase();
+      if(['true','yes','1','y','roll'].includes(_rf)||get(C.rollId)){row.roll=true;const rid=get(C.rollId);if(rid)row.rollId=rid;}
+      rows.push(row);
+    }
+    return{broker:'CoveredWheel',rows,unrecognised:bad,skipped:[]};
+  }
+  // Long options (buy-to-open and the closes/expiries of those same contracts in this file) leave the wheel rows
+  // and become Options-position fills. Wheel rows are otherwise untouched.
+  function splitLongs(res){
+    if(!res||!res.rows)return res;
+    const k=r=>`${r.ticker}|${r.strike}|${r.expiry}`;
+    const pcOf=r=>r._pc||'';
+    const longs=new Set(res.rows.filter(r=>r.action==='BTO').map(k));
+    const shortOpen=new Set(res.rows.filter(r=>r.action==='CSP'||r.action==='STOC').map(k));
+    const fills=[],keep=[];
+    res.rows.forEach(r=>{
+      const isLong=r.action==='BTO'||(longs.has(k(r))&&!shortOpen.has(k(r))&&(r.action==='STC'||r.action==='EXP'||r.action==='OUT'||r.action==='IN'));
+      if(!isLong){keep.push(r);return;}
+      fills.push({ticker:r.ticker,side:'long',effect:r.action==='BTO'?'open':'close',expired:r.action==='EXP',type:r._pc||(r.action==='IN'?'C':'C'),strike:r.strike,expiry:r.expiry,qty:Math.round((r.shares||100)/100),price:r.action==='EXP'?0:(r.action==='IN'||r.action==='OUT'?0:r.premium),fees:r.fees||0,date:r.entered,total:r.total,comment:r.comment||''});
+    });
+    keep.forEach(r=>delete r._pc);
+    return{...res,rows:keep,optionFills:(res.optionFills||[]).concat(fills)};
+  }
+  // ── Robinhood account activity report (Reports and statements → Account activity report, CSV) ──
+  // Columns: Activity Date, Process Date, Settle Date, Instrument, Description, Trans Code, Quantity, Price, Amount.
+  // Newest first; options described as "SPCX 11/20/2026 Call $170.00"; expiries as "Option Expiration for …";
+  // assignment = OASGN (qty like "2S", no price) plus a separate share Buy/Sell row; fees = gap between price×size and Amount.
+  const RH_SKIP={CDIV:'dividend',MDIV:'dividend',DIV:'dividend',DRIP:'dividend reinvested',ACH:'cash in or out',DCF:'cash in or out',RTP:'cash in or out',WIRE:'cash in or out',ACATI:'transfer from another broker',ACATO:'transfer to another broker',INT:'interest',MINT:'margin interest',GOLD:'Gold subscription',SLIP:'stock lending',GDBP:'cash in or out',FUTSWP:'cash sweep',SPL:'stock split',SPR:'stock split',OCA:'option adjustment',REC:'free stock',SOFF:'spin-off',CIL:'cash in lieu',SXCH:'exchange',DTAX:'tax',DFEE:'fee',AFEE:'fee',GMPC:'gift',TA:'transfer'};
+  function parseRobinhood(rows,hi){
+    const H=rows[hi].map(norm),ix=n=>H.indexOf(n);
+    const C={date:ix('activity date'),ins:ix('instrument'),desc:ix('description'),code:ix('trans code'),qty:ix('quantity'),price:ix('price'),amt:ix('amount')};
+    const ev=[],bad=[],skip=[];
+    const r2=n=>Math.round(n*100)/100;
+    for(let i=hi+1;i<rows.length;i++){
+      const v=rows[i],g=c=>c>-1&&c<v.length?String(v[c]||'').trim():'';
+      const raw=v.join(',').replace(/\s+/g,' ');
+      const code=g(C.code).toUpperCase(),date=pickDate(g(C.date));
+      if(!code&&!date)continue; // blank lines and the disclaimer footer
+      if(norm(v[0])==='activity date')continue;
+      if(!date){bad.push({line:i+1,raw,reason:'no date'});continue;}
+      const desc=g(C.desc),optS=desc.replace(/^option (expiration|assignment|exercise)s? for\s+/i,'').split('\n')[0];
+      const opt=parseOption(optS);
+      const qty=Math.abs(num(g(C.qty).replace(/[A-Za-z]+$/,''))),price=Math.abs(num(g(C.price))),amt=num(g(C.amt));
+      const base={line:i+1,raw,date,code,qty:isNaN(qty)?0:qty,price:isNaN(price)?0:price,amount:isNaN(amt)?0:amt};
+      if(['STO','BTO','BTC','STC','OEXP','OASGN','OEXCS'].includes(code)){
+        if(!opt){bad.push({line:i+1,raw,reason:"couldn't read the option"});continue;}
+        if(!(base.qty>0)){bad.push({line:i+1,raw,reason:'no quantity'});continue;}
+        let fees=0;
+        if(code==='STO'||code==='STC')fees=r2(base.price*base.qty*100-base.amount);
+        else if(code==='BTO'||code==='BTC')fees=r2(-base.amount-base.price*base.qty*100);
+        if(!(fees>0)||fees>50*base.qty)fees=0; // a rebate or an odd row: never invent fees
+        ev.push({...base,kind:'opt',ticker:opt.ticker,pc:opt.pc,strike:opt.strike,expiry:opt.expiry,fees});
+      }else if(code==='BUY'||code==='SELL'){
+        const tk=(g(C.ins)||'').toUpperCase();
+        if(!tk||!(base.qty>0)){bad.push({line:i+1,raw,reason:'share trade with no ticker or quantity'});continue;}
+        if(/dividend reinvest/i.test(desc)){skip.push({line:i+1,raw,reason:'dividend reinvested'});continue;}
+        const fees=code==='BUY'?r2(-base.amount-base.price*base.qty):r2(base.price*base.qty-base.amount);
+        ev.push({...base,kind:'shares',ticker:tk,fees:fees>0&&fees<50?fees:0,assign:/assign|exercise/i.test(desc)});
+      }else skip.push({line:i+1,raw,reason:RH_SKIP[code]||(code?'not a trade ('+code+')':'not a trade')});
+    }
+    if(ev.length>1&&ev[0].date>ev[ev.length-1].date)ev.reverse(); // Robinhood lists newest first; work oldest first
+    return{broker:'Robinhood',rh:ev,rows:[],optionFills:[],unrecognised:bad,skipped:skip};
+  }
+  function parseBrokerCSV(text){
+    text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
+    if(!text)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Empty file'};
+    _dmy=sniffDMY(text);
+    let rows=parseCSVText(text);
+    const hi=findHeader(rows);
+    if(hi<0)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Could not find a header row (expected columns like Date, Symbol, Action, Quantity, Price).'};
+    const ib=rows[hi][0]==='Trades'&&rows[hi][1]==='Header';
+    let hdr=ib?rows[hi].slice(2):rows[hi];
+    const broker=detectBroker(hdr,ib?'trades':'');
+    if(broker==='CoveredWheel'&&hi===0)return parseNative(text);
+    if(broker==='Robinhood'){_dmy=false;return parseRobinhood(rows,hi);}
+    const C=mapCols(hdr);
+    if(C.date>-1)_dmy=sniffDMY(rows.slice(hi+1).map(r=>(ib?r.slice(2):r)[C.date]||'').join('\n')+(/trading ?212|etoro/i.test(broker)?' etoro':''));
+    const out=[],bad=[],skip=[];
+    for(let i=hi+1;i<rows.length;i++){
+      let v=rows[i];
+      if(ib){if(v[0]!=='Trades')continue;if(v[1]!=='Data')continue;v=v.slice(2);}
+      const raw=rows[i].join(',');
+      if(v.length<3){continue;}
+      // repeated header rows / totals / disclaimers
+      if(norm(v[0])===norm(hdr[0])){continue;}
+      const g=c=>c>-1&&c<v.length?v[c]:'';
+      const gs=cs=>cs.map(c=>g(c)).filter(Boolean).join(' ');
+      if(C.status>-1&&g(C.status)&&!/fill/i.test(g(C.status))){skip.push({line:i+1,raw,reason:'order not filled'});continue;}
+      const desc=g(C.desc),sym=g(C.symbol);
+      let opt=parseOption(sym)||parseOption(desc)||parseOption(gs(C.action));
+      // explicit option columns (Tastytrade, generic)
+      if(!opt&&C.strike>-1&&num(g(C.strike))>0&&C.expiry>-1&&g(C.expiry)){
+        const pcs=(g(C.pc)||'').toUpperCase()[0];
+        const tk=(g(C.underlying)||sym.split(/\s/)[0]||'').toUpperCase();
+        if((pcs==='P'||pcs==='C')&&tk)opt={ticker:tk,expiry:pickDate(g(C.expiry)),strike:num(g(C.strike)),pc:pcs};
+      }
+      const entered=pickDate(g(C.date));
+      const qtyRaw=num(g(C.qty));
+      const actText=gs(C.action)+(broker==='Fidelity'||!gs(C.action)?' '+desc:'');
+      const act=classify(actText,opt,qtyRaw,broker);
+      if(act.startsWith('SKIP:')){skip.push({line:i+1,raw,reason:act.slice(5)});continue;}
+      if(!act){bad.push({line:i+1,raw,reason:'could not tell the trade type'});continue;}
+      if(!entered){bad.push({line:i+1,raw,reason:'no trade date'});continue;}
+      // never invent a quantity: a row we can't size is listed, not imported as 1 contract
+      if(isNaN(qtyRaw)||qtyRaw===0){bad.push({line:i+1,raw,reason:C.qty>-1&&g(C.qty)?"couldn't read the quantity":'no quantity'});continue;}
+      const contracts=Math.abs(qtyRaw);
+      const shares=Math.round(contracts*100);
+      let fees=0;C.fees.forEach(c=>{const f=num(g(c));if(!isNaN(f))fees+=Math.abs(f);});
+      fees=Math.round(fees*100)/100;
+      const amt=Math.abs(num(g(C.amount)));
+      let premium,total;
+      if((act==='IN'||act==='OUT')){premium=opt.strike;total=computeTotal(act,premium,shares,fees);} // assignment fees kept
+      else if(act==='EXP'){premium=0;fees=0;total=0;}
+      else{
+        premium=Math.abs(num(g(C.price)));
+        if(isNaN(premium)||premium===0)premium=!isNaN(amt)&&amt>0?Math.round((amt+(act==='BTC'?-fees:fees))/shares*10000)/10000:0;
+        else if(!isNaN(amt)&&amt>0&&premium*shares>20*amt)premium=premium/100; // per-contract price
+        total=!isNaN(amt)&&amt>0?amt:computeTotal(act,premium,shares,fees);
+        if(!isNaN(amt)&&amt>0&&fees>0&&Math.abs(premium*shares-amt)<0.006)total=isCredit(act)?amt-fees:amt+fees; // gross proceeds + separate commission
+      }
+      total=Math.round(total*100)/100;
+      const days=opt.expiry&&entered?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
+      out.push({_pc:opt.pc,ticker:opt.ticker,action:act,entered,expiry:opt.expiry||null,strike:opt.strike||null,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${broker}`});
+    }
+    return splitLongs({broker,rows:out,unrecognised:bad,skipped:skip});
+  }
+  // ── PDF statements: text → trades ──
+  // pdf.js text items ({str, transform:[..,x,y], page}) → lines, grouping by y so table rows stay intact
+  function pdfItemsToLines(items){
+    const groups=[];
+    items.forEach(it=>{
+      if(!it||!String(it.str||'').trim())return;
+      // handle rotated (landscape) pages: text direction comes from the matrix
+      const t=it.transform,pg=it.page||1,rot=Math.abs(t[1])>Math.abs(t[0]);
+      const y=rot?(t[1]>0?t[4]:-t[4]):-t[5],x=rot?(t[1]>0?t[5]:-t[5]):t[4];
+      let g=groups.find(g=>g.pg===pg&&Math.abs(g.y-y)<=2.5);
+      if(!g){g={pg,y,items:[]};groups.push(g);}
+      g.items.push({x,s:String(it.str).trim()});
+    });
+    groups.sort((a,b)=>a.pg-b.pg||a.y-b.y);
+    return groups.map(g=>g.items.sort((a,b)=>a.x-b.x).map(i=>i.s).join('  ')).join('\n');
+  }
+  // find an option contract anywhere in a line → {opt,start,end}
+  function findOption(line){
+    const re=/[A-Z][A-Z0-9.]{0,9}\s*\d{6}[CP]\d{3,8}(?:\.\d+)?|(?:PUT|CALL)\s+\([A-Z][A-Z0-9.]{0,9}\)[^$]*\$[\d.,]+/gi;
+    let m;
+    while((m=re.exec(line))){const o=parseOption(m[0].replace(/^[-.]/,''));if(o)return{opt:o,start:m.index,end:m.index+m[0].length};}
+    const words=[...line.matchAll(/\S+/g)];
+    for(let i=0;i<words.length;i++){
+      if(!/^[A-Z][A-Z0-9.]{0,9}$/.test(words[i][0]))continue;
+      for(let n=3;n<=Math.min(7,words.length-i);n++){
+        const st=words[i].index,last=words[i+n-1],en=last.index+last[0].length;
+        const o=parseOption(line.slice(st,en));
+        if(o)return{opt:o,start:st,end:en};
+      }
+    }
+    return null;
+  }
+  function stmtDate(s){
+    let d;
+    const m=/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i.exec(s);
+    if(m)return`${m[3]}-${pad(MONS[m[1].slice(0,3).toLowerCase()])}-${pad(m[2])}`;
+    const m2=/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})\b/i.exec(s);
+    if(m2)return`${m2[3]}-${pad(MONS[m2[2].slice(0,3).toLowerCase()])}-${pad(m2[1])}`;
+    if(/(\d{4})-(\d{2})-(\d{2})|\b\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}\b|^\d{8}\b/.test(s))return pickDate(s);
+    return'';
+  }
+  function detectSource(text){
+    const t=text.toLowerCase();
+    const B=[['Robinhood','robinhood'],['Tastytrade','tastytrade'],['Tastytrade','tastyworks'],['Interactive Brokers','interactive brokers'],['Schwab','schwab'],['Fidelity','fidelity'],['E*Trade','e*trade'],['E*Trade','etrade'],['Webull','webull'],['Trading 212','trading 212'],['Trading 212','trading212'],['eToro','etoro']];
+    for(const[n,k]of B)if(t.includes(k))return n;
+    return'PDF statement';
+  }
+  function parseStatementText(text){
+    text=String(text||'').replace(/\r\n?/g,'\n');
+    const src=detectSource(text);
+    if(text.replace(/\s/g,'').length<20)return{broker:src,rows:[],unrecognised:[],skipped:[],error:"This PDF has no readable text — it looks like a scanned image. Scanned PDFs can't be read; download a text statement or CSV from your broker instead."};
+    // day-first sniff ignores dates inside option descriptions
+    _dmy=sniffDMY(text.split('\n').map(l=>{const f=findOption(l);return f?l.slice(0,f.start)+' '+l.slice(f.end):l;}).join('\n'));
+    const lines=text.split('\n').map(l=>l.trim());
+    const rows=[],bad=[],skip=[];let lastDate='',optLines=0;
+    const SUMMARY=/^(?:total|totals|subtotal|sub-total|net|realized|unrealized|year to date|ytd|summary|balance|opening|closing|beginning|ending|page\b)/i;
+    const NOTRADE=/^(?:mark-to-market performance summary|realized (?:&|and) unrealized performance summary|open positions|financial instrument information|net stock position summary|codes|cash report|positions|holdings|portfolio(?: summary)?|position summary|forex balances|notes|legal notes)$/i;
+    const TRADESEC=/^(?:trades|transactions|trade confirmations?|account activity|activity|transaction (?:details|history)|options activity(?: summary)?)$/i;
+    const sectioned=lines.some(l=>TRADESEC.test(l))&&lines.some(l=>NOTRADE.test(l));
+    let active=true;
+    for(let i=0;i<lines.length;i++){
+      const L=lines[i];if(!L)continue;
+      if(sectioned){if(TRADESEC.test(L)){active=true;continue;}if(NOTRADE.test(L)){active=false;continue;}if(!active)continue;}
+      const f=findOption(L);
+      if(!f){if(L.length<=14){const d=stmtDate(L);if(d)lastDate=d;}continue;}
+      optLines++;
+      if(SUMMARY.test(L)||/\b(?:realized|unrealized|gain|loss|p\/l|position|market value)\b/i.test(L.slice(0,f.start))){skip.push({line:i+1,raw:L,reason:'summary line, not a trade'});continue;}
+      let rest=(L.slice(0,f.start)+' '+L.slice(f.end)).replace(/\(\s*\d+\s*SHS\s*\)/gi,' ');
+      // "Trade date 01/10/2025" on the next line beats a yearless settlement date
+      const nxt=(lines[i+1]||'')+' '+(lines[i+2]&&!findOption(lines[i+1]||'')?lines[i+2]:'');
+      const td=/trade\s*date[:\s]+([^\s].{0,20})/i.exec(nxt);
+      const dSrc=rest.replace(/\$[\d.,]+/g,' ');
+      let entered=td?stmtDate(td[1]):'';
+      if(!entered){entered=stmtDate(dSrc);if(entered)lastDate=entered;else entered=lastDate;}
+      const numTxt=rest.replace(/\b(\d+)S\b/g,'$1').replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{1,2}\.\d{1,2}\.\d{2,4}\b|\d{4}-\d{2}-\d{2}(?:,?\s+\d{1,2}:\d{2}(?::\d{2})?)?|\b\d{1,2}:\d{2}(?::\d{2})?\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/gi,' ');
+      const nums=[...numTxt.matchAll(/(?:^|\s)(\(?-?[$£€]?\d[\d,]*(?:\.\d+)?\)?-?)(?=\s|$)/g)].map(m=>num(m[1])).filter(n=>!isNaN(n));
+      const qi=nums.findIndex(n=>Number.isInteger(Math.abs(n))&&n!==0&&Math.abs(n)<1000);
+      const act=classify(rest,f.opt,qi>-1?nums[qi]:NaN,src==='Interactive Brokers'?'Interactive Brokers':'Statement');
+      if(!act||act.startsWith('SKIP:')){bad.push({line:i+1,raw:L,reason:'could not tell the trade type'});continue;}
+      if(!entered){bad.push({line:i+1,raw:L,reason:'no trade date'});continue;}
+      if(qi<0){bad.push({line:i+1,raw:L,reason:'no quantity'});continue;}
+      const contracts=Math.abs(nums[qi]),shares=contracts*100;
+      const opt=f.opt;let premium=0,total=0,fees=0;
+      if(act==='IN'||act==='OUT'){premium=opt.strike;const fl=/(?:fees?|comm(?:ission)?s?)[:\s]*\(?-?[$£€]?(\d+(?:\.\d+)?)\)?/i.exec(rest);fees=fl?Math.round(+fl[1]*100)/100:0;total=computeTotal(act,premium,shares,fees);} // assignment fees kept
+      else if(act!=='EXP'){
+        const after=nums.slice(qi+1).map(Math.abs);
+        // premium = first plausible per-share price; total = a later number ≈ premium×shares (± fees)
+        let best=null;
+        // pass 1: an amount exactly = price×shares (gross proceeds, fee in the next column); pass 2: within fee tolerance (net amount)
+        for(const exact of[true,false]){
+          for(let a=0;a<after.length&&!best;a++){const pr=after[a];if(!(pr>0&&pr<2000))continue;
+            for(let b=a+1;b<after.length;b++){const am=after[b];const diff=Math.abs(pr*shares-am);
+              if(exact?diff<0.006:(diff<=Math.max(3,am*0.08)&&diff<=contracts*15)){best={pr,am,diff,mid:after.slice(b+1,b+2)};break;}}}
+          if(best)break;}
+        if(best){premium=best.pr;total=best.am;
+          const fee=best.mid.find(x=>Math.abs(x-best.diff)<0.006);
+          fees=Math.round(best.diff*100)/100;
+          // IBKR-style: proceeds = gross, comm column separate → net it
+          if(best.diff<0.006){const c=best.mid.find(x=>x>0&&x<contracts*15);if(c){fees=c;total=act==='BTC'||act==='STC'&&false?best.am+c:(isCredit(act)?best.am-c:best.am+c);}}
+          void fee;
+        }else{premium=after.find(x=>x>0&&x<2000)||0;total=computeTotal(act,premium,shares,0);}
+      }
+      total=Math.round(total*100)/100;
+      const days=opt.expiry?Math.max(0,Math.round((Date.parse(opt.expiry)-Date.parse(entered))/864e5)):0;
+      rows.push({_pc:opt.pc,ticker:opt.ticker,action:act,entered,expiry:opt.expiry,strike:opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`});
+    }
+    // single trade confirmation: contract may be split across lines
+    if(!rows.length){
+      const flat=lines.filter(Boolean).join(' ');
+      const f=findOption(flat);
+      if(f){
+        const rest=flat.slice(0,f.start)+' '+flat.slice(f.end);
+        let act=classify(rest,f.opt,NaN,'Statement');
+        let sm={};try{sm=typeof parseSmartText==='function'?(parseSmartText(text)||{}):{};}catch(e){}
+        if(!act||act.startsWith('SKIP:'))act=sm.action&&VALID_ACTIONS.has(sm.action)?sm.action:'';
+        const fl=/(?:filled|executed|trade\s*date|date)[:\s]+(?:on\s+)?([A-Za-z0-9\/.,\- ]{6,20})/i.exec(rest);
+        const entered=(fl&&stmtDate(fl[1]))||stmtDate(rest.replace(/\$[\d.,]+/g,' '));
+        const cm=/(\d+)\s+contracts?\b|contracts?[:\s]+(\d+)/i.exec(rest);
+        const contracts=cm?+(cm[1]||cm[2]):(sm.shares?sm.shares/100:0),shares=contracts*100;
+        if(act&&entered&&!(contracts>0))return splitLongs({broker:src+' confirmation',rows:[],unrecognised:[{line:1,raw:flat.slice(0,160),reason:'no quantity'}],skipped:[]});
+        const pm=/(?:average|avg\.?|fill|limit)?\s*price[:\s]+\$?([\d.]+)/i.exec(rest);
+        const premium=pm?+pm[1]:(sm.premium||0);
+        const fm=/(?:fees?|commissions?)[^$\d]{0,20}\$?([\d.]+)/i.exec(rest);const fees=fm?+fm[1]:(sm.fees||0);
+        const tm=/(?:net\s+amount|net\s+credit|net\s+debit|total|amount)[:\s]+\$?([\d,.]+)/i.exec(rest);
+        if(act&&entered){
+          const total=Math.round((tm?num(tm[1]):computeTotal(act,premium,shares,fees))*100)/100;
+          const days=Math.max(0,Math.round((Date.parse(f.opt.expiry)-Date.parse(entered))/864e5));
+          return splitLongs({broker:src+' confirmation',rows:[{_pc:f.opt.pc,ticker:f.opt.ticker,action:act,entered,expiry:f.opt.expiry,strike:f.opt.strike,premium,fees,shares,total,days:(act==='CSP'||act==='STOC')?days:0,verified:false,comment:`Imported from ${src} PDF`}],unrecognised:[],skipped:[]});
+        }
+      }
+    }
+    return splitLongs({broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')});
+  }
+  return{splitLongs,parseRobinhood,parseCSVText,num,pickDate,sniffDMY,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
+}
+const BCSV=brokerCSVLib();
+let _importParsed=null;
+// rows that close a long leg already in Options (and no wheel short on that contract) → options fills
+function _routeToOpenLongs(p){
+  if(!p||!p.rows)return p;
+  const longs=(db.opts||[]).filter(l=>l.status==='open'&&l.side==='long');if(!longs.length)return p;
+  const fills=[...(p.optionFills||[])],keep=[];
+  p.rows.forEach(r=>{
+    const l=(r.action==='STC'||r.action==='EXP')&&longs.find(l=>l.underlying===r.ticker&&+l.strike===+r.strike&&l.expiry===r.expiry);
+    if(l)fills.push({ticker:r.ticker,side:'long',effect:'close',expired:r.action==='EXP',type:l.type,strike:r.strike,expiry:r.expiry,qty:Math.round((r.shares||100)/100),price:r.action==='EXP'?0:r.premium,fees:r.fees||0,date:r.entered});
+    else keep.push(r);
+  });
+  return{...p,rows:keep,optionFills:fills};
+}
+// Robinhood events (oldest first) → what to add, given what's already in WheelHouse. Pure: never writes.
+// Wheel: puts, covered calls on shares you hold, assignments, share buys/sells → db.trades rows.
+// LEAPs: any bought option → its own leg; calls sold on a ticker with an open LEAP (and no wheel shares) → short calls on that LEAP.
+// A buy-back and a new sale on the same day stay two separate trades: the CSV can't show whether it was one roll order.
+function _brandName(){return(typeof window!=='undefined'&&window.BRAND&&window.BRAND.name)||'OpTrack';}
+function rhPlan(ev,opts,trades,mkId){
+  const legs=(opts||[]).map(l=>({...l})),newLegs=[],changed=new Set(),wheelRows=[],lines=[],bad=[],skip=[];let dupes=0;
+  const r2=n=>Math.round(n*100)/100,D=(a,b)=>Math.round((Date.parse(a)-Date.parse(b))/864e5);
+  const held={};(trades||[]).forEach(t=>{if(t.action==='IN')held[t.ticker]=(held[t.ticker]||0)+(+t.shares||0);if(t.action==='OUT')held[t.ticker]=(held[t.ticker]||0)-(+t.shares||0);});
+  const wheeled=new Set((trades||[]).map(t=>t.ticker));
+  const rank=e=>e.kind==='shares'?1:['STO','BTO'].includes(e.code)?2:0;
+  const E=ev.map((e,i)=>({e,i})).sort((a,b)=>a.e.date.localeCompare(b.e.date)||rank(a.e)-rank(b.e)||a.i-b.i).map(x=>x.e);
+  const same=(l,e,side)=>l.underlying===e.ticker&&l.type===e.pc&&+l.strike===+e.strike&&l.expiry===e.expiry&&l.side===side;
+  const openLeg=(e,side)=>legs.find(l=>l.status==='open'&&same(l,e,side));
+  const dupOpen=(e,side)=>legs.find(l=>same(l,e,side)&&(l.entryDate||'')===e.date&&+l.qty===+e.qty&&Math.abs(+l.entryPrice-e.price)<0.005);
+  const dupClose=(e,side)=>legs.find(l=>l.status!=='open'&&same(l,e,side)&&l.closeDate===e.date);
+  const leapFor=(tk,date)=>legs.filter(l=>l.status==='open'&&l.side==='long'&&l.type==='C'&&!l.parentLeapId&&l.underlying===tk&&l.expiry>date).sort((a,b)=>b.expiry.localeCompare(a.expiry))[0];
+  const c=e=>`${e.qty} ${e.ticker} $${+e.strike} ${e.pc==='C'?'call':'put'}${e.qty>1?'s':''} (${e.expiry})`;
+  const close=(l,e,how)=>{if(+e.qty<+l.qty){const rest={...l,id:mkId(),qty:+l.qty-e.qty,fees:0};legs.push(rest);newLegs.push(rest);l.qty=e.qty;}
+    Object.assign(l,how==='exp'?{status:'expired',closePrice:0,closeDate:e.date,closeFees:0}:{status:'closed',closePrice:e.price,closeDate:e.date,closeFees:e.fees});
+    if(!newLegs.includes(l))changed.add(l.id);};
+  const pend=[];
+  const wheelDup=r=>(trades||[]).some(t=>t.ticker===r.ticker&&t.action===r.action&&t.entered===r.entered&&(+t.strike||0)===(+r.strike||0)&&(+t.shares||0)===(+r.shares||0)&&(!t.expiry||!r.expiry||t.expiry===r.expiry)&&Math.abs((+t.premium||0)-(+r.premium||0))<0.005);
+  const addWheel=(e,action,o)=>{
+    const shares=o.shares,premium=o.premium,fees=o.fees||0;
+    const r={ticker:e.ticker,action,entered:e.date,expiry:o.expiry||null,strike:o.strike||null,premium,fees,shares,total:r2(o.total!=null?o.total:computeTotal(action,premium,shares,fees)),days:(action==='CSP'||action==='STOC')&&o.expiry?Math.max(0,D(o.expiry,e.date)):0,verified:false,comment:'Imported from Robinhood'};
+    if(action==='IN')held[e.ticker]=(held[e.ticker]||0)+shares;if(action==='OUT')held[e.ticker]=(held[e.ticker]||0)-shares;
+    wheeled.add(e.ticker);
+    if(wheelDup(r)){dupes++;return null;}
+    wheelRows.push(r);return r;};
+  for(const e of E){
+    if(e.kind==='shares'){
+      const pi=pend.findIndex(p=>p.ticker===e.ticker&&p.side===e.code&&p.shares===e.qty&&e.date>=p.date&&D(e.date,p.date)<=4&&(Math.abs(e.price-p.strike)<0.005||e.assign));
+      if(pi>-1){const pr=pend.splice(pi,1)[0];
+        // the assignment's fee sits on this share row — keep it on the IN/OUT trade instead of dropping it
+        if(pr.row&&e.fees>0){pr.row.fees=r2((+pr.row.fees||0)+e.fees);pr.row.total=r2(computeTotal(pr.row.action,pr.row.premium,pr.row.shares,pr.row.fees));}
+        skip.push({line:e.line,raw:e.raw,reason:'shares from the assignment, already counted'+(pr.row&&e.fees>0?` (fee $${e.fees.toFixed(2)} kept on the assignment)`:'')});continue;}
+      if(!wheeled.has(e.ticker)){skip.push({line:e.line,raw:e.raw,reason:"share trade on a stock you don't wheel"});continue;}
+      addWheel(e,e.code==='BUY'?'IN':'OUT',{shares:e.qty,premium:e.price,fees:e.fees});continue;
+    }
+    const opt={expiry:e.expiry,strike:e.strike},sh=e.qty*100,amt=Math.abs(e.amount);
+    if(e.code==='BTO'){
+      if(dupOpen(e,'long')){dupes++;continue;}
+      const l={id:mkId(),groupId:null,underlying:e.ticker,type:e.pc,side:'long',strike:+e.strike,expiry:e.expiry,qty:e.qty,entryPrice:e.price,entryDate:e.date,fees:e.fees,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:'Imported from Robinhood'};
+      l.groupId=l.id;legs.push(l);newLegs.push(l);lines.push(`Bought ${c(e)} at $${e.price.toFixed(2)}${e.pc==='C'&&D(e.expiry,e.date)>=270?' — LEAP':''}`);continue;
+    }
+    if(e.code==='STO'&&e.pc==='C'&&!(held[e.ticker]>0)){
+      const L=leapFor(e.ticker,e.date);
+      if(L){
+        if(dupOpen(e,'short')){dupes++;continue;}
+        const l={id:mkId(),groupId:null,parentLeapId:L.id,underlying:e.ticker,type:'C',side:'short',strike:+e.strike,expiry:e.expiry,qty:e.qty,entryPrice:e.price,entryDate:e.date,fees:e.fees,status:'open',closePrice:null,closeDate:null,closeFees:0,mark:null,wheelId:null,notes:'Imported from Robinhood'};
+        l.groupId=l.id;legs.push(l);newLegs.push(l);lines.push(`Sold ${c(e)} against your ${e.ticker} LEAP at $${e.price.toFixed(2)}`);continue;
+      }
+    }
+    if(['BTC','OEXP','OASGN','STC','OEXCS'].includes(e.code)){
+      const side=e.code==='STC'||e.code==='OEXCS'?'long':e.code==='OEXP'?(openLeg(e,'short')?'short':openLeg(e,'long')?'long':'short'):'short';
+      const l=openLeg(e,side);
+      if(l&&(side==='long'||l.parentLeapId)){
+        if(e.code==='OASGN'||e.code==='OEXCS'){bad.push({line:e.line,raw:e.raw,reason:e.code==='OASGN'?'a call sold against your LEAP was assigned — enter this one by hand':'you exercised an option — enter this one by hand'});continue;}
+        close(l,e,e.code==='OEXP'?'exp':'close');
+        lines.push(`${e.code==='OEXP'?'Expired':e.code==='STC'?'Sold back':'Bought back'} ${c(e)}${e.code==='OEXP'?'':' at $'+e.price.toFixed(2)}`);continue;
+      }
+      if(dupClose(e,side)&&(side==='long'||dupClose(e,side).parentLeapId)){dupes++;continue;}
+    }
+    if(e.code==='OEXCS'){bad.push({line:e.line,raw:e.raw,reason:'you exercised an option — enter this one by hand'});continue;}
+    // wheel
+    if(e.code==='STO')addWheel(e,e.pc==='P'?'CSP':'STOC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='BTC')addWheel(e,'BTC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='STC')addWheel(e,'STC',{...opt,shares:sh,premium:e.price,fees:e.fees,total:amt||null});
+    else if(e.code==='OEXP')addWheel(e,'EXP',{...opt,shares:sh,premium:0,fees:0,total:0});
+    else if(e.code==='OASGN'){const put=e.pc==='P';const row=addWheel(e,put?'IN':'OUT',{strike:e.strike,expiry:e.expiry,shares:sh,premium:+e.strike,fees:e.fees||0});pend.push({ticker:e.ticker,date:e.date,side:put?'BUY':'SELL',shares:sh,strike:+e.strike,row});}
+  }
+  return{wheelRows,newLegs,changedLegs:legs.filter(l=>changed.has(l.id)),lines,dupes,unrecognised:bad,skipped:skip};
+}
+function importPreview(pre){
+  const txt=pre?'x':document.getElementById('import-csv').value;
+  const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
+  if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
+  const p=_routeToOpenLongs(pre||BCSV.parseBrokerCSV(txt));_importParsed=p;
+  if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
+  if(p.rh&&!csvImportOk()){box.innerHTML=`<div class="imp-err">The free plan includes 1 Robinhood CSV import, and you've used it. Pro has unlimited imports. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
+  if(p.rh){ // Robinhood activity report: plan against what's already here
+    const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;p.rows=P.wheelRows;p.unrecognised=p.unrecognised.concat(P.unrecognised);p.skipped=p.skipped.concat(P.skipped);
+    const why={};p.skipped.forEach(x=>{why[x.reason]=(why[x.reason]||0)+1;});
+    const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
+    const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
+    box.innerHTML=`<div class="imp-broker">Robinhood activity report</div>`+
+      (p.rows.length?`<div class="imp-sub">${p.rows.length} wheel trade${p.rows.length>1?'s':''} to add:</div><div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+
+      (P.lines.length?`<div class="imp-sub">${P.lines.length} LEAP trade${P.lines.length>1?'s':''} to add (LEAPs tab):</div><ul class="imp-bad" style="color:var(--text2)">${P.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
+      (P.dupes?`<div class="imp-sub" style="color:var(--text3)">${P.dupes} already in ${_brandName()}, skipped</div>`:'')+
+      (p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">${p.skipped.length} row${p.skipped.length>1?'s':''} skipped: ${Object.entries(why).map(([k,n])=>`${esc(k)} (${n})`).join(', ')}</div>`:'')+
+      (p.unrecognised.length?`<div class="imp-sub">Not imported (${p.unrecognised.length}):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'');
+    const n=p.rows.length+P.newLegs.length+P.changedLegs.length;
+    btn.disabled=!n;btn.textContent=n?`Import ${p.rows.length+P.lines.length}`:'Nothing new';return;
+  }
+  const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
+  const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
+  const badH=p.unrecognised.length?`<div class="imp-sub">Couldn't understand ${p.unrecognised.length} row${p.unrecognised.length>1?'s':''} (not imported):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'';
+  const skipH=p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">Skipped ${p.skipped.length} non-wheel row${p.skipped.length>1?'s':''} (share trades, dividends, transfers…)</div>`:'';
+  box.innerHTML=`<div class="imp-broker">Detected: <b>${esc(p.broker)}</b> · ${p.rows.length} trade${p.rows.length===1?'':'s'} found</div>`+
+    (p.rows.length?`<div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+badH+skipH;
+  const of=p.optionFills||[];
+  if(of.length)box.innerHTML+=`<div class="imp-sub" style="color:#5eead4">+ ${of.length} long-option fill${of.length>1?'s':''} (buy-to-open and their closes) → Options tab, not the wheel:</div><ul class="imp-bad" style="color:var(--text2)">${of.map(f=>`<li>${esc(f.date)} ${f.effect==='open'?'Buy to open':f.expired?'Expired':'Sell to close'} ${f.qty}× ${esc(f.ticker)} ${f.strike}${f.type} ${esc(f.expiry)}${f.expired?'':' @ '+(+f.price).toFixed(2)}</li>`).join('')}</ul>`;
+  const n=p.rows.length+of.length;
+  btn.disabled=!n;btn.textContent=n?`Import ${n}`:'Import';
+}
+function importLoadFile(file){
+  if(!file)return;
+  document.getElementById('import-fname').textContent=file.name;
+  if(/\.pdf$/i.test(file.name)||file.type==='application/pdf'){importLoadPDF(file);return;}
+  const r=new FileReader();
+  r.onload=()=>{document.getElementById('import-csv').value=r.result;document.getElementById('import-fname').textContent=file.name;importPreview();};
+  r.readAsText(file);
+}
+let _pdfjs=null;
+async function importLoadPDF(file){
+  const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
+  box.innerHTML='<div class="imp-broker">Reading PDF…</div>';btn.disabled=true;_importParsed=null;
+  try{
+    if(!_pdfjs){const V='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';_pdfjs=await import(V+'pdf.min.mjs');_pdfjs.GlobalWorkerOptions.workerSrc=V+'pdf.worker.min.mjs';}
+    const doc=await _pdfjs.getDocument({data:await file.arrayBuffer()}).promise;
+    const items=[];
+    for(let n=1;n<=doc.numPages;n++){const tc=await(await doc.getPage(n)).getTextContent();tc.items.forEach(it=>items.push({str:it.str,transform:it.transform,page:n}));}
+    importPreview(BCSV.parseStatementText(BCSV.pdfItemsToLines(items)));
+  }catch(e){importPreview({broker:'PDF',rows:[],unrecognised:[],skipped:[],error:"Couldn't open this PDF ("+(e&&e.message||e)+"). If it's password-protected, remove the password first; you need to be online the first time a PDF is read."});}
+}
+function initImportDrop(){
+  const z=document.getElementById('import-drop'),fi=document.getElementById('import-file'),ta=document.getElementById('import-csv');
+  if(!z||z._wired)return;z._wired=true;
+  z.addEventListener('click',()=>fi.click());
+  fi.addEventListener('change',()=>{importLoadFile(fi.files[0]);fi.value='';});
+  ['dragenter','dragover'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.remove('drag');}));
+  z.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];importLoadFile(f);});
+  let t;ta.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(importPreview,250);});
+}
+function doImport(){
+  if(!_importParsed)importPreview();
+  const p=_importParsed;if(!p)return;
+  let capSkipLeaps=0;const capSkipTickers=new Set();let capSkipRows=0;
+  if(p.plan){
+    const P=p.plan;
+    if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
+    else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));const cap=capNewLeaps(db.opts,P.newLegs);capSkipLeaps+=cap.droppedLeaps;db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(cap.keep);cap.keep.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);}
+    if(!p.rows.length){_noteCsvImport(p);closeModal('mImport');document.getElementById('import-csv').value='';_importParsed=null;importPreview();render();if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
+  }
+  if(!(p.rows.length||(p.optionFills||[]).length))return;
+  if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
+  else if((p.optionFills||[]).length){
+    const before=db.opts||[];const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
+    const cap=capNewLeaps(before,r.created);if(cap.dropped){const k=new Set(cap.keep.map(l=>l.id));const cr=new Set(r.created.map(l=>l.id));r.legs=r.legs.filter(l=>!cr.has(l.id)||k.has(l.id));r.created=cap.keep;capSkipLeaps+=cap.droppedLeaps;}
+    db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));
+    if(r.unmatched.length)console.warn('Option closes with no open long leg:',r.unmatched);
+  }
+  let imported=0,dupes=0;
+  const newWheelTickers=new Set();
+  const newWheels=[],newTrades=[];
+  const existingFingerprints=new Set(db.trades.map(t=>`${t.ticker}|${t.action}|${t.entered}|${t.strike||''}|${t.shares||''}`));
+  for(const r of p.rows){
+    const{ticker,action,entered,strike,shares}=r;
+    const fp=`${ticker}|${action}|${entered}|${strike||''}|${shares||''}`;
+    if(!p.plan&&existingFingerprints.has(fp)){dupes++;continue;}
+    existingFingerprints.add(fp);
+    let wheel=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
+    if(!wheel&&!wheelCapOk(ticker,db.wheels)){capSkipTickers.add(ticker);capSkipRows++;continue;}
+    if(isOpenRisk(action,!!(r.roll||r.isRoll||r.rollId))&&!wheelRiskOk(db.wheels.concat(newWheels))){capSkipTickers.add(ticker);capSkipRows++;continue;}
+    if(!wheel){
+      const existing=db.wheels.filter(w=>w.ticker===ticker).length;
+      const now=new Date();
+      const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
+      const label=`Wheel ${existing+1} — ${mon} ${now.getFullYear()}`;
+      const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);
+      wheel={id:uid(),ticker,label,company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};
+      db.wheels.push(wheel);newWheels.push(wheel);newWheelTickers.add(ticker);
+    }
+    const days=r.days||0;
+    const nt={id:uid(),wheelId:wheel.id,ticker,action,entered,expiry:r.expiry||null,strike,premium:r.premium||0,fees:r.fees||0,shares,total:r.total||0,days,ppd:days>0?(r.total||0)/days:0,verified:!!r.verified,comment:r.comment||''};
+    applyImportRoll(nt,r);
+    db.trades.push(nt);newTrades.push(nt);imported++;
+  }
+  autoLinkRollBatch(newTrades); // only fills rollId for rows already flagged as a roll
+  newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');
+  document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();render();
+
+  // Fetch logos and prices for any new wheels
+  newWheelTickers.forEach(ticker=>{
+    fetchSymbol(ticker).then(()=>{
+      const w=db.wheels.find(x=>x.ticker===ticker&&x.status==='open');
+      if(w&&quotes[ticker]){w.lastPrice=quotes[ticker].price;render();}
+    }).catch(()=>{});
+    fetchLogo(ticker).then(()=>render()).catch(()=>{});
+  });
+  const parts=[`${imported} imported`];
+  if(dupes>0)parts.push(`${dupes} duplicates skipped`);
+  if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in ${_brandName()}`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
+  if(capSkipRows)parts.push(`${capSkipRows} trades for ${[...capSkipTickers].join(', ')} skipped (free plan limit)`);if(capSkipLeaps)parts.push(`${capSkipLeaps} LEAP${capSkipLeaps>1?'s':''} skipped (free plan limit)`);
+  _noteCsvImport(p);
+  alert(`Import complete: ${parts.join(', ')}.`);
+  if(capSkipRows||capSkipLeaps)openUpgrade('unlimited',capSkipRows?capMsg('wheel'):capMsg('leap'));
+}
+// ── Realised P&L chart (READ-ONLY). Closed trades only, booked on their close date, split the same way as the
+// Monthly P&L / Shares & LEAPs P&L tables: option credits vs buybacks, share sales and closed LEAPs by sign, dividends.
+function realisedDaily(trades,legs,today,wheels){
+  today=today||new Date().toISOString().slice(0,10);
+  wheels=wheels||(typeof db!=='undefined'?db.wheels:[]);
+  const ledger=OT_LEDGER.buildLedger(wheels,trades,legs||[],{today});
+  const inc=ledger.events.filter(e=>e.bucket==='income');
+  const g=OT_LEDGER.groupEventsByPeriod(inc,{gran:'Day'});
+  return g.buckets.filter(b=>b.gain||b.loss).map(b=>({date:b.key,gain:b.gain,loss:b.loss,amount:b.net})).sort((a,b)=>a.date.localeCompare(b.date));
+}
+const PNL_RANGES=[['1W',7],['1M',30],['3M',91],['6M',182],['YTD','ytd'],['1Y',365],['All',0]];
+const PNL_DEFAULT_GRAN={'1W':'Day','1M':'Day','3M':'Week','6M':'Week','YTD':'Month','1Y':'Month','All':'Month'};
+const _iso=t=>new Date(t).toISOString().slice(0,10);
+function _bucketKey(date,gran){
+  if(gran==='Month')return date.slice(0,7)+'-01';
+  if(gran==='Week'){const t=new Date(date+'T12:00:00');const dow=(t.getUTCDay()+6)%7;return _iso(t.getTime()-dow*864e5);} // Monday
+  return date;
+}
+// Earliest entered/entry date in the book (range window only; no P&L math).
+function earliestTradeDate(trades,legs){
+  let d='';
+  const consider=x=>{const s=String(x||'').slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(s)&&(!d||s<d))d=s;};
+  (trades||[]).forEach(t=>consider(t.entered));
+  (legs||[]).forEach(l=>consider(l.entryDate));
+  return d||null;
+}
+// Buckets for a range and granularity: every bucket from range start to today (empty ones too), {key,gain,loss,net}.
+// All: fromDate (earliest trade date) or the first day in daily, whichever is earlier, through today.
+function pnlBuckets(daily,range,gran,today,fromDate){
+  const r=PNL_RANGES.find(x=>x[0]===range)||PNL_RANGES[PNL_RANGES.length-1];gran=gran||PNL_DEFAULT_GRAN[r[0]];
+  const dataStart=daily&&daily[0]?daily[0].date:today;
+  const start=r[1]==='ytd'?today.slice(0,4)+'-01-01':r[1]?_iso(new Date(today+'T12:00:00')-r[1]*864e5+864e5):([fromDate,dataStart].filter(Boolean).sort()[0]||today);
+  const map={};let k=_bucketKey(start,gran);const endK=_bucketKey(today,gran);
+  for(let n=0;k<=endK&&n<2000;n++){map[k]={key:k,gain:0,loss:0};const t=new Date(k+'T12:00:00');
+    k=gran==='Month'?_iso(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,1,12)):_iso(t.getTime()+(gran==='Week'?7:1)*864e5);}
+  daily.forEach(e=>{if(e.date<start||e.date>today)return;const b=map[_bucketKey(e.date,gran)];if(b){b.gain+=e.gain;b.loss+=e.loss;}});
+  const buckets=Object.values(map).map(b=>({...b,gain:Math.round(b.gain*100)/100,loss:Math.round(b.loss*100)/100,net:Math.round((b.gain-b.loss)*100)/100}));
+  const tot=buckets.reduce((a,b)=>({gain:a.gain+b.gain,loss:a.loss+b.loss}),{gain:0,loss:0});
+  return{start,end:today,gran,buckets,gain:Math.round(tot.gain*100)/100,loss:Math.round(tot.loss*100)/100,net:Math.round((tot.gain-tot.loss)*100)/100};
+}
+let pnlRange='All',pnlFull=false;
+const PNL_MEASURES=[['all','Total Realised'],['options','All options'],['wheel','Wheel P&L'],['pmcc','PMCC calls'],['shares','Shares & LEAPs P&L']];
+function _loadPnlMeasure(){try{let v=localStorage.getItem('optrack-pnl-measure');if(v==='leaps')v='pmcc';if(PNL_MEASURES.some(m=>m[0]===v)){if(localStorage.getItem('optrack-pnl-measure')!==v)localStorage.setItem('optrack-pnl-measure',v);return v;}if(v)localStorage.setItem('optrack-pnl-measure','options');}catch(e){}return 'options';}
+let pnlMeasure=_loadPnlMeasure();
+function setPnlMeasure(k){if(!PNL_MEASURES.some(m=>m[0]===k))return;pnlMeasure=k;try{localStorage.setItem('optrack-pnl-measure',k);}catch(e){}_pnlRedraw();const mo=document.getElementById('home-monthly');if(mo)mo.innerHTML=renderMonthlyForMeasure(k);}
+// Chart-only: dated events already used by the Shares & LEAPs P&L table (FIFO share sales, dividends, closed long LEAPs). No new P&L math.
+function sharesLeapsDaily(trades,legs,today,wheels){
+  today=today||new Date().toISOString().slice(0,10);
+  wheels=wheels||(typeof db!=='undefined'?db.wheels:[]);
+  const ledger=OT_LEDGER.buildLedger(wheels,trades,legs||[],{today});
+  const asset=ledger.events.filter(e=>e.bucket==='asset');
+  const g=OT_LEDGER.groupEventsByPeriod(asset,{gran:'Day'});
+  return g.buckets.filter(b=>b.gain||b.loss).map(b=>({date:b.key,gain:b.gain,loss:b.loss,amount:b.net})).sort((a,b)=>a.date.localeCompare(b.date));
+}
+// Chart-only: join two existing daily series by date. No new P&L math.
+function mergePnlDaily(a,b){
+  const d={};
+  const add=e=>{if(!e||!e.date)return;const o=d[e.date]||(d[e.date]={date:e.date,gain:0,loss:0});o.gain+=e.gain||0;o.loss+=e.loss||0;};
+  (a||[]).forEach(add);(b||[]).forEach(add);
+  return Object.values(d).sort((x,y)=>x.date.localeCompare(y.date)).map(o=>({date:o.date,gain:Math.round(o.gain*100)/100,loss:Math.round(o.loss*100)/100,amount:Math.round((o.gain-o.loss)*100)/100}));
+}
+// Chart-only: feed existing realisedDaily / sharesLeapsDaily. No new P&L math.
+// Total Realised (measure key 'all') = every trade type: options plus shares, dividends and closed LEAPs.
+function pnlDailyForMeasure(measure,trades,legs,today,wheels){
+  wheels=wheels||(typeof db!=='undefined'?db.wheels:[]);
+  if(measure==='wheel')return realisedDaily(trades,[],today,wheels);
+  if(measure==='pmcc'||measure==='leaps')return realisedDaily([],legs||[],today,wheels);
+  if(measure==='options')return realisedDaily(trades,legs||[],today,wheels);
+  if(measure==='shares')return sharesLeapsDaily(trades,legs||[],today,wheels);
+  return mergePnlDaily(realisedDaily(trades,legs||[],today,wheels),sharesLeapsDaily(trades,legs||[],today,wheels));
+}
+// Display only: bucket an existing daily series by month. No new P&L math.
+function calcMonthlyForMeasure(measure,trades,legs,today,wheels){
+  wheels=wheels||(typeof db!=='undefined'?db.wheels:[]);
+  const mo={};
+  (pnlDailyForMeasure(measure,trades,legs,today,wheels)||[]).forEach(e=>{
+    if(!e||!e.date)return;const ym=String(e.date).slice(0,7);
+    const r=mo[ym]||(mo[ym]={ym,collected:0,loss:0});r.collected+=e.gain||0;r.loss+=e.loss||0;
+  });
+  return Object.keys(mo).sort((a,b)=>b.localeCompare(a)).map(ym=>{
+    const r=mo[ym],collected=Math.round(r.collected*100)/100,loss=Math.round(r.loss*100)/100;
+    return{ym,collected,gain:collected,loss,net:Math.round((collected-loss)*100)/100,profit:Math.round((collected-loss)*100)/100};
+  });
+}
+// Home table under the P&L graph: same measure as the dropdown, all months, not the chart range.
+function renderMonthlyForMeasure(measure){
+  measure=measure||(typeof pnlMeasure!=='undefined'&&pnlMeasure)||'options';
+  const today=new Date().toISOString().slice(0,10);
+  const rows=calcMonthlyForMeasure(measure,db.trades,db.opts||[],today,db.wheels).filter(r=>r.collected||r.loss);
+  if(!rows.length)return '';
+  const label=(PNL_MEASURES.find(m=>m[0]===measure)||[measure,measure])[1];
+  const isSh=measure==='shares'||measure==='all';
+  const yr=today.slice(0,4);
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]);
+  const monthlyCap=OT_LEDGER.monthlyDeployedCapital(db.wheels,db.trades,db.opts||[],{today});
+  const manual=rs.base==='account'&&rs.account>0;
+  const sum=(list,keys)=>{const o={};keys.forEach(k=>o[k]=Math.round(list.reduce((a,r)=>a+(r[k]||0),0)*100)/100);return o;};
+  const lbl=ym=>new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'numeric'});
+  const cell=(v,cls,lab)=>`<td class="num ${v?cls:'m'}"${lab?` data-lbl="${lab}"`:''}>${v?fmtMoney(v):'—'}</td>`;
+  const pcell=(v,lab)=>`<td class="num mpl-net ${v?colorN(v):'m'}" style="font-weight:720"${lab?` data-lbl="${lab}"`:''}>${v?(v>0?'+':'')+fmtMoney(v):'—'}</td>`;
+  const heads=isSh?['Gains','Losses','Net','%']:['Premium collected','Loss','Profit','%'];
+  const keys=isSh?['collected','loss','net']:['collected','loss','profit'];
+  const tips={
+    all:'Everything realised in that month: wheel options, PMCC short calls, share sales, dividends and closed LEAPs. Figures match the Total Realised bars above. Open options are not included.',
+    options:'Options only: realised premium and buybacks on wheel puts and calls and PMCC short calls, combined. Figures match the All options bars above. Share sales, dividends and closed LEAPs are not included.',
+    wheel:'Wheel options only: realised premium and buybacks on wheel puts and calls. Figures match the Wheel P&L bars above. PMCC short calls are not included.',
+    pmcc:'PMCC short calls only: realised premium and buybacks. Figures match the PMCC calls bars above. Closed long LEAPs stay in Shares & LEAPs P&L.',
+    shares:'The same realised figures as the Shares & LEAPs P&L bars above: share sales (first in, first out), dividends, and closed long LEAPs. Open shares and LEAPs are not included.'
+  };
+  const pctCell=(r,isSum)=>{
+    if(isSum)return `<td class="num m mpl-pct" data-lbl="Return">—</td>`;
+    const cap=monthReturnCapital(rs,r.ym,monthlyCap);
+    const pnl=isSh?(r.net||0):(r.profit||0);
+    const mr=monthReturnPct(pnl,cap,null);
+    const tip=cap>0?` title="${esc('Based on '+capitalTipMoney(cap)+(manual?' manual capital':' peak deployed capital'))}"`:'';
+    if(!mr)return `<td class="num m mpl-pct" data-lbl="Return"${tip}>—</td>`;
+    const cls=mr.pct>0?'g':mr.pct<0?'r':'';
+    const txt=(mr.pct>0?'+':mr.pct<0?'−':'')+Math.abs(mr.pct).toFixed(2)+'%';
+    return `<td class="num mpl-pct ${cls}" data-lbl="Return"${tip} style="font-weight:480">${txt}</td>`;
+  };
+  const line=(l,r,c,isSum)=>`<tr class="${c||''}"><td class="mpl-month">${l}</td>${isSh?cell(r.collected,'g','Gains')+cell(r.loss?-r.loss:0,'r','Losses')+pcell(r.net,'Net'):cell(r.collected,'g','Collected')+cell(r.loss?-r.loss:0,'r','Loss')+pcell(r.profit,'Profit')}${pctCell(r,isSum)}</tr>`;
+  return`<div class="d-panel">
+      <div class="d-panel-hdr"><span class="d-panel-title">Monthly P&amp;L · ${label} ${ii(tips[measure]||tips.all)}</span></div>
+      <div class="d-panel-body">
+        <table class="a-table mpl-table"><thead><tr><th>Month</th>${heads.map(h=>`<th class="num">${h}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(r=>line(lbl(r.ym),r)).join('')}
+        ${line('Year to date '+yr,sum(rows.filter(r=>r.ym.startsWith(yr)),keys),'mpl-sum',true)}
+        ${line('All time',sum(rows,keys),'mpl-sum',true)}</tbody></table>
+      </div>
+    </div>`;
+}
+// Projected yearly income: same realised YTD total as the Home P&L graph on All + YTD,
+// paced from the first trade this year (or 1 Jan if you started earlier). Display only.
+function calcProjectedYearly(trades,legs,today){
+  today=String(today||'').slice(0,10);
+  const yr=today.slice(0,4),yearStart=yr+'-01-01';
+  const total=(pnlDailyForMeasure('all',trades,legs||[],today)||[]).filter(e=>e.date>=yearStart&&e.date<=today).reduce((a,e)=>a+(e.amount!=null?e.amount:(e.gain||0)-(e.loss||0)),0);
+  const first=earliestTradeDate(trades,legs||[]);
+  if(!first)return{total:0,days:0,yearly:null,since:null,startedMidYear:false};
+  const paceStart=first>yearStart?first:yearStart;
+  const days=Math.max(1,Math.round((new Date(today+'T12:00:00')-new Date(paceStart+'T12:00:00'))/86400000)+1);
+  return{total,days,since:paceStart,startedMidYear:first>yearStart,yearly:(total/days)*365};
+}
+// More data KPI scope: 'all' (default), 'wheel' or 'pmcc' (LEAPs & PMCC). Display only; persists in localStorage.
+function moreScope(){
+  try{const v=localStorage.getItem('optrack-more-scope');if(v==='wheel'||v==='pmcc')return v;}catch(e){}
+  return'all';
+}
+function setMoreScope(k){
+  if(k!=='all'&&k!=='wheel'&&k!=='pmcc')return;
+  try{localStorage.setItem('optrack-more-scope',k);}catch(e){}
+  if(typeof view!=='undefined'&&view==='analytics'&&typeof switchView==='function'){
+    const y=typeof window!=='undefined'?window.scrollY:0;
+    switchView('analytics');
+    if(typeof window!=='undefined')window.scrollTo(0,y);
+  }
+}
+// More data figures, all from one OT_LEDGER build filtered to the scope ('all' | 'wheel' | 'pmcc'). Pure: no db.
+// Option income = closed sold options (wheel puts/calls + PMCC and other short calls), net of buybacks.
+// Total realised = option income + share sales + dividends + closed LEAPs. AROC is capital×days weighted.
+// Open LEAPs with their open short calls, plus open short options not written against an open LEAP. Pure (OPTS only).
+function openLeapPositions(legs,today){
+  today=String(today||new Date().toISOString().slice(0,10)).slice(0,10);
+  const open=(legs||[]).filter(l=>l&&!l.demo&&l.status==='open');
+  const dte=e=>e?Math.round((Date.parse(e+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/864e5):null;
+  const row=l=>{const p=OPTS.legPnL(l);return{leg:l,id:l.id,ticker:l.underlying||l.und||l.ticker||'',type:l.type,strike:+l.strike||0,expiry:l.expiry||'',dte:dte(l.expiry),cost:p.costBasis,unrealised:p.unrealized};};
+  const leaps=open.filter(l=>l.side==='long'&&!l.parentLeapId);
+  const ids=new Set(leaps.map(l=>l.id));
+  const shorts=open.filter(l=>l.side==='short');
+  const byExp=(a,b)=>a.expiry.localeCompare(b.expiry)||a.ticker.localeCompare(b.ticker);
+  const rows=leaps.map(l=>({...row(l),shorts:shorts.filter(s=>s.parentLeapId===l.id).map(row).sort(byExp)})).sort(byExp);
+  const other=shorts.filter(s=>!s.parentLeapId||!ids.has(s.parentLeapId)).map(row).sort(byExp);
+  return{leaps:rows,other,shortCount:shorts.length,cost:Math.round(rows.reduce((a,r)=>a+r.cost,0)*100)/100};
+}
+// Risk & Exposure peak commitments: biggest CSP notional and biggest LEAP cost. Pure (OPTS only).
+function moreRiskFigures(trades,legs){
+  trades=trades||[];legs=(legs||[]).filter(l=>l&&!l.demo);
+  const rd=n=>Math.round(n*100)/100;
+  const peakCsp=trades.filter(t=>t.action==='CSP'&&t.strike&&t.shares).reduce((a,t)=>Math.max(a,t.strike*t.shares),0);
+  const peakLeap=rd(legs.filter(l=>l.side==='long'&&!l.parentLeapId).reduce((a,l)=>Math.max(a,OPTS.legPnL(l).costBasis),0));
+  return{peakCsp,peakLeap};
+}
+// Fee % label: fees ÷ closed option premium, '—' when there is no closed premium (never NaN / Infinity)
+function feePctLabel(fees,base){
+  const f=fees==null?0:+fees,b=+base;
+  if(!(b>0)||!isFinite(b)||!isFinite(f))return'—';
+  return(f/b*100).toFixed(1)+'%';
+}
+function moreLedgerStats(scope,wheels,trades,legs,today){
+  today=String(today||new Date().toISOString().slice(0,10)).slice(0,10);
+  wheels=wheels||[];trades=trades||[];legs=(legs||[]).filter(l=>l&&!l.demo);
+  const L=OT_LEDGER,rd=n=>Math.round(n*100)/100,sum=(list,f)=>list.reduce((a,e)=>a+(f(e)||0),0);
+  const ledger=L.buildLedger(wheels,trades,legs,{today});
+  const events=scope==='wheel'||scope==='pmcc'?L.filterEvents(ledger.events,{strategy:scope}):ledger.events.slice();
+  const inc=events.filter(e=>e.bucket==='income');
+  const tradeById={},legById={};
+  trades.forEach(t=>{if(t&&t.id)tradeById[t.id]=t;});legs.forEach(l=>{if(l&&l.id)legById[l.id]=l;});
+  const openerOf=e=>(e.strategy==='pmcc'?legById[e.legId]:tradeById[e.legId])||null;
+  const dteOf=e=>{const o=openerOf(e);if(!o)return null;
+    if(e.strategy==='pmcc')return o.entryDate&&o.expiry?L.daysBetweenUTC(o.entryDate,o.expiry):null;
+    if(+o.days>0)return +o.days;
+    return o.entered&&o.expiry?L.daysBetweenUTC(o.entered,o.expiry):null;};
+  const parentOf=e=>{const l=e.strategy==='pmcc'?legById[e.legId]:null;return l&&l.parentLeapId?l.parentLeapId:null;};
+  const aroc=list=>L.weightedAROC(list);
+  const split=list=>({all:aroc(list),wheel:aroc(list.filter(e=>e.strategy==='wheel')),pmcc:aroc(list.filter(e=>e.strategy==='pmcc'))});
+  // Win / loss: same rule as calcWinLoss (every closed sold option, amount >= 0 is a win)
+  const S=L.summarizeIncome(inc),closed=S.wins+S.losses;
+  const wl={wins:S.wins,losses:S.losses,avgWin:S.avgWin,avgLoss:S.avgLoss,wr:closed>0?((S.wins/closed)*100).toFixed(1):null};
+  // AROC: all closed, and closed legs of positions still open (open wheels; short calls on an open LEAP)
+  const openWheel=new Set(wheels.filter(w=>w.status==='open').map(w=>w.id));
+  const isOpenPos=e=>{if(e.strategy==='wheel')return openWheel.has(e.wheelId);const p=parentOf(e);return!!(p&&legById[p]&&legById[p].status==='open');};
+  const incOpen=inc.filter(isOpenPos);
+  // Months of option income: event months for streaks / best / worst; calendar span (quiet months = 0) for Sortino and drawdown
+  const g=L.groupEventsByPeriod(inc,{gran:'Month'});
+  const lbl=ym=>new Date(ym+'-02').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'numeric'});
+  const eventMonths=g.buckets.map(b=>({ym:b.key,label:lbl(b.key),gain:b.gain,loss:b.loss,net:b.net}));
+  const months=[];
+  if(eventMonths.length){
+    const by={};eventMonths.forEach(m=>by[m.ym]=m);
+    let y=+eventMonths[0].ym.slice(0,4),m=+eventMonths[0].ym.slice(5,7);const last=eventMonths[eventMonths.length-1].ym;
+    for(let n=0;n<1200;n++){const ym=y+'-'+String(m).padStart(2,'0');if(ym>last)break;months.push(by[ym]||{ym,label:lbl(ym),gain:0,loss:0,net:0});m++;if(m>12){m=1;y++;}}
+  }
+  const sortino=L.calcSortino(months.map(m=>m.net));
+  let peak=0,cum=0,maxDD=0;months.forEach(m=>{cum+=m.net;if(cum>peak)peak=cum;if(peak-cum>maxDD)maxDD=peak-cum;});
+  let cur=0,maxStreak=0;eventMonths.forEach(m=>{if(m.net>=0){cur++;maxStreak=Math.max(maxStreak,cur);}else cur=0;});
+  const bestMonth=eventMonths.reduce((a,m)=>!a||m.net>a.net?m:a,null),worstMonth=eventMonths.reduce((a,m)=>!a||m.net<a.net?m:a,null);
+  const grossIn=sum(inc,e=>e.grossIn),grossOut=sum(inc,e=>e.grossOut);
+  const profitFactor=grossOut>0?grossIn/grossOut:grossIn>0?Infinity:0;
+  // This month and last month of option income (calendar months)
+  const ym=today.slice(0,7),y0=+today.slice(0,4),m0=+today.slice(5,7);
+  const lastYm=m0===1?(y0-1)+'-12':y0+'-'+String(m0-1).padStart(2,'0');
+  const monthNet=k=>{const b=g.buckets.find(x=>x.key===k);return b?b.net:0;};
+  // Records: best single closed trade, best per day held, biggest buyback
+  const best=inc.reduce((a,e)=>!a||e.amount>a.amount?e:a,null);
+  const bestPPD=inc.filter(e=>e.daysHeld>0).reduce((a,e)=>!a||e.amount/e.daysHeld>a.amount/a.daysHeld?e:a,null);
+  const biggestBuyback=inc.filter(e=>e.grossOut>0).reduce((a,e)=>!a||e.grossOut>a.grossOut?e:a,null);
+  // DTE at open buckets
+  const DTE=[['1-7d',1,7],['8-14d',8,14],['15-30d',15,30],['31-45d',31,45],['45d+',46,1e9]];
+  const ppd=list=>{const d=sum(list,e=>e.daysHeld);return d>0?sum(list,e=>e.amount)/d:null;};
+  const dte=DTE.map(([label,min,max])=>{const list=inc.filter(e=>{const d=dteOf(e);return d!=null&&d>=min&&d<=max;});
+    return list.length?{label,count:list.length,total:rd(sum(list,e=>e.amount)),ppd:ppd(list),aroc:aroc(list)}:null;}).filter(Boolean);
+  // Puts vs calls
+  const strat=isPut=>{const list=inc.filter(e=>isPut?e.kind==='csp':(e.kind==='cc'||e.kind==='pmcc_call'));const d=list.map(dteOf).filter(x=>x!=null);
+    return{count:list.length,total:rd(sum(list,e=>e.amount)),avgDte:d.length?d.reduce((a,x)=>a+x,0)/d.length:null,ppd:ppd(list),aroc:aroc(list)};};
+  // Ticker leaderboard
+  const tk={};
+  events.forEach(e=>{const t=String(e.ticker||'').toUpperCase();if(!t)return;const o=tk[t]=tk[t]||{ticker:t,premium:0,realised:0,trades:0,cyc:new Set(),inc:[]};
+    o.realised+=e.amount;o.cyc.add(e.strategy==='wheel'?'w:'+e.wheelId:'l:'+(parentOf(e)||e.legId));
+    if(e.bucket==='income'){o.premium+=e.amount;o.trades++;o.inc.push(e);}});
+  const tickers=Object.values(tk).map(o=>({ticker:o.ticker,premium:rd(o.premium),realised:rd(o.realised),trades:o.trades,cycles:o.cyc.size,aroc:aroc(o.inc)})).sort((a,b)=>b.premium-a.premium);
+  // Scoreboard: one row per wheel (wheel scope), one per long LEAP with its short calls (LEAPs & PMCC scope)
+  const board=[];
+  const fig=ev=>{const wi=ev.filter(e=>e.bucket==='income');return{gross:rd(sum(wi,e=>e.grossIn)),premium:rd(sum(wi,e=>e.amount)),realised:rd(sum(ev,e=>e.amount)),aroc:aroc(wi),closed:wi.length};};
+  if(scope!=='pmcc')wheels.slice().sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99)).forEach(w=>{
+    board.push({kind:'wheel',id:w.id,wheel:w,...fig(events.filter(e=>e.strategy==='wheel'&&e.wheelId===w.id))});});
+  if(scope!=='wheel')legs.filter(l=>l.side==='long'&&!l.parentLeapId).forEach(l=>{
+    const kids=legs.filter(k=>k.parentLeapId===l.id),ids=new Set([l.id,...kids.map(k=>k.id)]);
+    board.push({kind:'leap',id:l.id,leg:l,legCount:1+kids.length,...fig(events.filter(e=>e.strategy==='pmcc'&&ids.has(e.legId)))});});
+  return{scope:scope==='wheel'||scope==='pmcc'?scope:'all',events,inc,wl,
+    realised:rd(sum(events,e=>e.amount)),premium:rd(S.total),grossIn:rd(grossIn),grossOut:rd(grossOut),profitFactor,fees:rd(sum(events,e=>e.fees)),
+    aroc:split(inc),arocOpen:split(incOpen),openWheels:openWheel.size,openLeaps:legs.filter(l=>l.side==='long'&&!l.parentLeapId&&l.status==='open').length,
+    eventMonths,months,sortino,maxDD,maxDDPct:peak>0?maxDD/peak*100:0,maxStreak,bestMonth,worstMonth,
+    month:monthNet(ym),lastMonth:monthNet(lastYm),hasMonths:eventMonths.length>0,
+    best,bestPPD,biggestBuyback,totalOptDays:sum(inc,e=>e.daysHeld),avgLeg:inc.length?S.total/inc.length:0,
+    dte,csp:strat(true),cc:strat(false),tickers,board,dteOf,openerOf};
+}
+function pnlCurveHtml(){
+  const today=new Date().toISOString().slice(0,10);
+  const _m=pnlMeasure||'options';
+  const _from=typeof earliestTradeDate==='function'?earliestTradeDate(db.trades,db.opts||[]):null;
+  const B=pnlBuckets(pnlDailyForMeasure(_m,db.trades,db.opts||[],today,db.wheels),pnlRange,null,today,_from); // granularity follows the range
+  const el=typeof document!=='undefined'&&document.getElementById('pnl-curve');
+  const W=pnlFull?Math.max(600,window.innerWidth-96):Math.max(600,(el&&el.clientWidth?el.clientWidth-40:1100)),H=pnlFull?Math.max(320,window.innerHeight-170):380;
+  const PL=60,PR=14,PT=14,PB=30,cw=W-PL-PR,ch=H-PT-PB,n=Math.max(1,B.buckets.length);
+  const _pcEmpty=!B.buckets.some(b=>b.gain||b.loss);const mx=_pcEmpty?100:Math.max(1,...B.buckets.map(b=>Math.max(b.gain,b.loss))),mn=0,rg=mx; // empty: a tidy $0–$100 scale instead of $0,$0,$1,$1 // both bars rise from zero
+  const Y=v=>PT+(mx-v)/rg*ch,y0=Y(0),slot=cw/n,bw=Math.max(1,Math.min(28,slot*0.36));
+  const raw=rg/5,m=Math.pow(10,Math.floor(Math.log10(raw))),step=[1,2,5,10].map(k=>k*m).find(k=>k>=raw)||m*10;
+  const money=v=>(v<0?'-':'')+'$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1).replace(/\.0$/,'')+'k':Math.round(Math.abs(v)));
+  let grid='';for(let v=Math.ceil(mn/step)*step;v<=mx+1e-9;v+=step){const y=Y(v).toFixed(1);grid+=`<line x1="${PL}" x2="${W-PR}" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width="1"${Math.abs(v)<1e-9?'':' stroke-dasharray="2 4"'}/><text x="${PL-8}" y="${+y+3}" text-anchor="end" fill="var(--text3)" font-size="12">${money(v)}</text>`;}
+  const lab=k=>{const t=new Date(k+'T12:00:00');return B.gran==='Month'?t.toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'short',year:'2-digit'}):t.toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{day:'numeric',month:'short'});};
+  const every=Math.max(1,Math.ceil(n/(cw/70)));
+  const tipLab=k=>B.gran==='Week'?'Week of '+lab(k):B.gran==='Month'?new Date(k+'T12:00:00').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{month:'long',year:'numeric'}):new Date(k+'T12:00:00').toLocaleDateString((typeof dateFmt==='string'&&dateFmt==='uk')?'en-GB':'en-US',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  let bars='';B.buckets.forEach((b,i)=>{const cx=PL+slot*i+slot/2;
+    if(b.gain)bars+=`<rect x="${(cx-bw-1).toFixed(1)}" y="${Y(b.gain).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.gain)).toFixed(1)}" rx="2" fill="var(--green)" fill-opacity="0.85"/>`;
+    if(b.loss)bars+=`<rect x="${(cx+1).toFixed(1)}" y="${Y(b.loss).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,y0-Y(b.loss)).toFixed(1)}" rx="2" fill="var(--red)" fill-opacity="0.85"/>`;
+    bars+=`<rect class="pc-hit" x="${(PL+slot*i).toFixed(1)}" y="${PT}" width="${slot.toFixed(1)}" height="${ch}" data-l="${tipLab(b.key)}" data-g="${b.gain}" data-s="${b.loss}" data-n="${b.net}" data-bl="${(cx-bw-1).toFixed(1)}" data-br="${(cx+1+bw).toFixed(1)}"></rect>`;
+    if(i%every===0)bars+=`<text x="${cx.toFixed(1)}" y="${H-10}" text-anchor="middle" fill="var(--text3)" font-size="12">${lab(b.key)}</text>`;});
+  const col=B.net<0?'var(--red)':'var(--green)';
+  const btn=(k,on,fn)=>`<button type="button" class="pc-r${on?' on':''}" onclick="${fn}('${k}')">${k}</button>`;
+  const _isSh=_m==='shares'||_m==='all';
+  const _tips={all:'Everything realised: wheel puts and calls, PMCC short calls, share sales, dividends and closed LEAPs, on the day they closed, expired or were assigned. Green = gains (including premium collected), red = losses (including buyback costs). Open options are not included. Hover a bar for that period.',
+    options:'Realised premium and buybacks on wheel puts and calls and PMCC short calls, combined. Share sales, dividends and closed long LEAPs stay in Shares & LEAPs P&L. Open options are not included.',
+    wheel:'The wheel share of that same Options P&L: realised premium and buybacks on wheel puts and calls only. PMCC short calls are in PMCC calls. Open options are not included.',
+    pmcc:'The PMCC short-call share of that same Options P&L: realised premium and buybacks on PMCC short calls. Closed long LEAPs stay in Shares & LEAPs P&L. Open options are not included.',
+    shares:'The same realised figures as the Shares & LEAPs P&L table: each share sale (called away or sold) matched first in, first out against what those shares cost, dividends, and each long LEAP when it is sold or expires. Green = gains, red = losses. Booked on the day it closed.'};
+  const _sub=`<span class="pc-sub"><span class="g">${fmtMoney(B.gain)}</span> ${_isSh?'gains':'collected'} · <span class="r">${fmtMoney(-B.loss)}</span> ${_isSh?'losses':'loss'}</span>`;
+  const _leg=`<div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--green)"></div>${_isSh?'Gains':'Premium collected'}</div><div class="a-chart-legend-item"><div class="a-chart-legend-dot" style="background:var(--red)"></div>${_isSh?'Losses':'Loss'}</div>`;
+  return`<div class="pc-head"><select class="pc-measure" aria-label="Chart measure" onchange="setPnlMeasure(this.value)">${PNL_MEASURES.map(([k,l])=>`<option value="${k}"${k===_m?' selected':''}>${l}</option>`).join('')}</select>${ii(_tips[_m]||_tips.all)}
+    <span class="pc-net" style="color:${col}">${B.net>0?'+':''}${fmtMoney(B.net)}</span>${_sub}
+    <div class="pc-btns">${PNL_RANGES.map(([k])=>btn(k,k===pnlRange,'setPnlRange')).join('')}<button type="button" class="pc-r pc-fs" title="${pnlFull?'Close (Esc)':'Full screen'}" onclick="togglePnlFull()">${pnlFull?'✕':'⛶'}</button></div></div>
+    <div style="position:relative"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${grid}${bars}</svg>${_pcEmpty?'<div class="pc-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:0.8125rem;pointer-events:none">Your realised P&amp;L shows here once a trade closes, expires or is assigned.</div>':''}<div class="pc-tip" id="pc-tip"></div></div>
+    <div class="a-chart-legend">${_leg}</div>`;
+}
+// Chart tooltip only: selected measure's figures, no P&L math.
+function pnlTipHtml(measure,label,gain,loss,net){
+  const inc=fmtMoney(gain),out=fmtMoney(-loss),nc=net<0?'r':'g',netLine=`<div>Net <span class="${nc}">${fmtMoney(net)}</span></div>`;
+  if(measure==='all')return`<b>${label}</b><div>In <span class="g">${inc}</span></div><div>Out <span class="r">${out}</span></div>${netLine}`;
+  if(measure==='shares')return`<b>${label}</b><div>Gains <span class="g">${inc}</span></div><div>Losses <span class="r">${out}</span></div>${netLine}`;
+  return`<b>${label}</b><div>Premium collected <span class="g">${inc}</span></div><div>Loss <span class="r">${out}</span></div>${netLine}`;
+}
+let _pnlTipEl=null,_pnlTipHideT=0,_pnlTipPt=null,_pnlTipTouchAt=0;
+function _pnlHitEl(n){while(n&&n!==document){if(n.classList&&n.classList.contains('pc-hit'))return n;n=n.parentNode;}return null;}
+function pnlTipHide(){clearTimeout(_pnlTipHideT);_pnlTipEl=null;const t=document.getElementById('pc-tip');if(t)t.classList.remove('on');}
+function pnlTipShow(el){
+  const t=document.getElementById('pc-tip');if(!t||!el)return;
+  clearTimeout(_pnlTipHideT);
+  const html=pnlTipHtml(pnlMeasure||'options',el.dataset.l,+el.dataset.g,+el.dataset.s,+el.dataset.n);
+  if(t._html!==html){t.innerHTML=html;t._html=html;}
+  _pnlTipEl=el;
+  const host=t.parentElement,svg=host&&host.querySelector('svg');if(!host||!svg)return;
+  const box=host.getBoundingClientRect(),svgBox=svg.getBoundingClientRect();
+  const vb=svg.viewBox&&svg.viewBox.baseVal,W=(vb&&vb.width)||svgBox.width,H=(vb&&vb.height)||svgBox.height;
+  const sx=svgBox.width/W,sy=svgBox.height/H,pad=6,gap=10,ox=svgBox.left-box.left,oy=svgBox.top-box.top;
+  const br=(+el.dataset.br)*sx+ox,bl=(+el.dataset.bl)*sx+ox;
+  const plotTop=14*sy+oy;
+  const tw=t.offsetWidth,th=t.offsetHeight;
+  const bars=[...svg.querySelectorAll('rect:not(.pc-hit)')].map(r=>{
+    const x=+r.getAttribute('x'),y=+r.getAttribute('y'),w=+r.getAttribute('width'),h=+r.getAttribute('height');
+    return{l:x*sx+ox,t:y*sy+oy,r:(x+w)*sx+ox,b:(y+h)*sy+oy};
+  }).filter(b=>b.r>b.l+0.5&&b.b>b.t+0.5);
+  const inCard=(x,y)=>x>=pad&&y>=pad&&x+tw<=box.width-pad&&y+th<=box.height-pad;
+  const clear=(x,y)=>inCard(x,y)&&!bars.some(b=>!(x+tw<=b.l-4||x>=b.r+4||y+th<=b.t-4||y>=b.b+4));
+  let x=br+gap,y=plotTop+4,preferRight=x+tw+pad<=box.width;
+  if(!preferRight)x=bl-tw-gap;
+  if(!clear(x,y)){
+    let best=null,bestD=1e9;
+    const maxX=box.width-tw-pad,maxY=box.height-th-pad;
+    for(let yy=pad;yy<=maxY;yy+=6){
+      for(let xx=pad;xx<=maxX;xx+=6){
+        if(!clear(xx,yy))continue;
+        const d=(xx-(preferRight?br+gap:bl-tw-gap))**2+(yy-(plotTop+4))**2;
+        if(d<bestD){bestD=d;best={x:xx,y:yy};}
+      }
+    }
+    if(best){x=best.x;y=best.y;}
+    else{x=Math.max(pad,Math.min(x,maxX));y=Math.max(pad,Math.min(y,maxY));}
+  }
+  t.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+  t.classList.add('on');
+}
+function pnlTip(e,el){if(!e||!el){pnlTipHide();return;}pnlTipShow(el);}
+(function bindPnlTip(){
+  if(typeof document==='undefined'||document._pnlTipBound)return;document._pnlTipBound=true;
+  const isMouse=e=>!e.pointerType||e.pointerType==='mouse'||e.pointerType==='pen';
+  const recentTouch=()=>Date.now()-_pnlTipTouchAt<800;
+  document.addEventListener('pointerover',e=>{
+    if(!isMouse(e)||recentTouch())return;
+    const hit=_pnlHitEl(e.target);if(hit)pnlTipShow(hit);
+  },true);
+  document.addEventListener('pointerout',e=>{
+    if(!isMouse(e)||recentTouch())return;
+    const hit=_pnlHitEl(e.target);if(!hit)return;
+    if(_pnlHitEl(e.relatedTarget))return;
+    clearTimeout(_pnlTipHideT);_pnlTipHideT=setTimeout(()=>{if(_pnlTipEl===hit)pnlTipHide();},80);
+  },true);
+  document.addEventListener('pointerdown',e=>{
+    const hit=_pnlHitEl(e.target);
+    if(isMouse(e)){if(!hit)pnlTipHide();return;}
+    if(hit)_pnlTipPt={x:e.clientX,y:e.clientY,hit};else pnlTipHide();
+  },true);
+  document.addEventListener('pointerup',e=>{
+    if(isMouse(e)||!_pnlTipPt)return;
+    const p=_pnlTipPt;_pnlTipPt=null;_pnlTipTouchAt=Date.now();
+    const hit=_pnlHitEl(e.target);if(!hit||hit!==p.hit)return;
+    if(Math.hypot(e.clientX-p.x,e.clientY-p.y)>10)return;
+    if(_pnlTipEl===hit)pnlTipHide();else pnlTipShow(hit);
+  },true);
+})();
+function _pnlRedraw(){const el=document.getElementById('pnl-curve');if(el)el.innerHTML=pnlCurveHtml();}
+function setPnlRange(k){pnlRange=k;_pnlRedraw();}
+function togglePnlFull(on){pnlFull=on===undefined?!pnlFull:!!on;const el=document.getElementById('pnl-curve');if(el)el.classList.toggle('pc-full',pnlFull);document.body.classList.toggle('pc-lock',pnlFull);_pnlRedraw();}
+function goToHealth(){if(isPhoneLayout())return;switchView('analytics');setTimeout(()=>{const p=document.getElementById('health-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},50);}
+window.goToHealth=goToHealth;window.setPnlRange=setPnlRange;window.setPnlMeasure=setPnlMeasure;window.setMoreScope=setMoreScope;window.togglePnlFull=togglePnlFull;window.pnlTip=pnlTip;window.pnlTipShow=pnlTipShow;window.pnlTipHide=pnlTipHide;window.pnlTipHtml=pnlTipHtml;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pnlFull)togglePnlFull(false);});
+window.addEventListener('resize',()=>{_pnlRedraw();if((view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())switchView('dash');});
+
+function renderAnalytics(){
+  const s=calcOverall();
+  const today=new Date().toISOString().slice(0,10),scope=moreScope();
+  const py=calcProjectedYearly(scope==='pmcc'?[]:db.trades,scope==='wheel'?[]:(db.opts||[]),today);
+  // Every figure below comes from one OT_LEDGER build filtered to the More data scope
+  const M=moreLedgerStats(scope,db.wheels,db.trades,db.opts||[],today);
+  const wl=M.wl;
+  const scopeName=scope==='wheel'?'Wheel ':scope==='pmcc'?'LEAPs & PMCC ':'';
+  const pctS=v=>v==null?'—':v===Infinity?'∞':v.toFixed(1)+'%';
+  const evKind=e=>e.kind==='csp'?'CSP':e.kind==='pmcc_call'?'PMCC call':e.kind==='cc'?(e.strategy==='wheel'?'STOC':'Short call'):'Option';
+  const avgAroc=M.aroc[scope==='wheel'?'wheel':scope==='pmcc'?'pmcc':'all'];
+  const avgTradeSize=M.avgLeg;
+
+  // Profit factor: credits ÷ buybacks on closed sold options
+  const profitFactor=M.profitFactor;
+  const profitFactorStr=profitFactor===Infinity?'∞':profitFactor.toFixed(2);
+
+  // Sortino: mean monthly option income ÷ downside deviation of every month against 0 (OT_LEDGER.calcSortino; — under 3 months)
+  const sortinoStr=M.sortino==null?'—':M.sortino===Infinity?'∞':M.sortino.toFixed(2);
+
+  // Max drawdown on cumulative option income
+  const maxDDPct=M.maxDDPct;
+
+  // Ticker leaderboard
+  const tickerBoard=M.tickers;
+
+  // Concentration
+  const totalPremium=tickerBoard.reduce((s,t)=>s+Math.abs(t.premium),0)||1;
+
+  // Helpers
+  // Section helpers — collapsible
+  let _secId=0;
+  const sec=(title,sub,openByDefault)=>{
+    const id='a-sec-'+(_secId++);
+    const chevCls=openByDefault?'a-sec-chevron open':'a-sec-chevron';
+    return`<div class="a-sec-hdr" onclick="toggleAnalyticsSec('${id}',this)"><span class="${chevCls}">▶</span><span class="a-sec-title">${title}</span>${sub?`<span class="a-sec-sub">${sub}</span>`:''}</div><div id="${id}" class="a-sec-body${openByDefault?'':' collapsed'}">`;
+  };
+  const secEnd='</div>';
+  const stat=(val,lbl,sub,col,explain)=>{
+    const hasX=!!explain;
+    const xt=hasX?` data-xt="${lbl.replace(/"/g,'&quot;')}"`:'' ;
+    const xb=hasX?` data-xb="${explain.replace(/"/g,'&quot;')}"`:'' ;
+    const xIcon=hasX?`<span class="dcard-info" onmouseenter="showXpop(this)" onmouseleave="hideXpop()">?</span>`:'';
+    return`<div class="a-stat"${xt}${xb}>${xIcon}<div class="a-stat-val" style="color:${col||'var(--text)'}">${val}</div><div class="a-stat-lbl">${lbl}</div>${sub?`<div class="a-stat-sub">${sub}</div>`:''}</div>`;
+  };
+
+  // ── Section 1: Performance Overview ──
+  const perfStats=`<div class="a-stat-grid">
+    ${stat(fmtMoney(M.realised),scopeName+'Total Realised',scope==='wheel'?'all-time: option income + shares + dividends':scope==='pmcc'?'all-time: option income + closed LEAPs':'all-time: option income + shares + dividends + LEAPs',M.realised>=0?'var(--green)':'var(--red)','Total realised, all-time: option income plus '+(scope==='wheel'?'share sales and dividends':scope==='pmcc'?'closed LEAPs':'share sales, dividends and closed LEAPs')+'. Open positions excluded.')}
+    ${stat(pctS(avgAroc),'AROC',scope==='all'?'Wheel '+pctS(M.aroc.wheel)+' · PMCC '+pctS(M.aroc.pmcc):'closed options, weighted',unsignedValueColor(avgAroc),'Annualised return on capital across every closed sold option, realised only, weighted by capital × days held: Σ P&L ÷ Σ (capital × days) × 365. Wheel puts use the strike as capital, covered calls the share cost, PMCC calls the LEAP cost.')}
+    ${stat(sortinoStr,'Sortino Ratio',M.sortino==null?'needs 3+ months':'risk-adjusted','var(--text)','Average monthly option income ÷ downside deviation. Downside deviation is measured over every month (quiet months count as 0) against a target of 0, so only losing months add to it. Higher is better. Shown once there are 3 months.')}
+    ${stat(maxDDPct.toFixed(1)+'%','Max Drawdown','peak premium decline','var(--text)','Largest peak-to-trough decline in cumulative premium income. Measures worst-case pain.')}
+  </div>
+  <div class="a-stat-grid" style="margin-top:0.625rem">
+    ${stat(profitFactorStr,'Profit Factor','gross credits ÷ debits',parseFloat(profitFactorStr)>=1.5?'var(--green)':'var(--text2)','Gross premium credits divided by total buyback debits. Above 1.0 means profitable overall. Above 2.0 is excellent.')}
+    ${stat(wl.wr?wl.wr+'%':'—','Win Rate',wl.wins+'W · '+wl.losses+'L',parseFloat(wl.wr||0)>=60?'var(--green)':'var(--text2)','Closed sold options only, same rule as Home: a win kept the premium or was bought back cheaper.')}
+    ${stat(fmtMoney(M.premium),'Option Income','all-time, net of buybacks',M.premium>=0?'var(--green)':'var(--red)','Realised option income, all-time: sold options that were bought back, expired or assigned, net of buybacks. Open options not counted.')}
+    ${stat(py.yearly!=null?fmtMoney(py.yearly):'—','Annualised Projection',py.yearly==null?'no trades yet':py.startedMidYear?`based on ${py.days}d since ${fmtDayMon(py.since)}`:`based on ${py.days} days YTD`,py.yearly==null?'var(--text3)':py.yearly>=0?'var(--green)':'var(--red)',scope==='wheel'?'Wheel realised income this year — option premium, stock sales and dividends — scaled to 365 days from your first wheel trade this year, or from 1 January if you started earlier. PMCC short calls, closed LEAPs and open positions are not included.':'All realised income this year — wheel options, PMCC short calls, closed LEAPs and calls, share sales and dividends — scaled to 365 days from your first trade this year, or from 1 January if you started earlier. Open positions are not included.')}
+  </div>`;
+
+  // ── Section 2: Income Analysis (13-month chart reuse) ──
+
+
+  // ── Section 3: Trade Quality — DTE analysis ──
+  const dteRows=M.dte.map(d=>`<tr>
+    <td style="font-weight:720;color:var(--silver)">${d.label}</td>
+    <td data-l="Trades">${d.count}</td>
+    <td data-l="Total" class="${colorN(d.total)}">${fmtMoney(d.total)}</td>
+    <td data-l="Avg PPD" style="color:${unsignedValueColor(d.ppd)}">${d.ppd!=null?fmtMoney(d.ppd)+'/d':'—'}</td>
+    <td data-l="Avg AROC" style="color:${arocColor(d.aroc)}">${pctS(d.aroc)}</td>
+  </tr>`).join('');
+
+  // ── Section 5: Strategy Comparison ──
+  const stratTip='Closed trades, net of buybacks: option income kept on sold options that were bought back, expired or assigned. Avg DTE is days to expiry when opened; Avg PPD is option income per day held. Options still open and gross credits opened are not counted.';
+  const stratBox=(title,c)=>`<div class="a-chart-box">
+      <div class="a-chart-title">${title} ${ii(stratTip)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem">
+        <div><span class="t3-xs">Closed</span><div class="fw5">${c.count}</div></div>
+        <div><span class="t3-xs">Option Income</span><div class="${colorN(c.total)} fw5">${fmtMoney(c.total)}</div></div>
+        <div><span class="t3-xs">Avg DTE</span><div class="fw5">${c.avgDte?c.avgDte.toFixed(0)+'d':'—'}</div></div>
+        <div><span class="t3-xs">Avg PPD</span><div style="font-weight:720;color:${unsignedValueColor(c.ppd)}">${c.ppd!=null?fmtMoney(c.ppd):'—'}</div></div>
+      </div>
+    </div>`;
+  const stratTable=`<div class="d-grid d-grid-2" style="gap:0.75rem">
+    ${stratBox('Cash-Secured Puts',M.csp)}
+    ${stratBox(scope==='wheel'?'Covered Calls':'Covered &amp; PMCC Calls',M.cc)}
+  </div>`;
+
+  // Ticker leaderboard
+  const tickerRows=tickerBoard.map(t=>{
+    const avgA=t.aroc;
+    const pct=(Math.abs(t.premium)/totalPremium*100);
+    return`<tr>
+      <td style="font-weight:720;color:var(--orange)">${esc(t.ticker)}</td>
+      <td>${t.cycles}</td>
+      <td>${t.trades}</td>
+      <td class="${colorN(t.premium)} fw5">${fmtMoney(t.premium)}</td>
+      <td style="color:${avgA!=null&&avgA>=0?'var(--green)':'var(--red)'}">${avgA!=null?avgA.toFixed(1)+'%':'—'}</td>
+      <td><div class="d-pct-bar" style="width:5rem"><div class="d-pct-fill" style="width:${pct.toFixed(0)}%;background:var(--orange)"></div></div></td>
+    </tr>`;
+  }).join('');
+
+  // ── Section 6: Risk ──
+  // Risk & Exposure follows the scope: wheel trades, LEAP / short-call legs, or both
+  const R=moreRiskFigures(db.trades,db.opts||[]),OL=openLeapPositions(db.opts||[],today);
+  const k$=n=>fmtMoney(n).replace(/\.\d\d$/,'');
+  // Fees and fee % both from the closed, scoped OT_LEDGER events: open trades' fees count once they close
+  const feeAmt=M.fees;
+  // Same denominator in every scope: gross premium on closed trades in the scope (OT_LEDGER income events), never open credits
+  const feeBase=M.grossIn;
+  const peak=scope==='wheel'?R.peakCsp:scope==='pmcc'?R.peakLeap:Math.max(R.peakCsp,R.peakLeap);
+  const riskStats=`<div class="a-stat-grid">
+    ${(c=>scope==='wheel'
+      ?stat(fmtMoney(c.wheel),'Current Exposure','Puts '+k$(c.puts)+' · Shares '+k$(c.shares),'var(--text)','Capital at work in wheels, same as Home: open put collateral plus the cost of shares you hold.')
+      :scope==='pmcc'
+      ?stat(fmtMoney(c.leaps),'Current Exposure',OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),'var(--text)','Capital at work in LEAPs, same as Home: what you paid for open LEAPs. Short calls written against them need no extra capital.')
+      :stat(fmtMoney(c.total),'Current Exposure','Wheel '+fmtMoney(c.wheel).replace(/\.\d\d$/,'')+' · LEAPs '+fmtMoney(c.leaps).replace(/\.\d\d$/,''),'var(--text)','Capital at work, same as Home: open put collateral, open shares and what you paid for open LEAPs.'))(currentCapitalAtWork())}
+    ${stat(fmtMoney(peak),'Peak Exposure',scope==='wheel'?'highest single CSP':scope==='pmcc'?'highest single LEAP':'highest single CSP or LEAP','var(--text2)',scope==='wheel'?'Largest single cash-secured put notional ever opened. Your peak capital requirement.':scope==='pmcc'?'Most you have paid for a single LEAP, open or closed. Your peak capital requirement.':'Largest single commitment ever: a cash-secured put notional or what you paid for one LEAP, whichever is bigger.')}
+    ${stat(fmtMoney(feeAmt),'Total Fees',feePctLabel(feeAmt,feeBase)+' of closed premium','var(--text2)','Commissions and regulatory fees across closed trades')}
+    ${scope==='pmcc'
+      ?stat(String(OL.shortCount),'Open Short Calls','against '+OL.leaps.length+' open LEAP'+(OL.leaps.length!==1?'s':''),OL.shortCount>0?'var(--text)':'var(--text3)','Short calls still open, written against your LEAPs (and any short options not tied to a LEAP).')
+      :stat(s.totalSharesHeld>0?s.totalSharesHeld+'':'0','Shares Held','currently assigned',s.totalSharesHeld>0?'var(--text)':'var(--text3)','Total shares currently held as a result of put assignment.')}
+  </div>`;
+
+  // ── Section 7: Wheel Scoreboard ──
+  const _w=new Map(db.wheels.map(w=>[w.id,w]));
+  const rotRows=M.board.map(r=>{
+    if(r.kind==='leap'){
+      const l=r.leg;
+      return`<tr>
+      <td style="color:var(--orange)">L</td>
+      <td>${esc((l.underlying||l.ticker||'')+' $'+(+l.strike||0)+' LEAP')}</td>
+      <td><span class="rot-badge ${l.status==='open'?'open':'closed'}" style="padding:2px 0.4375rem;border-radius:6px;font-size:0.675rem">${l.status==='open'?'● Open':'Closed'}</span></td>
+      <td class="num">${r.legCount}</td>
+      <td class="num g">${fmtMoney(r.gross)}</td>
+      <td class="num ${colorN(r.premium)}">${fmtMoney(r.premium)}</td>
+      <td class="num ${colorN(r.realised)}">${fmtMoney(r.realised)}</td>
+      <td class="num">${fmtMoney(OPTS.legPnL(l).costBasis)}</td>
+      <td class="num ${r.aroc!=null?colorN(r.aroc):'m'}">${pctS(r.aroc)}</td>
+      <td class="num m">—</td>
+    </tr>`;
+    }
+    const w=_w.get(r.id)||r.wheel;const m=calcWheel(w);
+    const cr=cycleReturn(w,m,rotationShareStats(w,db.trades,_priceOf),m.trades.filter(t=>t.action==='DIV').reduce((s,t)=>s+(t.total||0),0));
+    return`<tr>
+      <td style="color:var(--text)">${w.sortOrder||'?'}</td>
+      <td>${esc(wheelLabelDisplay(w.label,w)==='—'?(w.ticker||''):wheelLabelDisplay(w.label,w))}</td>
+      <td><span class="rot-badge ${w.status}" style="padding:2px 0.4375rem;border-radius:6px;font-size:0.675rem">${w.status==='open'?'● Open':'Closed'}</span></td>
+      <td class="num">${m.trades.length}</td>
+      <td class="num g">${fmtMoney(r.gross)}</td>
+      <td class="num ${colorN(r.premium)}">${fmtMoney(r.premium)}</td>
+      <td class="num ${colorN(r.realised)}">${fmtMoney(r.realised)}</td>
+      <td class="num">${m.breakeven!=null?'$'+fmt2(m.breakeven):'—'}</td>
+      <td class="num ${r.aroc!=null?colorN(r.aroc):'m'}">${pctS(r.aroc)}</td>
+      <td class="num ${cr?colorN(cr.raw):'m'}" title="${cr?(cr.ann==null?'Under 7 days: raw return, not annualised':'Raw '+cr.raw.toFixed(1)+'% over '+cr.days+'d'+(cr.incUnrealised?', incl. unrealised':'')):''}">${cr?(cr.ann!=null?cr.ann.toFixed(1)+'%':cr.raw.toFixed(1)+'%*'):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Section: Streaks & Records ──
+  const recordStats=`<div class="a-stat-grid">
+    ${stat(M.maxStreak?M.maxStreak+' mo':'—','Win Streak','consecutive profitable months','var(--green)','Longest run of consecutive months with positive net option income.')}
+    ${stat(M.bestMonth?fmtMoney(M.bestMonth.net):'—','Best Month',M.bestMonth?M.bestMonth.label:'','var(--green)','Single best calendar month by option income.')}
+    ${stat(M.worstMonth?fmtMoney(M.worstMonth.net):'—','Worst Month',M.worstMonth?M.worstMonth.label:'',M.worstMonth&&M.worstMonth.net<0?'var(--red)':'var(--text2)','Worst calendar month by option income. Negative means buyback costs exceeded credits.')}
+    ${stat(M.best?fmtMoney(M.best.amount):'—','Best Single Trade',M.best?evKind(M.best)+' · '+fmtDate(M.best.date):'','var(--green)','Closed trades, net of buybacks: the sold option that kept the most option income once any buyback is taken off. Not the biggest gross credit opened.')}
+  </div>`;
+
+  // ═══ ASSEMBLE ═══
+  const dteTable=dteRows
+    ?`<div class="a-table-wrap"><table class="a-table a-table-nums stack-table"><thead><tr><th>DTE</th><th>Trades</th><th>Total</th><th>Avg PPD</th><th>Avg AROC</th></tr></thead><tbody>${dteRows}</tbody></table></div>`
+    :`<p class="a-empty">No closed trades to show yet.</p>`;
+  return`<div class="a-wrap">
+    <div class="a-section">${sec('Performance','All-time returns and records',true)}${perfStats}
+      <div style="margin-top:0.75rem">${recordStats}</div>
+    ${secEnd}</div>
+
+    <div class="a-section">${sec('Trade Quality','DTE, delta and tickers',true)}
+      ${typeof analyticsDeltaSectionHtml==='function'?analyticsDeltaSectionHtml():''}
+      <div class="a-chart-box">
+        <div class="a-chart-title">Performance by DTE</div>
+        ${dteTable}
+      </div>
+      <div class="a-stat-grid" style="margin-top:0.75rem">
+        ${stat(M.totalOptDays+'d','Total Option-Days','closed trades, days held','var(--text2)','Closed trades only: the sum of days held across every sold option that was bought back, expired or assigned. Options still open are not counted.')}
+        ${stat(fmtMoney(avgTradeSize),'Avg Trade P&L','per closed trade, net','var(--text2)','Closed trades, net of buybacks: average option income kept per sold option that was bought back, expired or assigned. Not the gross credit of options opened.')}
+        ${stat(M.bestPPD?fmtMoney(M.bestPPD.amount/M.bestPPD.daysHeld)+'/d':'—','Best PPD Trade',M.bestPPD?evKind(M.bestPPD)+' · '+M.bestPPD.daysHeld+'d':'','var(--green)','Closed sold option with the most option income per day held — your most capital-efficient trade.')}
+        ${stat(M.biggestBuyback?fmtMoney(M.biggestBuyback.grossOut):'—','Biggest BTC',M.biggestBuyback?fmtDate(M.biggestBuyback.date):'',M.biggestBuyback?'var(--red)':'var(--text3)','Most expensive single buyback. Large BTCs eat into premium — track these to improve roll timing.')}
+      </div>
+    ${stratTable}
+      <div class="a-chart-box" style="margin-top:0.75rem">
+        <div class="a-chart-title">Ticker Leaderboard</div>
+        ${tickerRows
+          ?`<div class="a-table-wrap"><table class="a-table a-table-nums"><thead><tr><th>Ticker</th><th>Cycles</th><th>Closed</th><th>Option Income</th><th>Avg AROC</th><th>Share</th></tr></thead><tbody>${tickerRows}</tbody></table></div>`
+          :`<p class="a-empty">No closed options to rank yet.</p>`}
+      </div>
+    ${secEnd}</div>
+
+    <div class="a-section">${sec('Risk & Exposure','Capital and fees')}${riskStats}${secEnd}</div>
+
+    <div class="a-section">${sec(scope==='pmcc'?'LEAP Scoreboard':scope==='wheel'?'Wheel Scoreboard':'Scoreboard',scope==='pmcc'?'Per-LEAP results':scope==='wheel'?'Per-wheel results':'Per-wheel and per-LEAP results')}
+      <div class="a-table-wrap"><table class="a-table"><thead><tr><th>#</th><th>${scope==='pmcc'?'LEAP':scope==='wheel'?'Wheel':'Wheel / LEAP'}</th><th>Status</th><th class="num">Trades</th><th class="num">Gross</th><th class="num">Option Income</th><th class="num">Total Realised</th><th class="num">Basis</th><th class="num">AROC</th><th class="num">Cycle /yr ${ii(`Realised only. Gross = premium collected on closed options; Option Income is net of buybacks; Total Realised adds share sales, dividends and closed LEAPs. AROC is weighted by capital × days held. LEAP rows: Trades counts the LEAP and its short calls, Basis is the LEAP cost. Cycle /yr is realised premium + share P&amp;L + dividends ÷ capital tied up, annualised from first trade to end (or today). * under 7 days, shown raw.`)}</th></tr></thead><tbody>${rotRows}</tbody></table></div>
+    ${secEnd}</div>
+  </div>`;
+}
+
+function _iiPos(e){const b=e.target&&e.target.closest&&e.target.closest('.ii');if(!b)return;const r=b.getBoundingClientRect(),w=Math.min(272,innerWidth-24);b.classList.toggle('ii-r',r.left+w/2>innerWidth-12);b.classList.toggle('ii-l',r.left-w/2<12)}
+if(typeof document!=='undefined'){document.addEventListener('mouseover',_iiPos);document.addEventListener('focusin',_iiPos)}
+// Pure: where to put a tip box (w×h) for an icon rect r inside a vw×vh viewport — below by default, flips up, kept 8px inside the edges.
+function iiPlace(r,w,h,vw,vh){
+  const m=8,g=6;let left=r.left+r.width/2-w/2;left=Math.max(m,Math.min(left,vw-w-m));
+  let top=r.bottom+g;if(top+h>vh-m&&r.top-g-h>=m)top=r.top-g-h;top=Math.max(m,Math.min(top,vh-h-m));
+  return{left:Math.round(left),top:Math.round(top)};
+}
+// ⓘ tips render in one body-level popup so tiles/panels with overflow:hidden never clip them (hover, focus, tap).
+(function(){
+  if(typeof document==='undefined')return;
+  let cur=null;
+  const tipOf=n=>n&&n.closest&&n.closest('.ii');
+  const pop=()=>{let p=document.getElementById('ii-pop');if(!p){p=document.createElement('div');p.id='ii-pop';p.setAttribute('role','tooltip');p.hidden=true;document.body.appendChild(p);}return p;};
+  const show=b=>{const p=pop();p.textContent=b.getAttribute('data-tip')||'';p.hidden=false;const r=b.getBoundingClientRect(),q=p.getBoundingClientRect(),o=iiPlace(r,q.width,q.height,innerWidth,innerHeight);p.style.left=o.left+'px';p.style.top=o.top+'px';cur=b;};
+  const hide=()=>{const p=document.getElementById('ii-pop');if(p)p.hidden=true;cur=null;};
+  document.addEventListener('mouseover',e=>{const b=tipOf(e.target);if(b&&b!==cur&&!b.closest('.hk'))show(b);});
+  document.addEventListener('mouseout',e=>{const b=tipOf(e.target);if(b&&b===cur&&!(e.relatedTarget&&b.contains(e.relatedTarget))&&document.activeElement!==b)hide();});
+  document.addEventListener('focusin',e=>{const b=tipOf(e.target);if(b&&!b.closest('.hk'))show(b);});
+  document.addEventListener('focusout',e=>{if(e.target===cur)hide();});
+  // Home tiles: tapping ⓘ flips the tile itself to show the tip (same size) on desktop; on phone the text does not fit the tile, so the same viewport popup as other ⓘ tips is used (8px margins). Tap again or outside to close. One at a time.
+  const unflip=()=>document.querySelectorAll('.hk.hk-flipped').forEach(t=>{t.classList.remove('hk-flipped');const k=t.querySelector('.hk-back');if(k)k.remove();});
+  document.addEventListener('mouseout',e=>{const t=e.target.closest&&e.target.closest('.hk.hk-flipped');if(t&&!(e.relatedTarget&&t.contains(e.relatedTarget)))unflip();}); // mouseleave of the flipped tile flips it back
+  document.addEventListener('click',e=>{
+    const t=e.target.closest&&e.target.closest('.hk');
+    if(t&&t.classList.contains('hk-flipped')){e.stopPropagation();e.preventDefault();unflip();return;}
+    const b=tipOf(e.target);
+    if(b&&t){e.stopPropagation();e.preventDefault();hide();unflip();if((typeof isPhoneLayout==='function'&&isPhoneLayout())||innerWidth<=700){show(b);return;}const k=document.createElement('div');k.className='hk-back';k.innerHTML='<span class="hk-x" aria-label="Close">×</span><div class="hk-bt"></div>';k.querySelector('.hk-bt').textContent=b.getAttribute('data-tip')||'';t.appendChild(k);t.classList.add('hk-flipped');return;}
+    if(b){show(b);}else{if(cur)hide();if(!t)unflip();}
+  },true);
+  addEventListener('scroll',()=>{if(cur)hide();},true);addEventListener('resize',()=>{if(cur)hide();});
+})();
+function ii(t){return`<button type="button" class="ii" aria-label="How it's worked out" data-tip="${String(t).replace(/<[^>]*>/g,'').replace(/"/g,'&quot;')}" onclick="event.stopPropagation();this.focus()">ⓘ</button>`}
+function exportCSV(){
+  const q=logQ.toLowerCase();
+  const filtered=db.trades.filter(t=>{
+    if(!q)return true;
+    return(t.ticker||'').toLowerCase().includes(q)||(t.action||'').toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q);
+  });
+  const hdr=['Ticker','Action','Wheel','Entered','Expiry','Strike Price','Premium/Price','Fees','Shares','Total','Days','PPD','Verified','Comment','Roll','Roll ID','Status'];
+  const rows=filtered.map(t=>{const w=db.wheels.find(x=>x.id===t.wheelId);return[t.ticker,t.action,w?wheelLabelDisplay(w.label,w):'',t.entered,t.expiry||'',t.strike||'',t.premium,t.fees,t.shares,t.total,t.days,t.days>0?(t.total/t.days).toFixed(2):0,t.verified?'Yes':'No',t.comment||'',tradeIsRoll(t)?'Yes':'',t.rollId||'',w&&w.status==='open'?'active':'closed'].map(v=>{let s=String(v??'').replace(/"/g,'""');if(/^[=+\-@]/.test(s)&&isNaN(Number(s)))s="'"+s;return`"${s}"`;}).join(',');});
+  const csv=[hdr.join(','),...rows].join('\n');
+  const suffix=q?`-${q}`:'';
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`optrack${suffix}-${new Date().toISOString().slice(0,10)}.csv`});
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+// ════════════════════════════════════════════════════════
+// PASTE TRADE — SMARTSCAN
+// ════════════════════════════════════════════════════════
+let parsedTradeData=null;
+const MON_PAT='Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
+const MON_MAP={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+
+function switchPasteTab(tab){
+  const isSmartScan=tab==='smartscan';
+  document.getElementById('paste-panel-smartscan').style.display=isSmartScan?'block':'none';
+  document.getElementById('paste-panel-manual').style.display=isSmartScan?'none':'block';
+  document.getElementById('tab-smartscan').style.background=isSmartScan?'var(--orange-safe)':'var(--bg3)';
+  document.getElementById('tab-smartscan').style.color=isSmartScan?'#fff':'var(--text2)';
+  document.getElementById('tab-manual').style.background=isSmartScan?'var(--bg3)':'var(--orange-safe)';
+  document.getElementById('tab-manual').style.color=isSmartScan?'var(--text2)':'#fff';
+  if(!isSmartScan){
+    const wheelId=document.getElementById('paste-wheelId').value;
+    const w=wheelId?db.wheels.find(x=>x.id===wheelId):null;
+    const ticker=w?.ticker||'SOFI';
+    document.getElementById('pm-ticker').value=ticker;
+    document.getElementById('pm-entered').value=new Date().toISOString().slice(0,10);
+    document.getElementById('pm-action').value='CSP';
+    ['pm-expiry','pm-strike','pm-delta','pm-premium','pm-shares','pm-total','pm-comment','pm-current-price','pm-fill-time'].forEach(id=>document.getElementById(id).value='');
+    const _pmh=document.getElementById('pm-fill-time-hint');if(_pmh){_pmh.textContent='';_pmh.hidden=true;}
+    document.getElementById('pm-fees').value='0';
+    const pr=document.getElementById('pm-roll');if(pr)pr.checked=false;
+    populatePMWheelSelect(wheelId,ticker);
+    onPMActionChange();
+  }
+}
+function populatePMWheelSelect(wheelId,ticker){
+  const wheels=(db.wheels||[]).filter(w=>!ticker||w.ticker===ticker).sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99));
+  fillWheelPick('pm-wheel',wheelPickItems(wheels),pickWheelDefault(wheelId,ticker));
+  fillRollSelect('pm-roll-from',document.getElementById('pm-wheel').value,'');
+  warmWheelLogos();
+}
+function onPMTickerInput(){const tk=document.getElementById('pm-ticker').value.toUpperCase().trim();populatePMWheelSelect(null,tk);}
+function onPMActionChange(){
+  const a=document.getElementById('pm-action').value;const isOpt=OPTIONS.has(a);const isSell=(a==='CSP'||a==='STOC');
+  document.getElementById('pmg-expiry').style.opacity=isOpt?'1':'0.4';
+  document.getElementById('pmg-strike').style.opacity=isOpt?'1':'0.4';
+  document.getElementById('pmg-delta').style.opacity=isSell?'1':'0.4';
+  document.getElementById('pm-prem-lbl').textContent=STOCKS.has(a)?'Price per Share':'Premium per Share';
+  const cp=document.getElementById('pm-cp-wrap');if(cp)cp.style.display=isSell?'':'none';
+  autoCalcPMTotal();
+}
+function autoCalcPMTotal(){
+  const a=actionFromSelect(document.getElementById('pm-action').value);
+  const p=parseFloat(document.getElementById('pm-premium').value)||0;
+  const s=parseFloat(document.getElementById('pm-shares').value)||0;
+  const f=parseFloat(document.getElementById('pm-fees').value)||0;
+  document.getElementById('pm-total').value=computeTotal(a,p,s,f).toFixed(2);
+}
+function autoCalcPMDTE(){autoCalcPMTotal();} // days computed at save time; just keep total fresh
+function noteFirstTrade(){if(typeof otTrack==='function')otTrack('/first-trade-saved');}
+function savePMTrade(){
+  const ticker=document.getElementById('pm-ticker').value.toUpperCase().trim();
+  const entered=document.getElementById('pm-entered').value;
+  if(!ticker){alert('Ticker required');return;}if(!entered){alert('Entry date required');return;}
+  const _fa=readFilledAtField('pm-entered','pm-fill-time','pm-fill-time-hint',null);if(_fa.error)return;
+  const selAction=document.getElementById('pm-action').value;
+  const action=actionFromSelect(selAction);
+  const openMarket=selAction==='IN_MKT';
+  const expiry=document.getElementById('pm-expiry').value||null;
+  if(OPTIONS.has(action)&&!expiry){alert('Enter the expiry');return;}
+  let wheelId=document.getElementById('pm-wheel').value;
+  if(wheelId==='new'||!wheelId){
+    const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
+    if(ex){wheelId=ex.id;}else{if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
+  }
+  if(isOpenRisk(action,!!(document.getElementById('pm-roll')&&document.getElementById('pm-roll').checked))&&!wheelRiskOk()){openUpgrade('unlimited',capMsg('wheel-risk'));return;}
+  const premium=parseFloat(document.getElementById('pm-premium').value)||0;
+  const shares=parseFloat(document.getElementById('pm-shares').value)||0;
+  const fees=parseFloat(document.getElementById('pm-fees').value)||0;
+  const total=parseFloat(document.getElementById('pm-total').value)||computeTotal(action,premium,shares,fees);
+  const deltaRaw=parseFloat(document.getElementById('pm-delta').value);
+  const days=expiry&&entered?Math.max(0,Math.round((new Date(expiry)-new Date(entered))/86400000)):0;
+  const newTrade={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker,action,entered,expiry,
+    strike:parseFloat(document.getElementById('pm-strike').value)||null,
+    delta:isNaN(deltaRaw)?null:deltaRaw,
+    premium,fees,shares,total,days,ppd:days>0?total/days:0,
+    verified:false,comment:document.getElementById('pm-comment').value.trim()};
+  if(action==='IN'&&openMarket)newTrade.openMarket=true;
+  if(_fa.value)newTrade.filledAt=_fa.value;
+  if(action==='CSP'||action==='STOC'){const raw=document.getElementById('pm-current-price').value.trim();if(raw!==''&&+raw>=0){newTrade.currentPrice=+raw;newTrade.currentPriceAt=new Date().toISOString();}}
+  applyTradeRollFromForm(newTrade,!!(document.getElementById('pm-roll')&&document.getElementById('pm-roll').checked),db.trades);
+  const _firstTrade=!db.trades.length;
+  db.trades.push(newTrade);expanded.add(wheelId);
+  _saveTrade(newTrade);closeModal('mPaste');render();
+  if(_firstTrade)noteFirstTrade();
+}
+function openPasteTrade(wheelId){
+  document.getElementById('paste-raw').value='';
+  document.getElementById('paste-error').style.display='none';
+  document.getElementById('paste-step1').style.display='block';
+  document.getElementById('paste-step2').style.display='none';
+  document.getElementById('paste-wheelId').value=wheelId||'';
+  switchPasteTab('smartscan');
+  openModal('mPaste');
+  setTimeout(()=>document.getElementById('paste-raw').focus(),100);
+}
+function showPasteStep1(){
+  document.getElementById('paste-step1').style.display='block';
+  document.getElementById('paste-step2').style.display='none';
+}
+
+// Fills a "rolls from" list when that control is on the page. Nothing is chosen for the user.
+function fillRollSelect(selId,wheelId,excludeId){
+  const sel=document.getElementById(selId);if(!sel)return;
+  const rows=(db.trades||[]).filter(t=>t&&t.wheelId===wheelId&&t.id!==excludeId).sort((a,b)=>String(b.entered||'').localeCompare(String(a.entered||'')));
+  sel.innerHTML='<option value="">Choose a trade</option>'+rows.map(t=>{const k=t.strike?` $${fmt2(t.strike).replace(/\.00$/,'')}`:'';const when=t.entered?` · ${fmtDateShort(t.entered)}`:'';return `<option value="${esc(t.id)}">${esc((t.action||'')+k+when)}</option>`;}).join('');
+}
+function fillLeapRollSelect(leap){
+  const sel=document.getElementById('pcc-roll-from');if(!sel||!leap)return;
+  const rows=pmccShortsFor(leap,db.opts||[]).slice().sort((a,b)=>String(b.entryDate||b.closeDate||'').localeCompare(String(a.entryDate||a.closeDate||'')));
+  sel.innerHTML='<option value="">Choose a trade</option>'+rows.map(l=>`<option value="${esc(l.id)}">${esc((l.status==='open'?'Open':'Closed')+' $'+fmt2(l.strike).replace(/\.00$/,'')+' · '+_fdShort(l.entryDate||l.closeDate||''))}</option>`).join('');
+}
+// ── SmartScan — broker-agnostic pattern hunter ──
+// Handles: Robinhood, Tastytrade, IBKR, Schwab, TD Ameritrade, E*Trade,
+//          Fidelity, Webull, eToro, Trading 212, and anything else
+function parseSmartText(raw,todayISO){
+  const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const full=text;
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
+  const r={};
+
+  // ── TICKER ──
+  const NOISE=new Set([
+    'THE','AND','FOR','EST','GMT','GTC','DAY','NET','FEE','FEES','TYPE','OPEN',
+    'GOOD','TIME','SELL','SOLD','CALL','PUTS','FILLED','BUY','LIMIT','STOP',
+    'MARKET','ORDER','TRADE','CASH','DEBIT','CREDIT','PRICE','FILL','ACCOUNT',
+    'IND','IRA','ROTH','USD','GBP','EUR','STATUS','QTY','CUSIP','SIDE',
+    'TO','CLOSE','PUT','BOUGHT','AT','ON','OF','IN','BY','EXP','EXPIRY','STRIKE','SHARES','CONTRACT','CONTRACTS','TOTAL','DATE',
+    'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','SEPT','OCT','NOV','DEC','JUNE','JULY','MARCH','APRIL'
+  ]);
+  // Normalise a candidate ticker — uppercase, strip noise
+  const cleanTick=t=>t?t.toUpperCase().trim():null;
+  const okTick=t=>t&&!NOISE.has(t)&&t.length>=2;
+  // 1-letter tickers (F, T, V, C, O, U…): only from an explicit signal, never the prose words A / I
+  const ONE_NOISE=new Set(['A','I']);
+  const popRows=(typeof window!=='undefined'&&window.POPULAR&&window.POPULAR.rows)||[];
+  const isPopular=t=>popRows.some(r=>String(r&&r[0]).toUpperCase()===t);
+  const ok1=(raw1,explicit)=>/^[A-Z]$/.test(raw1||'')&&(explicit?true:!ONE_NOISE.has(raw1));
+
+  // Labelled ticker fields (IBKR, Fidelity, E*Trade, Schwab)
+  const labelTick=/(?:symbol|ticker|security|underlying)[:\s]+([A-Za-z]{1,5})\b/i.exec(full);
+  // Right before a $strike or Put/Call: "SOFI $15 Put", "SOFI 15 Call", "SOFI Put"
+  const strikeTick=/\b([A-Za-z]{1,5})\s+(?:\$\s?\d+(?:\.\d+)?\s*(?:put|call)s?\b|\$\s?\d+(?:\.\d+)?\b|\d+(?:\.\d+)?\s+(?:put|call)s?\b|(?:put|call)s?\b)/ig;
+  // A 1-letter word only counts when it sits right before "$12 Put" / "12 Call" (strike + type), as written in capitals
+  const strike1=/^\s+(?:\$\s?\d+(?:\.\d+)?\s*|\d+(?:\.\d+)?\s+)(?:put|call)s?\b/i;
+  let t0=null;for(const m of full.matchAll(strikeTick)){const c=cleanTick(m[1]);if(okTick(c)){t0=c;break;}if(ok1(m[1],false)&&strike1.test(m[0].slice(m[1].length))){t0=c;break;}}
+  // "Symbol: F" / "Ticker: F" (explicit label, capital letter) and OCC "F 261218P00012000"
+  const label1=/(?:symbol|ticker)\s*:\s*([A-Z])\b(?![.'’])/i.exec(full);
+  const occ1=/(?:^|[\s\-.])([A-Z])\s*\d{6}[CP]\d{8}\b/.exec(full);
+  // Adjacent to action verb (Robinhood, Tastytrade, Webull)
+  const adjTick=/(?:buy|sell|bought|sold|open|executed)\s+\d*\s*([A-Za-z]{2,5})\b/i.exec(full);
+  // "Sold 5 F …" — a capital 1-letter symbol next to the verb, only when it is a known ticker (POPULAR.rows)
+  const adj1=/(?:buy|sell|bought|sold|executed)\s+(?:\d+\s+)?([A-Z])\b(?![.'’])/i.exec(full);
+  // Pipe-delimited: "| sofi |" or "| SOFI |"  (garbled / copy-paste formats)
+  const pipeTick=/\|\s*([A-Za-z]{2,5})\s*\|/.exec(full);
+  // eToro / Trading 212 style: "SOFI - SoFi Technologies"
+  const dashTick=/\b([A-Za-z]{2,5})\s*[-–]\s*[A-Z][a-z]/.exec(full);
+
+  const t1=cleanTick(labelTick?.[1]),t2=cleanTick(adjTick?.[1]),
+        t3=cleanTick(pipeTick?.[1]),t4=cleanTick(dashTick?.[1]);
+  if(okTick(t1))r.ticker=t1;
+  else if(label1&&ok1(label1[1],true))r.ticker=label1[1];
+  else if(occ1&&ok1(occ1[1],true))r.ticker=occ1[1];
+  else if(t0)r.ticker=t0;
+  else if(okTick(t2))r.ticker=t2;
+  else if(adj1&&ok1(adj1[1],false)&&isPopular(adj1[1]))r.ticker=adj1[1];
+  else if(okTick(t3))r.ticker=t3;
+  else if(okTick(t4))r.ticker=t4;
+  else{
+    // Frequency scan — case-insensitive, uppercase all candidates
+    const freq={};
+    [...full.matchAll(/\b([A-Za-z]{2,5})\b/g)]
+      .map(m=>m[1].toUpperCase()).filter(w=>!NOISE.has(w))
+      .forEach(w=>{freq[w]=(freq[w]||0)+1;});
+    const sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+    if(sorted.length)r.ticker=sorted[0][0];
+  }
+
+  // ── DIRECTION ──
+  // Weight explicit phrases higher: "sell to open" > bare "sell"
+  const sellPhrases=(full.match(/\b(sell\s+to\s+open|sell\s+to\s+close|sold|sell)\b/gi)||[]).length;
+  const buyPhrases=(full.match(/\b(buy\s+to\s+open|buy\s+to\s+close|bought|buy)\b/gi)||[]).length;
+  let direction=sellPhrases>buyPhrases?'sell':buyPhrases>sellPhrases?'buy':null;
+  if(!direction){
+    // Tie (or no buy/sell words): only an explicit code decides — STO/STC/SLD (IBKR) vs BTO/BTC/BOT. Never guess 'sell'.
+    const sx=/\b(?:STO|STC|SLD)\b/.test(full),bx=/\b(?:BTO|BTC|BOT)\b/.test(full);
+    if(sx&&!bx)direction='sell';else if(bx&&!sx)direction='buy';
+  }
+
+  // ── OPTION TYPE ──
+  const callScore=(full.match(/\bcall(s)?\b/gi)||[]).length;
+  const putScore=(full.match(/\bput(s)?\b/gi)||[]).length;
+  const optType=callScore===0&&putScore===0?null:callScore>=putScore?'call':'put';
+
+  // ── POSITION EFFECT ──
+  // Explicit phrases first
+  const sellToOpen=/sell\s+to\s+open/i.test(full);
+  const sellToClose=/sell\s+to\s+close/i.test(full);
+  const buyToOpen=/buy\s+to\s+open/i.test(full);
+  const buyToClose=/buy\s+to\s+close/i.test(full);
+  // Robinhood "Position effect: Open"
+  const posLabel=/position\s+effect[:\s]+(open|close)/i.exec(full);
+  let posEffect='open';
+  if(posLabel)posEffect=posLabel[1].toLowerCase();
+  else if(sellToClose||buyToClose)posEffect='close';
+  else if(sellToOpen||buyToOpen)posEffect='open';
+  else{const openScore=(full.match(/\bopen\b/gi)||[]).length;const closeScore=(full.match(/\bclose[d]?\b/gi)||[]).length;posEffect=closeScore>openScore?'close':'open';}
+
+  // ── STRIKE ──
+  const strikePats=[
+    /\$(\d+(?:\.\d+)?)\s*(?:call|put)/i,           // "$20 Call" — Robinhood
+    /(?:strike|strike price)[:\s]+\$?(\d+(?:\.\d+)?)/i, // "Strike: 20.00" — IBKR/Fidelity
+    /(\d+(?:\.\d+)?)\s+(?:call|put)\b/i,            // "20 Call" — Tastytrade
+    /\bat\s+\$?(\d+(?:\.\d+)?)\s*(?:call|put)/i,    // "at $20 Call"
+    /(?:exercise|exp(?:iry)?\s+price)[:\s]+\$?(\d+(?:\.\d+)?)/i // E*Trade/Schwab
+  ];
+  for(const p of strikePats){const sm=p.exec(full);if(sm){r.strike=parseFloat(sm[1]);break;}}
+
+  // ── DATES ──
+  const today=todayISO&&/^\d{4}-\d{2}-\d{2}$/.test(todayISO)?new Date(+todayISO.slice(0,4),+todayISO.slice(5,7)-1,+todayISO.slice(8,10)):new Date();today.setHours(0,0,0,0);
+  const allDates=[];const yearless=new Set(); // indexes of dates written without a year (filled in with this year)
+  let m;
+  // "20 Mar" / "20 Mar 2026" / "20 March 2026"
+  const rx1=new RegExp(`(?<![\\d.$])(\\d{1,2})\\s+(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)(?:\\s+(\\d{4}))?\\b`,'gi');
+  while((m=rx1.exec(full))!==null){
+    const monAbbr=m[2].slice(0,3).toLowerCase();
+    const mon=MON_MAP[monAbbr];if(!mon)continue;
+    const yr=m[3]?parseInt(m[3]):today.getFullYear();
+    const d1=new Date(yr,mon-1,parseInt(m[1]));allDates.push(d1);if(!m[3])yearless.add(allDates.length-1);
+  }
+  // "Mar 20 2026" / "March 20, 2026"
+  const rx2=new RegExp(`(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2}),?\\s+(\\d{4})`,'gi');
+  while((m=rx2.exec(full))!==null){const monAbbr=m[1].slice(0,3).toLowerCase();const mon=MON_MAP[monAbbr];if(!mon)continue;allDates.push(new Date(parseInt(m[3]),mon-1,parseInt(m[2])));}
+  // "Jul 2" / "Jun 29" (month-first, NO year — Robinhood US confirmations). Skip if a year follows (rx2 owns those) or if the number is a contract/share count.
+  const rx2b=new RegExp(`(${MON_PAT}(?:uary|ruary|ch|ril|e|y|ne|ly|ust|tember|ober|vember|cember)?)\\s+(\\d{1,2})\\b(?!\\s*,?\\s*\\d{4})(?!\\s+(?:contracts?|shares?|put|call)\\b)`,'gi');
+  while((m=rx2b.exec(full))!==null){const mon=MON_MAP[m[1].slice(0,3).toLowerCase()];if(!mon)continue;const d2=new Date(today.getFullYear(),mon-1,parseInt(m[2]));allDates.push(d2);yearless.add(allDates.length-1);}
+  // Slash dates, ONE pass: US (MM/DD) or UK (DD/MM) decided once for the whole paste by BCSV.sniffDMY, read by BCSV.pickDate
+  const _B=typeof BCSV!=='undefined'&&BCSV&&BCSV.sniffDMY&&BCSV.pickDate?BCSV:null;
+  const slashDMY=_B?_B.sniffDMY(full):(()=>{let dm=false,md=false;for(const x of full.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/g)){if(+x[1]>12)dm=true;if(+x[2]>12)md=true;}return dm&&!md?true:md?false:/trading ?212|etoro|\bgbp\b|£/i.test(full);})();
+  const rx3=/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/g;
+  while((m=rx3.exec(full))!==null){
+    let isoD;
+    if(_B)isoD=_B.pickDate(m[0],slashDMY);
+    else{let a=+m[1],b=+m[2];if(a>12||(slashDMY&&b<=12)){const t=a;a=b;b=t;}const y=+m[3]<100?2000+(+m[3]):+m[3];isoD=`${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`;}
+    const pm=/^(\d{4})-(\d{2})-(\d{2})$/.exec(isoD||'');if(!pm)continue;
+    const mo=+pm[2],dd=+pm[3];if(mo<1||mo>12||dd<1||dd>31)continue;
+    allDates.push(new Date(+pm[1],mo-1,dd));
+  }
+  // YYYY-MM-DD (ISO — IBKR, Trading 212)
+  const rx4=/(\d{4})-(\d{2})-(\d{2})/g;
+  while((m=rx4.exec(full))!==null)allDates.push(new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3])));
+  // "20Mar2026" (IBKR compact)
+  const rx5=new RegExp(`(\\d{1,2})(${MON_PAT})(\\d{4})`,'gi');
+  while((m=rx5.exec(full))!==null){const mon=MON_MAP[m[2].toLowerCase()];if(!mon)continue;allDates.push(new Date(parseInt(m[3]),mon-1,parseInt(m[1])));}
+
+  // Dec→Jan rollover: a yearless date (e.g. "Jan 15") that lands well before the fill date (e.g. "Dec 18") is next year's expiry
+  {const past0=allDates.filter(d=>d<=today).sort((a,b)=>b-a);const fillRef=past0[0];
+    if(fillRef)for(let i=0;i<allDates.length;i++){const d=allDates[i];
+      if(!yearless.has(i)||!(d<fillRef)||(today-d)<=45*86400000)continue;
+      const nd=new Date(d.getFullYear()+1,d.getMonth(),d.getDate());if(nd>=fillRef)allDates[i]=nd;}}
+  // Deduplicate and classify
+  const uniq=[...new Map(allDates.map(d=>[d.getTime(),d])).values()];
+  const futureDates=uniq.filter(d=>d>today).sort((a,b)=>a-b);
+  const pastDates=uniq.filter(d=>d<=today).sort((a,b)=>b-a);
+  const recentPastDates=uniq.filter(d=>d<=today&&(today-d)<=45*86400000).sort((a,b)=>b-a);
+  const toISOS=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  r.expiry=futureDates.length?toISOS(futureDates[0]):(recentPastDates.length?toISOS(recentPastDates[0]):null);
+  r.entered=pastDates.length?toISOS(pastDates[0]):toISOS(today);
+
+  // ── CONTRACTS / SHARES ──
+  // Quantities: thousands commas ("1,000") and signed broker quantities ("-5") read as plain counts
+  const QN='(-?\\d{1,3}(?:,\\d{3})+|-?\\d+)';
+  const qn=s=>Math.abs(parseInt(String(s).replace(/,/g,''),10));
+  const lastOf=rx=>{let last=null;for(const x of full.matchAll(rx))last=x;return last;};
+  // Last "N contracts at $X" = the execution line (an earlier one is usually the order / limit line)
+  const conAt=lastOf(new RegExp(QN+'\\s+contracts?\\s+at\\s+\\$?([\\d.]+)','gi'));   // Robinhood
+  const shAt=lastOf(new RegExp(QN+'\\s+shares?\\s+at\\s+\\$?([\\d.]+)','gi'));
+  const conFill=lastOf(new RegExp('filled\\s+(?:quantity\\s*)?\\n?\\s*'+QN+'\\s+contracts?\\s+at\\s+\\$?([\\d.]+)','gi'));
+  const conAlone=new RegExp(QN+'\\s+contracts?','i').exec(full);
+  const shAlone=new RegExp(QN+'\\s+shares?','i').exec(full);
+  const qtyLabel=new RegExp('(?:qty|quantity|contracts?|shares?|size)[:\\s]+'+QN,'i').exec(full); // IBKR/Schwab/Fidelity
+  let contracts=null,shareCount=null;
+  if(conFill){contracts=qn(conFill[1]);r.premium=parseFloat(conFill[2]);}
+  else if(conAt){contracts=qn(conAt[1]);r.premium=parseFloat(conAt[2]);}
+  else if(shAt){shareCount=qn(shAt[1]);r.premium=parseFloat(shAt[2]);}
+  else if(conAlone)contracts=qn(conAlone[1]);
+  else if(qtyLabel&&optType)contracts=qn(qtyLabel[1]);
+  else if(shAlone)shareCount=qn(shAlone[1]);
+  else if(qtyLabel)shareCount=qn(qtyLabel[1]);
+  r.shares=contracts?contracts*100:shareCount||null;
+
+  // ── PREMIUM — priority order covers all major brokers ──
+  if(!r.premium){
+    const premPats=[
+      /(?:fill(?:ed)?\s+price|execution\s+price|trade\s+price)[:\s]+\$?([\d.]+)/i, // IBKR/Fidelity
+      /(?:limit\s+price|avg\.?\s*price|average\s+price)[:\s]+\$?([\d.]+)/i,        // Schwab/E*Trade
+      /@ ?\$?([\d.]+)/,                                                              // Tastytrade/Robinhood
+      /(?:premium|price\s+per\s+(?:share|contract))[:\s]+\$?([\d.]+)/i,            // generic
+      /(?:price)[:\s]+\$?([\d.]+)/i,                                                // Webull/eToro
+      /\$?(0\.\d{2,4})\b/                                                            // bare small decimal
+    ];
+    for(const p of premPats){const pm=p.exec(full);if(pm){r.premium=parseFloat(pm[1]);break;}}
+  }
+
+  // ── FEES — sum all fee-related amounts ──
+  // Broker fees may be shown negative ("-$1.30") or in brackets ("($0.65)") — always a positive cost here
+  const FAMT='(\\(?\\s*-?\\s*[$£€]?\\s*-?\\d[\\d,]*(?:\\.\\d+)?\\s*\\)?|\\(?\\s*-?\\s*[$£€]?\\s*-?\\.\\d+\\s*\\)?)';
+  const feeAmt=s=>{const n=parseFloat(String(s).replace(/[(),$£€\s-]/g,''));return isNaN(n)?0:Math.abs(n);};
+  let fees=0;
+  const feeRx=new RegExp('(?:regulatory\\s+fee|sec\\s+fee|taf\\s+fee|contract\\s+fee|options?\\s+fee|commission|brokerage\\s+fee|transaction\\s+fee|platform\\s+fee)[s:\\s]*\\n?\\s*'+FAMT,'gi');
+  while((m=feeRx.exec(full))!==null){
+    const lineStart=full.lastIndexOf('\n',m.index)+1;
+    if(/\btotal\b/i.test(full.slice(lineStart,m.index)))continue; // "Total commissions …" is a summary, not an item
+    fees+=feeAmt(m[1]);
+  }
+  // Summary fee line ("Total fees", "Commissions/Fees", "Fees & commissions"): the broker's own total wins, so
+  // itemised lines plus their total are never added together
+  const feeSum=new RegExp('(?:total\\s+(?:commissions?\\s*(?:and|&|\\/)\\s*)?fees?(?:\\s*(?:and|&|\\/)\\s*commissions?)?|commissions?\\s*(?:and|&|\\/)\\s*fees?|fees?\\s*(?:and|&|\\/)\\s*commissions?)[s:\\s]*\\n?\\s*'+FAMT,'i').exec(full);
+  if(feeSum)fees=feeAmt(feeSum[1]);
+  r.fees=Math.round(fees*100)/100;
+
+  // ── TOTAL ──
+  const totalPats=[
+    /(?:est(?:imated)?\.?\s*credit|net\s+credit|received\s+(?:a\s+)?credit(?:\s+of)?)[:\s]*\n?\s*\$?([\d,.]+)/i,
+    /(?:est(?:imated)?\.?\s*debit|net\s+debit|total\s+(?:cost|debit))[:\s]*\n?\s*\$?([\d,.]+)/i,
+    /(?:net\s+amount|amount|proceeds|total\s+value)[:\s]+\$?([\d,.]+)/i, // E*Trade/Fidelity
+    /(?:net\s+p(?:remium|roceeds))[:\s]+\$?([\d,.]+)/i,                 // Trading 212
+    /(?:total|net)[:\s]+\$?([\d,.]+)/i
+  ];
+  let scraped=null;
+  for(const p of totalPats){const tm=p.exec(full);if(tm){const v=parseFloat(tm[1].replace(/,/g,''));if(!isNaN(v))scraped=v;break;}}
+  // ── ACTION ── no silent flips: a bought-to-open option, a buy/sell tie, or a sold-to-close put is an error, not a guess
+  r.optType=optType;
+  const explicitBTO=optType&&(/\bBTO\b/.test(full)||(buyToOpen&&!buyToClose)||(direction==='buy'&&posLabel&&posLabel[1].toLowerCase()==='open'));
+  if(explicitBTO){r.error='This is a bought option — add it on the LEAPs tab';return r;}
+  if(!direction){r.error="Couldn't tell if this was a buy or a sell — the paste mentions both equally. Check you copied the whole confirmation.";return r;}
+  if(optType==='call'){
+    if(direction==='sell'&&posEffect==='open')r.action='STOC';
+    else if(direction==='sell'&&posEffect==='close')r.action='STC';
+    else r.action='BTC';
+  }else if(optType==='put'){
+    if(posEffect==='close'){
+      // closing a put on the wheel = buying back the short put; an explicit SELL to close is a bought (long) put
+      if(direction==='sell'&&(sellToClose||posLabel)&&!buyToClose){r.error='This sells a bought put to close it — add it on the LEAPs tab';return r;}
+      r.action='BTC';
+    }else r.action=direction==='sell'?'CSP':'BTC';
+  }else{
+    r.action=direction==='buy'?'IN':'OUT';
+    r.expiry=null;r.strike=null;
+  }
+
+  // Total: premium × shares ± fees is the truth; a broker total that disagrees by more than $0.05 is flagged, never kept
+  r.total=computeTotal(r.action,r.premium,r.shares,r.fees);
+  if(scraped!=null){
+    r.scrapedTotal=scraped;
+    if(Math.abs(scraped-r.total)>0.05)r.totalWarning=`The paste shows a total of $${scraped.toFixed(2)}, but premium × shares ${(typeof isCredit==="function"?isCredit(r.action):/^(CSP|STOC|STO|STC|OUT)$/.test(r.action))?'−':'+'} fees comes to $${(+r.total||0).toFixed(2)}. Check the premium, quantity and fees before saving.`;
+  }
+
+  // ── DTE / PPD ──
+  if(r.entered&&r.expiry)r.days=Math.max(0,Math.round((new Date(r.expiry)-new Date(r.entered))/86400000));
+  r.ppd=r.days>0?r.total/r.days:0;
+  return r;
+}
+
+// ── Roll paste detection & parsing ──
+function detectRollPaste(raw){
+  return /\broll\b/i.test(raw)&&(raw.match(/filled quantity/gi)||[]).length>=2;
+}
+
+function splitFeesCents(total,count){
+  if(!(count>0))return[];
+  const totalCents=Math.round(Math.max(0,+total||0)*100);
+  const base=Math.floor(totalCents/count),rem=totalCents-base*count;
+  return Array.from({length:count},(_,i)=>(base+(i<rem?1:0))/100);
+}
+
+function parseRollTrades(raw,todayISO){
+  const T=todayISO||new Date().toISOString().slice(0,10);
+  const MON_MAP_R={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  const MON_PAT_R='Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
+  // Day-first '24 Apr' or month-first 'Apr 24' (Robinhood). Returns [month, day] or null.
+  const rdMD=str=>{let m=new RegExp(`\\b(\\d{1,2})\\s+(${MON_PAT_R})[a-z]*\\b`,'i').exec(str);if(m)return[MON_MAP_R[m[2].slice(0,3).toLowerCase()],+m[1]];
+    m=new RegExp(`\\b(${MON_PAT_R})[a-z]*\\.?\\s+(\\d{1,2})\\b(?!\\d)`,'i').exec(str);if(m)return[MON_MAP_R[m[1].slice(0,3).toLowerCase()],+m[2]];return null;};
+  const iso=(y,mo,d)=>`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  // Fill date: most recent occurrence on or before today. Expiry: first occurrence on or after the fill date.
+  const pastISO=md=>{const y=+T.slice(0,4);let r=iso(y,md[0],md[1]);return r>T?iso(y-1,md[0],md[1]):r;};
+  const fwdISO=(md,from)=>{const y=+from.slice(0,4);let r=iso(y,md[0],md[1]);return r<from?iso(y+1,md[0],md[1]):r;};
+  // Extract ticker from first line
+  const firstLine=(raw.split('\n')[0]||'').trim();
+  const tickM=/\b([A-Z]{2,5})\b/.exec(firstLine);
+  // 1-letter tickers (F, T…): only when a leg line names them right before the strike ("Buy F $12 Put …")
+  const leg1=tickM?null:/(?:^|\n)\s*(?:Buy|Sell)\s+([A-Z])\s+\$\d/.exec(raw);
+  const ticker=tickM?tickM[1]:leg1&&leg1[1]!=='A'&&leg1[1]!=='I'?leg1[1]:null;
+  if(!ticker)return null;
+  // Find leg blocks by Buy/Sell TICKER pattern
+  const legRx=new RegExp(`(Buy|Sell)\\s+${ticker}\\b`,'gi');
+  const legMatches=[...raw.matchAll(legRx)];
+  if(legMatches.length<2)return null;
+  // Split fees equally
+  const feeRx=/(?:est\.?\s*regulatory\s+fees?|contract\s+fee|commission)[s:\s]*\n?\s*\(?\s*-?\s*\$?\s*-?(\d[\d,]*(?:\.\d+)?|\.\d+)\s*\)?/gi; // "-$1.30" / "($0.65)" = a positive fee
+  let totalFees=0;let fm;while((fm=feeRx.exec(raw))!==null)totalFees+=parseFloat(fm[1].replace(/,/g,''));
+  const legFees=splitFeesCents(totalFees,2);
+  const trades=[];
+  for(let i=0;i<2;i++){
+    const match=legMatches[i];
+    const direction=match[1].toLowerCase();
+    const blockStart=match.index;
+    const blockEnd=i+1<legMatches.length?legMatches[i+1].index:raw.length;
+    const block=raw.slice(blockStart,blockEnd);
+    const bLines=block.split('\n').map(l=>l.trim()).filter(l=>l);
+    // Parse first line: "Buy/Sell TICKER $STRIKE Put/Call DD Mon"
+    const fl=bLines[0];
+    const strikeM=/\$(\d+(?:\.\d+)?)/.exec(fl);
+    const optTypeM=/\b(put|call)\b/i.exec(fl);
+    const expMD=rdMD(fl.slice(optTypeM?optTypeM.index:0));
+    const strike=strikeM?parseFloat(strikeM[1]):null;
+    const optType=optTypeM?optTypeM[1].toLowerCase():null;
+    // Position effect
+    const peIdx=bLines.findIndex(l=>/^position effect$/i.test(l));
+    const posEffect=peIdx>=0?(bLines[peIdx+1]||'').toLowerCase():null;
+    // Filled quantity
+    const fqIdx=bLines.findIndex(l=>/^filled quantity$/i.test(l));
+    let contracts=0,premium=0;
+    if(fqIdx>=0){const fq=bLines[fqIdx+1]||'';const cM=/(-?\d{1,3}(?:,\d{3})+|-?\d+)\s+contracts?\s+at\s+\$(\d+(?:\.\d+)?)/i.exec(fq);if(cM){contracts=Math.abs(parseInt(cM[1].replace(/,/g,''),10));premium=parseFloat(cM[2]);}}
+    // never save a leg with no size: tell the caller instead of a $0, 0-share trade
+    if(!(contracts>0))return{error:`Couldn't read the filled quantity on the ${direction} leg — check you copied the whole roll.`};
+    const shares=contracts*100;
+    // Entered date
+    let entered=T;
+    for(let j=0;j<bLines.length;j++){
+      if(/^filled$/i.test(bLines[j])){const dm=rdMD(bLines[j+1]||'');if(dm){entered=pastISO(dm);break;}}
+    }
+    const expiry=expMD?fwdISO(expMD,entered):null;
+    // Action — Position effect decides open/close: buy+open BTO, buy+close BTC, sell+open CSP/STOC, sell+close STC
+    let action;
+    if(optType==='put'||optType==='call'){
+      if(direction==='buy')action=posEffect==='open'?'BTO':'BTC';
+      else action=posEffect==='close'?'STC':(optType==='put'?'CSP':'STOC');
+    }else{action=direction==='buy'?'IN':'OUT';}
+    const total=premium&&shares?computeTotal(action,premium,shares,legFees[i]):0;
+    const days=expiry&&entered?Math.max(0,Math.round((new Date(expiry)-new Date(entered))/86400000)):0;
+    trades.push({ticker,action,entered,expiry,strike,premium,shares,contracts,optType,effect:posEffect,fees:legFees[i],total,days,ppd:days>0?total/days:0,rollId:null});
+  }
+  return trades.length===2?trades:null;
+}
+
+function showRollPreview(trades){
+  const wheelId=document.getElementById('paste-wheelId').value;
+  const ticker=trades[0].ticker;
+  const wheelHtml=`<div class="wh-pick"><input type="hidden" id="paste-wheel-sel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div>`;
+  function tradeCard(p){
+    const cr=isCredit(p.action);const col=cr?'var(--green)':'var(--red)';const borderCol=cr?'var(--green)':'var(--red)';
+    return`<div style="background:var(--bg3);border:1px solid var(--border);border-left:0.1875rem solid ${borderCol};border-radius:0.5rem;padding:0.75rem;flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:0.4375rem;margin-bottom:0.5625rem">
+        <span class="ab ab-${p.action}">${p.action}</span>
+        <span style="color:var(--silver);font-weight:720;font-size:0.8125rem">${esc(p.ticker)}${p.strike?' $'+p.strike:''}</span>
+        <span style="margin-left:auto;font-weight:720;color:${col}">${cr?'+':'-'}$${(p.total||0).toFixed(2)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3125rem;font-size:0.825rem;color:var(--text2)">
+        <div><span class="t3">Entered: </span>${fmtDateFull(p.entered)}</div>
+        <div><span class="t3">Expiry: </span>${fmtDateFull(p.expiry)||'—'}</div>
+        <div><span class="t3">Premium: </span>$${(p.premium||0).toFixed(4)}</div>
+        <div><span class="t3">DTE: </span>${p.days!=null?p.days+'d':'—'}</div>
+      </div>
+    </div>`;
+  }
+  const net=trades.reduce((s,t)=>s+(isCredit(t.action)?t.total:-t.total),0);
+  document.getElementById('paste-preview').innerHTML=`
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6875rem">
+      <span style="background:rgba(var(--brand-orange-rgb),0.15);border:1px solid var(--orange);color:var(--orange);font-size:0.75rem;font-weight:720;padding:0.1875rem 0.625rem;border-radius:1.25rem;letter-spacing:.5px">TWO TRADES</span>
+      <span style="font-size:0.825rem;color:var(--text3)">Saved as a close and an open. Link them yourself if you want.</span>
+      <span style="margin-left:auto;font-size:0.875rem;font-weight:720;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'Net credit: +':'Net debit: -'}$${Math.abs(net).toFixed(2)}</span>
+    </div>
+    <div style="display:flex;gap:0.5rem;align-items:stretch;margin-bottom:0.75rem">
+      ${tradeCard(trades[0])}
+      <div style="display:flex;align-items:center;color:var(--orange);font-size:1.25rem;font-weight:720;flex-shrink:0">→</div>
+      ${tradeCard(trades[1])}
+    </div>
+    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>`;
+  document.getElementById('paste-step1').style.display='none';
+  document.getElementById('paste-step2').style.display='block';
+  fillWheelPick('paste-wheel-sel',wheelPickItems([...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99))),pickWheelDefault(wheelId,ticker));
+  warmWheelLogos();
+}
+
+function parsePaste(){
+  const raw=document.getElementById('paste-raw').value.trim();
+  const errEl=document.getElementById('paste-error');
+  errEl.style.display='none';
+  if(!raw){errEl.textContent='Paste some text first.';errEl.style.display='block';return;}
+  try{
+    // ── Roll detection first ──
+    if(detectRollPaste(raw)){
+      const rollTrades=parseRollTrades(raw);
+      if(rollTrades&&rollTrades.error){errEl.textContent=rollTrades.error;errEl.style.display='block';return;}
+      if(rollTrades&&rollTrades.some(t=>t.action==='BTO')){errEl.textContent='This is a roll of a bought call — add it on the LEAP card.';errEl.style.display='block';return;}
+      if(rollTrades){parsedTradeData=rollTrades;showRollPreview(rollTrades);return;}
+    }
+    let p=parseSmartText(raw);
+    if(p.error){errEl.textContent=p.error;errEl.style.display='block';return;}
+    if(!p.ticker){errEl.textContent='Could not find ticker symbol. Make sure you copied the full confirmation.';errEl.style.display='block';return;}
+    if(!p.action){errEl.textContent='Could not determine trade type (Buy/Sell, Call/Put, Open/Close).';errEl.style.display='block';return;}
+    parsedTradeData=p;
+    showPastePreview(p);
+  }catch(e){errEl.textContent='Parse error: '+e.message;errEl.style.display='block';}
+}
+
+function showPastePreview(p){
+  const wheelId=document.getElementById('paste-wheelId').value;
+  // Build wheel select
+  const wheelHtml=`<div class="wh-pick"><input type="hidden" id="paste-wheel-sel"><button type="button" class="wh-pick-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleWheelPick(this)"><span class="wh-pick-face"></span><span class="wh-caret">▾</span></button><div class="wh-pick-list" hidden role="listbox"></div></div>`;
+  const totalCol=isCredit(p.action)?'var(--green)':'var(--red)';
+  const totalSign=isCredit(p.action)?'+':'-';
+  const warnHtml=p.totalWarning?`<div class="ss-total-warn" role="alert" style="background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.55);color:var(--yellow);border-radius:6px;padding:0.625rem 0.75rem;margin-bottom:0.75rem;font-family:'Urbanist',sans-serif;font-size:0.8125rem;line-height:1.4"><div style="font-weight:720;margin-bottom:0.25rem">Totals don't match</div><div>Broker total: <b>$${(+p.scrapedTotal||0).toFixed(2)}</b> · Calculated: <b>$${(+p.total||0).toFixed(2)}</b></div><div style="margin-top:0.25rem;color:var(--text2)">${esc(p.totalWarning)}</div></div>`:'';
+  document.getElementById('paste-preview').innerHTML=`${warnHtml}
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:0.1875rem solid var(--orange);border-radius:0.5rem;padding:0.875rem;margin-bottom:0.875rem">
+      <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.875rem">
+        <span class="ab ab-${p.action}">${p.action}</span>
+        <span style="font-weight:720;font-size:1rem;color:var(--silver)">${esc(p.ticker)}</span>
+        ${p.strike?`<span style="color:var(--text2);font-size:0.8125rem">$${p.strike} ${p.optType==='put'||(!p.optType&&p.action==='CSP')?'Put':'Call'}</span>`:''}
+        <span style="margin-left:auto;font-size:1.125rem;font-weight:720;color:${totalCol}">${totalSign}$${(p.total||0).toFixed(2)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.625rem">
+        <div><div class="mini-lbl">Entered</div><div class="fs-sm">${fmtDateFull(p.entered)}</div></div>
+        <div><div class="mini-lbl">Expiry</div><div class="fs-sm">${fmtDateFull(p.expiry)}</div></div>
+        <div><div class="mini-lbl">DTE</div><div class="fs-sm">${p.days!=null?p.days+'d':'—'}</div></div>
+        <div><div class="mini-lbl">Premium</div><div class="fs-sm">$${(p.premium||0).toFixed(4)}</div></div>
+        <div><div class="mini-lbl">Shares</div><div class="fs-sm">${p.shares||'—'}</div></div>
+        ${isPhoneLayout()?'':`<div><div class="mini-lbl">Fees</div><div class="fs-sm">$${(p.fees||0).toFixed(2)}</div></div>`}
+      </div>
+    </div>
+    <div class="fld"><label>Assign to wheel</label>${wheelHtml}</div>`;
+  fillWheelPick('paste-wheel-sel',wheelPickItems([...(db.wheels||[])].sort((a,b)=>(a.sortOrder||99)-(b.sortOrder||99))),pickWheelDefault(wheelId,p.ticker));
+  warmWheelLogos();
+  document.getElementById('paste-step1').style.display='none';
+  document.getElementById('paste-step2').style.display='block';
+}
+
+function confirmParsed(){
+  if(!parsedTradeData)return;
+  const _rows=Array.isArray(parsedTradeData)?parsedTradeData:[parsedTradeData];
+  if(_rows.some(p=>OPTIONS.has(p.action)&&!p.expiry)){alert('Enter the expiry');return;}
+  // ── Roll: save both trades ──
+  if(Array.isArray(parsedTradeData)){
+    const trades=parsedTradeData;
+    let wheelId=document.getElementById('paste-wheel-sel').value;
+    if(wheelId==='new'||!wheelId){
+      const ex=db.wheels.find(w=>w.ticker===trades[0].ticker&&w.status==='open');
+      if(ex){wheelId=ex.id;}
+      else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
+    }
+    if(trades.some(p=>isOpenRisk(p.action,!!(p.roll||p.isRoll||p.rollId)))&&!wheelRiskOk()){openUpgrade('unlimited',capMsg('wheel-risk'));return;}
+    const _firstTrade=!db.trades.length;
+    const built=trades.map(p=>{
+      const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
+        expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
+        shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
+        verified:false,comment:'via SmartScan'};
+      applyImportRoll(nt,p);
+      return nt;
+    });
+    autoLinkRollBatch(built,{enteredTogether:true});
+    built.forEach(nt=>{db.trades.push(nt);_saveTrade(nt);});
+    expanded.add(wheelId);closeModal('mPaste');parsedTradeData=null;
+    try{render();}catch(e){console.error('SmartScan roll render error:',e);}
+    if(_firstTrade)noteFirstTrade();
+    return;
+  }
+  // ── Single trade ──
+  const p=parsedTradeData;
+  const _firstTrade=!db.trades.length;
+  let wheelId=document.getElementById('paste-wheel-sel').value;
+  if(wheelId==='new'||!wheelId){
+    const ex=db.wheels.find(w=>w.ticker===p.ticker&&w.status==='open');
+    if(ex){wheelId=ex.id;}
+    else{if(!wheelCapOk(p.ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:p.ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:p.entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
+  }
+  if(isOpenRisk(p.action,!!(p.roll||p.isRoll||p.rollId))&&!wheelRiskOk()){openUpgrade('unlimited',capMsg('wheel-risk'));return;}
+  const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
+    expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
+    shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
+    verified:false,comment:'via SmartScan'};
+  applyImportRoll(nt,p);
+  autoLinkRollBatch([nt]);
+  db.trades.push(nt);_saveTrade(nt); // save only what was touched
+  expanded.add(wheelId);
+  closeModal('mPaste');parsedTradeData=null;
+  try{render();}catch(e){console.error('SmartScan render error:',e);alert('Trade saved but display error: '+e.message+'\n\nRefresh the page to see your trade.');}
+  if(_firstTrade)noteFirstTrade();
+}
+
+// ════════════════════════════════════════════════════════
+// AUTH & ONBOARDING
+// ════════════════════════════════════════════════════════
+function authTab(tab){
+  const isSign = tab==='signin';
+  document.getElementById('tab-signin').style.background = isSign?'var(--bg3)':'transparent';
+  document.getElementById('tab-signin').style.color = isSign?'var(--text)':'var(--text3)';
+  document.getElementById('tab-signup').style.background = isSign?'transparent':'var(--bg3)';
+  document.getElementById('tab-signup').style.color = isSign?'var(--text3)':'var(--text)';
+  document.getElementById('auth-submit-btn').textContent = isSign?'Sign In':'Create Account';
+  document.getElementById('auth-submit-btn').dataset.mode = tab;
+  document.getElementById('auth-error').style.display='none';
+  const fw=document.getElementById('auth-forgot-wrap');if(fw)fw.style.display=isSign?'block':'none';
+  const lead=document.getElementById('auth-lead');if(lead)lead.style.display=isSign?'none':'block';
+  const pw=document.getElementById('auth-password');if(pw&&document.activeElement!==pw)pw.placeholder=isSign?'Password':(isPhoneLayout()?'Password, 6+ characters':'Password (6 or more characters)');
+}
+authTab('signin');
+
+function showAuthError(msg){
+  const el=document.getElementById('auth-error');
+  el.textContent=msg;el.style.background='#3b1a1a';el.style.borderColor='#7f1d1d';el.style.color='#fca5a5';el.style.display='block';
+}
+
+async function authSubmit(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-password').value;
+  const mode=document.getElementById('auth-submit-btn').dataset.mode||'signin';
+  const btn=document.getElementById('auth-submit-btn');
+  if(!email||!pass){showAuthError('Please enter your email and password.');return;}
+  const fresh=mode==='signup';
+  if(fresh)_freshSignup=true;
+  btn.textContent='Please wait…';btn.disabled=true;
+  const authEl=document.getElementById('auth-overlay');
+  if(authEl)authEl.style.display='none';
+  showLoadingOverlay(fresh?'Creating your account…':'Signing in…');
+  try{
+    if(fresh){
+      await createUserWithEmailAndPassword(_auth,email,pass);
+      if(_auth.currentUser)_confirmedUid=_auth.currentUser.uid;
+      if(typeof otTrack==='function')otTrack('/signup-complete');
+      if(typeof trackXSignup==='function')trackXSignup();
+      // Show the first-ticker step as soon as Auth succeeds; Firestore and quotes continue in the background.
+      showOnboardingIfNeeded();
+      hideLoadingOverlay(true);
+      resetAuthButton();
+    } else {
+      await signInWithEmailAndPassword(_auth,email,pass);
+    }
+  } catch(e){
+    _freshSignup=false;
+    hideLoadingOverlay(true);
+    if(authEl)authEl.style.display='flex';
+    btn.textContent=fresh?'Create Account':'Sign In';btn.disabled=false;
+    const msgs={'auth/email-already-in-use':'An account with this email already exists. Try Sign In.','auth/invalid-email':'That email address does not look right.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-credential':'Incorrect email or password.','auth/network-request-failed':'Could not reach the sign-in service. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Please try again later.'};
+    showAuthError(msgs[e.code]||e.message);
+  }
+}
+
+async function authForgot(e){
+  if(e)e.preventDefault();
+  const email=document.getElementById('auth-email').value.trim();
+  const el=document.getElementById('auth-error');
+  if(!email){showAuthError('Enter your email address above, then tap Forgot password.');document.getElementById('auth-email').focus();return;}
+  try{
+    await sendPasswordResetEmail(_auth,email);
+  }catch(err){
+    if(err.code==='auth/invalid-email'){showAuthError('Invalid email address.');return;}
+    if(err.code==='auth/too-many-requests'){showAuthError('Too many attempts. Please try again later.');return;}
+  }
+  el.textContent='If that email has an account, a reset link is on its way. Check your inbox (and spam).';
+  el.style.background='#0f2e2a';el.style.borderColor='var(--orange)';el.style.color='#99f6e4';el.style.display='block';
+}
+
+function isInAppBrowser(){
+  const ua=navigator.userAgent||'';
+  if(/Twitter/i.test(ua))return true;
+  if(/FBAN|FBAV/i.test(ua))return true;
+  if(/Instagram/i.test(ua))return true;
+  if(/LinkedInApp/i.test(ua)||/LinkedIn/i.test(ua)&&/Mobile/i.test(ua))return true;
+  if(/TikTok|musical_ly/i.test(ua))return true;
+  if(/; wv\)/.test(ua)&&/Android/i.test(ua))return true;
+  return false;
+}
+function updateAuthInAppNote(){
+  const el=document.getElementById('auth-inapp-note');
+  if(el)el.style.display=isInAppBrowser()?'block':'none';
+}
+async function authCopyPageLink(){
+  const url=location.href;
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(url);
+    else throw new Error('no clipboard');
+  }catch(e){
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=url;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';
+      document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+    }catch(err){return;}
+  }
+  const btn=document.getElementById('auth-copy-link');
+  if(btn){const t=btn.textContent;btn.textContent='Copied';setTimeout(()=>{btn.textContent=t;},2000);}
+}
+async function authGoogle(){
+  try{
+    if(isInAppBrowser()){
+      await signInWithRedirect(_auth,_googleProvider);
+      return;
+    }
+    const cred=await signInWithPopup(_auth,_googleProvider);
+    const info=getAdditionalUserInfo(cred);
+    if(info&&info.isNewUser){_freshSignup=true;if(typeof otTrack==='function')otTrack('/signup-complete');if(typeof trackXSignup==='function')trackXSignup();}
+  }catch(e){
+    if(e.code==='auth/popup-closed-by-user')return;
+    const msgs={'auth/popup-blocked':'Your browser blocked the Google window. Allow pop-ups for this site and try again.','auth/unauthorized-domain':'Google sign-in is not available from this address.','auth/network-request-failed':'Could not reach the sign-in service. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Please try again later.'};
+    showAuthError(msgs[e.code]||e.message);
+  }
+}
+
+function isFreshSignup(user){
+  if(_freshSignup)return true;
+  try{
+    const c=Date.parse(user&&user.metadata&&user.metadata.creationTime);
+    const l=Date.parse(user&&user.metadata&&user.metadata.lastSignInTime);
+    return Number.isFinite(c)&&Math.abs((l||c)-c)<60000&&(Date.now()-c)<180000;
+  }catch(e){return false;}
+}
+function showOnboardingIfNeeded(){
+  const ob=document.getElementById('onboard-overlay');
+  if(ob)ob.style.display=needsOnboarding(db,localStorage.getItem('wh-onboardSkipped')==='1')?'flex':'none';
+}
+function hideLoadingOverlay(immediate){
+  const el=document.getElementById('loading-overlay');
+  if(!el)return;
+  if(immediate){el.style.display='none';el.classList.remove('fade-out');return;}
+  el.classList.add('fade-out');
+  setTimeout(()=>{el.style.display='none';el.classList.remove('fade-out');},300);
+}
+function showLoadingOverlay(msg){
+  const el=document.getElementById('loading-overlay');
+  const bar=document.getElementById('loading-bar');
+  const text=document.getElementById('loading-text');
+  if(text&&msg)text.textContent=msg;
+  if(bar)bar.style.width='20%';
+  if(el){el.classList.remove('fade-out');el.style.display='flex';}
+}
+
+function startLiveQuotes(){
+  clearInterval(_pollHandle);
+  _pollHandle=setInterval(fetchAllQuotes,60000);
+  fetchAllQuotes();
+  fetchOptionMarks(false);
+}
+
+function needsOnboarding(d,skipped){return !skipped&&!(d.wheels&&d.wheels.length)&&!(d.trades&&d.trades.length)&&!(((typeof _realOpts!=='undefined'&&_realOpts)||d.opts||[]).length);}
+function onboardSkip(){localStorage.setItem('wh-onboardSkipped','1');const ob=document.getElementById('onboard-overlay');if(ob)ob.style.display='none';}
+async function onboardSubmit(){
+  const ticker=document.getElementById('onboard-ticker').value.trim().toUpperCase();
+  if(!ticker){document.getElementById('onboard-ticker').focus();return;}
+  // UID is guaranteed here — onboarding only shows after onAuthStateChanged confirms a valid user
+  const userId=_confirmedUid;
+  if(!userId){console.error('Onboard: no confirmed UID — should not happen');return;}
+  const btn=document.getElementById('onboard-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Starting…';}
+  const wheelId='w_'+ticker.toLowerCase()+'_'+uid();
+  const newWheel={id:wheelId,ticker:ticker,label:fmtMonYear(new Date().toISOString().slice(0,10)),status:'open',sortOrder:1,createdAt:new Date().toISOString()};
+  db.wheels.push(newWheel);
+  document.getElementById('onboard-overlay').style.display='none';
+  startPriceFill(ticker,newWheel);
+  _saveWheel(newWheel);
+}
+
+function showSignOutButton(user){
+  // Populate settings modal with user info
+  const userEl=document.getElementById('settings-user');
+  if(userEl)userEl.textContent=user.email||user.displayName||'user';
+}
+
+function bindOptrackBotLinks(){
+  const u=(window.BRAND&&window.BRAND.optrackBot&&window.BRAND.optrackBot.url)||'';
+  document.querySelectorAll('#paste-optrack-bot-link,#settings-optrack-bot-link,#tn-optrack-bot').forEach(a=>{if(u)a.href=u;});
+}
+bindOptrackBotLinks();
+function openSettings(){
+  openModal('mSettings');
+  // Sync toggle states
+  const toggle=document.getElementById('theme-toggle');
+  const knob=document.getElementById('theme-knob');
+  if(toggle){
+    const isLight=document.documentElement.getAttribute('data-theme')!=='dark';
+    toggle.checked=isLight;
+    if(knob)knob.style.left=isLight?'18px':'2px';
+  }
+  const dateSel=document.getElementById('date-fmt-select');
+  if(dateSel)dateSel.value=dateFmt;
+  fillReturnSettings();
+  const pl=document.getElementById('settings-plan'),lab=planLabel();
+  if(pl){const extra=_ent&&_ent.founder?'':_ent&&_ent.stripeCustomerId?'<a href="#" onclick="openBillingPortal();return false" style="color:var(--orange)">Manage billing</a>':'<a href="#" onclick="closeModal(\'mSettings\');openUpgrade(\'trial\');return false" style="color:var(--orange)">Upgrade</a>';pl.style.display=lab?'block':'none';pl.innerHTML=!lab?'':`Plan: <b>${lab}</b>`+(extra?' · '+extra:'');}
+}
+function fillReturnSettings(){}
+// Return settings live in a small panel opened from the cog on the Home Capital at work / Account size tile.
+function retFmtAcct(el){const v=el.value,pos=el.selectionStart||0;const before=v.slice(0,pos).replace(/[^0-9]/g,'').length;const d=v.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');const f=d?Number(d).toLocaleString('en-US'):'';el.value=f;let i=0,c=0;while(i<f.length&&c<before){if(/\d/.test(f[i]))c++;i++;}try{el.setSelectionRange(i,i);}catch(e){}}
+// Monthly target tracking is Pro (paid or trial). Free keeps the saved target but Home ignores it.
+function retTargetOn(){return true;}
+function homeReturnSettings(rs){return retTargetOn()?rs:{...rs,target:null};}
+function openRetCfg(btn){
+  const _tOn=retTargetOn();
+  closeRetCfg();
+  const rs=returnSettings(localStorage.getItem('wh-returnSet'),db.trades,db.opts||[]);
+  let rawBase=null;try{rawBase=JSON.parse(localStorage.getItem('wh-returnSet')||'null')?.base;}catch(e){}
+  const base=rawBase==='account'?'account':rs.base;
+  const p=document.createElement('div');p.id='ret-pop';p.className='wl-wi ret-pop';
+  p.onclick=e=>e.stopPropagation();
+  p.innerHTML=`<button type="button" class="wl-wi-x" aria-label="Close" onclick="closeRetCfg()">×</button>
+  <div class="wl-wi-in" style="grid-template-columns:1fr">
+    <label>Measure return against<input type="hidden" id="ret-base">
+      <div class="ret-mode" role="radiogroup" aria-label="Measure return against">
+        <button type="button" data-base="caw" aria-pressed="false" onclick="setRetBase('caw')">Auto</button>
+        <button type="button" data-base="account" aria-pressed="false" onclick="setRetBase('account')">Manual</button>
+      </div>
+    </label>
+  </div>
+  <div class="ret-notes">
+    <div class="ret-note">Auto: measures each month's % return against that month's peak capital at work. Manual: uses the account size you enter.</div>
+    <div class="ret-note">Applies to Return this month, the monthly table, and the Report.</div>
+  </div>
+  <div class="wl-wi-in">
+    <label id="ret-acct-row">Account size<span class="ret-dol"><input id="ret-account" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 50,000" oninput="retFmtAcct(this)" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>
+    <label>Monthly target<span class="ret-pct"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>
+  </div>
+  <div style="font-size:0.72rem;color:var(--text3);font-weight:480">Banked profit only. Leave the target empty to switch it off.</div>
+  <div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="saveReturnSettings(true)">Save</button></div>`;
+  document.body.appendChild(p);
+  p.querySelector('#ret-account').value=rs.account?Number(rs.account).toLocaleString('en-US'):'';
+  p.querySelector('#ret-target').value=rs.target||'';
+  setRetBase(base);
+  const r=btn.getBoundingClientRect(),w=Math.min(300,window.innerWidth-16);
+  p.style.width=w+'px';
+  p.style.left=Math.max(8,Math.min(window.innerWidth-w-8,r.right-w))+'px';
+  p.style.top=(r.bottom+6)+'px';
+  const a=p.querySelector(base==='account'?'#ret-account':'.ret-mode [data-base="caw"]');if(a)a.focus();
+}
+function setRetBase(v){
+  const b=v==='account'?'account':'caw';
+  const h=document.getElementById('ret-base');if(h)h.value=b;
+  const row=document.getElementById('ret-acct-row');if(row)row.style.display=b==='account'?'block':'none';
+  document.querySelectorAll('#ret-pop .ret-mode button').forEach(btn=>{
+    const on=btn.getAttribute('data-base')===b;
+    btn.classList.toggle('on',on);
+    btn.setAttribute('aria-pressed',on?'true':'false');
+  });
+}
+function closeRetCfg(){const p=document.getElementById('ret-pop');if(p)p.remove();}
+document.addEventListener('click',e=>{if(e.target.closest&&(e.target.closest('#ret-pop')||e.target.closest('.hk-cog')))return;closeRetCfg();});
+function saveReturnSettings(){
+  const bEl=document.getElementById('ret-base');if(!bEl)return;
+  const b=bEl.value,a=+String(document.getElementById('ret-account').value).replace(/[^0-9.]/g,'')||0,t=+document.getElementById('ret-target').value||0;
+  localStorage.setItem('wh-returnSet',JSON.stringify({base:b,account:a>0?a:0,target:t>0?t:null}));
+  persistReturnSettings();
+  closeRetCfg();
+  render();
+}
+// Return settings follow the account across devices (users/{uid}/prefs/return).
+function persistReturnSettings(){
+  if(APP_DEMO||!_fsDb||!_confirmedUid)return;
+  let v=null;try{v=JSON.parse(localStorage.getItem('wh-returnSet')||'null');}catch(e){return;}
+  if(!v)return;
+  _fsSetDoc(_fsDoc(_fsDb,'users',_confirmedUid,'prefs','return'),v).catch(e=>console.warn('Return settings save failed:',e.message));
+}
+async function loadReturnSettings(uid){
+  if(APP_DEMO||!_fsDb||!uid)return;
+  try{
+    const sn=await listenServer(doc(_fsDb,'users',uid,'prefs','return'));
+    if(sn.exists()){const d=sn.data();localStorage.setItem('wh-returnSet',JSON.stringify({base:d.base==='account'?'account':'caw',account:+d.account>0?+d.account:0,target:+d.target>0?+d.target:null}));}
+    else if(localStorage.getItem('wh-returnSet'))persistReturnSettings();
+  }catch(e){console.warn('Return settings load failed:',e.message);}
+}
+function setDateFmt(val){
+  if(val!=='us'&&val!=='uk')return;
+  dateFmt=val;
+  localStorage.setItem('wh-dateFmt',val);
+  render();
+}
+function toggleTheme(isLight){
+  if(isLight)document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme','dark');
+  localStorage.setItem('wh-theme',isLight?'light':'dark');
+  const knob=document.getElementById('theme-knob');
+  if(knob)knob.style.left=isLight?'18px':'2px';
+}
+function toggleSidebar(){} // sidebar removed in the overhaul (kept so old calls are harmless)
+
+// ── Plans: Free / Pro. Everything is driven by window.BRAND.plans; gating is OFF unless plans.gating is true.
+// The entitlement lives at entitlements/{uid}: users can read it, only the server (Stripe webhook / founder tool) can write it.
+let _ent=null,_entErr=false;
+function planCfg(){return (typeof window!=='undefined'&&window.BRAND&&window.BRAND.plans)||{gating:false,paidFeatures:[],free:{}};}
+// Pro = paid subscription, founder, or inside the 14-day trial. One source of truth: OT_TIER.getEffectiveTier (app/entitlement.js).
+function _tierLib(){return typeof OT_TIER!=='undefined'?OT_TIER:(typeof window!=='undefined'&&window.OT_TIER)||null;}
+function effectiveTier(ent){const T=_tierLib();if(T)return T.getEffectiveTier(ent===undefined?_ent:ent,Date.now());const p=!!(ent&&(ent.plan==='pro'||ent.founder));return{tier:p?'pro':'free',isTrial:false,trialDaysLeft:0,paid:p};}
+function isPro(ent,err){return !!(err||effectiveTier(ent).tier==='pro'); } // can't read it → never lock anyone out
+function isPaidPro(ent){return !!(ent&&(ent.plan==='pro'||ent.founder));}
+// Badge only: a real Pro entitlement (plan pro, or a founder). A failed read and the demo stay unmarked.
+function proBadgeOn(ent){return !!(ent&&ent.demo!==true&&(ent.plan==='pro'||ent.founder));}
+function syncProBadge(){const el=document.getElementById('tn-pro');if(el)el.hidden=!proBadgeOn(_ent);syncTrialPill();}
+function syncTrialPill(info){const el=document.getElementById('tn-trial');if(!el)return;const t=info||(planCfg().gating&&!_entErr&&!(_ent&&_ent.demo)?effectiveTier(_ent):null);
+  if(!t||!t.isTrial){el.hidden=true;return;}const d=t.trialDaysLeft;el.innerHTML='<span class="tt-long">Pro trial · '+d+' day'+(d===1?'':'s')+' left</span><span class="tt-short">Trial · '+d+'d</span>';el.setAttribute('aria-label','Pro trial, '+d+' day'+(d===1?'':'s')+' left. See Pro plans');el.classList.toggle('tn-trial-end',t.trialDaysLeft<=3);el.hidden=false;}
+function canUse(feature,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(!(cfg.paidFeatures||[]).includes(feature))return true;
+  return isPro(ent===undefined?_ent:ent,err===undefined?_entErr:err);}
+function underLimit(kind,count,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const f=cfg.free||{};const lim=kind==='wheel'?f.maxWheelTickers:f.maxOpenLeaps;return lim==null||count<lim;}
+// Free caps. Existing data is never touched — only creating a NEW open wheel ticker / open LEAP past the cap is blocked.
+function wheelCapOk(ticker,wheels,cfg,ent,err){const s=new Set((wheels||[]).filter(w=>w.status==='open').map(w=>w.ticker));if(ticker&&s.has(ticker))return true;return underLimit('wheel',s.size,cfg,ent,err);}
+function openTickerCount(wheels){return new Set((wheels||db.wheels||[]).filter(w=>w.status==='open').map(w=>w.ticker)).size;}
+function openLeapCount(legs){return (legs||db.opts||[]).filter(l=>l.status==='open'&&l.side==='long').length;}
+function isOpenRisk(action,isRoll){const T=_tierLib();if(T&&T.isOpeningAction)return !!(isRoll||T.isOpeningAction(action));return !!(isRoll||action==='CSP'||action==='STOC'||action==='STO'||action==='CC');}
+function wheelRiskOk(wheels,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const T=_tierLib(),n=openTickerCount(wheels);if(T)return T.canOpenOrRollWheel(effectiveTier(ent===undefined?_ent:ent),n,cfg);return isPro(ent,err)||n<=((cfg.free||{}).maxWheelTickers||2);}
+function pmccRiskOk(legs,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const T=_tierLib(),n=openLeapCount(legs);if(T)return T.canAddPmccCall(effectiveTier(ent===undefined?_ent:ent),n,cfg);return isPro(ent,err)||n<=((cfg.free||{}).maxOpenLeaps||1);}
+function liveOptionPricesOn(cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const T=_tierLib();if(T)return T.liveOptionPrices(effectiveTier(ent===undefined?_ent:ent));return isPro(ent,err);}
+function optionMarks(){return liveOptionPricesOn()?_wheelMarks:{};}
+function optPriceCueHtml(){if(typeof liveOptionPricesOn==='function'&&liveOptionPricesOn())return '';const T=_tierLib();const s=(T&&T.planCopy&&T.planCopy().optionPricesCue)||'Auto option prices · Pro';return `<button type="button" class="opt-price-cue" onclick="event.stopPropagation();openUpgrade('option-prices')">${s}</button>`;}
+function leapCapOk(adding,legs,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const lim=(cfg.free||{}).maxOpenLeaps;if(lim==null)return true;
+  return (legs||[]).filter(l=>l.status==='open'&&l.side==='long').length+(adding||1)<=lim;}
+// Imports: keep new legs up to the open-LEAP cap; drop the excess open LEAPs plus any new calls sold against them.
+// When already over the LEAP cap, also drop new short-call opens (close-only).
+function capNewLeaps(existing,newLegs,cfg,ent,err){const drop=new Set();let n=(existing||[]).filter(l=>l.status==='open'&&l.side==='long').length;
+  (newLegs||[]).forEach(l=>{if(l.side==='long'&&l.status==='open'){if(leapCapOk(1,Array(n).fill({status:'open',side:'long'}),cfg,ent,err))n++;else drop.add(l.id);}});
+  if(!canUse('unlimited',cfg,ent,err)){const lim=((cfg||planCfg()).free||{}).maxOpenLeaps??1;if((existing||[]).filter(l=>l.status==='open'&&l.side==='long').length>lim){(newLegs||[]).forEach(l=>{if(l.side==='short'&&l.status==='open')drop.add(l.id);});}}
+  const keep=(newLegs||[]).filter(l=>!drop.has(l.id)&&!(l.parentLeapId&&drop.has(l.parentLeapId)));return{keep,dropped:(newLegs||[]).length-keep.length,droppedLeaps:drop.size};}
+// Robinhood CSV import: Free gets plans.free.maxCsvImports completed imports (csvImportsUsed, server-written), Pro/trial unlimited.
+function csvImportOk(cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const e=ent===undefined?_ent:ent;const T=_tierLib();
+  if(T)return T.canImportCsv(effectiveTier(e),e,cfg);return isPro(e,false)||((e&&+e.csvImportsUsed)||0)<((cfg.free||{}).maxCsvImports??1);}
+function capMsg(kind){const f=planCfg().free||{};
+  if(kind==='wheel')return `Free plan: up to ${f.maxWheelTickers} open tickers. Your existing ones are kept — upgrade to add more.`;
+  if(kind==='wheel-risk')return `Free plan: opening and rolling resume automatically once you are back to ${f.maxWheelTickers} open tickers. You can still close, expire or assign existing positions.`;
+  if(kind==='leap-risk')return `Free plan: opening and rolling short calls resume automatically once you are back to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. You can still close existing short calls.`;
+  return `Free plan: up to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. Your existing ones are kept — upgrade to add more.`;}
+async function loadEntitlement(uid){try{const sn=await listenServer(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}syncProBadge();}
+async function _pollUpgrade(uid){for(let i=0;i<6&&!isPaidPro(_ent);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPaidPro(_ent)){alert('Thanks! Pro is now on for your account.');render();}}
+function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';const t=effectiveTier(_ent);if(t.isTrial)return `Pro trial · ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left`;if(t.tier==='pro')return 'Pro';return 'Free';}
+let _upgInterval='annual';
+function _upgPrices(){const T=_tierLib();return T?T.priceDisplay(planCfg()):null;}
+function upgSetInterval(iv){_upgInterval=iv==='monthly'?'monthly':'annual';const D=_upgPrices();if(!D)return;
+  document.querySelectorAll('#mUpgrade [data-iv]').forEach(b=>{const on=b.dataset.iv===_upgInterval;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
+  const x=_upgInterval==='annual'?D.annual:D.monthly;document.getElementById('upg-amt').innerHTML=`${esc(x.perMonthText)}<span> / month</span>`;document.getElementById('upg-billed').textContent=x.line;
+  document.getElementById('upg-save').textContent=`Save ${D.annual.savePct}%`;}
+function upgGo(){return startCheckout(_upgInterval);}
+function openUpgrade(feature,msg){
+  const B=window.BRAND||{},P=planCfg(),N=B.featureNames||{},t=effectiveTier(_ent);
+  const C=_tierLib()&&_tierLib().planCopy?_tierLib().planCopy():null;
+  document.getElementById('upg-feature').textContent=feature==='trial'?(t.isTrial?`You're on the Pro trial: ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left. Keep Pro when it ends:`:'Pro'):N[feature]?(N[feature].endsWith('.')?N[feature]:N[feature]+'.'):'Upgrade to Pro.';
+  const freeEl=document.getElementById('upg-free');if(freeEl)freeEl.textContent=C?C.free:'';
+  const trialEl=document.getElementById('upg-trial');if(trialEl)trialEl.textContent=C?C.trial:'';
+  document.getElementById('upg-table').innerHTML=(P.comparison||[]).map(r=>`<tr><td>${r[0]}</td>${[r[1],r[2]].map(v=>`<td class="${v==='✓'||v==='Unlimited'?'y':v==='–'?'n':''}">${v}</td>`).join('')}</tr>`).join('');
+  upgSetInterval(P.defaultInterval||'annual');
+  document.getElementById('upg-msg').textContent=msg||'';openModal('mUpgrade');
+}
+async function _billingCall(fn,payload){
+  if(APP_DEMO){location.href='/start';throw new Error('Opening sign-up…');}
+  const u=_auth.currentUser;if(!u)throw new Error('Please sign in again.');
+  const r=await fetch('/.netlify/functions/'+fn,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify(payload||{})});
+  const j=await r.json().catch(()=>({}));if(!r.ok||!j.url)throw new Error(j.error||'Something went wrong, please try again.');return j.url;
+}
+async function startCheckout(interval){interval=interval==='monthly'?'monthly':'annual'; // older links said yearly
+  const m=document.getElementById('upg-msg');if(m)m.textContent='Opening secure checkout…';try{const url=await _billingCall('checkout',{interval});if(url){try{if(typeof otTrack==='function')otTrack('/checkout-started/'+interval);}catch(e){}}if(url)location.href=url;}catch(e){if(m)m.textContent=e.message;}}
+// Server-side plan bookkeeping (entitlements are read-only to the browser): start the trial once for a new account, count CSV imports.
+async function _accountCall(action){if(APP_DEMO)return null;const u=_auth.currentUser;if(!u)return null;
+  const r=await fetch('/.netlify/functions/account',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify({action})});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'account '+r.status);if(j.entitlement)_ent={...(_ent||{}),...j.entitlement};syncProBadge();return j;}
+// New accounts only (created in the last 48h, re-checked on the server): ask the server to start the 14-day trial once.
+function _maybeStartTrial(user){try{if(_entErr||!planCfg().gating||APP_DEMO)return;if(_ent&&(_ent.trialStartedAt||isPaidPro(_ent)))return;
+  const c=Date.parse(user&&user.metadata&&user.metadata.creationTime||'');if(!c||Date.now()-c>48*3600e3)return;
+  _accountCall('start-trial').then(j=>{if(j&&j.started)render();}).catch(e=>console.warn('Trial start:',e.message));}catch(e){}}
+function _noteCsvImport(p){if(!p||!p.rh)return;_ent={...(_ent||{}),csvImportsUsed:((_ent&&+_ent.csvImportsUsed)||0)+1};_accountCall('csv-import').catch(e=>console.warn('Import count:',e.message));}
+async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
+
+// ── Your data: export and delete ─────────────────────────────
+const USER_COLLECTIONS=['wheels','trades','optlegs'];
+function _csvCell(v){if(v===null||v===undefined)return '';if(typeof v==='object')v=JSON.stringify(v);
+  // Text that starts like a formula gets a leading ' so Excel/Sheets show it rather than run it.
+  if(typeof v==='string'&&/^[=+\-@\t\r]/.test(v)&&isNaN(Number(v)))v="'"+v;v=String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function toCSV(rows){const keys=[];rows.forEach(r=>Object.keys(r).forEach(k=>{if(!keys.includes(k))keys.push(k);}));return [keys.join(',')].concat(rows.map(r=>keys.map(k=>_csvCell(r[k])).join(','))).join('\r\n');}
+function buildExport(data,meta){
+  const app=(typeof window!=='undefined'&&window.BRAND&&window.BRAND.name)||'OpTrack';
+  const json={app,exportedAt:(meta&&meta.at)||new Date().toISOString(),account:(meta&&meta.email)||'',wheels:data.wheels||[],trades:data.trades||[],leaps:data.optlegs||[]};
+  const rows=[].concat((data.wheels||[]).map(r=>({record:'wheel',...r})),(data.trades||[]).map(r=>({record:'trade',...r})),(data.optlegs||[]).map(r=>({record:'leap',...r})));
+  return {json:JSON.stringify(json,null,2),csv:toCSV(rows)};
+}
+async function deleteAllUserData(uid,api){
+  if(!uid)throw new Error('Not signed in');let n=0;
+  for(const c of USER_COLLECTIONS){const ids=await api.list(c);for(const id of ids){await api.del(c,id);n++;}}
+  const left=[];for(const c of USER_COLLECTIONS){if((await api.list(c)).length)left.push(c);}
+  if(left.length)throw new Error('Some data could not be deleted ('+left.join(', ')+'). Nothing else was removed; please try again.');
+  return n;
+}
+function _download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+async function exportMyData(){
+  if(APP_DEMO){alert('Export works on your own account. This is the demo.');return;}
+  const uid=_currentUid();if(!uid){alert('Please sign in first.');return;}
+  try{
+    const data={};for(const c of USER_COLLECTIONS){data[c]=(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.data());}
+    const out=buildExport(data,{email:_auth.currentUser&&_auth.currentUser.email});
+    const base=String(_brandName()).toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-export-'+new Date().toISOString().slice(0,10);
+    _download(base+'.json',out.json,'application/json');setTimeout(()=>_download(base+'.csv',out.csv,'text/csv'),400);
+  }catch(e){console.error('Export failed:',e);alert('Could not export, please check your connection and try again.');}
+}
+function togglePw(btn){
+  const input=btn.parentNode.querySelector('input');if(!input)return;
+  const show=input.type==='password';
+  const start=input.selectionStart,end=input.selectionEnd;
+  input.type=show?'text':'password';
+  btn.setAttribute('aria-pressed',show?'true':'false');
+  btn.setAttribute('aria-label',show?'Hide password':'Show password');
+  const open=btn.querySelector('.pw-eye-show'),shut=btn.querySelector('.pw-eye-hide');
+  if(open)open.hidden=show;if(shut)shut.hidden=!show;
+  input.focus();
+  try{if(start!=null)input.setSelectionRange(start,end);}catch(e){}
+}
+function openDeleteAccount(){
+  closeModal('mSettings');openModal('mDelete');
+  const u=_auth.currentUser;const pw=document.getElementById('delete-password');
+  const isPw=!!(u&&u.providerData&&u.providerData.some(p=>p.providerId==='password'));
+  const wrap=document.getElementById('delete-password-wrap');
+  wrap.style.display=isPw?'block':'none';pw.value='';pw.type='password';
+  const eye=wrap.querySelector('.pw-eye');if(eye){eye.setAttribute('aria-pressed','false');eye.setAttribute('aria-label','Show password');const open=eye.querySelector('.pw-eye-show'),shut=eye.querySelector('.pw-eye-hide');if(open)open.hidden=false;if(shut)shut.hidden=true;}
+  document.getElementById('delete-confirm').value='';document.getElementById('delete-go').disabled=true;document.getElementById('delete-msg').textContent='';
+}
+async function doDeleteAccount(){
+  const u=_auth.currentUser,uid=_currentUid(),msg=document.getElementById('delete-msg'),btn=document.getElementById('delete-go');
+  if(!u||!uid||u.uid!==uid){msg.textContent='Please sign in again first.';return;}
+  if(document.getElementById('delete-confirm').value.trim()!=='DELETE')return;
+  btn.disabled=true;btn.textContent='Deleting…';msg.textContent='';
+  try{
+    // 1. Prove it's really you (Firebase needs a recent sign-in to delete an account).
+    if(u.providerData.some(p=>p.providerId==='password')){const pw=document.getElementById('delete-password').value;if(!pw)throw Object.assign(new Error('Enter your password to confirm.'),{soft:true});await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,pw));}
+    else await reauthenticateWithPopup(u,_googleProvider);
+    // 2. Delete every document, then 3. the login itself.
+    await deleteAllUserData(uid,{list:async c=>(await getDocsFromServer(collection(_fsDb,'users',uid,c))).docs.map(d=>d.id),del:(c,id)=>deleteDoc(doc(_fsDb,'users',uid,c,id))});
+    await releaseFirestore();
+    await deleteUser(u);
+    Object.keys(localStorage).filter(k=>k.startsWith('wh-')||k==='wheel_tracker_v7').forEach(k=>localStorage.removeItem(k));
+    closeModal('mDelete');alert('Your account and all its data have been deleted.');location.reload();
+  }catch(e){
+    console.error('Delete failed:',e);btn.disabled=false;btn.textContent='Delete my account forever';
+    const m={'auth/wrong-password':'Wrong password.','auth/invalid-credential':'Wrong password.','auth/popup-closed-by-user':'Sign-in was cancelled, so nothing was deleted.','auth/too-many-requests':'Too many attempts, please try later.'};
+    msg.textContent=m[e.code]||e.message;
+  }
+}
+
+async function doSignOut(){
+  try{await releaseFirestore();await signOut(_auth);closeModal('mSettings');}catch(e){console.error('Sign out failed:',e);}
+}
+
+// ════════════════════════════════════════════════════════
+// MASTER SWITCH — nothing runs until Firebase confirms auth
+// ════════════════════════════════════════════════════════
+// ── Demo boot: made-up trades from demo.js, Pro features on, prices made up locally (no API calls). ──
+function demoBoot(){
+  window._authResolved=true;_confirmedUid=null;
+  _ent={plan:'pro',demo:true};_entErr=false;syncProBadge();
+  const d=OT_DEMO.load();db.wheels=d.wheels;db.trades=d.trades;db.opts=d.opts;window._db=db;
+  document.getElementById('auth-overlay').style.display='none';
+  document.documentElement.classList.add('ot-demo');
+  const bar=document.createElement('div');bar.id='demo-banner';
+  bar.innerHTML='<span class="db-copy"><span class="db-full"><b>Demo</b> with made-up trades. Nothing is saved to an account. Long press or right-click any trades to see the real net.</span><span class="db-short"><b>Demo</b> · made-up trades</span></span><span class="db-act"><button type="button" onclick="OT_DEMO.reset()">Reset demo</button><a href="/app/?signup=1" class="db-go" onclick="window.otTrack&&window.otTrack(\'/start-free\')">Start free</a></span>';
+  document.body.prepend(bar);
+  const _syncDemoBan=()=>{document.documentElement.style.setProperty('--demo-banner-h',bar.offsetHeight+'px');};
+  _syncDemoBan();window.addEventListener('resize',_syncDemoBan);
+  const cta=document.createElement('div');cta.id='demo-cta';
+  cta.innerHTML='<a class="demo-cta-btn" href="/app/?signup=1">Start 14-day free trial — no credit card required</a>';
+  document.body.appendChild(cta);
+  const tab=document.getElementById('tabbar');
+  const _syncDemoCta=()=>{
+    document.documentElement.style.setProperty('--demo-cta-h',cta.offsetHeight+'px');
+    if(tab)document.documentElement.style.setProperty('--tabbar-h',tab.offsetHeight+'px');
+  };
+  _syncDemoCta();window.addEventListener('resize',_syncDemoCta);
+  if(typeof ResizeObserver==='function'){const ro=new ResizeObserver(_syncDemoCta);ro.observe(cta);if(tab)ro.observe(tab);}
+  ['settings-export','settings-signout','settings-delete','settings-user'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  const sx=document.getElementById('settings-export');if(sx){const r=document.createElement('button');r.className='btn btn-ghost btn-full st-row';r.textContent='Reset demo';r.onclick=()=>OT_DEMO.reset();sx.after(r);}
+  const ta=document.getElementById('paste-raw');if(ta){const b=document.createElement('button');b.type='button';b.id='demo-sample';b.className='btn btn-ghost';b.style.cssText='margin-top:0.5rem;font-size:0.75rem';b.textContent='Try a sample';b.onclick=()=>{ta.value=OT_DEMO.sample();ta.focus();};ta.after(b);}
+  const hv={home:'dash',wheel:'positions',leaps:'options',activity:'log',stats:'analytics',report:'report'}[location.hash.slice(1)];
+  safeBrandMarks();
+  if(hv)switchView(hv);else render();
+  fetchAllQuotes().then(()=>{db.wheels.forEach(w=>{if(w.status==='open'&&quotes[w.ticker])w.lastPrice=quotes[w.ticker].price;});render();
+    const l=document.getElementById('loading-overlay');if(l)l.style.display='none';}).catch(()=>{const l=document.getElementById('loading-overlay');if(l)l.style.display='none';});
+  clearInterval(_pollHandle);_pollHandle=setInterval(fetchAllQuotes,60000);
+}
+function resetAuthButton(){
+  const btn=document.getElementById('auth-submit-btn');
+  if(!btn)return;
+  btn.disabled=false;
+  const mode=btn.dataset.mode||'signin';
+  btn.textContent=mode==='signup'?'Create Account':'Sign In';
+}
+function showAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'flex';
+  updateAuthInAppNote();
+  var signup=false;try{signup=sessionStorage.getItem('ot-signup')==='1';sessionStorage.removeItem('ot-signup');}catch(e){}
+  if(typeof authTab==='function')authTab(signup?'signup':'signin');
+  resetAuthButton();
+  const ob = document.getElementById('onboard-overlay');
+  if (ob) ob.style.display = 'none';
+  const btn = document.getElementById('auth-signout-btn');
+  if (btn) btn.remove();
+  db = JSON.parse(JSON.stringify(SEED_DATA));
+  window._db = db;
+  render();
+}
+
+const _googleRedirectReady = APP_DEMO ? Promise.resolve(null) : getRedirectResult(_auth).then(cred => {
+  if(cred){
+    const info=getAdditionalUserInfo(cred);
+    if(info&&info.isNewUser){
+      _freshSignup=true;
+      if(typeof otTrack==='function')otTrack('/signup-complete');
+      if(typeof trackXSignup==='function')trackXSignup();
+      showOnboardingIfNeeded();
+    }
+  }
+  return cred;
+}).catch(e => {
+  if(e&&e.code!=='auth/no-auth-event')console.error('Google redirect sign-in failed:',e);
+  return null;
+});
+if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
+  await _googleRedirectReady;
+  window._authResolved = true;
+  if (user) {
+    try{sessionStorage.removeItem('ot-signup');}catch(e){}
+    _confirmedUid = user.uid;
+    ensureFirestore();
+    showSignOutButton(user);
+    document.getElementById('auth-overlay').style.display = 'none';
+    resetAuthButton();
+
+    const fresh=isFreshSignup(user);
+    _freshSignup=false;
+
+    const migrateLegacy=async()=>{
+      const localData=localStorage.getItem('wheel_tracker_v7');
+      if(!localData)return;
+      const loadingText=document.getElementById('loading-text');
+      if(loadingText)loadingText.textContent='Migrating data...';
+      console.log('Forcing migration...');
+      try{
+        const oldDb=JSON.parse(localData);
+        for(const w of (oldDb.wheels||[])){if(w&&w.id)await setDoc(doc(_fsDb,'users',user.uid,'wheels',w.id),w);}
+        for(const t of (oldDb.trades||[])){if(t&&t.id)await setDoc(doc(_fsDb,'users',user.uid,'trades',t.id),t);}
+        for(const l of (oldDb.opts||[])){if(l&&l.id)await setDoc(doc(_fsDb,'users',user.uid,'optlegs',l.id),l);}
+        localStorage.removeItem('wheel_tracker_v7');
+        console.log('Migration successful. localStorage cleared.');
+      }catch(err){console.error('Migration failed:',err);}
+    };
+
+    const loadAccount=()=>Promise.all([
+      loadDBFromFirestore(user.uid),
+      loadHealthDismiss(user.uid),
+      loadReturnSettings(user.uid)
+    ]).then(()=>{window._db=db;});
+
+    // New sign-up: show the first-ticker step as soon as Auth succeeds. Prefs and quotes fill in behind it.
+    if(fresh){
+      showOnboardingIfNeeded();
+      hideLoadingOverlay(true);
+      loadEntitlement(user.uid).then(()=>{_maybeStartTrial(user);if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPaidPro(_ent))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
+      migrateLegacy().then(loadAccount).then(()=>{startLiveQuotes();}).catch(e=>{
+        console.error('Load failed:',e);
+      });
+      return;
+    }
+
+    const loadingEl=document.getElementById('loading-overlay');
+    const loadingBar=document.getElementById('loading-bar');
+    const loadingText=document.getElementById('loading-text');
+    showLoadingOverlay('Loading your account…');
+    if(loadingBar)loadingBar.style.width='30%';
+
+    try{
+      loadEntitlement(user.uid).then(()=>{_maybeStartTrial(user);if(/[?&]upgraded=1/.test(location.search))_pollUpgrade(user.uid);else{const cp=sessionStorage.getItem('ot-checkout');if(cp){sessionStorage.removeItem('ot-checkout');if(!isPaidPro(_ent))startCheckout(cp).then(()=>{const m=document.getElementById('upg-msg');if(m&&m.textContent&&!/Opening/.test(m.textContent))alert(m.textContent);});}}});
+      await migrateLegacy();
+      await loadAccount();
+    }catch(e){
+      console.error('Load failed:', e);
+      if(loadingText)loadingText.innerHTML='Could not load your data — check your connection. '
+        +'<button onclick="location.reload()" style="margin-left:0.5rem;padding:0.25rem 0.625rem;border-radius:0.375rem;border:1px solid var(--border,#444);background:transparent;color:inherit;cursor:pointer">Retry</button>';
+      return; // do NOT proceed to quotes/render/onboarding with an empty db
+    }
+    render();
+    hideLoadingOverlay();
+    // Prices and logos fill in behind the cards — do not block first paint
+    startLiveQuotes();
+  } else {
+    _confirmedUid = null;_ent=null;_entErr=false;syncProBadge();
+    clearInterval(_pollHandle);
+    _pollHandle = null;
+    document.getElementById('loading-overlay').style.display = 'none';
+    showAuthOverlay();
+  }
+});
+
+// ════════════════════════════════════════════════════════
+// DOM EVENT WIRING + GLOBAL EXPOSE — INSIDE module scope
+// ════════════════════════════════════════════════════════
+function tryLockPhonePortrait(){
+  try{
+    if(!(window.matchMedia&&matchMedia('(max-width:700px) and (pointer:coarse)').matches))return;
+    const ori=screen.orientation;
+    if(ori&&typeof ori.lock==='function'){
+      const p=ori.lock('portrait');
+      if(p&&typeof p.catch==='function')p.catch(function(){});
+    }
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded', () => {
+  tryLockPhonePortrait();
+  const tabSignin = document.getElementById('tab-signin');
+  const tabSignup = document.getElementById('tab-signup');
+  if (tabSignin) tabSignin.addEventListener('click', () => authTab('signin'));
+  if (tabSignup) tabSignup.addEventListener('click', () => authTab('signup'));
+  const submitBtn = document.getElementById('auth-submit-btn');
+  if (submitBtn) submitBtn.addEventListener('click', authSubmit);
+  const passField = document.getElementById('auth-password');
+  if (passField) passField.addEventListener('keydown', e => { if(e.key==='Enter') authSubmit(); });
+  const googleBtn = document.getElementById('auth-google-btn');
+  if (googleBtn) googleBtn.addEventListener('click', authGoogle);
+  updateAuthInAppNote();
+  const copyLinkBtn = document.getElementById('auth-copy-link');
+  if (copyLinkBtn) copyLinkBtn.addEventListener('click', authCopyPageLink);
+  const forgotLink = document.getElementById('auth-forgot');
+  if (forgotLink) forgotLink.addEventListener('click', authForgot);
+  const onboardBtn = document.getElementById('onboard-submit-btn');
+  if (onboardBtn) onboardBtn.addEventListener('click', onboardSubmit);
+  const tickerField = document.getElementById('onboard-ticker');
+  if (tickerField) tickerField.addEventListener('keydown', e => { if(e.key==='Enter') onboardSubmit(); });
+});
+window.addEventListener('pageshow',tryLockPhonePortrait);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)tryLockPhonePortrait();});
+
+window.togglePw = togglePw;
+window.authTab = authTab;
+window.authSubmit = authSubmit;
+window.authGoogle = authGoogle;
+window.authForgot = authForgot;
+window.onboardSubmit = onboardSubmit;
+window.switchView = switchView; window.copyReport = copyReport;
+window.goToOpt = goToOpt; window.goToLeap = goToLeap;
+window.setOptDemo = setOptDemo;
+window.exportOptsCSV = exportOptsCSV;
+window.setOptFilter = setOptFilter;
+window.openOptAdd = openOptAdd;
+window.openPmccSell=openPmccSell;window.openLeapRoll=openLeapRoll;window.pmccManualTab=pmccManualTab;window.pmccSide=pmccSide;window.pmccTab=pmccTab;window.pmccRunScan=pmccRunScan;window.pmccFillFrom=pmccFillFrom;window.savePmcc=savePmcc;window.pmccSaveRoll=pmccSaveRoll;window.pmccClose=pmccClose;window.pmccExpire=pmccExpire;window.pmccDeleteShort=pmccDeleteShort;window.openPmccLegEdit=openPmccLegEdit;window.savePmccLeg=savePmccLeg;
+window.openLeapAdd = openLeapAdd;window.openLeapEdit = openLeapEdit;window.saveLeap = saveLeap;window.deleteLeap = deleteLeap;window.setLeapStatus = setLeapStatus;window.toggleShowClosedLeaps = toggleShowClosedLeaps;window.toggleHideLeap = toggleHideLeap;window.toggleShowHiddenLeaps = toggleShowHiddenLeaps;window.setLeapSort = setLeapSort;window.toggleLeapMinAll = toggleLeapMinAll;window.switchLeapTab = switchLeapTab;window.leapRunScan = leapRunScan;window.leapFillFrom = leapFillFrom;
+window.openOptEdit = openOptEdit;
+window.optAddLeg = optAddLeg;
+window.optParsePaste = optParsePaste;
+window.saveOpt = saveOpt;
+window.deleteOptGroup = deleteOptGroup;
+window.openOptClose = openOptClose;
+window.saveOptClose = saveOptClose;
+window.fetchOptionMarks = fetchOptionMarks; window.refreshLegMark = refreshLegMark; window.dismissHealth = dismissHealth; window.dismissSelTip = dismissSelTip; window.selDone = selDone;
+
+window.openNewPos = openNewPos;
+window.quickAddRotation = quickAddRotation;
+window.openNewWheel = openNewWheel;window.nwInput = nwInput;window.nwKey = nwKey;window.nwBlur = nwBlur;window.commitNewWheel = commitNewWheel;
+window.closeModal = closeModal;
+window.saveWheel = saveWheel;
+window.deleteTrade = deleteTrade;
+window.deleteTradeFromModal = deleteTradeFromModal;
+window.markExpiredFromModal = markExpiredFromModal;
+window.saveTrade = saveTrade;
+window.switchPasteTab = switchPasteTab;window.fillRollSelect = fillRollSelect;
+window.toggleWheelPick = toggleWheelPick;window.chooseWheelPick = chooseWheelPick;
+window.parsePaste = parsePaste;
+window.savePMTrade = savePMTrade;
+window.showPasteStep1 = showPasteStep1;
+window.confirmParsed = confirmParsed;
+function selTipHtml(){try{if(localStorage.getItem('wh-sel-tip')==='1')return '';}catch(e){}return `<div class="sel-tip"><span>Right-click to select trades</span><button type="button" class="sel-tip-x" onclick="dismissSelTip(event)" aria-label="Dismiss">✕</button></div>`;}
+function dismissSelTip(e){if(e){e.preventDefault();e.stopPropagation();}try{localStorage.setItem('wh-sel-tip','1');}catch(err){}document.querySelectorAll('.sel-tip').forEach(n=>n.remove());}
+function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');dismissSelTip();try{history.pushState({whSel:1},'');}catch(e){}selPaint();}
+function selExit(){if(!_selOn&&!document.body.classList.contains('sel-mode'))return;_selOn=false;_sel.clear();document.body.classList.remove('sel-mode');document.querySelectorAll('.trow.sel').forEach(el=>el.classList.remove('sel'));const panel=document.getElementById('sel-panel');if(panel)panel.hidden=true;}
+function selDone(){if(_selOn&&history.state&&history.state.whSel){_selPop=true;history.back();return;}selExit();}
+function selRead(row){return{key:row.getAttribute('data-sel')||'',cash:+row.getAttribute('data-cash')||0,date:row.getAttribute('data-date')||'',tk:row.getAttribute('data-tk')||'',fee:+row.getAttribute('data-fee')||0,ct:+row.getAttribute('data-ct')||0,act:row.getAttribute('data-act')||'',strike:row.getAttribute('data-strike')||''};}
+function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_sel.has(k))_sel.delete(k);else _sel.set(k,selRead(row));row.classList.toggle('sel',_sel.has(k));if(!_sel.size){selDone();return;}selBar();}
+function selPaint(){document.querySelectorAll('.trow[data-sel]').forEach(el=>el.classList.toggle('sel',_sel.has(el.getAttribute('data-sel'))));selBar();}
+function selPlace(){const panel=document.getElementById('sel-panel');if(!panel||panel.hidden)return;const de=document.documentElement,vw=de.clientWidth||innerWidth,vv=window.visualViewport,visL=vv?Math.max(0,vv.offsetLeft):0,visR=vv?Math.min(vw,vv.offsetLeft+vv.width):vw;panel.style.right='auto';panel.style.left=Math.round((visL+visR)/2)+'px';panel.style.width='min(22rem,'+Math.max(200,Math.floor(visR-visL-48))+'px)';}
+window.addEventListener('resize',selPlace);if(window.visualViewport)visualViewport.addEventListener('resize',selPlace);
+function selBar(){const panel=document.getElementById('sel-panel');if(!panel)return;if(!_selOn||!_sel.size){panel.hidden=true;return;}panel.hidden=false;selPlace();const items=[..._sel.values()];const s=selSummary(items);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),kind=document.getElementById('sel-kind'),bits=document.getElementById('sel-bits'),list=document.getElementById('sel-list');const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));const head=selHeadline(s);if(net){net.textContent=money(s.net);net.className=head.netClass;}if(kind){kind.textContent=head.kind;kind.className=head.kindClass;}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(bits){const lines=[`Collected ${fmtMoney(s.credits)}` ,`Paid ${fmtMoney(s.debits)}`,`Fees ${fmtMoney(s.fees)}`];const cl=selContractLine(s,money);if(cl)lines.push(cl);if(s.tickers.length>1)lines.push(s.tickers.map(t=>`${esc(t.tk)} ${money(t.cash)}`).join(' · '));let status='';if(s.isRoll){const {trades:pool,tip}=selCollectTrades(items);if(tip&&typeof buildRollChain==='function'){const chain=buildRollChain(pool,tip.id);if(chain&&chain.live)status=rollStatusHtml(rollChainStatus(chain.trades,tip,selOpenMark(tip)),money);}}bits.innerHTML=lines.map(l=>`<div>${l}</div>`).join('')+status;}if(list){list.innerHTML=items.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>{const k=t.strike?` $${fmt2(+t.strike).replace(/\.00$/,'')}`:'';return `<div class="sel-row"><span>${t.date?fmtDateShort(t.date):''}</span><span>${esc((t.act||'')+k)}</span><span class="${t.cash<0?'r':'g'}">${money(t.cash)}</span></div>`;}).join('');}}
+document.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(e.ctrlKey||e.metaKey){e.preventDefault();_selSkip=true;if(!_selOn)selEnter();selToggle(row);return;}if(_selOn)return;if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;const x=e.clientX,y=e.clientY;let held=false;try{row.setPointerCapture(e.pointerId);}catch(err){}const timer=setTimeout(()=>{held=true;_selSkip=true;if(!_selOn)selEnter();selToggle(row);try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}},500);const cancel=ev=>{clearTimeout(timer);if(ev&&ev.type==='pointerup'&&held)_selSkip=true;row.removeEventListener('pointermove',move);row.removeEventListener('pointerup',cancel);row.removeEventListener('pointercancel',cancel);};const move=ev=>{if(Math.abs(ev.clientX-x)>12||Math.abs(ev.clientY-y)>12)cancel(ev);};row.addEventListener('pointermove',move);row.addEventListener('pointerup',cancel);row.addEventListener('pointercancel',cancel);});
+document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
+document.addEventListener('click',e=>{if(!_selOn)return;const t=e.target;if(t.closest&&(t.closest('.trow[data-sel]')||t.closest('#sel-panel')))return;selDone();});
+document.addEventListener('contextmenu',e=>{const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;e.preventDefault();if(_selSkip)return;_selSkip=true;if(!_selOn)selEnter();selToggle(row);setTimeout(()=>{_selSkip=false;},400);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_selOn){e.preventDefault();selDone();}});
+window.addEventListener('popstate',()=>{if(_selPop){_selPop=false;selExit();return;}if(_selOn)selExit();});
+window.doImport = doImport;
+window.openPasteTrade = openPasteTrade;
+window.openEditWheel = openEditWheel;
+window.toggleStatus = toggleStatus;
+window.moveWheel = moveWheel;
+window.deleteWheel = deleteWheel;
+window.toggleExpand = toggleExpand;
+window.toggleLeapExpand = toggleLeapExpand;
+window.toggleListAll = toggleListAll;
+window.toggleMinimise = toggleMinimise;
+window.toggleHide = toggleHide;
+window.toggleMinAll = toggleMinAll;
+window.wlWhatIf = wlWhatIf; window.wlWhatIfClose = wlWhatIfClose; window.wlWhatIfCalc = wlWhatIfCalc; window.wlWhatIfLog = wlWhatIfLog;
+window.toggleShowClosed = toggleShowClosed;
+window.toggleShowHidden = toggleShowHidden;
+window.setPosSort = setPosSort;
+window.setLogQ = setLogQ; window.setLogKind = setLogKind;
+window.cyclePosSort = cyclePosSort;
+window.toggleSortMenu = toggleSortMenu;
+window.closeSortMenu = closeSortMenu;
+window.openEditTrade = openEditTrade;
+window.saveWheelCurrentPrice = saveWheelCurrentPrice;
+window.saveOptCurrentPrice = saveOptCurrentPrice;
+window.goToTrade = goToTrade; window.goToNextExpiry = goToNextExpiry;
+window.goToWheel = goToWheel; // module-scope rule: inline handlers need window exposure
+window.sortLog = sortLog;
+window.openAddTrade = openAddTrade;
+window.openImport = openImport;
+window.openSettings = openSettings;
+window.toggleTheme = toggleTheme;
+window.setDateFmt = setDateFmt;
+window.toggleSidebar = toggleSidebar;
+window.doSignOut = doSignOut;
+window.onboardSkip = onboardSkip;
+window.setRetBase = setRetBase; window.saveReturnSettings = saveReturnSettings; window.retFmtAcct = retFmtAcct; window.openRetCfg = openRetCfg; window.closeRetCfg = closeRetCfg; window.openUpgrade = openUpgrade; window.upgGo = upgGo; window.upgSetInterval = upgSetInterval; window.syncTrialPill = syncTrialPill; window.startCheckout = startCheckout; window.openBillingPortal = openBillingPortal;
+window.exportMyData = exportMyData; window.openDeleteAccount = openDeleteAccount; window.doDeleteAccount = doDeleteAccount;
+window.exportCSV = exportCSV;
+window.toggleAnalyticsSec = toggleAnalyticsSec;
+window.onActionChange = onActionChange;
+window.onTickerInput = onTickerInput;
+window.autoCalcDTE = autoCalcDTE;
+window.readFilledAtField = readFilledAtField;
+window.paintFillTimeHint = paintFillTimeHint;
+window.setFillTimeField = setFillTimeField;
+window.filledAtFromOpenForm = filledAtFromOpenForm;
+window.paintTradeDeltaHint = paintTradeDeltaHint;
+window.paintLeapDeltaHint = paintLeapDeltaHint;
+window.paintPeDeltaHint = paintPeDeltaHint;
+window.autoCalcTotal = autoCalcTotal;
+window.autoCalcPPD = autoCalcPPD;
+window.onPMActionChange = onPMActionChange;
+window.onPMTickerInput = onPMTickerInput;
+window.autoCalcPMTotal = autoCalcPMTotal;
+window.autoCalcPMDTE = autoCalcPMDTE;
+window.showXpop = showXpop;
+window.hideXpop = hideXpop;
+

@@ -1,8 +1,9 @@
+const{appSrc}=require('./appsrc');
 // caw-toggle.test.js — Capital at Work cog: Auto / Manual toggle (v411). No maths changes.
 const test=require('node:test');const assert=require('node:assert');
 const fs=require('fs'),path=require('path');
 const{extractFn}=require('./extract');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app/index.html'),'utf8');
+const SRC=appSrc();
 
 test('popover swaps the dropdown for an Auto/Manual toggle; Auto=caw, Manual=account',()=>{
   const cfg=extractFn('openRetCfg');

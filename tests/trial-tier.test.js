@@ -1,7 +1,8 @@
+const{appSrc}=require('./appsrc');
 // trial-tier.test.js — USD Pro pricing, 14-day reverse trial, Free vs Pro gates (v408).
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path'),vm=require('vm');
 const T=require('../app/entitlement.js');const{extractFn}=require('./extract');
-const A=path.join(__dirname,'..','app');const SRC=fs.readFileSync(path.join(A,'index.html'),'utf8');
+const A=path.join(__dirname,'..','app');const SRC=appSrc();
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);const P=ctx.window.BRAND.plans;
 const DAY=864e5,T0=Date.parse('2026-12-01T10:00:00Z');
 const trialUser=()=>({...T.trialFields(T0)});

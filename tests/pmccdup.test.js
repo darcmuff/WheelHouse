@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // pmccdup.test.js — LEAP buy back must not leave a second open STO; duplicate sells are refused (fake figures only).
 const { extractFn } = require('./extract');
 let pass = 0, fail = 0;
@@ -28,7 +29,7 @@ const marc = [...legs, again];
 const cur = S.pmccStats(leap, marc, '2026-10-29').cur;
 check('Edit → Delete short call targets the stray open copy', cur && cur.id === 's2', cur && cur.id);
 // v93 LEAP card: Close/Roll top right, always-visible trades, collapse key, roll-mode modal
-{const SRC=require('fs').readFileSync(require('path').join(__dirname,'..','app','index.html'),'utf8');
+{const SRC=appSrc();
 check('v93: Close in LEAP header, no Roll button', /class="lc-lacts"[^\n]*openOptClose\('\$\{esc\(gid\)\}','close'\)">Close</.test(SRC)&&!/openLeapRoll\(/.test(SRC.match(/class="lc-lacts"[\s\S]{0,400}/)[0]));
 check('v93: new collapse key, default expanded', SRC.includes("localStorage.getItem('wh-collapsedLeaps')")&&!SRC.includes('expandedLeaps'));
 check('v93: no stale Edit → Close LEAP pointers', !/Edit → Close LEAP/.test(SRC));

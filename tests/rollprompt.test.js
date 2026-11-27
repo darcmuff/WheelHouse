@@ -1,8 +1,9 @@
+const{appSrc}=require('./appsrc');
 // A close and a later open are two trades. The old "Mark as roll?" prompt stays gone.
 // A simple Roll checkbox and a stored roll / rollId flag are the replacement.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
 const{extractFn}=require('./extract');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 test('the mark-as-roll prompt and its matchers are gone',()=>{
   assert.ok(!SRC.includes('Mark as roll?'));
   assert.ok(!SRC.includes('function checkRollCandidate'));

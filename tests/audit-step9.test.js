@@ -1,9 +1,10 @@
+const{appSrc}=require('./appsrc');
 // audit-step9.test.js — cleanup, listener fix and dead code (audit Step 9).
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const { extractFn } = require('./extract');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 
 // listenServer run against a fake onSnapshot that records subscribe/unsubscribe
 function harness() {

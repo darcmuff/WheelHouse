@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // delta.test.js — Black-Scholes delta at open, IV solve, unsolvable cases, bucketing.
 // Isolated helper only. Does not touch existing optionsLib or P&L.
 const test = require('node:test');
@@ -108,7 +109,7 @@ test('bucket edges and No delta; best bucket is highest average P&L', () => {
 });
 
 test('delta.js is a separate helper and optionsLib BS is unchanged', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const src = appSrc();
   const delta = fs.readFileSync(path.join(__dirname, '..', 'app', 'delta.js'), 'utf8');
   assert.match(delta, /fixed 4%/);
   assert.match(delta, /filledAt/);
@@ -205,7 +206,7 @@ test('blank fill time writes nothing; malformed input is rejected', () => {
 });
 
 test('delta buckets live in More data, not the Report', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const src = appSrc();
   const analytics = extractFn('renderAnalytics');
   const report = extractFn('renderReport');
   const table = extractFn('analyticsDeltaTable');

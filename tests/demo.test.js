@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path'),vm=require('vm');
-const A=path.join(__dirname,'..','app');const SRC=fs.readFileSync(path.join(A,'demo.js'),'utf8');const H=fs.readFileSync(path.join(A,'index.html'),'utf8');
+const A=path.join(__dirname,'..','app');const SRC=fs.readFileSync(path.join(A,'demo.js'),'utf8');const H=appSrc();
 function env(pathname){
   class Storage{constructor(){this._m={};}getItem(k){return k in this._m?this._m[k]:null;}setItem(k,v){this._m[k]=String(v);}removeItem(k){delete this._m[k];}}
   const ls=new Storage(),ss=new Storage();let reloaded=0;const fetched=[];

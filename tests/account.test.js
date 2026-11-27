@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
-const{extractFn}=require('./extract');const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const{extractFn}=require('./extract');const SRC=appSrc();
 const L=new Function("const USER_COLLECTIONS=['wheels','trades','optlegs'];"+['_csvCell','toCSV','buildExport','deleteAllUserData'].map(n=>{const s=extractFn(n);return s.startsWith('function')&&n==='deleteAllUserData'?'async '+s:s;}).join('\n')+'\nreturn{toCSV,buildExport,deleteAllUserData};')();
 const data={wheels:[{id:'w1',ticker:'ZEPH'}],trades:[{id:'t1',wheelId:'w1',type:'CSP',premium:1.25,pnl:-40,note:'rolled, "early"'},{id:'t2',note:'=HYPERLINK("x")'}],optlegs:[{id:'o1',ticker:'KOLA',side:'long'}]};
 test('export JSON has everything',()=>{const j=JSON.parse(L.buildExport(data,{at:'2026-11-01T00:00:00Z',email:'a@b.c'}).json);

@@ -1,6 +1,7 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');
 const fs=require('fs');const path=require('path');
-const SRC=fs.readFileSync(path.join(__dirname,'../app/index.html'),'utf8');
+const SRC=appSrc();
 function grab(name){
   const i=SRC.indexOf('function '+name+'(');
   assert.ok(i>=0,name+' missing');

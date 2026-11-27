@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
-const{extractFn}=require('./extract');const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const{extractFn}=require('./extract');const SRC=appSrc();
 const needs=new Function(extractFn('needsOnboarding')+'\nreturn needsOnboarding;')();
 test('onboarding only for a truly empty account',()=>{assert.ok(needs({wheels:[],trades:[],opts:[]},false));
   assert.ok(!needs({wheels:[],trades:[],opts:[{id:'o'}]},false),'LEAP-only user is not new');assert.ok(!needs({wheels:[{id:'w'}],trades:[],opts:[]},false));assert.ok(!needs({wheels:[],trades:[],opts:[]},true),'skipped');});

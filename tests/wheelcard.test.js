@@ -1,8 +1,9 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const { extractFn } = require('./extract');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const L = new Function('db', ['walkLegPairs','realisedPremium','shareRealisations', 'calcWheel', 'wheelCardSummary', 'wheelStage'].map(extractFn).join('\n') + '\nreturn {shareRealisations,calcWheel,wheelCardSummary,wheelStage};');
 // ACME example wheel: 400 shares, fees $1.08 per option
 const opt = (i, a, ent, exp, k, p, ew) => { const g = p * 400, tot = Math.round((['CSP', 'STOC', 'STC'].includes(a) ? g - 1.08 : g + 1.08) * 100) / 100;

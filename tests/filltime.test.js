@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // Fill time field: labels, ids (for OpTrack Bot), grey hints, and save wiring.
 const test = require('node:test');
 const assert = require('node:assert');
@@ -5,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { extractFn } = require('./extract');
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const attr = (id) => ((SRC.match(new RegExp(`<input id="${id}"[^>]*>`)) || [])[0] || '');
 
 function around(id, before, after) {

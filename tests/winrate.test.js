@@ -1,8 +1,9 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const { extractFn, withLedger } = require('./extract');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const mk = db => new Function('db', withLedger(extractFn('calcWinLoss') + '\nreturn calcWinLoss();'));
 const run = db => mk()(db);
 test('win rate counts closed option trades only (same rule as the old panel)', () => {

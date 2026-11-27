@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn, extractConst, withLedger } = require('./extract');
@@ -111,7 +112,7 @@ test('open options and open long LEAP cost are excluded', () => {
 });
 
 test('More data KPI and Annualised Projection both use calcProjectedYearly, not calcYTD yearly', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   const start = H.indexOf('function renderStatsOverview(');
   const mid = H.indexOf('function renderAnalytics(');
   const overview = H.slice(start, mid);

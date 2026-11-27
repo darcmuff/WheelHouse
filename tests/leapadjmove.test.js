@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 const {extractFn}=require('./extract');
 const f=new Function(extractFn('leapAdjMoveHtml')+'\nreturn leapAdjMoveHtml;')();
 test('Cost after calls %: down vs paid is green ▼ (calls paid you back)',()=>{

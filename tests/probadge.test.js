@@ -1,8 +1,9 @@
+const{appSrc}=require('./appsrc');
 // Pro badge: real Pro/founder entitlements only. Free, demo, and a failed read stay unmarked.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
 const{extractFn}=require('./extract');
 const proBadgeOn=new Function(extractFn('proBadgeOn')+'\nreturn proBadgeOn;')();
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 test('badge is on for plan pro and founders, off for free, demo, and no entitlement',()=>{
   assert.strictEqual(proBadgeOn({plan:'pro'}),true);
   assert.strictEqual(proBadgeOn({founder:true}),true);

@@ -1,7 +1,8 @@
+const{appSrc}=require('./appsrc');
 // Show/hide on every password field. Sign-in and create-account share one field.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
 const{extractFn}=require('./extract');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 const togglePw=new Function(extractFn('togglePw')+'\nreturn togglePw;')();
 function field(type){
   const icons={};

@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 const i=SRC.indexOf('function leapOptHtml(');const j=SRC.indexOf('\nfunction renderLeapCard(',i);
 const f=new Function(SRC.slice(i,j)+'\nreturn leapOptHtml;')();
 test('option up vs prev close',()=>{const h=f(62.4,60.5,null);assert.ok(h.includes('$62.40')&&h.includes('▲3.1%')&&h.includes('+$1.90')&&h.includes('var(--green)'));});

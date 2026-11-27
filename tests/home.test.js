@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const { extractFn } = require('./extract');
@@ -39,7 +40,7 @@ test('next expiry picks the soonest open leg across wheel and LEAPs', () => {
   assert.strictEqual(nx.ticker, 'NVDA'); assert.strictEqual(nx.dte, 8);
 });
 test('no trade warnings anywhere: Needs you is data health only', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   assert.ok(!/function needsYou|function pmccLabels|function buildDashAlerts/.test(H));
   assert.ok(!/Take profit|Expiring soon|Near the money|Under 9 months left|is below breakeven|wl-memo warn|leap-badge \$\{|_itmTag/.test(H));
   assert.ok(/✓ All clear/.test(H) && /allDataHealth\(\)/.test(H));
@@ -71,7 +72,7 @@ test('next expiry passes through trade identity without changing the pick', () =
   assert.strictEqual(wheel.what, 'put $150');
 });
 test('Next expiry tile is clickable and keyboard-accessible when a trade exists', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   const home = extractFn('renderHome');
   assert.ok(home.includes('hk-nx') && home.includes('goToNextExpiry(this)') && home.includes('role="button"') && home.includes('tabindex="0"'));
   assert.ok(H.includes('function goToNextExpiry') && H.includes('_flashTrade') && H.includes('nx-flash'));
@@ -79,7 +80,7 @@ test('Next expiry tile is clickable and keyboard-accessible when a trade exists'
 });
 
 test('LEAP payback bar has a small ⓘ at the left, not a tooltip on the bar', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   assert.ok(H.includes("n.closest('.ii')") || H.includes('n.closest(".ii")') || H.includes("closest('.ii')"));
   assert.ok(!H.includes('.lc-bar[data-tip]'));
   assert.ok(!H.includes('.lc-bar::after'));
@@ -108,7 +109,7 @@ test('LEAP payback bar has a small ⓘ at the left, not a tooltip on the bar', (
 });
 
 test('More data and Report are hidden on phone and kept on desktop', () => {
-  const H = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   assert.ok(/\.v2-hero\.v2-home \.home-head p\.home-more\{display:none\}/.test(H));
   assert.ok(/\.ny-desk\{display:none\}/.test(H));
   assert.ok(!H.includes('settings-log') && !H.includes('settings-more') && !H.includes('settings-report'));

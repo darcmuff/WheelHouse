@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
 const A=path.join(__dirname,'..','app');
 const{goatPath,gcLiveHost,gcTestFlag,gcShouldCount,gcTakePageview}=require('../app/goat-path.js');
@@ -115,7 +116,7 @@ test('every counting page inlines the helpers, sets no_onload, sends one pagevie
     const take=new Function(fns.gcTakePageview+';return gcTakePageview;')();
     const st={};assert.ok(take(st)&&!take(st));
   });
-  const idx=fs.readFileSync(path.join(A,'index.html'),'utf8');
+  const idx=appSrc();
   const i=idx.indexOf('<script src="demo.js"></script>');
   assert.ok(i>0&&i<idx.indexOf('localStorage'),'demo.js still runs before any localStorage read on the app page');
   const ana=fs.readFileSync(path.join(A,'analytics.js'),'utf8');

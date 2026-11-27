@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -117,7 +118,7 @@ test('Manual mode overrides Auto with no regressions on Home, Report and the tab
 });
 
 test('Monthly P&L table adds a % column and a denominator tooltip', () => {
-  const H = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const H = appSrc();
   const start = H.indexOf('function renderMonthlyForMeasure');
   const fn = H.slice(start, H.indexOf('\n}\n', start));
   assert.ok(fn.includes("'%'") || fn.includes('"%s"') || fn.includes("'%']") || fn.includes(",'%']") || fn.includes(",'%']"), 'has a % column');

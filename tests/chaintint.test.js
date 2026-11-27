@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // chaintint.test.js — each roll chain gets its own permanent tint index.
 const test = require('node:test');
 const assert = require('node:assert');
@@ -48,7 +49,7 @@ test('pmcc: rolledFrom chains indexed, lone short untinted', () => {
 });
 
 test('trade tables do not paint chain strips, roll icons or tint', () => {
-  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const src = appSrc();
   assert.ok(!/chain-row|roll-badge|chain-tint|roll-trade|roll-slot|⛓ Chain|chain complete/.test(src));
 });
 

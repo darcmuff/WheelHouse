@@ -1,7 +1,8 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const styleOf = id => (SRC.match(new RegExp(`<div id="${id}" style="([^"]*)"`)) || [])[1] || '';
 test('page boots on the loading screen, not the sign-in form (no fake "signed out" while Firebase restores the session)', () => {
   assert.match(styleOf('auth-overlay'), /display:none/);

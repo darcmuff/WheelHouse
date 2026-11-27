@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 test('Add trade is only on each trade table, not the nav or the import row',()=>{
   assert.ok(!SRC.includes('tn-paste'));
   assert.ok(!SRC.includes('function pasteFill'));

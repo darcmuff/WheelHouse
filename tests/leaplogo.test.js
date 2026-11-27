@@ -1,5 +1,6 @@
+const{appSrc}=require('./appsrc');
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 function grab(name){const i=SRC.indexOf('function '+name+'(');if(i<0)throw new Error('missing '+name);let d=0,start=SRC.indexOf('{',i);for(let j=start;j<SRC.length;j++){if(SRC[j]==='{')d++;else if(SRC[j]==='}'){d--;if(!d)return SRC.slice(i,j+1);}}throw new Error('unclosed '+name);}
 function grabConst(name){const i=SRC.indexOf('const '+name+'=');if(i<0)throw new Error('missing '+name);let end=SRC.indexOf(';',i);return SRC.slice(i,end+1);}
 const f=new Function('logos','esc',grabConst('FACE_LOGOS')+'\n'+grab('logoUrlFor')+'\n'+grab('rotNumHtml')+'\n'+grab('leapLogoHtml')+'\nreturn leapLogoHtml;')({SPCX:'https://x/wordmark.png',AAPL:'https://x/aapl.png'},s=>s);

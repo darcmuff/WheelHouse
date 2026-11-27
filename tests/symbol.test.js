@@ -1,9 +1,10 @@
+const{appSrc}=require('./appsrc');
 // New wheel: Finnhub search results and ticker fallback.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const path=require('path');
 const{extractFn}=require('./extract');
 const{pick}=require('../netlify/functions/symbol.js');
 const nwTicker=new Function(extractFn('nwTicker')+'\nreturn nwTicker;')();
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 test('search keeps stocks and drops odd symbols',()=>{
   const rows=pick({result:[
     {description:'TESLA INC',displaySymbol:'TSLA',type:'Common Stock'},

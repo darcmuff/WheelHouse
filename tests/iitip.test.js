@@ -1,8 +1,9 @@
+const{appSrc}=require('./appsrc');
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const { extractFn } = require('./extract');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const SRC = appSrc();
 const place = new Function(extractFn('iiPlace') + 'return iiPlace;')();
 const r = (left, top) => ({ left, top, width: 12, height: 12, right: left + 12, bottom: top + 12 });
 test('tip sits under the icon, centred', () => {

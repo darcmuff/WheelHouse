@@ -1,7 +1,8 @@
+const{appSrc}=require('./appsrc');
 // startup.test.js — app always opens on the Wheel tab; price charts start collapsed.
 const test = require('node:test');
 const assert = require('node:assert');
-const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app', 'index.html'), 'utf8');
+const src = appSrc();
 
 test('startup view is always Wheel, saved tab ignored', () => {
   assert.match(src, /let view='positions';/);

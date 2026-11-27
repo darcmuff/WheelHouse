@@ -1,9 +1,10 @@
+const{appSrc}=require('./appsrc');
 // Roll flag + pairing. A stored roll / rollId is the only signal; history is not guessed.
 const test=require('node:test');const assert=require('node:assert/strict');
 const fs=require('fs');const path=require('path');
 const{extractFn}=require('./extract');
 
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 
 const helpers=new Function([
   'let _n=0;function uid(){return "id"+(++_n);}',

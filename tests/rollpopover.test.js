@@ -1,3 +1,4 @@
+const{appSrc}=require('./appsrc');
 // Roll picker math + open-roll row display. Figures are Marc's (t1194u).
 const test=require('node:test');
 const assert=require('node:assert');
@@ -5,7 +6,7 @@ const fs=require('fs');
 const path=require('path');
 const{extractFn,extractConst}=require('./extract');
 
-const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
+const SRC=appSrc();
 
 const stubs=`
 function fmtMoney(n){if(n==null||isNaN(n))return'—';const abs=Math.abs(n).toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g,',');return(n<0?'-$':'$')+abs;}

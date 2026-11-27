@@ -1,7 +1,8 @@
+const{appSrc}=require('./appsrc');
 // tiersplit.test.js — v426 Free vs Pro/Trial split: caps, close-only downgrade, option quotes, copy.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path'),vm=require('vm');
 const T=require('../app/entitlement.js');const{extractFn}=require('./extract');
-const A=path.join(__dirname,'..','app');const SRC=fs.readFileSync(path.join(A,'index.html'),'utf8');
+const A=path.join(__dirname,'..','app');const SRC=appSrc();
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(A,'brand.js'),'utf8'),ctx);const P=ctx.window.BRAND.plans;
 const G=new Function('OT_TIER','let _ent=null,_entErr=false,db={wheels:[],opts:[]};'+['planCfg','_tierLib','effectiveTier','isPro','canUse','underLimit','wheelCapOk','leapCapOk','csvImportOk','openTickerCount','openLeapCount','isOpenRisk','wheelRiskOk','pmccRiskOk','liveOptionPricesOn'].map(extractFn).join('\n')+'\nreturn{isPro,canUse,wheelCapOk,leapCapOk,csvImportOk,wheelRiskOk,pmccRiskOk,liveOptionPricesOn,isOpenRisk};')(T);
 const FREE={plan:'free'},PRO={plan:'pro'};
