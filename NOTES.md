@@ -8,6 +8,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `main` is at sw v417 (`c6156d6`, 2026-11-26): checkout error handling (v414), US date default (v415), phone tab swipe (v416) and the neighbouring-page peek (v417).
 
+- `dev` only (sw v432, 2026-11-27): The wheel card’s top-right figure is now `Net P&L (now)`: cycle mark-to-market (the same realised figure shown underneath, plus the open option’s mark and any open-share unrealised). An unpriced open option shows — rather than a partial number. Trade-row P&L is unchanged. Do not push to main until Marc says so.
+
 - `dev` only (sw v431, 2026-11-27): Phone long-press on an *open* trade row no longer loses the hold. A live quote or delta refresh was rebuilding the list mid-press, which cancelled the gesture and let Android start a native copy/select. Render is deferred while a finger is down, the hold looks up the row by `data-sel`, and the whole trade list blocks text selection and the Android `selectstart` callout. Do not push to main until Marc says so.
 
 - `dev` only (sw v430, 2026-11-27): Phone long-press to select trades for net P&L is more reliable: 450ms hold, 10px move tolerance, cancel on scroll, no pointer capture (which aborted the gesture on iOS), suppress the native callout/context-menu so it cannot deselect the row, haptic plus a press tint, and the following click is ignored. Desktop right-click is unchanged. Do not push to main until Marc says so.

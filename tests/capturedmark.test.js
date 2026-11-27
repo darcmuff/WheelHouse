@@ -27,9 +27,9 @@ test('an explicit empty quote says no quote, and a mark that has not loaded yet 
   assert.ok(cells({[occ]:null},141.03).cap.includes('no quote'));
   assert.strictEqual(cells({},141.03).cap,'—');
 });
-test('card Profit uses the same words when the quote was rejected',()=>{
+test('card Net P&L (now) shows an em dash when the quote was rejected',()=>{
   const src=appSrc();
-  assert.ok(src.includes('wl-cur"><span>Profit</span><b class="m">no quote</b>'));
+  assert.ok(src.includes('wl-cur"><span>Net P&amp;L (now)</span><b class="m">—</b>'));
   assert.ok(src.includes("c.markWhy==='none'"));
 });
 test('LEAP short rows say no quote when the mark was rejected, even if a last price is still saved',()=>{

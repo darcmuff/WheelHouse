@@ -53,7 +53,7 @@ test('wheel card: no More numbers disclosure; premium collected and days in cycl
   const card = SRC.slice(SRC.indexOf('const wheelCardBody='), SRC.indexOf('const metricsBar='));
   const ret = SRC.slice(SRC.indexOf('${wheelCardBody}'), SRC.indexOf('${wheelCardBody}') + 40);
   assert.ok(!/wl-more/.test(ret));
-  assert.ok(SRC.includes("_fact('Realised premium'") && SRC.includes("_fact('Days in cycle'"));
+  assert.ok(SRC.includes("_fact('Realised'") && SRC.includes("_fact('Days in cycle'"));
   assert.ok(!SRC.includes('wl-prem'), 'no premium pill in the stage row');
   assert.ok(card.includes('${_fPrem}${_fDays}'));
 });
@@ -65,15 +65,18 @@ test('metrics rows: space-between, first flush left, last flush right, single ro
   assert.ok(SRC.includes('.wl-facts>.wl-f:last-child:not(:first-child){text-align:right}'));
 });
 
-test('wheel card: open-option cell is labelled Profit with signed $ and % underneath', () => {
-  assert.ok(SRC.includes('<span>Profit</span>'));
+test('wheel card: top-right cell is Net P&L (now) with a signed $ and no open-leg %', () => {
+  assert.ok(SRC.includes('<span>Net P&amp;L (now)</span>'));
+  assert.ok(!SRC.includes('<span>Profit</span>'));
   assert.ok(!SRC.includes("<span>Current value</span>"));
-  assert.ok(SRC.includes("${_curPft>=0?'+':'-'}${fmtMoney(Math.abs(_curPft))}"));
+  assert.ok(SRC.includes("${_netNow>=0?'+':'-'}${fmtMoney(Math.abs(_netNow))}"));
 });
 
-test('wheel card Profit is chain-aware', () => {
-  assert.ok(SRC.includes('const _curChain=wheelChainProfit(m.trades,_curOpt,_curVal);'));
-  assert.ok(SRC.includes('const _curPft=_curChain?_curChain.profit:wheelCurrentProfit(_curOpt,_curVal);'));
+test('wheel card Net P&L (now) is cycle mark-to-market, not chain or single-leg Profit', () => {
+  assert.ok(SRC.includes('wheelNetPnlNow({'));
+  assert.ok(SRC.includes('realised:m.realisedPnL'));
+  assert.ok(SRC.includes('const _legPft=wheelCurrentProfit(_curOpt,_curVal);'));
+  assert.ok(!SRC.includes('const _curPft=_curChain?_curChain.profit:wheelCurrentProfit(_curOpt,_curVal);'));
 });
 
 test('v103 continuity: wheel card controls/formats match LEAP card', () => {

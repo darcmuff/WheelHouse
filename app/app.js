@@ -3431,6 +3431,19 @@ function wheelCurrentValue(opt,mid){return opt&&mid!=null&&mid>=0?Math.round(mid
 // Pure: % of the sold premium still kept = (premium received − current value) ÷ premium received × 100. + = cheaper to buy back.
 // Pure: open-option profit now = premium received − live buy-back cost; null without premium or quote.
 function wheelCurrentProfit(opt,curVal){if(!opt||curVal==null)return null;if(!(opt.premium>0))return null;if(opt.openCredit!=null)return Math.round((opt.openCredit-curVal)*100)/100;return Math.round((opt.premium*100*opt.contracts-curVal)*100)/100;}
+// Pure: cycle mark-to-market P&L = banked realised (closed legs + dividends/fees) + open option MTM + open share unrealised.
+// Returns null (UI shows —) when an open option or open shares cannot be priced, so a partial figure is never shown.
+function wheelNetPnlNow(o){
+  o=o||{};
+  if(o.hasOpenOption&&!o.optionPriced)return null;
+  if(o.hasOpenShares&&!o.sharesPriced)return null;
+  const r=+o.realised;
+  if(isNaN(r))return null;
+  const opt=o.hasOpenOption?+o.openOptionPnl:0;
+  const sh=o.hasOpenShares?+o.openSharePnl:0;
+  if(isNaN(opt)||isNaN(sh))return null;
+  return Math.round((r+opt+sh)*100)/100;
+}
 // Pure: chain-aware Profit. When the open leg tips a roll chain: chain net − live buy-back;
 // % = that ÷ every sell-to-open premium received across the chain. Null when the leg is not in a chain.
 function wheelChainProfit(trades,opt,curVal){
@@ -3622,11 +3635,18 @@ function renderRotationWindow(wheel){
     :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
   const _curOpt=isOpen?wheelCurrentOption(wheel.ticker,m.trades):null,_wm=typeof optionMarks==='function'?optionMarks():_wheelMarks,_markKnown=!!(_curOpt&&Object.prototype.hasOwnProperty.call(_wm,_curOpt.occ));
   const _curVal=_markKnown&&_wm[_curOpt.occ]!=null?wheelCurrentValue(_curOpt,_wm[_curOpt.occ]):null;
-  let _curPct=wheelCurrentPct(_curOpt,_curVal);
-  const _curChain=wheelChainProfit(m.trades,_curOpt,_curVal);
-  const _curPft=_curChain?_curChain.profit:wheelCurrentProfit(_curOpt,_curVal);
-  if(_curChain)_curPct=_curChain.pct;
-  const _fCur=_curPft!=null&&_curPct!=null?`<div class="wl-f wl-cur"><span>Profit</span><b class="${_curPft>=0?'g':'r'}">${_curPft>=0?'+':'-'}${fmtMoney(Math.abs(_curPft))}</b><small class="${_curPct>=0?'g':'r'}">${_curPct>=0?'+':'-'}${Math.round(Math.abs(_curPct))}%</small></div>`:(_markKnown?`<div class="wl-f wl-cur"><span>Profit</span><b class="m">no quote</b></div>`:'');
+  const _legPft=wheelCurrentProfit(_curOpt,_curVal);
+  const _hasOpenShares=(_rss.openShares>0)||(m.sharesHeld>0);
+  const _netNow=wheelNetPnlNow({
+    realised:m.realisedPnL,
+    hasOpenOption:!!_curOpt,
+    optionPriced:_curVal!=null&&_legPft!=null,
+    openOptionPnl:_legPft,
+    hasOpenShares:_hasOpenShares,
+    sharesPriced:!_hasOpenShares||(_rss.unrealised!=null&&!isNaN(_rss.unrealised)),
+    openSharePnl:_rss.unrealised
+  });
+  const _fCur=_netNow!=null?`<div class="wl-f wl-cur"><span>Net P&amp;L (now)</span><b class="${_netNow>=0?'g':'r'}">${_netNow>=0?'+':'-'}${fmtMoney(Math.abs(_netNow))}</b></div>`:`<div class="wl-f wl-cur"><span>Net P&amp;L (now)</span><b class="m">—</b></div>`;
   const _f3=m.sharesHeld>0
     ?_fact('Unrealised',_rss.unrealised==null?'no price':fmtMoney(_rss.unrealised),_rss.unrealised==null?'m':colorN(_rss.unrealised))
     :'';
@@ -3637,7 +3657,7 @@ function renderRotationWindow(wheel){
   const _memo=_cs.held?`<div class="wl-memo">Sell calls above <b>$${fmt2(_cs.sellAbove)}</b> ${ii(`Your breakeven after all premium and dividends. Calls struck above this lock in a profit if called away.`)}<button type="button" class="wl-wi-btn" onclick="event.stopPropagation();wlWhatIf('${wheel.id}')">What if?</button></div><div class="wl-wi" id="wi-${wheel.id}" hidden onclick="event.stopPropagation()" data-be="${m.breakeven}" data-shares="${m.sharesHeld}" data-oshares="${_rss.openShares}" data-ocost="${_rss.openCost}" data-prem="${m.premiumNet}" data-real="${_rss.realised||0}" data-divs="${_divs}"><button type="button" class="wl-wi-x" aria-label="Close" onclick="event.stopPropagation();wlWhatIfClose('${wheel.id}')">×</button><div class="wl-wi-in"><label>Strike<input data-wi="k" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 190" oninput="wlWhatIfCalc('${wheel.id}')"></label><label>Premium / share<input data-wi="p" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.00" oninput="wlWhatIfCalc('${wheel.id}')"></label></div><div data-wi="out"><div class="wl-wi-r"><span>New cost basis</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>Breakeven</span><span class="wl-wi-v">—</span></div><div class="wl-wi-r"><span>If called away</span><span class="wl-wi-v">—</span></div></div><div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();wlWhatIfLog('${wheel.id}')">Log this trade</button></div></div>`:'';
   const _cap=(m.sharesHeld>0&&openPos&&openPos.action==='STOC'&&_rss.openShares>0)?calledAwayProfit(openPos.strike,_rss.openShares,_rss.openCost,m.premiumNet,_rss.realised,_divs):null;
   const _fCall=_cap!=null?_fact('Profit if called',(_cap>=0?'+':'')+fmtMoney(_cap).replace(/\.00$/,''),colorN(_cap)):'';
-  const _fPrem=_fact('Realised premium',fmtMoney(m.premiumRealised).replace(/\.00$/,''),colorN(m.premiumRealised)); // realised only; was gross 'Premium collected' incl. open sells
+  const _fPrem=_fact('Realised',fmtMoney(m.realisedPnL).replace(/\.00$/,''),colorN(m.realisedPnL)); // same banked figure Net P&L (now) adds: closed premium + share realisations + dividends
   const _fDays=_cr?_fact('Days in cycle',String(_cr.days)):'';
   // Part-covered shares: held minus shares under open covered calls (skipped if any call has no share count)
   const _idle=(()=>{if(_stage!==2||!isOpen||!(m.sharesHeld>0))return 0;const calls=openOptionLegs(m.trades).filter(o=>o.action==='STOC');if(!calls.length||calls.some(o=>!(o._rem>0)&&!Number(o.shares)))return 0;const cov=calls.reduce((a,o)=>a+(o._rem>0?o._rem:Number(o.shares)),0);return Math.max(0,m.sharesHeld-cov);})();
