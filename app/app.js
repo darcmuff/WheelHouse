@@ -3444,6 +3444,31 @@ function wheelNetPnlNow(o){
   if(isNaN(opt)||isNaN(sh))return null;
   return Math.round((r+opt+sh)*100)/100;
 }
+// Pure: Chain Captured % for an active rolled chain (2+ trades, priced open leg).
+// credit is buildRollChain().net — the same Chain Net Credit the cashflow popover shows.
+// buyBack is currentOptionPrice × contracts × 100. pct is hidden when credit <= 0 (no NaN / sign-flip).
+function chainCapturedNow(credit,buyBack,tradeCount){
+  if(!(tradeCount>=2))return null;
+  if(buyBack==null||buyBack===''||isNaN(+buyBack)||+buyBack<0)return null;
+  const c=+credit;
+  if(isNaN(c))return null;
+  const now=Math.round((c-+buyBack)*100)/100;
+  const pct=c>0?Math.round((now/c)*100):null;
+  return{now,credit:c,pct,buyBack:+buyBack};
+}
+function chainCapturedCard(info){
+  if(!info||info.pct==null)return null;
+  const tone=info.pct>0?'g':info.pct<0?'r':'m';
+  const abs=Math.abs(info.credit).toFixed(2).replace(/\.00$/,'').replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const cred=(info.credit<0?'-$':'$')+abs;
+  return{tone,text:info.pct+'% of '+cred+' chain'};
+}
+function chainCapturedPopover(info,money){
+  if(!info)return '';
+  const now=typeof money==='function'?money(info.now):String(info.now);
+  if(info.pct==null)return 'Now: '+now;
+  return 'Now: '+now+' · '+info.pct+'% captured';
+}
 // Pure: chain-aware Profit. When the open leg tips a roll chain: chain net − live buy-back;
 // % = that ÷ every sell-to-open premium received across the chain. Null when the leg is not in a chain.
 function wheelChainProfit(trades,opt,curVal){
@@ -3646,7 +3671,14 @@ function renderRotationWindow(wheel){
     sharesPriced:!_hasOpenShares||(_rss.unrealised!=null&&!isNaN(_rss.unrealised)),
     openSharePnl:_rss.unrealised
   });
-  const _fCur=_netNow!=null?`<div class="wl-f wl-cur"><span>Net P&amp;L (now)</span><b class="${_netNow>=0?'g':'r'}">${_netNow>=0?'+':'-'}${fmtMoney(Math.abs(_netNow))}</b></div>`:`<div class="wl-f wl-cur"><span>Net P&amp;L (now)</span><b class="m">—</b></div>`;
+  const _chain=_curOpt?buildRollChain(m.trades,_curOpt.id):null;
+  const _tip=_curOpt&&m.trades.find(t=>t.id===_curOpt.id);
+  const _chainMark=(_tip&&typeof selOpenMark==='function')?selOpenMark({..._tip,ticker:_tip.ticker||wheel.ticker}):null;
+  const _chainBuy=_chainMark!=null&&_curOpt?wheelCurrentValue(_curOpt,_chainMark):_curVal;
+  const _capNow=_chain?chainCapturedNow(_chain.net,_chainBuy,_chain.trades.length):null;
+  const _capCard=chainCapturedCard(_capNow);
+  const _capLine=_capNow&&_capNow.pct!=null&&_capCard?`<small class="wl-chain-cap ${_capCard.tone}">${_capCard.text}</small>`:'';
+  const _fCur=_netNow!=null?`<div class="wl-f wl-cur"><span>Net P&amp;L (now)</span><b class="${_netNow>=0?'g':'r'}">${_netNow>=0?'+':'-'}${fmtMoney(Math.abs(_netNow))}</b>${_capLine}</div>`:`<div class="wl-f wl-cur"><span>Net P&amp;L (now)</span><b class="m">—</b></div>`;
   const _f3=m.sharesHeld>0
     ?_fact('Unrealised',_rss.unrealised==null?'no price':fmtMoney(_rss.unrealised),_rss.unrealised==null?'m':colorN(_rss.unrealised))
     :'';
@@ -8510,7 +8542,7 @@ function selToggle(row){const k=row.getAttribute('data-sel');if(!k)return;if(_se
 function selPaint(){document.querySelectorAll('.trow[data-sel]').forEach(el=>el.classList.toggle('sel',_sel.has(el.getAttribute('data-sel'))));selBar();}
 function selPlace(){const panel=document.getElementById('sel-panel');if(!panel||panel.hidden)return;const de=document.documentElement,vw=de.clientWidth||innerWidth,vv=window.visualViewport,visL=vv?Math.max(0,vv.offsetLeft):0,visR=vv?Math.min(vw,vv.offsetLeft+vv.width):vw;panel.style.right='auto';panel.style.left=Math.round((visL+visR)/2)+'px';panel.style.width='min(22rem,'+Math.max(200,Math.floor(visR-visL-48))+'px)';}
 window.addEventListener('resize',selPlace);if(window.visualViewport)visualViewport.addEventListener('resize',selPlace);
-function selBar(){const panel=document.getElementById('sel-panel');if(!panel)return;if(!_selOn||!_sel.size){panel.hidden=true;return;}panel.hidden=false;selPlace();const items=[..._sel.values()];const s=selSummary(items);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),kind=document.getElementById('sel-kind'),bits=document.getElementById('sel-bits'),list=document.getElementById('sel-list');const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));const head=selHeadline(s);if(net){net.textContent=money(s.net);net.className=head.netClass;}if(kind){kind.textContent=head.kind;kind.className=head.kindClass;}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(bits){const lines=[`Collected ${fmtMoney(s.credits)}` ,`Paid ${fmtMoney(s.debits)}`,`Fees ${fmtMoney(s.fees)}`];const cl=selContractLine(s,money);if(cl)lines.push(cl);if(s.tickers.length>1)lines.push(s.tickers.map(t=>`${esc(t.tk)} ${money(t.cash)}`).join(' · '));let status='';if(s.isRoll){const {trades:pool,tip}=selCollectTrades(items);if(tip&&typeof buildRollChain==='function'){const chain=buildRollChain(pool,tip.id);if(chain&&chain.live)status=rollStatusHtml(rollChainStatus(chain.trades,tip,selOpenMark(tip)),money);}}bits.innerHTML=lines.map(l=>`<div>${l}</div>`).join('')+status;}if(list){list.innerHTML=items.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>{const k=t.strike?` $${fmt2(+t.strike).replace(/\.00$/,'')}`:'';return `<div class="sel-row"><span>${t.date?fmtDateShort(t.date):''}</span><span>${esc((t.act||'')+k)}</span><span class="${t.cash<0?'r':'g'}">${money(t.cash)}</span></div>`;}).join('');}}
+function selBar(){const panel=document.getElementById('sel-panel');if(!panel)return;if(!_selOn||!_sel.size){panel.hidden=true;return;}panel.hidden=false;selPlace();const items=[..._sel.values()];const s=selSummary(items);const net=document.getElementById('sel-net'),sub=document.getElementById('sel-sub'),nowEl=document.getElementById('sel-now'),kind=document.getElementById('sel-kind'),bits=document.getElementById('sel-bits'),list=document.getElementById('sel-list');const money=n=>(n<0?'-':'+')+fmtMoney(Math.abs(n));const head=selHeadline(s);if(net){net.textContent=money(s.net);net.className=head.netClass;}if(kind){kind.textContent=head.kind;kind.className=head.kindClass;}const range=!s.min?'':s.min===s.max?fmtDateShort(s.min):fmtDateShort(s.min)+' – '+fmtDateShort(s.max);if(sub)sub.textContent=s.n+' trade'+(s.n===1?'':'s')+(range?' · '+range:'');if(bits){const lines=[`Collected ${fmtMoney(s.credits)}` ,`Paid ${fmtMoney(s.debits)}`,`Fees ${fmtMoney(s.fees)}`];const cl=selContractLine(s,money);if(cl)lines.push(cl);if(s.tickers.length>1)lines.push(s.tickers.map(t=>`${esc(t.tk)} ${money(t.cash)}`).join(' · '));let status='',nowLine='';if(s.isRoll){const {trades:pool,tip}=selCollectTrades(items);if(tip&&typeof buildRollChain==='function'){const chain=buildRollChain(pool,tip.id);if(chain&&chain.live){const st=rollChainStatus(chain.trades,tip,selOpenMark(tip));status=rollStatusHtml(st,money);nowLine=chainCapturedPopover(chainCapturedNow(chain.net,st.closeCost,chain.trades.length),money);}}}bits.innerHTML=lines.map(l=>`<div>${l}</div>`).join('')+status;}if(nowEl){if(nowLine){nowEl.hidden=false;nowEl.textContent=nowLine;}else{nowEl.hidden=true;nowEl.textContent='';}}if(list){list.innerHTML=items.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>{const k=t.strike?` $${fmt2(+t.strike).replace(/\.00$/,'')}`:'';return `<div class="sel-row"><span>${t.date?fmtDateShort(t.date):''}</span><span>${esc((t.act||'')+k)}</span><span class="${t.cash<0?'r':'g'}">${money(t.cash)}</span></div>`;}).join('');}}
 bindSelPress();
 document.addEventListener('click',e=>{if(!_selOn)return;const row=e.target.closest&&e.target.closest('.trow[data-sel]');if(!row)return;if(_selSkip){_selSkip=false;e.preventDefault();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();selToggle(row);},true);
 document.addEventListener('click',e=>{if(!_selOn)return;const t=e.target;if(t.closest&&(t.closest('.trow[data-sel]')||t.closest('#sel-panel')))return;selDone();});

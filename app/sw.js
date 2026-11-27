@@ -1,5 +1,5 @@
 // OpTrack service worker. Bump CACHE on every release.
-const CACHE='optrack-v432';
+const CACHE='optrack-v433';
 // Caches from earlier app names, deleted on update. Only the service-worker cache: your data and settings are untouched.
 const LEGACY = ['wheelhouse-'];
 const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
