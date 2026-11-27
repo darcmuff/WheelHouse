@@ -44,35 +44,67 @@
   }
 
   // ── Free vs Pro gates. `info` is a getEffectiveTier result; `cfg` is BRAND.plans (free limits).
-  // Existing data is NEVER gated: viewing, editing, closing and exporting are always allowed on every tier.
-  // Free limits apply only to NEW additions and to Pro-only views.
+  // Existing data is NEVER gated: viewing, editing, closing, exporting and deleting are always allowed
+  // on every tier, including a Free account that is over the cap after a trial ends.
+  // Free limits apply only to NEW risk (new wheels, opening legs, rolls, new LEAPs, PMCC short-call
+  // opens/rolls when over the LEAP cap, a 2nd CSV import) and to auto-updating option prices.
   const isProTier = info => !!(info && info.tier === 'pro');
   const lim = (cfg, k, d) => { const f = (cfg && cfg.free) || {}; return f[k] == null ? d : f[k]; };
+  function openCount(openTickers) {
+    if (typeof openTickers === 'number') return openTickers;
+    if (openTickers instanceof Set) return openTickers.size;
+    return (openTickers || []).length;
+  }
   function existingDataAccess() { return { view: true, edit: true, close: true, export: true, delete: true }; }
-  // Open a NEW wheel ticker. Adding legs to / closing an already-open ticker is always fine.
+  // Open a NEW wheel ticker. Attaching to an already-open ticker is always fine (closing included).
+  // Opening/rolling legs on that ticker is a separate check: canOpenOrRollWheel.
   function canOpenWheel(info, openTickers, ticker, cfg) {
     if (isProTier(info)) return true;
     const s = openTickers instanceof Set ? openTickers : new Set(openTickers || []);
     if (ticker && s.has(ticker)) return true;
     return s.size < lim(cfg, 'maxWheelTickers', 2);
   }
+  // Opening legs (CSP / CC / STO) and rolls: allowed at or under the Free cap; close-only when over it.
+  function canOpenOrRollWheel(info, openTickers, cfg) {
+    if (isProTier(info)) return true;
+    return openCount(openTickers) <= lim(cfg, 'maxWheelTickers', 2);
+  }
+  function isOpeningAction(action) {
+    return action === 'CSP' || action === 'STOC' || action === 'STO' || action === 'CC';
+  }
+  function isClosingAction(action) {
+    return action === 'BTC' || action === 'STC' || action === 'EXP' || action === 'ASN'
+      || action === 'OUT' || action === 'EXPIRE' || action === 'ASSIGN';
+  }
   // Open a NEW long LEAP. Free: 1 open LEAP.
   function canOpenLeap(info, openLeapCount, cfg, adding) {
     if (isProTier(info)) return true;
     return (openLeapCount || 0) + (adding || 1) <= lim(cfg, 'maxOpenLeaps', 1);
   }
-  // PMCC short calls against an open LEAP: every tier (Free is limited only by its 1 open LEAP).
-  function canAddPmccCall(info) { return true; }
+  // PMCC short-call open or roll: allowed when at or under the Free LEAP cap; blocked when over it.
+  function canAddPmccCall(info, openLeapCount, cfg) {
+    if (isProTier(info)) return true;
+    return (openLeapCount || 0) <= lim(cfg, 'maxOpenLeaps', 1);
+  }
   // Robinhood CSV import: Free gets 1 completed import, Pro / trial unlimited.
   function canImportCsv(info, ent, cfg) {
     if (isProTier(info)) return true;
     return ((ent && +ent.csvImportsUsed) || 0) < lim(cfg, 'maxCsvImports', 1);
   }
-  // Live option prices (1-minute option polling, live buy-back marks): every tier.
-  function liveOptionPrices(info) { return true; }
-  // Pro-only views (monthly target, analytics, scoreboard, written report).
-  const PRO_VIEWS = ['analytics', 'report'];
-  function canSeeView(info, view) { return PRO_VIEWS.indexOf(view) < 0 || isProTier(info); }
+  // Auto-updating option prices (optchain / Cboe / Nasdaq / Finnhub): Pro and active trial only.
+  function liveOptionPrices(info) { return isProTier(info); }
+  // Analytics, report, monthly targets and the rest of the app are free for every tier.
+  const PRO_VIEWS = [];
+  function canSeeView(info, view) { return true; }
+
+  const COPY = {
+    free: 'Full OpTrack — auto-updating stock prices, SmartScan, OpTrack Bot, PMCCs, and reports — for 2 active wheels and 1 active LEAP/PMCC (plus 1 Robinhood CSV import).',
+    pro: 'Unlimited wheels, unlimited LEAPs & PMCCs, unlimited CSV imports, and auto-updating option prices.',
+    trial: 'Try Pro free for 14 days · No credit card required.',
+    optionPrices: 'Auto-updating option prices',
+    optionPricesCue: 'Auto option prices · Pro'
+  };
+  function planCopy() { return COPY; }
 
   // ── Pricing display, computed from BRAND.plans.prices so a price change is one edit in brand.js.
   function money(sym, n) { return sym + (Math.round(n * 100) % 100 ? n.toFixed(2) : String(Math.round(n))); }
@@ -84,14 +116,15 @@
     return {
       defaultInterval: P.defaultInterval || 'annual',
       annual: { amount: a, perMonth, perMonthText: money(sym, perMonth), totalText: money(sym, a), savePct: save,
-        line: 'billed ' + money(sym, a) + '/year · Save ' + save + '%' },
+        line: money(sym, perMonth) + '/mo billed yearly · Save ' + save + '%' },
       monthly: { amount: m, perMonthText: money(sym, m), line: 'billed monthly' }
     };
   }
   function trialPillText(info) { return info && info.isTrial ? 'Pro trial · ' + info.trialDaysLeft + ' day' + (info.trialDaysLeft === 1 ? '' : 's') + ' left' : ''; }
 
-  const api = { TRIAL_DAYS, DAY, isPaid, getEffectiveTier, trialFields, existingDataAccess, canOpenWheel, canOpenLeap,
-    canAddPmccCall, canImportCsv, liveOptionPrices, canSeeView, PRO_VIEWS, priceDisplay, trialPillText };
+  const api = { TRIAL_DAYS, DAY, isPaid, getEffectiveTier, trialFields, existingDataAccess, canOpenWheel,
+    canOpenOrRollWheel, isOpeningAction, isClosingAction, canOpenLeap, canAddPmccCall, canImportCsv,
+    liveOptionPrices, canSeeView, PRO_VIEWS, priceDisplay, trialPillText, planCopy, COPY };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.OT_TIER = api;
 })(typeof window !== 'undefined' ? window : null);

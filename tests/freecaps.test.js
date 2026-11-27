@@ -2,7 +2,7 @@
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs'),path=require('path'),vm=require('vm');
 const{extractFn}=require('./extract');const SRC=fs.readFileSync(path.join(__dirname,'..','app','index.html'),'utf8');
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app','brand.js'),'utf8'),ctx);const ON=ctx.window.BRAND.plans,OFF={...ON,gating:false};
-const G=new Function("OT_TIER","let _ent=null,_entErr=false;"+['planCfg','isPro','canUse','underLimit','wheelCapOk','leapCapOk','capNewLeaps','_tierLib','effectiveTier'].map(extractFn).join('\n')+'\nreturn{wheelCapOk,leapCapOk,capNewLeaps};')(require('../app/entitlement.js'));
+const G=new Function("OT_TIER","let _ent=null,_entErr=false,db={wheels:[],opts:[]};"+['planCfg','isPro','canUse','underLimit','wheelCapOk','leapCapOk','capNewLeaps','openTickerCount','openLeapCount','wheelRiskOk','pmccRiskOk','_tierLib','effectiveTier'].map(extractFn).join('\n')+'\nreturn{wheelCapOk,leapCapOk,capNewLeaps,wheelRiskOk,pmccRiskOk};')(require('../app/entitlement.js'));
 const FREE={plan:'free'},PRO={plan:'pro'},FOUNDER={founder:true};
 const W=n=>Array.from({length:n},(_,i)=>({id:'w'+i,ticker:'T'+i,status:'open'}));
 const LEAP=(id,st='open')=>({id,side:'long',type:'C',status:st});
@@ -16,11 +16,23 @@ test('entitlement read failure stays fail-open (treated as Pro)',()=>{assert.ok(
 test('over-limit free user: keeps data, can add to existing tickers, cannot add new',()=>{const w=W(5);
   assert.ok(G.wheelCapOk('T4',w,ON,FREE,false));assert.ok(!G.wheelCapOk('NEW',w,ON,FREE,false));assert.strictEqual(w.length,5);
   assert.ok(!G.leapCapOk(1,[LEAP('a'),LEAP('b')],ON,FREE,false));});
+test('over-limit: opening and rolling blocked on every wheel; at the cap they still work',()=>{
+  assert.ok(G.wheelRiskOk(W(2),ON,FREE,false),'2 open wheels: still open/roll');
+  assert.ok(!G.wheelRiskOk(W(3),ON,FREE,false),'3 open wheels: close-only');
+  assert.ok(!G.wheelRiskOk(W(4),ON,FREE,false));
+  assert.ok(G.wheelRiskOk(W(20),ON,PRO,false));
+  assert.ok(G.pmccRiskOk([LEAP('a')],ON,FREE,false),'1 open LEAP: PMCC open/roll ok');
+  assert.ok(!G.pmccRiskOk([LEAP('a'),LEAP('b')],ON,FREE,false),'2 open LEAPs: PMCC open/roll blocked');
+  assert.ok(G.pmccRiskOk([LEAP('a'),LEAP('b')],ON,PRO,false));
+});
 test('import: excess open LEAPs dropped with their calls; closed history kept; Pro keeps all',()=>{
   const nl=[LEAP('n1'),LEAP('n2'),{id:'s2',side:'short',parentLeapId:'n2',status:'open'},LEAP('h','closed')];
   const r=G.capNewLeaps([],nl,ON,FREE,false);assert.deepStrictEqual(r.keep.map(l=>l.id),['n1','h']);assert.strictEqual(r.droppedLeaps,1);
   assert.strictEqual(G.capNewLeaps([LEAP('a')],nl,ON,FREE,false).keep.map(l=>l.id).join(),'h');
-  assert.strictEqual(G.capNewLeaps([],nl,ON,PRO,false).keep.length,4);});
+  assert.strictEqual(G.capNewLeaps([],nl,ON,PRO,false).keep.length,4);
+  const over=[LEAP('a'),LEAP('b')];const shorts=[{id:'sA',side:'short',parentLeapId:'a',status:'open'},LEAP('h2','closed')];
+  assert.deepStrictEqual(G.capNewLeaps(over,shorts,ON,FREE,false).keep.map(l=>l.id),['h2'],'over-cap: new short-call opens dropped, closed history kept');
+  assert.strictEqual(G.capNewLeaps(over,shorts,ON,PRO,false).keep.length,2);});
 const body=n=>{const s=extractFn(n);assert.ok(s,n);return s;};
 test('every creation route checks the cap',()=>{
   assert.match(body('openNewPos'),/wheelCapOk\(null,db\.wheels\)/);assert.match(body('quickAddRotation'),/wheelCapOk\(ticker/);
@@ -29,4 +41,7 @@ test('every creation route checks the cap',()=>{
   const imp=body('doImport');assert.match(imp,/wheelCapOk\(ticker,db\.wheels\)\)\{capSkipTickers/);assert.strictEqual((imp.match(/capNewLeaps\(/g)||[]).length,2);
   // manual trade forms that can create a wheel
   assert.strictEqual((SRC.match(/if\(ex\)\{wheelId=ex\.id;\}else\{if\(!wheelCapOk\(ticker,db\.wheels\)\)/g)||[]).length,2);
-  assert.ok(!/if\(ex\)\{wheelId=ex\.id;\}else\{const mo/.test(SRC));});
+  assert.ok(!/if\(ex\)\{wheelId=ex\.id;\}else\{const mo/.test(SRC));
+  ['saveTrade','savePMTrade','confirmParsed','doImport'].forEach(f=>assert.ok(/wheelRiskOk/.test(body(f)),f+' blocks opening/rolling when over the wheel cap'));
+  ['openPmccSell','savePmcc','pmccSaveRoll'].forEach(f=>assert.ok(/pmccRiskOk/.test(body(f)),f+' blocks PMCC open/roll when over the LEAP cap'));
+});

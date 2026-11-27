@@ -765,6 +765,10 @@ body{background:var(--bg);color:var(--text);line-height:1.45}
 .tn-trial:hover{color:var(--text);border-color:var(--text3)}
 .tn-trial.tn-trial-end{color:var(--brand-orange);border-color:rgba(var(--brand-orange-rgb),.45);background:rgba(var(--brand-orange-rgb),.06)}
 .tn-trial[hidden]{display:none}
+.upg-free,.upg-trial{font-size:0.8125rem;color:var(--text2);line-height:1.45;margin:0 0 0.75rem}
+.upg-trial{color:var(--text3)}
+.opt-price-cue{display:inline;margin-left:0.35rem;padding:0;border:0;background:none;font:inherit;font-size:0.6875rem;font-weight:600;color:var(--text3);cursor:pointer;border-radius:6px}
+.opt-price-cue:hover{color:var(--brand-orange)}
 .ret-pro{display:inline-flex;align-items:center;margin-top:0.25rem;font:inherit;font-size:0.75rem;font-weight:700;padding:0.375rem 0.625rem;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer}
 .ret-pro:hover{color:var(--brand-orange);border-color:rgba(var(--brand-orange-rgb),.45)}
 .tn-trial .tt-short{display:none}
@@ -2567,9 +2571,11 @@ select,textarea,
     <div class="mtitle"><span>OpTrack Pro</span><span class="mx" onclick="closeModal('mUpgrade')">✕</span></div>
     <div class="upg-body">
       <p id="upg-feature" class="upg-feature"></p>
+      <p id="upg-free" class="upg-free"></p>
       <div class="upg-toggle" role="group" aria-label="Billing"><button type="button" data-iv="annual" class="on" aria-pressed="true" onclick="upgSetInterval('annual')">Annual <span id="upg-save" class="upg-save">Save 30%</span></button><button type="button" data-iv="monthly" aria-pressed="false" onclick="upgSetInterval('monthly')">Monthly</button></div>
       <div class="upg-price"><div class="upg-amt" id="upg-amt"></div><div class="upg-billed" id="upg-billed"></div></div>
       <button class="btn btn-primary upg-go" onclick="upgGo()">Upgrade to Pro</button>
+      <p id="upg-trial" class="upg-trial"></p>
       <div id="upg-msg" class="upg-msg"></div>
       <table class="upg-table"><thead><tr><th></th><th>Free</th><th>Pro</th></tr></thead><tbody id="upg-table"></tbody></table>
       <p class="upg-foot">Cancel any time from Settings. Payments handled securely by Stripe. Your trades are never locked or deleted on any plan.</p>
@@ -2888,6 +2894,7 @@ function rollStatusHtml(st,money){
   const pnl=n=>`<span class="${n<0?'r':'g'}">${money(n)}</span>`;
   const lines=[];
   if(st.chainNow!=null)lines.push(`<div>Chain P&L now: ${pnl(st.chainNow)}</div>`);
+  else if(typeof optPriceCueHtml==='function'){const cue=optPriceCueHtml();if(cue)lines.push(`<div>${cue}</div>`);}
   if(st.expiryMax!=null)lines.push(`<div>If expired worthless: ${pnl(st.expiryMax)}</div>`);
   if(st.assignedBasis!=null)lines.push(`<div>If assigned: ${fmtMoney(st.assignedBasis)}/sh</div>`);
   return lines.length?`<div class="sel-status">${lines.join('')}</div>`:'';
@@ -2922,8 +2929,9 @@ function selCollectTrades(items){
 function selOpenMark(tip){
   if(!tip)return null;
   const occ=typeof wheelLegOcc==='function'?wheelLegOcc(tip.ticker||'',tip):'';
-  const known=!!(occ&&typeof _wheelMarks!=='undefined'&&Object.prototype.hasOwnProperty.call(_wheelMarks,occ));
-  const live=known?_wheelMarks[occ]:null;
+  const marks=typeof optionMarks==='function'?optionMarks():(typeof _wheelMarks!=='undefined'?_wheelMarks:{});
+  const known=!!(occ&&marks&&Object.prototype.hasOwnProperty.call(marks,occ));
+  const live=known?marks[occ]:null;
   const hasTyped=tip.currentPrice!=null&&tip.currentPrice!=='';
   const typedFresh=hasTyped&&tip.currentPriceAt&&typeof isSameMarkDay==='function'&&isSameMarkDay(tip.currentPriceAt);
   if(hasTyped&&(typedFresh||live==null||!known)){const n=+tip.currentPrice;return n>=0?n:null;}
@@ -3808,7 +3816,7 @@ async function fetchAllQuotes(){
       if(allSyms.length>1)await new Promise(r=>setTimeout(r,200));
     }
     _applyWheelMarks();
-    await fetchOptionMarks(false);
+    if(typeof liveOptionPricesOn!=='function'||liveOptionPricesOn())await fetchOptionMarks(false);
     await logosDone;
     const nOk=Object.keys(quotes).length;
     if(nOk>0){
@@ -3932,8 +3940,6 @@ function goToNextExpiry(el){
 function _clearFocus(id){if(_focusTid&&(!id||_focusTid===id)){_focusTid=null;}}
 function switchView(v){
   if((v==='log'||v==='analytics'||v==='report')&&isPhoneLayout())v='dash';
-  if(v==='analytics'&&!canUse('analytics')){openUpgrade('analytics');return;}
-  if(v==='report'&&!canUse('report')){openUpgrade('report');return;}
   view=v;
   if(!_phoneSwipeHold&&typeof phoneSwipeClear==='function')phoneSwipeClear();
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
@@ -4984,6 +4990,7 @@ function deleteLeap(){
 // ── Sell call against a LEAP (PMCC) ──
 let _pmccScan=null;
 function openPmccSell(leapId){
+  if(!pmccRiskOk()){openUpgrade('unlimited',capMsg('leap-risk'));return;}
   const L=(db.opts||[]).find(x=>x.id===leapId);if(!L)return;
   const P=pmccStats(L,db.opts||[],new Date().toISOString().slice(0,10));
   const v=(k,x)=>document.getElementById(k).value=x??'';
@@ -5104,6 +5111,7 @@ function pmccRollPreview(r){
   <button class="btn btn-primary" style="width:100%;margin-top:0.625rem" onclick="pmccSaveRoll()">Save</button>`;
 }
 function pmccSaveRoll(){
+  if(!pmccRiskOk()){openUpgrade('unlimited',capMsg('leap-risk'));return;}
   const L=(db.opts||[]).find(x=>x.id===document.getElementById('pcc-leap').value),msg=document.getElementById('pcc-scan-msg');
   const a=_pmccRoll&&pmccRollApply(_pmccRoll,L,db.opts||[],uid(),false);
   if(!a||a.err){msg.style.color='var(--red)';msg.textContent=a?a.err:'Nothing to save';msg.style.display='block';return;}
@@ -5160,6 +5168,7 @@ function savePmcc(){
     if(r.rest){db.opts.push(r.rest);_saveOpt(r.rest);}
     closeModal('mPmcc');render();return;
   }
+  if(!pmccRiskOk()){openUpgrade('unlimited',capMsg('leap-risk'));return;}
   const r=pmccFormLeg(f,L);
   if(r.err){e.textContent=r.err;e.style.display='block';return;}
   const _fa=readFilledAtField('pcc-date','pcc-fill-time','pcc-fill-time-hint',null);if(_fa.error)return;
@@ -5590,8 +5599,9 @@ function _wheelMarkOf(t){
   const typedFresh=hasTyped&&t.currentPriceAt&&isSameMarkDay(t.currentPriceAt);
   if(typedFresh)return+t.currentPrice;
   const occ=wheelLegOcc(t.ticker||'',t);
-  if(typeof _wheelMarks!=='undefined'&&Object.prototype.hasOwnProperty.call(_wheelMarks,occ)){
-    const live=_wheelMarks[occ];
+  const _wm=typeof optionMarks==='function'?optionMarks():(typeof _wheelMarks!=='undefined'?_wheelMarks:{});
+  if(_wm&&Object.prototype.hasOwnProperty.call(_wm,occ)){
+    const live=_wm[occ];
     if(live!=null&&live!=='')return+live;
   }
   if(hasTyped)return+t.currentPrice;
@@ -5611,6 +5621,7 @@ async function fetchOptchain(symbol,contracts){
   throw last||new Error('optchain failed');
 }
 async function fetchWheelMarks(force){
+  if(typeof liveOptionPricesOn==='function'&&!liveOptionPricesOn())return;
   if(!force&&Date.now()-_wheelMarksAt<60e3)return;_wheelMarksAt=Date.now();
   const byU={};
   (db.wheels||[]).filter(w=>w.status==='open').forEach(w=>{const u=String(w.ticker).toUpperCase();openOptionLegs(db.trades.filter(t=>t.wheelId===w.id)).filter(t=>(t.action==='CSP'||t.action==='STOC')&&t.strike&&t.expiry).forEach(t=>{(byU[u]=byU[u]||new Set()).add(wheelLegOcc(w.ticker,t));});});
@@ -5629,6 +5640,7 @@ async function fetchWheelMarks(force){
 let _optMarksAt=0;
 function _markStamp(l){return String(l.markAt||'').slice(0,10)+'|'+(l.mark==null?'':l.mark)+'|'+(l.markSrc||'');}
 async function fetchOptionMarks(force, onlyId){
+  if(typeof liveOptionPricesOn==='function'&&!liveOptionPricesOn()){if(!onlyId)_optMarkStatus='';return;}
   let open=(db.opts||[]).filter(l=>l.status==='open'&&l.underlying&&l.expiry&&l.strike);
   if(onlyId)open=open.filter(l=>l.id===onlyId);
   if(!open.length){if(!onlyId)_optMarkStatus='';return;}
@@ -6246,8 +6258,8 @@ function renderRotationWindow(wheel){
   const _f2=_cs.held
     ?`<div class="wl-f wl-be"><span>Breakeven</span><b>$${fmt2(_cs.breakeven)}</b>${_cs.assignedAt!=null?`<small>Assigned at $${fmt2(_cs.assignedAt)}</small>`:''}</div>`
     :_fact(cspCollateral?'Collateral':'Shares P&amp;L',cspCollateral?fmtMoney(cspCollateral).replace(/\.00$/,''):(_rss.realised?fmtMoney(_rss.realised):'—'),cspCollateral?'':colorN(_rss.realised));
-  const _curOpt=isOpen?wheelCurrentOption(wheel.ticker,m.trades):null,_markKnown=!!(_curOpt&&Object.prototype.hasOwnProperty.call(_wheelMarks,_curOpt.occ));
-  const _curVal=_markKnown&&_wheelMarks[_curOpt.occ]!=null?wheelCurrentValue(_curOpt,_wheelMarks[_curOpt.occ]):null;
+  const _curOpt=isOpen?wheelCurrentOption(wheel.ticker,m.trades):null,_wm=typeof optionMarks==='function'?optionMarks():_wheelMarks,_markKnown=!!(_curOpt&&Object.prototype.hasOwnProperty.call(_wm,_curOpt.occ));
+  const _curVal=_markKnown&&_wm[_curOpt.occ]!=null?wheelCurrentValue(_curOpt,_wm[_curOpt.occ]):null;
   let _curPct=wheelCurrentPct(_curOpt,_curVal);
   const _curChain=wheelChainProfit(m.trades,_curOpt,_curVal);
   const _curPft=_curChain?_curChain.profit:wheelCurrentProfit(_curOpt,_curVal);
@@ -6281,7 +6293,7 @@ function renderRotationWindow(wheel){
       <div class="tgrid">${tradeTableHead({lastCol:'Captured',toStrike:true})}`;
     const _wp=walkLegPairs(m.trades).pairs;
     const _ord=[...m.trades].sort((a,b)=>wheelListCmp(a,b,_wp,x=>db.trades.indexOf(x)));
-    const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
+    const _L={ticker:wheel.ticker,spot:rawP,today:new Date().toISOString().slice(0,10),marks:typeof optionMarks==='function'?optionMarks():_wheelMarks,trades:m.trades,openIds:new Set(isOpen?openOptionLegs(m.trades).map(o=>o.id):[]),outcomes:wheelSellOutcomes(m.trades)};
     {const keep=listCut(_ord.length,_ord.map(()=>undefined),_ord.map(t=>_L.openIds.has(t.id)),10,listShowAll.has(wheel.id)),_S=keep.map(i=>_ord[i]);expandedHtml+=_S.map(t=>renderTradeRow(t,m.trades,{list:_L})).join('')+listMoreBtn(wheel.id,_ord.length,keep.length);}
     expandedHtml+=`</div></div>`;
   }
@@ -6457,6 +6469,7 @@ function wheelListCells(t,L){
     if(mark!=null&&prem>0){const opt={id:t.id,premium:prem,contracts:openSh/100,openCredit:openCreditOf()};const cv=wheelCurrentValue(opt,mark);
       const ch=wheelChainProfit(L.trades,opt,cv);const pf=wheelCurrentProfit(opt,cv);
       const pct=Math.round((prem-mark)/prem*100),cell=openCapturedHtml(pct,pf,mark,ch?ch.profit:null,typeof wheelMarkNote==='function'?wheelMarkNote(occ):'');r.cap=cell.html;r.capColor=cell.color;}
+    else if(mark==null&&!hasTyped){const cue=typeof optPriceCueHtml==='function'?optPriceCueHtml():'';if(cue)r.cap=(r.cap&&r.cap!=='—'?r.cap:'—')+cue;}
     return r;
   }
   const rest=slices.remainder[t.id];
@@ -6748,7 +6761,8 @@ function renderLog(){
   const priceOf=tk=>{const q=typeof quotes!=='undefined'&&quotes[tk];if(q&&q.price>0)return q.price;const w=(db.wheels||[]).find(x=>String(x.ticker||'').toUpperCase()===String(tk||'').toUpperCase()&&x.lastPrice!=null);return w?+w.lastPrice:null;};
   const shortMarkOf=t=>{
     const occ=typeof wheelLegOcc==='function'?wheelLegOcc(t.ticker,t):'';
-    const m=occ&&typeof _wheelMarks!=='undefined'&&Object.prototype.hasOwnProperty.call(_wheelMarks,occ)?_wheelMarks[occ]:null;
+    const _wm=typeof optionMarks==='function'?optionMarks():(typeof _wheelMarks!=='undefined'?_wheelMarks:{});
+    const m=occ&&_wm&&Object.prototype.hasOwnProperty.call(_wm,occ)?_wm[occ]:null;
     return m!=null&&m!==''?+m:null;
   };
   const held=actHeldValue(trades,priceOf,db.opts||[],shortMarkOf);
@@ -8362,6 +8376,7 @@ function saveTrade(){
     const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
     if(ex){wheelId=ex.id;}else{if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
+  if(!id&&isOpenRisk(action,!!(document.getElementById('tf-roll')&&document.getElementById('tf-roll').checked))&&!wheelRiskOk()){openUpgrade('unlimited',capMsg('wheel-risk'));return;}
   const openMarket=selAction==='IN_MKT';
   const deltaRaw=parseFloat(document.getElementById('tf-delta').value);
   const premium=parseFloat(document.getElementById('tf-premium').value)||0;
@@ -9062,6 +9077,7 @@ function doImport(){
     existingFingerprints.add(fp);
     let wheel=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
     if(!wheel&&!wheelCapOk(ticker,db.wheels)){capSkipTickers.add(ticker);capSkipRows++;continue;}
+    if(isOpenRisk(action,!!(r.roll||r.isRoll||r.rollId))&&!wheelRiskOk(db.wheels.concat(newWheels))){capSkipTickers.add(ticker);capSkipRows++;continue;}
     if(!wheel){
       const existing=db.wheels.filter(w=>w.ticker===ticker).length;
       const now=new Date();
@@ -9803,6 +9819,7 @@ function savePMTrade(){
     const ex=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
     if(ex){wheelId=ex.id;}else{if(!wheelCapOk(ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
+  if(isOpenRisk(action,!!(document.getElementById('pm-roll')&&document.getElementById('pm-roll').checked))&&!wheelRiskOk()){openUpgrade('unlimited',capMsg('wheel-risk'));return;}
   const premium=parseFloat(document.getElementById('pm-premium').value)||0;
   const shares=parseFloat(document.getElementById('pm-shares').value)||0;
   const fees=parseFloat(document.getElementById('pm-fees').value)||0;
@@ -10288,6 +10305,7 @@ function confirmParsed(){
       if(ex){wheelId=ex.id;}
       else{if(!wheelCapOk(trades[0].ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:trades[0].ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:trades[0].entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
     }
+    if(trades.some(p=>isOpenRisk(p.action,!!(p.roll||p.isRoll||p.rollId)))&&!wheelRiskOk()){openUpgrade('unlimited',capMsg('wheel-risk'));return;}
     const _firstTrade=!db.trades.length;
     const built=trades.map(p=>{
       const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
@@ -10313,6 +10331,7 @@ function confirmParsed(){
     if(ex){wheelId=ex.id;}
     else{if(!wheelCapOk(p.ticker,db.wheels)){openUpgrade('unlimited',capMsg('wheel'));return;}const mo=db.wheels.reduce((m,w)=>Math.max(m,w.sortOrder||0),0);const nw={id:uid(),ticker:p.ticker,label:'',company:'',status:'open',lastPrice:null,notes:'',createdAt:p.entered,sortOrder:mo+1};db.wheels.push(nw);_saveWheel(nw);wheelId=nw.id;}
   }
+  if(isOpenRisk(p.action,!!(p.roll||p.isRoll||p.rollId))&&!wheelRiskOk()){openUpgrade('unlimited',capMsg('wheel-risk'));return;}
   const nt={id:uid(),createdAt:new Date().toISOString(),wheelId,ticker:p.ticker,action:p.action,entered:p.entered,
     expiry:p.expiry||null,strike:p.strike||null,premium:p.premium||0,fees:p.fees||0,
     shares:p.shares||0,total:p.total||0,days:p.days||0,ppd:p.ppd||0,
@@ -10527,7 +10546,7 @@ function fillReturnSettings(){}
 // Return settings live in a small panel opened from the cog on the Home Capital at work / Account size tile.
 function retFmtAcct(el){const v=el.value,pos=el.selectionStart||0;const before=v.slice(0,pos).replace(/[^0-9]/g,'').length;const d=v.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');const f=d?Number(d).toLocaleString('en-US'):'';el.value=f;let i=0,c=0;while(i<f.length&&c<before){if(/\d/.test(f[i]))c++;i++;}try{el.setSelectionRange(i,i);}catch(e){}}
 // Monthly target tracking is Pro (paid or trial). Free keeps the saved target but Home ignores it.
-function retTargetOn(){return canUse('analytics');}
+function retTargetOn(){return true;}
 function homeReturnSettings(rs){return retTargetOn()?rs:{...rs,target:null};}
 function openRetCfg(btn){
   const _tOn=retTargetOn();
@@ -10552,9 +10571,9 @@ function openRetCfg(btn){
   </div>
   <div class="wl-wi-in">
     <label id="ret-acct-row">Account size<span class="ret-dol"><input id="ret-account" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 50,000" oninput="retFmtAcct(this)" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>
-    ${_tOn?`<label>Monthly target<span class="ret-pct"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>`:`<label>Monthly target<button type="button" class="ret-pro" onclick="closeRetCfg();openUpgrade('analytics')" title="Monthly target tracking is part of Pro">Pro · Upgrade</button><input id="ret-target" type="hidden"></label>`}
+    <label>Monthly target<span class="ret-pct"><input id="ret-target" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Off" onkeydown="if(event.key==='Enter')saveReturnSettings(true)"></span></label>
   </div>
-  <div style="font-size:0.72rem;color:var(--text3);font-weight:480">${_tOn?'Banked profit only. Leave the target empty to switch it off.':'Banked profit only. Monthly target tracking is part of Pro.'}</div>
+  <div style="font-size:0.72rem;color:var(--text3);font-weight:480">Banked profit only. Leave the target empty to switch it off.</div>
   <div class="wl-wi-act"><button type="button" class="btn btn-primary btn-sm" onclick="saveReturnSettings(true)">Save</button></div>`;
   document.body.appendChild(p);
   p.querySelector('#ret-account').value=rs.account?Number(rs.account).toLocaleString('en-US'):'';
@@ -10634,16 +10653,30 @@ function canUse(feature,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return tr
 function underLimit(kind,count,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const f=cfg.free||{};const lim=kind==='wheel'?f.maxWheelTickers:f.maxOpenLeaps;return lim==null||count<lim;}
 // Free caps. Existing data is never touched — only creating a NEW open wheel ticker / open LEAP past the cap is blocked.
 function wheelCapOk(ticker,wheels,cfg,ent,err){const s=new Set((wheels||[]).filter(w=>w.status==='open').map(w=>w.ticker));if(ticker&&s.has(ticker))return true;return underLimit('wheel',s.size,cfg,ent,err);}
+function openTickerCount(wheels){return new Set((wheels||db.wheels||[]).filter(w=>w.status==='open').map(w=>w.ticker)).size;}
+function openLeapCount(legs){return (legs||db.opts||[]).filter(l=>l.status==='open'&&l.side==='long').length;}
+function isOpenRisk(action,isRoll){const T=_tierLib();if(T&&T.isOpeningAction)return !!(isRoll||T.isOpeningAction(action));return !!(isRoll||action==='CSP'||action==='STOC'||action==='STO'||action==='CC');}
+function wheelRiskOk(wheels,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const T=_tierLib(),n=openTickerCount(wheels);if(T)return T.canOpenOrRollWheel(effectiveTier(ent===undefined?_ent:ent),n,cfg);return isPro(ent,err)||n<=((cfg.free||{}).maxWheelTickers||2);}
+function pmccRiskOk(legs,cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const T=_tierLib(),n=openLeapCount(legs);if(T)return T.canAddPmccCall(effectiveTier(ent===undefined?_ent:ent),n,cfg);return isPro(ent,err)||n<=((cfg.free||{}).maxOpenLeaps||1);}
+function liveOptionPricesOn(cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const T=_tierLib();if(T)return T.liveOptionPrices(effectiveTier(ent===undefined?_ent:ent));return isPro(ent,err);}
+function optionMarks(){return liveOptionPricesOn()?_wheelMarks:{};}
+function optPriceCueHtml(){if(typeof liveOptionPricesOn==='function'&&liveOptionPricesOn())return '';const T=_tierLib();const s=(T&&T.planCopy&&T.planCopy().optionPricesCue)||'Auto option prices · Pro';return `<button type="button" class="opt-price-cue" onclick="event.stopPropagation();openUpgrade('option-prices')">${s}</button>`;}
 function leapCapOk(adding,legs,cfg,ent,err){cfg=cfg||planCfg();if(canUse('unlimited',cfg,ent,err))return true;const lim=(cfg.free||{}).maxOpenLeaps;if(lim==null)return true;
   return (legs||[]).filter(l=>l.status==='open'&&l.side==='long').length+(adding||1)<=lim;}
 // Imports: keep new legs up to the open-LEAP cap; drop the excess open LEAPs plus any new calls sold against them.
+// When already over the LEAP cap, also drop new short-call opens (close-only).
 function capNewLeaps(existing,newLegs,cfg,ent,err){const drop=new Set();let n=(existing||[]).filter(l=>l.status==='open'&&l.side==='long').length;
   (newLegs||[]).forEach(l=>{if(l.side==='long'&&l.status==='open'){if(leapCapOk(1,Array(n).fill({status:'open',side:'long'}),cfg,ent,err))n++;else drop.add(l.id);}});
+  if(!canUse('unlimited',cfg,ent,err)){const lim=((cfg||planCfg()).free||{}).maxOpenLeaps??1;if((existing||[]).filter(l=>l.status==='open'&&l.side==='long').length>lim){(newLegs||[]).forEach(l=>{if(l.side==='short'&&l.status==='open')drop.add(l.id);});}}
   const keep=(newLegs||[]).filter(l=>!drop.has(l.id)&&!(l.parentLeapId&&drop.has(l.parentLeapId)));return{keep,dropped:(newLegs||[]).length-keep.length,droppedLeaps:drop.size};}
 // Robinhood CSV import: Free gets plans.free.maxCsvImports completed imports (csvImportsUsed, server-written), Pro/trial unlimited.
 function csvImportOk(cfg,ent,err){cfg=cfg||planCfg();if(!cfg.gating)return true;if(err===undefined?_entErr:err)return true;const e=ent===undefined?_ent:ent;const T=_tierLib();
   if(T)return T.canImportCsv(effectiveTier(e),e,cfg);return isPro(e,false)||((e&&+e.csvImportsUsed)||0)<((cfg.free||{}).maxCsvImports??1);}
-function capMsg(kind){const f=planCfg().free||{};return kind==='wheel'?`Free plan: up to ${f.maxWheelTickers} open tickers. Your existing ones are kept — upgrade to add more.`:`Free plan: up to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. Your existing ones are kept — upgrade to add more.`;}
+function capMsg(kind){const f=planCfg().free||{};
+  if(kind==='wheel')return `Free plan: up to ${f.maxWheelTickers} open tickers. Your existing ones are kept — upgrade to add more.`;
+  if(kind==='wheel-risk')return `Free plan: opening and rolling resume automatically once you are back to ${f.maxWheelTickers} open tickers. You can still close, expire or assign existing positions.`;
+  if(kind==='leap-risk')return `Free plan: opening and rolling short calls resume automatically once you are back to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. You can still close existing short calls.`;
+  return `Free plan: up to ${f.maxOpenLeaps} open LEAP${f.maxOpenLeaps>1?'s':''}. Your existing ones are kept — upgrade to add more.`;}
 async function loadEntitlement(uid){try{const sn=await listenServer(doc(_fsDb,'entitlements',uid));_ent=sn.exists()?sn.data():null;_entErr=false;}catch(e){console.warn('Entitlement read failed, treating as Pro:',e.message);_ent=null;_entErr=true;}syncProBadge();}
 async function _pollUpgrade(uid){for(let i=0;i<6&&!isPaidPro(_ent);i++){await new Promise(r=>setTimeout(r,2500));await loadEntitlement(uid);}history.replaceState(null,'',location.pathname);if(isPaidPro(_ent)){alert('Thanks! Pro is now on for your account.');render();}}
 function planLabel(){const c=planCfg();if(!c.gating)return '';if(_ent&&_ent.founder)return 'Pro (founder)';const t=effectiveTier(_ent);if(t.isTrial)return `Pro trial · ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left`;if(t.tier==='pro')return 'Pro';return 'Free';}
@@ -10656,7 +10689,10 @@ function upgSetInterval(iv){_upgInterval=iv==='monthly'?'monthly':'annual';const
 function upgGo(){return startCheckout(_upgInterval);}
 function openUpgrade(feature,msg){
   const B=window.BRAND||{},P=planCfg(),N=B.featureNames||{},t=effectiveTier(_ent);
-  document.getElementById('upg-feature').textContent=feature==='trial'?(t.isTrial?`You're on the Pro trial: ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left. Keep Pro when it ends:`:'Pro'):N[feature]?N[feature]+' is part of Pro.':'That is part of Pro.';
+  const C=_tierLib()&&_tierLib().planCopy?_tierLib().planCopy():null;
+  document.getElementById('upg-feature').textContent=feature==='trial'?(t.isTrial?`You're on the Pro trial: ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left. Keep Pro when it ends:`:'Pro'):N[feature]?N[feature]+'.':'Upgrade to Pro.';
+  const freeEl=document.getElementById('upg-free');if(freeEl)freeEl.textContent=C?C.free:'';
+  const trialEl=document.getElementById('upg-trial');if(trialEl)trialEl.textContent=C?C.trial:'';
   document.getElementById('upg-table').innerHTML=(P.comparison||[]).map(r=>`<tr><td>${r[0]}</td>${[r[1],r[2]].map(v=>`<td class="${v==='✓'||v==='Unlimited'?'y':v==='–'?'n':''}">${v}</td>`).join('')}</tr>`).join('');
   upgSetInterval(P.defaultInterval||'annual');
   document.getElementById('upg-msg').textContent=msg||'';openModal('mUpgrade');

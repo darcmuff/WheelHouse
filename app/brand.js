@@ -24,7 +24,7 @@ window.BRAND = {
     symbol: '$',
     defaultInterval: 'annual',          // the toggle starts on Annual
     prices: {
-      annual: { amount: 59 },           // $59/year → shown as $4.92/mo, billed $59/year · Save 30%
+      annual: { amount: 59 },           // $59/year → shown as $4.92/mo billed yearly · Save 30%
       monthly: { amount: 6.99 }         // $6.99/month
     },
     priceMonthly: 6.99,                 // kept for older readers; same numbers as `prices`
@@ -33,30 +33,31 @@ window.BRAND = {
     free: { maxWheelTickers: 2, maxOpenLeaps: 1, maxCsvImports: 1 },   // limits on the free plan (new additions only)
     // Paid-only features. Remove a line to make it free; add it back to make it paid.
     // Robinhood CSV import is not here: Free gets free.maxCsvImports imports, Pro unlimited.
-    // Free for everyone (Marc, 2026-11-26): live option prices every minute and PMCC tracking on the open LEAP(s) you have.
+    // Auto-updating option prices are Pro / trial only (OT_TIER.liveOptionPrices). Analytics,
+    // the report, monthly targets, SmartScan, OpTrack Bot and PMCC tracking (within the cap) are free.
     paidFeatures: [
-      'unlimited',        // more than the free limits above (2 open wheel tickers, 1 open LEAP)
-      'analytics',        // More data: monthly target tracking, analytics, scoreboard
-      'report'            // Plain-English account performance report
+      'unlimited'         // more than the free limits above (2 open wheel tickers, 1 open LEAP)
     ],
     // The Free vs Pro comparison (landing, start page and the in-app upgrade box all read this).
     comparison: [
       ['Manual entry and SmartScan', '✓', '✓'],
       ['OpTrack Bot <em>(requires Grok Bot)</em>', '✓', '✓'],
+      ['Auto-updating stock prices', '✓', '✓'],
+      ['Auto-updating option prices', '–', '✓'],
       ['Robinhood CSV import', '1 import', 'Unlimited'],
       ['Realised P&amp;L and Home', '✓', '✓'],
       ['Export and delete your data', '✓', '✓'],
       ['Wheel tickers', 'Up to 2 open', 'Unlimited'],
-      ['LEAPs &amp; PMCC tracking', '1 open LEAP with PMCC tracking', 'Unlimited LEAPs &amp; PMCC tracking'],
-      ['Live option prices (refreshed every minute)', '✓', '✓'],
-      ['Monthly target tracking, analytics &amp; scoreboard', '–', '✓'],
-      ['Plain-English account performance report', '–', '✓']
+      ['LEAPs &amp; PMCC tracking', '1 open LEAP/PMCC', 'Unlimited LEAPs &amp; PMCCs'],
+      ['Home monthly targets, analytics &amp; scoreboard', '✓', '✓'],
+      ['Plain-English account performance report', '✓', '✓']
     ]
   },
   // Plain-English names for upgrade prompts.
   featureNames: {
-    'unlimited': 'Unlimited wheel tickers and LEAPs',
+    'unlimited': 'Unlimited wheels, LEAPs and CSV imports',
     'robinhood-import': 'Unlimited Robinhood CSV imports',
+    'option-prices': 'Auto-updating option prices',
     'analytics': 'Monthly target tracking, analytics and scoreboard',
     'report': 'Plain-English account performance report'
   },

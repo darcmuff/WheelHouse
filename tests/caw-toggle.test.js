@@ -28,7 +28,7 @@ test('popover copy, Monthly target, and Banked profit line are unchanged besides
   assert.ok(cfg.includes('Applies to Return this month, the monthly table, and the Report.'));
   assert.ok(cfg.includes('class="ret-note"')&&/color:var\(--text3\)/.test(SRC.match(/\.ret-note\{[^}]+\}/)[0]));
   assert.ok(cfg.includes('Monthly target')&&cfg.includes('Banked profit only'));
-  assert.ok(cfg.includes("onclick=\"closeRetCfg();openUpgrade('analytics')\"")&&cfg.includes('<input id="ret-target" type="hidden">'));
+  assert.ok(cfg.includes('<input id="ret-target" type="number"')&&!cfg.includes("openUpgrade('analytics')")&&!cfg.includes('ret-pro'));
   const css=SRC.match(/\.ret-mode\{[^}]+\}/)[0]+SRC.match(/\.ret-mode button\.on\{[^}]+\}/)[0];
   assert.ok(css.includes('border-radius:6px')&&css.includes('var(--brand-orange)'));
 });

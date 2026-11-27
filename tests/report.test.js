@@ -150,10 +150,10 @@ test('report figures come from calcMonthlyRealised rows: LEAPs in options P&L, n
   assert.strictEqual(F.completeMonths, 1);
 });
 
-test('paid feature, gate and GoatCounter path are wired, and no writes in report code', () => {
+test('report is free on every tier; GoatCounter path is wired, and no writes in report code', () => {
   assert.match(brand, /'report'/);
   assert.match(brand, /featureNames[\s\S]*'report':/);
-  assert.match(SRC, /v==='report'&&!canUse\('report'\)/);
+  assert.doesNotMatch(SRC, /v==='report'&&!canUse\('report'\)/);
   assert.match(SRC, /otTrack\('\/report'\)/);
   assert.match(SRC, /Copy summary/);
   assert.match(SRC, /function renderReport\(/);
