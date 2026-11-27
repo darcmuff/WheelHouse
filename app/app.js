@@ -299,7 +299,7 @@ function selOpenMark(tip){
   if(live!=null&&live>=0)return +live;
   return null;
 }
-let _selOn=false,_selSkip=false,_selPop=false;const _sel=new Map();
+let _selOn=false,_selSkip=false,_selPop=false,_selPress=null,_selRenderWait=false;const _sel=new Map();
 function computeTotal(action,premium,shares,fees){
   fees=fees||0;premium=premium||0;shares=shares||0;
   const gross=premium*shares;
@@ -1689,6 +1689,7 @@ function _saveUIState(){
 }
 
 function render(){
+  if(typeof selDeferRender==='function'&&selDeferRender())return;
   if((view==='log'||view==='analytics'||view==='report')&&isPhoneLayout())view='dash';
   const _nwKeep=view==='positions'&&_nwOpen, _nwWas=document.getElementById('new-rot-ticker-top'), _nwTyped=_nwWas?_nwWas.value:'', _nwFocus=document.activeElement===_nwWas;
   _saveUIState();
@@ -8386,23 +8387,47 @@ const SEL_HOLD_MS=450,SEL_MOVE_PX=10;
 function selMoveTooFar(x0,y0,x,y){return Math.abs(x-x0)>SEL_MOVE_PX||Math.abs(y-y0)>SEL_MOVE_PX;}
 function selIsTouch(e){return!!e&&(e.pointerType==='touch'||e.pointerType==='pen');}
 function selContextShouldToggle(e,pressing,skip){if(pressing||skip)return false;if(selIsTouch(e))return false;return true;}
-let _selPress=null;
+function selDeferRender(){
+  if(_selPress){_selRenderWait=true;return true;}
+  return false;
+}
+function selFlushDeferredRender(){
+  if(!_selRenderWait)return;
+  _selRenderWait=false;
+  if(typeof render==='function')render();
+}
+function selRowKey(row){return row&&row.getAttribute?row.getAttribute('data-sel')||'':'';}
+function selRowByKey(k){
+  if(!k||typeof document==='undefined'||!document.querySelector)return null;
+  const q=String(k).replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+  return document.querySelector('.trow[data-sel="'+q+'"]');
+}
+function selLiveRow(row){return selRowByKey(selRowKey(row)||(_selPress&&_selPress.key)||'')||row||null;}
 function selClearPress(keepSkip){
   if(!_selPress)return;
   clearTimeout(_selPress.timer);
-  if(_selPress.row&&_selPress.row.classList)_selPress.row.classList.remove('trow-press');
+  const stale=_selPress.row;
+  if(stale&&stale.classList)stale.classList.remove('trow-press');
+  const live=selLiveRow(stale);
+  if(live&&live!==stale&&live.classList)live.classList.remove('trow-press');
   if(_selPress.off)_selPress.off();
   const held=_selPress.held;
   _selPress=null;
   if(held||keepSkip)_selSkip=true;
+  selFlushDeferredRender();
 }
 function selOnHold(row){
-  if(!_selPress||_selPress.row!==row)return;
+  if(!_selPress)return;
+  const key=_selPress.key||selRowKey(row);
+  if(_selPress.key&&key&&_selPress.key!==key)return;
+  const live=selLiveRow(row||_selPress.row);
+  if(!live)return;
   _selPress.held=true;
+  _selPress.row=live;
   _selSkip=true;
-  if(row&&row.classList)row.classList.remove('trow-press');
+  if(live.classList)live.classList.remove('trow-press');
   if(!_selOn)selEnter();
-  selToggle(row);
+  selToggle(live);
   try{if(typeof navigator!=='undefined'&&navigator.vibrate)navigator.vibrate(12);}catch(e){}
 }
 function bindSelPress(){
@@ -8416,11 +8441,11 @@ function bindSelPress(){
     if(_selOn)return;
     if(!selIsTouch(e))return;
     selClearPress();
-    const x=e.clientX,y=e.clientY,id=e.pointerId;
+    const x=e.clientX,y=e.clientY,id=e.pointerId,key=selRowKey(row);
     const scrollY=()=>{try{return window.scrollY||0;}catch(err){return 0;}};
     const y0=scrollY();
     row.classList.add('trow-press');
-    const timer=setTimeout(()=>selOnHold(row),SEL_HOLD_MS);
+    const timer=setTimeout(()=>selOnHold((_selPress&&_selPress.row)||row),SEL_HOLD_MS);
     const onMove=ev=>{
       if(ev.pointerId!=null&&id!=null&&ev.pointerId!==id)return;
       if(selMoveTooFar(x,y,ev.clientX,ev.clientY))selClearPress();
@@ -8435,7 +8460,7 @@ function bindSelPress(){
     document.addEventListener('pointerup',onUp,{passive:true});
     document.addEventListener('pointercancel',onUp,{passive:true});
     window.addEventListener('scroll',onScroll,{passive:true,capture:true});
-    _selPress={row,x,y,id,timer,held:false,off(){
+    _selPress={row,key,x,y,id,timer,held:false,off(){
       document.removeEventListener('pointermove',onMove);
       document.removeEventListener('pointerup',onUp);
       document.removeEventListener('pointercancel',onUp);
@@ -8452,6 +8477,9 @@ function bindSelPress(){
     selToggle(row);
     setTimeout(()=>{_selSkip=false;},400);
   });
+  document.addEventListener('selectstart',e=>{
+    if(_selPress||(e.target&&e.target.closest&&e.target.closest('.trow,.tr-card,.trade-body,.tgrid')))e.preventDefault();
+  },true);
 }
 
 function selEnter(){if(_selOn)return;_selOn=true;document.body.classList.add('sel-mode');dismissSelTip();try{history.pushState({whSel:1},'');}catch(e){}selPaint();}

@@ -246,6 +246,7 @@ html{font-size:118.75%} /* root scale (19px); all sizes are rem */
 .sel-mark{display:none}
 body.sel-mode .trow{user-select:none;-webkit-user-select:none}
 .trow{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.trade-body,.trade-body *,.tgrid,.tgrid *,.trow,.trow *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .trow.trow-press{background:var(--orangeL)}
 body.sel-mode .trow.sel{background:var(--orangeL);box-shadow:inset 0.2rem 0 0 var(--orange)}
 #sel-panel{position:fixed;z-index:70;top:7.25rem;left:50%;right:auto;transform:translateX(-50%);box-sizing:border-box;width:min(22rem,calc(100vw - 48px));max-width:calc(100vw - 48px);max-height:calc(100vh - 8.5rem);overflow-x:hidden;overflow-y:auto;font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg2);border:1px solid var(--border);border-radius:1.25rem;box-shadow:0 12px 40px rgba(20,24,20,.18);padding:1rem 1.125rem}

@@ -45,3 +45,36 @@ test('rows suppress callout and text selection; press state is visible',()=>{
   assert.match(SRC,/\.trow\{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none\}/);
   assert.match(SRC,/\.trow\.trow-press\{/);
 });
+
+test('open-row hold survives a re-render and looks up the row by data-sel',()=>{
+  assert.match(extractFn('renderTradeRow'),/data-sel=/);
+  assert.match(extractFn('render'),/selDeferRender\(\)/);
+  assert.match(extractFn('selClearPress'),/selFlushDeferredRender/);
+  assert.match(extractFn('selOnHold'),/selLiveRow|selRowByKey/);
+  const F=new Function(`
+    let _selPress=null,_selRenderWait=false;
+    ${extractFn('selDeferRender')}
+    ${extractFn('selRowKey')}
+    ${extractFn('selRowByKey').replace('document.querySelector','(selRowByKey.query||function(){return null})')}
+    return {
+      defer:selDeferRender,
+      set(p){_selPress=p;},
+      waiting(){return _selRenderWait;},
+      key:selRowKey,
+    };
+  `)();
+  assert.strictEqual(F.defer(),false);
+  F.set({key:'w:open1'});
+  assert.strictEqual(F.defer(),true,'render must wait while a finger is down');
+  assert.strictEqual(F.waiting(),true);
+  const row={getAttribute:k=>k==='data-sel'?'w:open-csp':''};
+  assert.strictEqual(F.key(row),'w:open-csp');
+});
+
+test('the trade list blocks Android text selection during a press',()=>{
+  const bind=extractFn('bindSelPress');
+  assert.match(bind,/addEventListener\('selectstart'/);
+  assert.match(bind,/preventDefault\(\)/);
+  assert.match(SRC,/\.trade-body,[\s\S]{0,80}user-select:none/);
+  assert.match(SRC,/\.trow \*\{[^}]*user-select:none/);
+});

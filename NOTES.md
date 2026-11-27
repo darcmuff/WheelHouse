@@ -8,6 +8,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `main` is at sw v417 (`c6156d6`, 2026-11-26): checkout error handling (v414), US date default (v415), phone tab swipe (v416) and the neighbouring-page peek (v417).
 
+- `dev` only (sw v431, 2026-11-27): Phone long-press on an *open* trade row no longer loses the hold. A live quote or delta refresh was rebuilding the list mid-press, which cancelled the gesture and let Android start a native copy/select. Render is deferred while a finger is down, the hold looks up the row by `data-sel`, and the whole trade list blocks text selection and the Android `selectstart` callout. Do not push to main until Marc says so.
+
 - `dev` only (sw v430, 2026-11-27): Phone long-press to select trades for net P&L is more reliable: 450ms hold, 10px move tolerance, cancel on scroll, no pointer capture (which aborted the gesture on iOS), suppress the native callout/context-menu so it cannot deselect the row, haptic plus a press tint, and the following click is ignored. Desktop right-click is unchanged. Do not push to main until Marc says so.
 
 - `dev` only (sw v429, 2026-11-27): Phone trade rows (≤700px) hide the Δ badge and stack an open leg’s P&L like closed BTC rows — amount on top, “41% · at $4.27” small and right-aligned underneath — so the figures no longer overlap the strike. Desktop at 1280px is unchanged. Do not push to main until Marc says so.
