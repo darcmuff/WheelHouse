@@ -10690,7 +10690,7 @@ function upgGo(){return startCheckout(_upgInterval);}
 function openUpgrade(feature,msg){
   const B=window.BRAND||{},P=planCfg(),N=B.featureNames||{},t=effectiveTier(_ent);
   const C=_tierLib()&&_tierLib().planCopy?_tierLib().planCopy():null;
-  document.getElementById('upg-feature').textContent=feature==='trial'?(t.isTrial?`You're on the Pro trial: ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left. Keep Pro when it ends:`:'Pro'):N[feature]?N[feature]+'.':'Upgrade to Pro.';
+  document.getElementById('upg-feature').textContent=feature==='trial'?(t.isTrial?`You're on the Pro trial: ${t.trialDaysLeft} day${t.trialDaysLeft===1?'':'s'} left. Keep Pro when it ends:`:'Pro'):N[feature]?(N[feature].endsWith('.')?N[feature]:N[feature]+'.'):'Upgrade to Pro.';
   const freeEl=document.getElementById('upg-free');if(freeEl)freeEl.textContent=C?C.free:'';
   const trialEl=document.getElementById('upg-trial');if(trialEl)trialEl.textContent=C?C.trial:'';
   document.getElementById('upg-table').innerHTML=(P.comparison||[]).map(r=>`<tr><td>${r[0]}</td>${[r[1],r[2]].map(v=>`<td class="${v==='✓'||v==='Unlimited'?'y':v==='–'?'n':''}">${v}</td>`).join('')}</tr>`).join('');

@@ -18,12 +18,15 @@ test('plan copy is exact, USD, US spelling; never says real-time or option marks
   assert.strictEqual(C.optionPrices,'Auto-updating option prices');
   assert.strictEqual(C.optionPricesCue,'Auto option prices · Pro');
   const D=T.priceDisplay(P);
-  assert.strictEqual(D.annual.line,'$4.92/mo billed yearly · Save 30%');
+  assert.strictEqual(D.annual.line,'$4.92/mo billed yearly');
   assert.strictEqual(D.monthly.perMonthText,'$6.99');
   const L=fs.readFileSync(path.join(A,'landing.html'),'utf8');
   const St=fs.readFileSync(path.join(A,'start.html'),'utf8');
   assert.ok(L.includes(C.trial)&&St.includes(C.trial));
-  assert.ok(L.includes('$4.92/mo billed yearly · Save 30%')&&St.includes('$4.92/mo billed yearly · Save 30%'));
+  assert.ok(L.includes('$4.92/mo billed yearly')&&St.includes('$4.92/mo billed yearly'));
+  assert.ok(!L.includes('$4.92/mo billed yearly · Save')&&!St.includes('$4.92/mo billed yearly · Save'),'billed line must not repeat Save 30%');
+  assert.ok(L.includes('id="pro-save">Save 30%')&&SRC.includes('id="upg-save"')&&SRC.includes('Save 30%'),'Save 30% badge stays');
+  assert.strictEqual(ctx.window.BRAND.featureNames.unlimited,'Unlimited wheels, LEAPs, CSV imports, and auto-updating option prices.');
   assert.ok(SRC.includes("id=\"upg-free\"")&&SRC.includes("id=\"upg-trial\"")&&/planCopy/.test(extractFn('openUpgrade')));
   for(const [name,txt] of [['landing',L],['start',St],['brand',fs.readFileSync(path.join(A,'brand.js'),'utf8')],['entitlement',fs.readFileSync(path.join(A,'entitlement.js'),'utf8')]]){
     assert.ok(!/real-time|option marks/i.test(txt),name+' must not say real-time or option marks');

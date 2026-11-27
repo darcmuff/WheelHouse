@@ -78,7 +78,7 @@ test('Free skips auto-updating option prices; Pro and trial fetch them',async()=
   for(const f of fs.readdirSync(A).filter(f=>/\.(html|js)$/.test(f)))assert.ok(!/once per visit/i.test(fs.readFileSync(path.join(A,f),'utf8')),f);
 });
 test('pricing: one config, USD $59/yr default ($4.92/mo, Save 30%) and $6.99/mo; no GBP left',()=>{
-  const D=T.priceDisplay(P);assert.strictEqual(D.defaultInterval,'annual');assert.strictEqual(D.annual.perMonthText,'$4.92');assert.strictEqual(D.annual.line,'$4.92/mo billed yearly · Save 30%');assert.strictEqual(D.monthly.perMonthText,'$6.99');
+  const D=T.priceDisplay(P);assert.strictEqual(D.defaultInterval,'annual');assert.strictEqual(D.annual.perMonthText,'$4.92');assert.strictEqual(D.annual.line,'$4.92/mo billed yearly');assert.strictEqual(D.monthly.perMonthText,'$6.99');
   assert.strictEqual(P.trialDays,T.TRIAL_DAYS);
   for(const f of ['landing.html','start.html','brand.js'])assert.ok(!/£\s?\d|£9|£79/.test(fs.readFileSync(path.join(A,f),'utf8')),f);
   assert.ok(!/upg-yearly|£/.test(extractFn('openUpgrade')));

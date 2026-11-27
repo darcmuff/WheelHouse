@@ -116,7 +116,7 @@
     return {
       defaultInterval: P.defaultInterval || 'annual',
       annual: { amount: a, perMonth, perMonthText: money(sym, perMonth), totalText: money(sym, a), savePct: save,
-        line: money(sym, perMonth) + '/mo billed yearly · Save ' + save + '%' },
+        line: money(sym, perMonth) + '/mo billed yearly' },
       monthly: { amount: m, perMonthText: money(sym, m), line: 'billed monthly' }
     };
   }

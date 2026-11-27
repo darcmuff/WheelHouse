@@ -24,7 +24,7 @@ window.BRAND = {
     symbol: '$',
     defaultInterval: 'annual',          // the toggle starts on Annual
     prices: {
-      annual: { amount: 59 },           // $59/year → shown as $4.92/mo billed yearly · Save 30%
+      annual: { amount: 59 },           // $59/year → shown as $4.92/mo billed yearly; Save 30% lives on the Annual badge
       monthly: { amount: 6.99 }         // $6.99/month
     },
     priceMonthly: 6.99,                 // kept for older readers; same numbers as `prices`
@@ -55,7 +55,7 @@ window.BRAND = {
   },
   // Plain-English names for upgrade prompts.
   featureNames: {
-    'unlimited': 'Unlimited wheels, LEAPs and CSV imports',
+    'unlimited': 'Unlimited wheels, LEAPs, CSV imports, and auto-updating option prices.',
     'robinhood-import': 'Unlimited Robinhood CSV imports',
     'option-prices': 'Auto-updating option prices',
     'analytics': 'Monthly target tracking, analytics and scoreboard',
