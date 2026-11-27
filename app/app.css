@@ -1411,6 +1411,7 @@ select,textarea,
   .tr-cap{margin-left:auto;text-align:right;font-weight:720;flex:0 0 auto;min-width:min-content;max-width:none;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:0.05rem}
   .tr-delta{display:none!important}
   .tr-cap>.cap-desk{display:none!important}
+  .tr-cap>.cap-chain{display:none!important}
   .tr-cap>.cap-phone{display:flex;flex-direction:column-reverse;align-items:flex-end;gap:0.05rem}
   .tr-cap>.cap-phone>div:first-child{font-size:0.75rem;font-weight:480;line-height:1.2}
   .tr-cap>.cap-phone>div:last-child{font-size:0.9rem;font-weight:720;line-height:1.2}

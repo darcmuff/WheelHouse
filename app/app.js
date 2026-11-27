@@ -254,8 +254,7 @@ function rollStatusHtml(st,money){
   if(!st)return '';
   const pnl=n=>`<span class="${n<0?'r':'g'}">${money(n)}</span>`;
   const lines=[];
-  if(st.chainNow!=null)lines.push(`<div>Chain P&L now: ${pnl(st.chainNow)}</div>`);
-  else if(typeof optPriceCueHtml==='function'){const cue=optPriceCueHtml();if(cue)lines.push(`<div>${cue}</div>`);}
+  if(st.chainNow==null&&typeof optPriceCueHtml==='function'){const cue=optPriceCueHtml();if(cue)lines.push(`<div>${cue}</div>`);}
   if(st.expiryMax!=null)lines.push(`<div>If expired worthless: ${pnl(st.expiryMax)}</div>`);
   if(st.assignedBasis!=null)lines.push(`<div>If assigned: ${fmtMoney(st.assignedBasis)}/sh</div>`);
   return lines.length?`<div class="sel-status">${lines.join('')}</div>`:'';

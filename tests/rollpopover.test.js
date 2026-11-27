@@ -164,7 +164,7 @@ test('picker markup keeps roll cashflow framing and status labels',()=>{
   assert.match(SRC,/\(net credit\)/);
   assert.match(SRC,/\(net debit\)/);
   assert.match(SRC,/sel-net-neutral/);
-  assert.match(SRC,/Chain P&L now/);
+  assert.doesNotMatch(SRC,/Chain P&L now/);
   assert.match(SRC,/If expired worthless/);
   assert.match(SRC,/If assigned/);
   assert.match(SRC,/closed → /);

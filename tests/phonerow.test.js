@@ -36,4 +36,7 @@ test('open-row P&L keeps the desktop one-line and stacks like closed BTC rows on
   assert.match(SRC,/\.cap-phone\{display:none\}/);
   in700(/\.tr-cap>\.cap-desk\{display:none!important\}/);
   in700(/\.tr-cap>\.cap-phone\{[^}]*flex-direction:\s*column-reverse/);
+  in700(/\.tr-cap>\.cap-chain\{display:none!important\}/);
+  const hideChain=SRC.slice(0,SRC.indexOf('@media')).match(/\.cap-chain\{[^}]*display:\s*none/);
+  assert.ok(!hideChain,'do not hide .cap-chain outside the phone breakpoint');
 });
