@@ -8,6 +8,8 @@ Notes written 2026-11-08, updated 2026-11-09. No earlier NOTES.md. This is the p
 
 - `main` is at sw v417 (`c6156d6`, 2026-11-26): checkout error handling (v414), US date default (v415), phone tab swipe (v416) and the neighbouring-page peek (v417).
 
+- `dev` only (sw v430, 2026-11-27): Phone long-press to select trades for net P&L is more reliable: 450ms hold, 10px move tolerance, cancel on scroll, no pointer capture (which aborted the gesture on iOS), suppress the native callout/context-menu so it cannot deselect the row, haptic plus a press tint, and the following click is ignored. Desktop right-click is unchanged. Do not push to main until Marc says so.
+
 - `dev` only (sw v429, 2026-11-27): Phone trade rows (≤700px) hide the Δ badge and stack an open leg’s P&L like closed BTC rows — amount on top, “41% · at $4.27” small and right-aligned underneath — so the figures no longer overlap the strike. Desktop at 1280px is unchanged. Do not push to main until Marc says so.
 
 - `dev` only (sw v428, 2026-11-27): X Pixel (pixel `riuhw`, Sign up event `tw-riuhw-152urb`) on the landing page, /demo, /start and the app, loaded async and fired only after a successful new-account creation. /demo HTML is split (styles to `app.css`, the main module to `app.js`) so first paint is no longer blocked on an 850KB document; non-critical scripts are deferred. A sticky /demo CTA reads “Start 14-day free trial — no credit card required” and goes to /app/?signup=1. Do not push to main until Marc says so.
