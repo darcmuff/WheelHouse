@@ -3699,8 +3699,9 @@ function openCapturedHtml(pct,openPnl,px,chainPnl,title){
   const at=px!=null?` <span class="cap-at">· at $${(+px).toFixed(2)}</span>`:'';
   const tip=title?` title="${esc(title)}"`:'';
   const pctHtml=pct==null?'':(sign?`<span class="${sign}">${pct}%</span>`:`${pct}%`);
-  let html=`<div style="white-space:nowrap"${tip}>${pctHtml} ·${dol}${at}</div>`;
-  if(chainPnl!=null)html+=`<div style="white-space:nowrap">Chain <span class="${chainPnl>=0?'g':'r'}">${chainPnl>=0?'+':'-'}${fmtMoney(Math.abs(chainPnl))}</span></div>`;
+  const amt=(dol||'').trim();
+  let html=`<div class="cap-desk" style="white-space:nowrap"${tip}>${pctHtml} ·${dol}${at}</div><div class="cap-phone"${tip}><div style="white-space:nowrap">${pctHtml}${at}</div><div style="white-space:nowrap">${amt}</div></div>`;
+  if(chainPnl!=null)html+=`<div class="cap-chain" style="white-space:nowrap">Chain <span class="${chainPnl>=0?'g':'r'}">${chainPnl>=0?'+':'-'}${fmtMoney(Math.abs(chainPnl))}</span></div>`;
   const color=openPnl>0?'var(--green)':openPnl<0?'var(--red)':'var(--text2)';
   return{html,color};
 }
