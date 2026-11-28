@@ -5935,16 +5935,18 @@ function brokerCSVLib(){
     m=/^(\d{4})(\d{2})(\d{2})(?:\b|T)/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
     const d=normDate(s.split(/[,;T]/)[0]);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
   }
+  // OCC strike digits: 8 = strike×1000 padded (00150000); 5-7 digits with no point = strike×1000 unpadded (P150000); else as written (P150, P152.5, P5900)
+  const occStrike=d=>/^\d{5,8}$/.test(d)?parseInt(d,10)/1000:parseFloat(d);
   // Option contract from OCC symbols or human descriptions → {ticker,expiry,strike,pc}
   function parseOption(s,loose){
     if(!s)return null;s=String(s).trim().replace(/^O:/i,'').replace(/^([A-Za-z]{2,5}) ([A-Za-z]) (?=\d{6}[CPcp])/,'$1.$2 ');let m;
     const T='([A-Z][A-Z0-9.]{0,9})';
     // OCC with a 4-digit year: "AAPL20250117P150" (tried first so the year can't be swallowed into the ticker)
     m=new RegExp('^[-.]?([A-Z][A-Z.]{0,9})\\s*(\\d{4})(\\d{2})(\\d{2})([CP])(\\d{8}|\\d+(?:\\.\\d+)?)$').exec(s.toUpperCase());
-    if(m&&+m[3]>=1&&+m[3]<=12&&+m[4]>=1&&+m[4]<=31){const k=m[6].length===8&&!m[6].includes('.')?parseInt(m[6],10)/1000:parseFloat(m[6]);return{ticker:m[1],expiry:`${m[2]}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
+    if(m&&+m[3]>=1&&+m[3]<=12&&+m[4]>=1&&+m[4]<=31){const k=occStrike(m[6]);return{ticker:m[1],expiry:`${m[2]}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
     // OCC: "AAPL  250117P00150000" / "AAPL250117P00150000" / ".AAPL250117P150" / "-AAPL250117P150"
     m=new RegExp('^[-.]?'+T+'\\s*(\\d{2})(\\d{2})(\\d{2})([CP])(\\d{8}|\\d+(?:\\.\\d+)?)$').exec(s.toUpperCase());
-    if(m){const k=m[6].length===8&&!m[6].includes('.')?parseInt(m[6],10)/1000:parseFloat(m[6]);return{ticker:m[1],expiry:`${yr(m[2])}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
+    if(m){const k=occStrike(m[6]);return{ticker:m[1],expiry:`${yr(m[2])}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
     const PC='(PUT|CALL|P|C)';
     // validates the date: day-first files ("17/01/2025", or ambiguous ones in a day-first file) are swapped; impossible dates → null
     const fin=(t,y,mo,d,k,pc,numeric)=>{mo=+mo;d=+d;if(numeric&&(mo>12||(_dmy&&d<=12)))[mo,d]=[d,mo];if(mo>12&&d<=12)[mo,d]=[d,mo];if(mo<1||mo>12||d<1||d>31)return null;
@@ -5980,19 +5982,24 @@ function brokerCSVLib(){
     const cut=m=>{t=t.replace(m[0],' ');};
     if((hit=/\b(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})\b/.exec(t))){y=+hit[1];mo=+hit[2];d=+hit[3];cut(hit);}
     else if((hit=/\b(20\d{2})(\d{2})(\d{2})\b/.exec(t))){y=+hit[1];mo=+hit[2];d=+hit[3];cut(hit);}
-    else if((hit=new RegExp("\\b(\\d{1,2})(?:ST|ND|RD|TH)?[ -]?("+MP+")[A-Z]*\\.?[ ,-]*'?(\\d{4}|\\d{2})\\b").exec(t))){y=yr(hit[3]);mo=MONS[hit[2].toLowerCase()];d=+hit[1];cut(hit);}
+    else if((hit=new RegExp("(^|[^\\d.])(\\d{1,2})(?:ST|ND|RD|TH)?[ -]?("+MP+")[A-Z]*\\.?[ ,-]*'?(\\d{4}|\\d{2})\\b").exec(t))){y=yr(hit[4]);mo=MONS[hit[3].toLowerCase()];d=+hit[2];t=t.replace(hit[0],hit[1]+' ');} // not "152.5 Jan" → 5 Jan
     else if((hit=new RegExp("\\b("+MP+")[A-Z]*\\.?[ -]+(\\d{1,2})(?:ST|ND|RD|TH)?[ ,-]+'?(\\d{4}|\\d{2})\\b").exec(t))){y=yr(hit[3]);mo=MONS[hit[1].toLowerCase()];d=+hit[2];cut(hit);}
     else if((hit=/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4}|\d{2})\b/.exec(t))){y=yr(hit[3]);mo=+hit[1];d=+hit[2];if(mo>12||(_dmy&&d<=12))[mo,d]=[d,mo];cut(hit);}
     else if((hit=/\b(\d{2})(\d{2})(\d{2})\b/.exec(t))&&+hit[2]>=1&&+hit[2]<=12&&+hit[3]>=1&&+hit[3]<=31){y=yr(hit[1]);mo=+hit[2];d=+hit[3];cut(hit);}
     else return null;
     if(!(mo>=1&&mo<=12&&d>=1&&d<=31&&y>=2000&&y<=2100))return null;
-    let pc='';
-    if((hit=/\b(PUT|CALL)\b/.exec(t))){pc=hit[1][0];cut(hit);}
-    else if((hit=/(?:^|\s)([PC])(?=\s|$)/.exec(t))){pc=hit[1];cut(hit);}
-    else if((hit=/(\d)([PC])(?=\s|$)/.exec(t))){pc=hit[2];t=t.replace(hit[0],hit[1]);}
+    let pc='',before='',after='',k=NaN;
+    const NUM='\\$?(\\d{1,6}(?:\\.\\d{1,4})?)';
+    const split=(h,keep)=>{before=t.slice(0,h.index);after=t.slice(h.index+h[0].length);if(keep)before+=keep;t=before+' '+after;};
+    if((hit=/\b(PUT|CALL)\b/.exec(t))){pc=hit[1][0];split(hit);}
+    else if((hit=/(?:^|\s)([PC])(?=\s|$)/.exec(t))){pc=hit[1];split(hit);}
+    else if((hit=/(\d)([PC])(?=\s|$)/.exec(t))){pc=hit[2];split(hit,hit[1]);after=after;}
     if(!pc)return null;
-    hit=/\$?(\d{1,6}(?:\.\d{1,4})?)(?![\d.])/.exec(t.replace(/[A-Z.]*[A-Z]\d+[A-Z.]*/g,' '));
-    const k=hit?parseFloat(hit[1]):NaN;
+    // the strike is the number touching the PUT/CALL word ("14 PUT", "CALL 152.5"), never the quantity or the 100 multiplier
+    const clean=x=>x.replace(/[A-Z.]*[A-Z]\d+[A-Z.]*/g,' ');
+    let mm=new RegExp(NUM+'\\s*$').exec(clean(before))||new RegExp('^\\s*'+NUM).exec(clean(after));
+    if(mm)k=parseFloat(mm[1]);
+    else{mm=/\$(\d{1,6}(?:\.\d{1,4})?)/.exec(clean(t))||new RegExp(NUM).exec(clean(t));if(mm)k=parseFloat(mm[1]);}
     if(!(k>0))return null;
     const STOP={PUT:1,CALL:1,P:1,C:1,A:1,AN:1,THE:1,OF:1,AND:1,SHS:1,SHARES:1,USD:1};
     const tk=(t.match(/\b[A-Z][A-Z0-9.]{0,9}\b/g)||[]).filter(w=>!STOP[w]&&!/^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$/.test(w))[0];
@@ -6001,13 +6008,13 @@ function brokerCSVLib(){
   }
   const norm=h=>String(h||'').toLowerCase().replace(/\(\$\)/g,'').replace(/\s+/g,' ').trim();
   const SYN={
-    date:['activity date','trade date','run date','transactiondate','transaction date','date/time','tradedate','filled time','date','time','trade time'],
-    symbol:['symbol','instrument','ticker','security','contract','financial instrument'],
+    date:['activity date','trade date','run date','transactiondate','transaction date','date/time','tradedate','filled time','fill time','execution time','datetime','date time','timestamp','date','time','trade time'],
+    symbol:['symbol','instrument','ticker','security','contract','financial instrument','option symbol','occ symbol','option'],
     underlying:['underlying symbol','underlying','root symbol','root'],
     desc:['description','name','security description'],
-    action:['trans code','action','transaction type','transactiontype','activity','sub type','type','side','buy/sell','open/close','code','activity type'],
-    qty:['quantity','qty','filled','contracts','shares'],
-    price:['price','average price','avg price','t. price','trade price','tradeprice','execution price'],
+    action:['trans code','action','transaction type','transactiontype','activity','sub type','type','side','buy/sell','open/close','open/closeindicator','open/close indicator','openclose','open close','code','activity type'],
+    qty:['quantity','qty','filled','filled qty','fill qty','quantity filled','executed qty','contracts','shares'],
+    price:['price','average price','avg price','filled avg price','avg fill price','fill price','filled price','t. price','trade price','tradeprice','execution price'],
     fees:['fees','commission','commissions','comm/fee','fees & comm','ibcommission','reg fee','fee'],
     amount:['amount','net amount','proceeds','value','net cash','netcash','total'],
     expiry:['expiration date','expiration','expiry','exp date','expiry date'],
@@ -6069,7 +6076,7 @@ function brokerCSVLib(){
     if(broker==='Interactive Brokers'&&!open&&!close){if(w(/\bo\b/))open=true;if(w(/\bc\b/))close=true;}
     let isSell=sell&&!buy,isBuy=buy&&!sell;
     if(!isSell&&!isBuy&&!isNaN(qty)&&qty!==0){isSell=qty<0;isBuy=qty>0;}
-    if(!open&&!close&&(broker==='Webull'||broker==='Statement')){open=isSell;close=isBuy;}
+    if(!open&&!close&&(broker==='Webull'||broker==='Statement'||(broker==='Generic'&&(sell||buy)))){open=isSell;close=isBuy;} // brokers that don't say open/close: a wheel sells to open and buys to close
     if(isSell&&open)return pc==='P'?'CSP':'STOC';
     if(isBuy&&close)return'BTC';
     if(isSell&&close)return'STC';

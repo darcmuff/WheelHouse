@@ -67,5 +67,35 @@ check('newest-first file comes out oldest-first', L.parseBrokerCSV(newestFirst).
 check('oldest-first file is left as is', L.parseBrokerCSV(hdr7 + '01/10/2025,AAPL 250117P00150000,Sell to Open,1,1.25,0.05,124.95\n01/15/2025,AAPL 250117P00150000,Buy to Close,1,0.20,0.05,-20.05\n').rows.map(r => r.action).join() === 'CSP,BTC');
 check('same-day newest-first fills keep open-before-close', L.parseBrokerCSV(hdr7 + '01/15/2025,AAPL 250117P00150000,Buy to Close,1,0.20,0.05,-20.05\n01/15/2025,AAPL 250117P00150000,Sell to Open,1,1.25,0.05,124.95\n01/10/2025,AAPL 250117P00150000,Sell to Open,1,1.00,0.05,99.95\n').rows.map(r => r.entered + r.action).join() === '2025-01-10CSP,2025-01-15CSP,2025-01-15BTC');
 
+// ── strike must be the strike, never the quantity or multiplier ──
+const strikeOf = (s) => { const r = L.parseOption(s, true); return r && r.strike; };
+check('TD Ameritrade wording: Sold -1 SOFI 100 (Weeklys) 17 JAN 25 14 PUT @.30', strikeOf('Sold -1 SOFI 100 (Weeklys) 17 JAN 25 14 PUT @.30') === 14, L.parseOption('Sold -1 SOFI 100 (Weeklys) 17 JAN 25 14 PUT @.30', true));
+check('qty and multiplier before the strike: 2 AAPL 100 Jan 17 2025 150 Call', strikeOf('2 AAPL 100 Jan 17 2025 150 Call') === 150, L.parseOption('2 AAPL 100 Jan 17 2025 150 Call', true));
+check('strike after the type: AAPL Call 152.5 Jan 17 2025', strikeOf('AAPL Call 152.5 Jan 17 2025') === 152.5);
+check('$ marks the strike when not next to the type: PUT AAPL $150 EXP 01/17/25', strikeOf('PUT AAPL $150 EXP 01/17/25') === 150);
+check('ticker is not the type or a month: BTO 1 SOFI 250117C00014000 style handled by OCC', (L.parseOption('BTO 1 SOFI 250117C00014000', true) || {}).ticker !== 'BTO');
+
+// ── more real-world layouts, with hand-checked expected trades ──
+const rk = (p) => p.rows.map(key).join(' ; ');
+const flex = `ClientAccountID,AssetClass,Symbol,DateTime,Quantity,TradePrice,IBCommission,Buy/Sell,Open/CloseIndicator,Put/Call,Strike,Expiry,UnderlyingSymbol,Multiplier
+U123,OPT,AAPL  250117P00150000,20250110;103211,-1,1.25,-1.05,SELL,O,P,150,20250117,AAPL,100
+U123,OPT,AAPL  250117P00150000,20250115;094500,1,0.20,-1.05,BUY,C,P,150,20250117,AAPL,100
+U123,STK,AAPL,20250117;160000,100,150,-1,BUY,O,,,,AAPL,1`;
+check('IBKR Flex query CSV (Buy/Sell + Open/CloseIndicator + DateTime)', rk(L.parseBrokerCSV(flex)) === '2025-01-10|AAPL|CSP|150|2025-01-17|100|1.25|1.05|123.95 ; 2025-01-15|AAPL|BTC|150|2025-01-17|100|0.2|1.05|21.05', rk(L.parseBrokerCSV(flex)));
+const tda = `DATE,TRANSACTION ID,DESCRIPTION,QUANTITY,SYMBOL,PRICE,COMMISSION,AMOUNT,REG FEE,SHORT-TERM RDM FEE,FUND REDEMPTION FEE, DEFERRED SALES CHARGE
+01/10/2025,111,Sold -1 SOFI 100 17 JAN 25 14 PUT @.30,-1,SOFI,.30,0.65,29.35,0.01,,,
+01/15/2025,112,Bought +1 SOFI 100 17 JAN 25 14 PUT @.05,1,SOFI,.05,0.65,-5.65,0.01,,,
+***END OF FILE***`;
+const ptda = L.parseBrokerCSV(tda);
+check('TD Ameritrade (no Open/Close words: sell = open, buy = close)', ptda.rows.length === 2 && ptda.rows[0].action === 'CSP' && ptda.rows[0].strike === 14 && ptda.rows[0].premium === 0.3 && ptda.rows[1].action === 'BTC', ptda.error || ptda.rows);
+const moo = `Side,Symbol,Name,Order Price,Order Qty,Filled Qty,Filled Avg Price,Status,Fill Time,Currency
+Sell,AAPL250117P150000,AAPL 250117 150.00P,1.25,1,1,1.25,Filled,"Jan 10, 2025 10:32:11 ET",USD
+Buy,AAPL250117P150000,AAPL 250117 150.00P,0.20,1,0,0,Cancelled,"Jan 14, 2025 10:32:11 ET",USD
+Buy,AAPL250117P150000,AAPL 250117 150.00P,0.25,1,1,0.20,Filled,"Jan 15, 2025 09:45:00 ET",USD`;
+const pm = L.parseBrokerCSV(moo);
+check('Moomoo-style: cancelled orders skipped, filled avg price used, strike*1000 OCC', pm.rows.length === 2 && pm.rows[0].strike === 150 && pm.rows[0].premium === 1.25 && pm.rows[1].premium === 0.2 && pm.rows[1].entered === '2025-01-15', pm.error || pm.rows);
+check('OCC strike variants: P150000 and P00150000 and P150 all = 150', [L.parseOption('AAPL250117P150000'), L.parseOption('AAPL250117P00150000'), L.parseOption('AAPL250117P150')].every(o => o && o.strike === 150));
+check('OCC 5900 index strike untouched', L.parseOption('SPXW 250117P05900000').strike === 5900 && L.parseOption('SPXW250117P5900').strike === 5900);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
