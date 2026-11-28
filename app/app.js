@@ -5884,7 +5884,7 @@ function brokerCSVLib(){
   const pad=n=>String(n).padStart(2,'0');
   let _dmy=false;
   // whole-document day-first detection: any a/b/yyyy with a>12, or UK/EU broker
-  const sniffDMY=t=>{let dm=false,md=false;for(const m of String(t).matchAll(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/g)){if(+m[1]>12)dm=true;if(+m[2]>12)md=true;}return dm&&!md?true:md?false:/trading ?212|etoro|\bgbp\b|£/i.test(t);};
+  const sniffDMY=t=>{let dm=false,md=false;for(const m of String(t).matchAll(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/g)){if(+m[1]>12)dm=true;if(+m[2]>12)md=true;}return dm&&!md?true:md?false:/trading ?212|etoro|\bgbp\b|£/i.test(t);};
   const yr=y=>{y=parseInt(y,10);return y<100?2000+y:y;};
   // Full-text CSV parser: quotes, "" escapes, commas/newlines inside quotes, CRLF, BOM
   function parseCSVText(text,delim){
@@ -5910,19 +5910,29 @@ function brokerCSVLib(){
   function num(s){
     if(s==null)return NaN;s=String(s).trim();if(!s||s==='--')return NaN;
     let neg=false;
+    s=s.replace(/[\u2212\u2012\u2013\u2014\uFE63\uFF0D]/g,'-'); // unicode minus / dashes from Excel and PDFs
     if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1);}
-    s=s.replace(/[$£€,\s]/g,'');
-    if(s.endsWith('-')){neg=!neg;s=s.slice(0,-1);}
-    const n=parseFloat(s);return isNaN(n)?NaN:(neg?-n:n);
+    s=s.replace(/[$£€¥₹\uFFFD,'’\s]/g,'').replace(/^\+/,'').replace(/^(usd|gbp|eur|cad|aud|chf)/i,'').replace(/(usd|gbp|eur|cad|aud|chf)$/i,'');
+    if(s[0]==='-'){neg=true;s=s.slice(1);}
+    if(s.endsWith('-')){neg=true;s=s.slice(0,-1);}
+    const n=parseFloat(s);return isFinite(n)?(neg?-n:n):NaN;
   }
   // Pull the first date out of "01/10/2025 as of 01/09/2025", "2025-01-10, 10:32", "20250110;103211", ISO times
   // dmy (optional): true = day-first, false = month-first for this call; omitted = the file's sniffed setting
-  function pickDate(s,dmy){
+  const validISO=d=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d||'');if(!m)return false;const y=+m[1],mo=+m[2],da=+m[3];if(y<1990||y>2100||mo<1||mo>12||da<1)return false;return da<=new Date(Date.UTC(y,mo,0)).getUTCDate();};
+  function pickDate(s,dmy){const r=_pickDate(s,dmy);return validISO(r)?r:'';}
+  function _pickDate(s,dmy){
     s=String(s||'').trim();if(!s)return'';
     const D=typeof dmy==='boolean'?dmy:_dmy;
     let m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
-    m=/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/.exec(s);if(m){let a=+m[1],b=+m[2];if(a>12||(D&&b<=12)){const t=a;a=b;b=t;}return`${yr(m[3])}-${pad(a)}-${pad(b)}`;}
-    m=/^(\d{4})(\d{2})(\d{2})\b/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
+    m=/\b(\d{4})[\/.](\d{1,2})[\/.](\d{1,2})\b/.exec(s);if(m)return`${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+        m=/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/.exec(s);if(m){let a=+m[1],b=+m[2];if(a>12||(D&&b<=12)){const t=a;a=b;b=t;}return`${yr(m[3])}-${pad(a)}-${pad(b)}`;}
+    // "Jan 10, 2025" / "January 10 2025" / "10-Jan-2025" / "10 Jan 25" / "10th Jan 2025" (month name, so no day/month ambiguity)
+    m=/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-\/.]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?[\s\-\/.,]*'?(\d{4}|\d{2})\b/i.exec(s);
+    if(m)return`${yr(m[3])}-${pad(MONS[m[2].toLowerCase()])}-${pad(+m[1])}`;
+    m=/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?[\s\-\/.]*(\d{1,2})(?:st|nd|rd|th)?[\s\-\/.,]+'?(\d{4}|\d{2})\b/i.exec(s);
+    if(m)return`${yr(m[3])}-${pad(MONS[m[1].toLowerCase()])}-${pad(+m[2])}`;
+    m=/^(\d{4})(\d{2})(\d{2})(?:\b|T)/.exec(s);if(m)return`${m[1]}-${m[2]}-${m[3]}`;
     const d=normDate(s.split(/[,;T]/)[0]);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
   }
   // Option contract from OCC symbols or human descriptions → {ticker,expiry,strike,pc}
@@ -6080,11 +6090,12 @@ function brokerCSVLib(){
       const rawAction=get(C.action).toLowerCase();
       const action=ACTION_MAP[rawAction]||rawAction.toUpperCase();
       if(!VALID_ACTIONS.has(action)){bad.push({line:i+1,raw:line,reason:'unknown action'});continue;}
-      const entered=normDate(get(C.entered));if(!entered){bad.push({line:i+1,raw:line,reason:'no date'});continue;}
-      const strike=parseFloat(get(C.strike))||null,shares=parseFloat(get(C.shares))||0;
-      const premium=parseFloat(get(C.premium))||0,fees=parseFloat(get(C.fees))||0;
-      const total=parseFloat(get(C.total))||computeTotal(action,premium,shares,fees);
-      const row={ticker,action,entered,expiry:normDate(get(C.expiry))||null,strike,premium,fees,shares,total,days:parseFloat(get(C.days))||0,verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)};
+      const nd=x=>pickDate(x)||normDate(x),nn=x=>{const v=num(x);return isNaN(v)?0:v;};
+      const entered=nd(get(C.entered));if(!entered){bad.push({line:i+1,raw:line,reason:'no date'});continue;}
+      const strike=nn(get(C.strike))||null,shares=nn(get(C.shares));
+      const premium=nn(get(C.premium)),fees=nn(get(C.fees));
+      const total=nn(get(C.total))||computeTotal(action,premium,shares,fees);
+      const row={ticker,action,entered,expiry:nd(get(C.expiry))||null,strike,premium,fees,shares,total,days:nn(get(C.days)),verified:['yes','true'].includes(get(C.verified).toLowerCase()),comment:get(C.comment)};
       const _rf=get(C.roll).toLowerCase();
       if(['true','yes','1','y','roll'].includes(_rf)||get(C.rollId)){row.roll=true;const rid=get(C.rollId);if(rid)row.rollId=rid;}
       rows.push(row);
@@ -6166,7 +6177,29 @@ function brokerCSVLib(){
     const q=c=>/[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;
     return rows.map(r=>r.map(c=>q(dec(c))).join(',')).join('\n');
   }
-  function parseBrokerCSV(text){
+  // Last line of defence: only sane trades reach the review step. Anything else is listed as "not imported" with a reason.
+  function vetRows(res){
+    if(!res||!res.rows)return res;
+    const ok=[],bad=res.unrecognised||[];
+    res.rows.forEach((r,i)=>{
+      let why='';const fin=v=>typeof v==='number'&&isFinite(v);
+      if(!validISO(r.entered))why='no valid trade date';
+      else if(r.expiry&&!validISO(r.expiry))why='expiry date unreadable';
+      else if(!/^[A-Z][A-Z0-9.]{0,9}$/.test(r.ticker||''))why='ticker unreadable';
+      else if(!VALID_ACTIONS.has(r.action))why='unknown trade type';
+      else if(![r.premium,r.fees,r.total,r.shares].every(fin))why='a number could not be read';
+      else if(r.strike!=null&&!(fin(r.strike)&&r.strike>0))why='strike price unreadable';
+      else if(r.action!=='DIV'&&!(r.shares>0))why='no quantity';
+      else if(r.premium<0||r.fees<0)why='negative price or fees';
+      if(why)bad.push({line:r.line||i+2,raw:[r.entered,r.ticker,r.action,r.strike,r.expiry,r.shares,r.premium].filter(x=>x!=null&&x!=='').join(' '),reason:why});else ok.push(r);
+    });
+    // Newest-first exports (most brokers' web downloads) are put back in time order, same-day fills included, so rolls and
+    // assignments see "open before close". Oldest-first files are left exactly as they came.
+    if(ok.length>1&&res.broker!=='CoveredWheel'&&ok[0].entered>ok[ok.length-1].entered)ok.reverse(); // (our own export keeps its order: roll links depend on it)
+    res.rows=ok;res.unrecognised=bad;return res;
+  }
+  function parseBrokerCSV(text){return vetRows(parseBrokerCSV0(text));}
+  function parseBrokerCSV0(text){
     text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
     if(!text)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Empty file'};
     text=normaliseDelimiter(text);
@@ -6363,7 +6396,7 @@ function brokerCSVLib(){
     }
     return splitLongs({broker:src,rows,unrecognised:bad,skipped:skip,error:rows.length||bad.length?undefined:(optLines?'No option trades found in this PDF.':'No option trades found in this PDF (share trades, dividends and cash movements are ignored).')});
   }
-  return{splitLongs,parseRobinhood,parseCSVText,num,pickDate,sniffDMY,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,pdfItemsToLines,findOption,parseStatementText};
+  return{splitLongs,parseRobinhood,parseCSVText,num,pickDate,sniffDMY,parseOption,classify,findHeader,detectBroker,parseBrokerCSV,vetRows,pdfItemsToLines,findOption,parseStatementText};
 }
 const BCSV=brokerCSVLib();
 let _importParsed=null;
@@ -6607,7 +6640,7 @@ function importPreview(pre){
   const p=_routeToOpenLongs(pre||_parseImportText(txt));_importParsed=p;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
   if(p.rh){ // Robinhood activity report: plan against what's already here
-    const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;p.rows=P.wheelRows;p.unrecognised=p.unrecognised.concat(P.unrecognised);p.skipped=p.skipped.concat(P.skipped);
+    const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;const vr=BCSV.vetRows({rows:P.wheelRows,unrecognised:[]});P.wheelRows=vr.rows;p.rows=vr.rows;p.unrecognised=p.unrecognised.concat(P.unrecognised,vr.unrecognised);p.skipped=p.skipped.concat(P.skipped);
     // Free allowance: only blocks a file that has something new to save. A pure duplicate says "Nothing new" and costs nothing.
     if(importGate({rh:true,hasNew:p.rows.length+P.newLegs.length+P.changedLegs.length>0,capOk:csvImportOk()})==='capped'){box.innerHTML=`<div class="imp-err">The free plan includes 1 Robinhood CSV import, and you've used it. Pro has unlimited imports. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
     const why={};p.skipped.forEach(x=>{why[x.reason]=(why[x.reason]||0)+1;});
@@ -6653,7 +6686,7 @@ function importLanding(o){return o.wheelRows>0?'positions':o.legs>0?'options':''
 // CSV first; if there's no trade table, the text may be a copied/saved statement (same line reader the PDF path uses)
 function _parseImportText(txt){
   const p=BCSV.parseBrokerCSV(txt);
-  if(p.error&&!(p.rows||[]).length&&!p.rh){try{const s=BCSV.parseStatementText(txt);if(s&&!s.error&&((s.rows||[]).length||(s.optionFills||[]).length))return s;}catch(e){}}
+  if(p.error&&!(p.rows||[]).length&&!p.rh){try{const s=BCSV.parseStatementText(txt);if(s&&!s.error&&((s.rows||[]).length||(s.optionFills||[]).length))return BCSV.vetRows(s);}catch(e){}}
   return p;
 }
 let _importFiles=null;
@@ -6688,7 +6721,7 @@ async function importLoadPDF(file,u8){
     const doc=await _pdfjs.getDocument({data:u8?u8.slice():await file.arrayBuffer()}).promise;
     const items=[];
     for(let n=1;n<=doc.numPages;n++){const tc=await(await doc.getPage(n)).getTextContent();tc.items.forEach(it=>items.push({str:it.str,transform:it.transform,page:n}));}
-    importPreview(BCSV.parseStatementText(BCSV.pdfItemsToLines(items)));
+    importPreview(BCSV.vetRows(BCSV.parseStatementText(BCSV.pdfItemsToLines(items))));
   }catch(e){importPreview({broker:'PDF',rows:[],unrecognised:[],skipped:[],error:"Couldn't open this PDF ("+(e&&e.message||e)+"). If it's password-protected, remove the password first; you need to be online the first time a PDF is read."});}
 }
 function initImportDrop(){
