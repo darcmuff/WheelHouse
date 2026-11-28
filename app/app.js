@@ -6824,7 +6824,7 @@ async function doImport(){
   const p=_importParsed;if(!p)return;
   if(p.rh&&!csvImportOk()&&!(p.plan&&!p.rows.length&&!p.plan.newLegs.length&&!p.plan.changedLegs.length)){importPreview();return;} // belt and braces: the review step already blocks this
   let legsSaved=0;
-  let capSkipLeaps=0;const capSkipTickers=new Set();let capSkipRows=0;
+  let capSkipLeaps=0;let capSkipTickers=new Set();let capSkipRows=0;
   if(p.plan){
     const P=p.plan;
     if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
