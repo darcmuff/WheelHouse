@@ -1,13 +1,15 @@
 // importfiles.test.js — what kind of file did the user pick, and how do we get text out of it?
-// (importFileLib in app/app.js; pure, no DOM.)  Run: node tests/importfiles.test.js
+// (importFileLib in app/import-parsers.js, lazy-loaded by importLoadFile; pure, no DOM.)  Run: node tests/importfiles.test.js
 const fs = require('fs'), path = require('path');
 const { extractFn, extractConst } = require('./extract');
+const { pathToFileURL } = require('url');
 const code = [extractConst('MON_PAT'), extractConst('MON_MAP'), extractConst('CREDITS'),
   extractConst('ACTION_MAP'), extractConst('VALID_ACTIONS'),
   extractFn('isCredit'), extractFn('computeTotal'), extractFn('parseCSVLine'), extractFn('normDate'),
-  extractFn('brokerCSVLib'), extractFn('importFileLib'), extractFn('rhPlan')].join('\n');
-const F = new Function(code + '\nconst B=brokerCSVLib();B.rhPlan=rhPlan;return {B,F:importFileLib()};')();
-const L = F.B, I = F.F;
+  extractFn('brokerCSVLib'), extractFn('rhPlan')].join('\n');
+const L = new Function(code + '\nconst B=brokerCSVLib();B.rhPlan=rhPlan;return B;')();
+const parsersSrc = fs.readFileSync(path.join(__dirname, '..', 'app', 'import-parsers.js'), 'utf8').replace(/^export /m, '');
+const I = new Function(parsersSrc + '\nreturn importFileLib();')();
 const fx = n => new Uint8Array(fs.readFileSync(path.join(__dirname, 'fixtures', n)));
 const bytes = s => new TextEncoder().encode(s);
 
@@ -16,6 +18,12 @@ const check = (name, ok, extra) => { ok ? pass++ : fail++; console.log((ok ? '  
 const key = r => [r.entered, r.ticker, r.action, r.strike, r.expiry, r.shares, r.premium, r.fees, r.total].join('|');
 
 (async () => {
+  // ── lazy module: not in app.js, only fetched on file pick ──
+  const appJs = fs.readFileSync(path.join(__dirname, '..', 'app', 'app.js'), 'utf8');
+  check('importFileLib lives in import-parsers.js, not app.js', !/function importFileLib\(/.test(appJs) && /export function importFileLib\(/.test(fs.readFileSync(path.join(__dirname, '..', 'app', 'import-parsers.js'), 'utf8')));
+  const loadFn = appJs.slice(appJs.indexOf('async function importLoadFile'), appJs.indexOf('let _pdfjs'));
+  check('importLoadFile dynamic-imports import-parsers.js only on file pick', /import\(['"]\.\/import-parsers\.js['"]\)/.test(loadFn));
+
   // ── sniffing by content, never by file name ──
   check('sniff pdf', I.sniff(bytes('%PDF-1.7\n...'), 'x.csv').kind === 'pdf');
   check('sniff xlsx (zip with xl/workbook.xml)', I.sniff(fx('trades-dates.xlsx'), 'trades.csv').kind === 'xlsx');

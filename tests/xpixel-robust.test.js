@@ -12,7 +12,7 @@ const INDEX=fs.readFileSync(path.join(A,'index.html'),'utf8');
 function env(opts={}){
   const store=Object.assign({},opts.store||{});
   const timers=[];const scripts=[];
-  const win={localStorage:{getItem:k=>(k in store?store[k]:null),setItem:(k,v)=>{store[k]=String(v);},removeItem:k=>{delete store[k];}}};
+  const win={localStorage:{getItem:k=>(k in store?store[k]:null),setItem:(k,v)=>{store[k]=String(v);},removeItem:k=>{delete store[k];}},location:{hostname:('hostname' in opts)?opts.hostname:'optrack.app'}};
   win.window=win;
   if(opts.twq){win.twq=opts.twq;}
   const doc={createElement:()=>{const s={async:false,src:''};scripts.push(s);return s;},getElementsByTagName:()=>[{parentNode:{insertBefore:()=>{}}}]};
@@ -77,8 +77,8 @@ test('early stub (index.html, before x-pixel.js runs) records a pending sign-up 
 
 test('early stub alone: calling trackXSignup before x-pixel.js is loaded stores a pending record and never throws',()=>{
   const m=INDEX.match(/<script>([^<]*ot-x-signup-pending[^<]*)<\/script>/);
-  const store={};const win={localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=v;}}};win.window=win;
-  const ctx=vm.createContext({window:win,localStorage:win.localStorage,Date,JSON});
+  const store={};const win={localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=v;}},location:{hostname:'optrack.app'}};win.window=win;
+  const ctx=vm.createContext({window:win,localStorage:win.localStorage,Date,JSON,location:win.location});
   vm.runInContext(m[1],ctx);
   assert.strictEqual(typeof win.trackXSignup,'function');
   assert.doesNotThrow(()=>win.trackXSignup('uE'));
@@ -104,4 +104,33 @@ test('all three sign-up paths pass the uid, and the auth listener is a safety ne
   assert.match(redirect,/trackXSignup\(cred\.user&&cred\.user\.uid\)/);
   const listener=SRC.slice(SRC.indexOf('const fresh=isFreshSignup(user);'),SRC.indexOf('const fresh=isFreshSignup(user);')+400);
   assert.match(listener,/if\(fresh[^)]*\)[\s\S]{0,200}trackXSignup\(user\.uid\)/,'new user detected by account age still fires (deduped by uid)');
+});
+
+test('install/fire inject uwt.js and send Sign up on optrack.app, never on a blocked host',()=>{
+  const ok=env({hostname:'optrack.app'});
+  assert.strictEqual(ok.scripts.filter(s=>/static\.ads-twitter\.com\/uwt\.js$/.test(s.src)).length,1);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify([].slice.call(ok.win.twq.queue[0]))),['config','riuhw']);
+  ok.win.trackXSignup('uProd');
+  assert.deepStrictEqual(evs(ok),[['event','tw-riuhw-152urb',{}]]);
+
+  const blocked=['dev--wheelhouse-tracker.netlify.app','deploy-preview-12--wheelhouse-tracker.netlify.app','localhost','127.0.0.1',''];
+  blocked.forEach(hostname=>{
+    const e=env({hostname,store:{'ot-x-signup-pending':JSON.stringify({u:'uPend',t:1700000000000-1000})}});
+    assert.strictEqual(e.scripts.filter(s=>/uwt\.js/.test(s.src)).length,0,hostname+' must not inject uwt.js');
+    assert.strictEqual(typeof e.win.twq,'function',hostname+' gets a no-op twq');
+    assert.doesNotThrow(()=>e.win.twq('config','riuhw'));
+    assert.doesNotThrow(()=>e.win.trackXSignup('uBlock'));
+    assert.strictEqual(evs(e).length,0,hostname+' must not send Sign up');
+    assert.ok(!e.store['ot-x-signup-pending'],hostname+' must clear pending, not send it later');
+    assert.ok(!e.store['ot-x-signup-sent'],hostname+' must not mark sent');
+  });
+});
+
+test('early stub on a blocked host does not record a pending sign-up',()=>{
+  const m=INDEX.match(/<script>([^<]*ot-x-signup-pending[^<]*)<\/script>/);
+  const store={};const win={localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=v;}},location:{hostname:'dev--wheelhouse-tracker.netlify.app'}};win.window=win;
+  const ctx=vm.createContext({window:win,localStorage:win.localStorage,Date,JSON,location:win.location});
+  vm.runInContext(m[1],ctx);
+  assert.doesNotThrow(()=>win.trackXSignup('uDev'));
+  assert.ok(!store['ot-x-signup-pending']);
 });

@@ -37,14 +37,16 @@ test('trackXSignup never throws (ad blockers, no window, no storage) and fires t
   assert.doesNotThrow(()=>X.trackXSignup('u1'));
   const calls=[];
   const win={localStorage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}},twq:function(){calls.push([].slice.call(arguments));}};win.window=win;
-  const ctx=vm.createContext({window:win,document:{},module:{exports:{}},setTimeout:()=>0,Date,JSON});
+  win.location={hostname:'optrack.app'};
+  const ctx=vm.createContext({window:win,document:{},module:{exports:{}},setTimeout:()=>0,Date,JSON,location:win.location});
   vm.runInContext(fs.readFileSync(path.join(A,'x-pixel.js'),'utf8'),ctx);
   win.trackXSignup('u9');
   assert.ok(calls.some(c=>c[0]==='event'&&c[1]==='tw-riuhw-152urb'));
   // blocked storage must not stop the event either
   const w2={localStorage:{getItem:()=>{throw new Error('blocked');},setItem:()=>{throw new Error('blocked');},removeItem:()=>{throw new Error('blocked');}},twq:function(){calls.push([].slice.call(arguments));}};w2.window=w2;
   const before=calls.length;
-  vm.runInContext(fs.readFileSync(path.join(A,'x-pixel.js'),'utf8'),vm.createContext({window:w2,document:{},module:{exports:{}},setTimeout:()=>0,Date,JSON}));
+  w2.location={hostname:'optrack.app'};
+  vm.runInContext(fs.readFileSync(path.join(A,'x-pixel.js'),'utf8'),vm.createContext({window:w2,document:{},module:{exports:{}},setTimeout:()=>0,Date,JSON,location:w2.location}));
   assert.doesNotThrow(()=>w2.trackXSignup('u10'));
   assert.ok(calls.length>before);
 });
@@ -70,4 +72,14 @@ test('Sign up event fires only after a successful new account, never on login or
   const redirect=SRC.slice(SRC.indexOf('const _googleRedirectReady'),SRC.indexOf('if (APP_DEMO) demoBoot()'));
   assert.match(redirect,/getAdditionalUserInfo\(cred\)/);
   assert.match(redirect,/info&&info\.isNewUser[\s\S]{0,200}trackXSignup/);
+});
+
+test('isProdHost allows only optrack.app and www.optrack.app',()=>{
+  assert.strictEqual(typeof X.isProdHost,'function');
+  assert.ok(X.isProdHost('optrack.app'));
+  assert.ok(X.isProdHost('www.optrack.app'));
+  ['dev--wheelhouse-tracker.netlify.app',
+   'deploy-preview-12--wheelhouse-tracker.netlify.app',
+   'localhost','127.0.0.1','','optrack.app.evil.com','notoptrack.app',
+   'file:','www.optrack.app.evil.com','optrack.app.com'].forEach(h=>assert.ok(!X.isProdHost(h),h+' must be blocked'));
 });
