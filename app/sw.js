@@ -1,10 +1,10 @@
 // OpTrack service worker. Bump CACHE on every release.
-const CACHE='optrack-v450';
+const CACHE='optrack-v451';
 // Caches from earlier app names, deleted on update. Only the service-worker cache: your data and settings are untouched.
 const LEGACY = ['wheelhouse-'];
 const SHELL = './index.html'; // the app itself (served at /app/); '/' is now the landing page
 // Logo SVGs carry ?v=N (bump with the pages that reference them when their colour changes) so a new page never pairs with an old cached logo.
-// import-parsers.js is not in STATIC: the SW must not fetch it at install. It is loaded with dynamic import() on file pick and then stored by the cache-first fetch handler below (runtime cache only).
+// import-vision.js (screenshot import) and import-parsers.js are not in STATIC: the SW must not fetch it at install. It is loaded with dynamic import() on file pick and then stored by the cache-first fetch handler below (runtime cache only).
 const STATIC = [SHELL, './landing.html', './start.html', './manifest.json', './brand.js', './wc-brand.js', './demo.js', './popular.js', './delta.js', './ledger.js', './entitlement.js', './analytics.js', './x-pixel.js', './app.css', './app.js', './sw-update.js', './legal.html', './nunito-900.woff2', './urbanist-var.woff2', './favicon.ico', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './logo-mark.svg?v=372', './logo-horizontal.svg?v=372', './brand/index.json', './brand/overrides.json', './brand/top250-options.json'];
 
 self.addEventListener('message', e => {

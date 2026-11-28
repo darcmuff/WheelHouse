@@ -44,7 +44,7 @@ test('setMarks registers WC_MARKS on global without throwing', () => {
 
 test('sw v382 precaches wc-brand but not brand PNG glob', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'app', 'sw.js'), 'utf8');
-  assert.match(sw, /optrack-v450/);
+  assert.match(sw, /optrack-v451/);
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../app/wc-brand.js'), 'utf8'), /force-cache/);
   assert.match(sw, /wc-brand\.js/);
   assert.match(sw, /runtime cache only/);

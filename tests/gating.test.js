@@ -14,7 +14,7 @@ test('gating on: free user is limited, Pro and founders are not',()=>{assert.ok(
 test('free features stay free even with gating on',()=>{assert.ok(G.canUse('smartscan',on,null,false));});
 test('if the entitlement cannot be read, nobody is locked out',()=>{assert.ok(G.canUse('unlimited',on,null,true));assert.ok(G.underLimit('wheel',99,on,null,true));});
 test('the gates are wired in',()=>{assert.ok(!SRC.includes("canUse('live-refresh')") );
-  assert.ok(SRC.includes("p.rh&&!csvImportOk()"));assert.ok(/function openNewPos\(\)\{\n  if\(!wheelCapOk\(/.test(SRC));assert.ok(/function openLeapAdd\(\)\{\n  if\(!leapCapOk\(/.test(SRC));
+  assert.ok(SRC.includes("(p.rh||p.vision)&&!csvImportOk()"),'doImport blocks a used Free allowance for Robinhood and screenshot imports');assert.ok(/function openNewPos\(\)\{\n  if\(!wheelCapOk\(/.test(SRC));assert.ok(/function openLeapAdd\(\)\{\n  if\(!leapCapOk\(/.test(SRC));
   assert.ok(/id="mUpgrade"/.test(SRC)&&SRC.includes("_billingCall('checkout'")&&SRC.includes('loadEntitlement(user.uid)'));
   assert.ok(/listenServer\(doc\(_fsDb,'entitlements',uid\)\)/.test(SRC),'reads top-level entitlements only');assert.ok(!/setDoc\(doc\(_fsDb,'entitlements'/.test(SRC),'app never writes entitlements');
   assert.ok(SRC.includes('liveOptionPricesOn'),'auto-updating option prices are gated');

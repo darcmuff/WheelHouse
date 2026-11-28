@@ -70,4 +70,22 @@ async function setEntitlement(uid, fields, fetchImpl = fetch) {
   if (!r.ok) throw new Error('set entitlement ' + r.status);
   return f;
 }
-module.exports = { verifyIdToken, bearerUser, accessToken, getEntitlement, setEntitlement, toFs, fromFs, serviceAccount, _reset: () => { _certs = null; _tok = null; } };
+// Screenshot-import daily counter: visionUsage/{uid} = { day, count } only (never image data). Browsers cannot read or
+// write it (catch-all deny in firestore.rules). Writes use a precondition so two parallel calls cannot both slip under the cap.
+const usageUrl = uid => `https://firestore.googleapis.com/v1/projects/${PROJECT()}/databases/(default)/documents/visionUsage/${encodeURIComponent(uid)}`;
+async function getVisionUsage(uid, fetchImpl = fetch) {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid || '')) throw new Error('bad uid');
+  const r = await fetchImpl(usageUrl(uid), { headers: { Authorization: 'Bearer ' + await accessToken(fetchImpl) } });
+  if (r.status === 404) return null; if (!r.ok) throw new Error('get usage ' + r.status);
+  const j = await r.json(); return { fields: fromFs(j.fields), updateTime: j.updateTime };
+}
+async function putVisionUsage(uid, fields, pre, fetchImpl = fetch) {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid || '')) throw new Error('bad uid');
+  const f = { day: String(fields.day), count: +fields.count };
+  const q = ['updateMask.fieldPaths=day', 'updateMask.fieldPaths=count', pre && pre.updateTime ? 'currentDocument.updateTime=' + encodeURIComponent(pre.updateTime) : 'currentDocument.exists=false'].join('&');
+  const r = await fetchImpl(usageUrl(uid) + '?' + q, { method: 'PATCH', headers: { Authorization: 'Bearer ' + await accessToken(fetchImpl), 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { day: toFs(f.day), count: toFs(f.count) } }) });
+  if (r.status === 400 || r.status === 409 || r.status === 412) { const e = new Error('usage conflict'); e.conflict = true; throw e; }
+  if (!r.ok) throw new Error('put usage ' + r.status);
+  return f;
+}
+module.exports = { verifyIdToken, bearerUser, accessToken, getEntitlement, setEntitlement, getVisionUsage, putVisionUsage, toFs, fromFs, serviceAccount, _reset: () => { _certs = null; _tok = null; } };

@@ -6522,8 +6522,8 @@ function rhPlan(ev,opts,trades,mkId){
 function importPreview(pre){
   const txt=pre?'x':document.getElementById('import-csv').value;
   const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
-  if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
-  const p=_routeToOpenLongs(pre||_parseImportText(txt));_importParsed=p;
+  if(!txt.trim()){box.innerHTML=_importVision?_importVision.html():'';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
+  const p=_routeToOpenLongs(pre||_parseImportText(txt));_importParsed=p;if(!pre&&_importVision)p.vision=true;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
   if(p.rh){ // Robinhood activity report: plan against what's already here
     const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;const vr=BCSV.vetRows({rows:P.wheelRows,unrecognised:[]});P.wheelRows=vr.rows;p.rows=vr.rows;p.unrecognised=p.unrecognised.concat(P.unrecognised,vr.unrecognised);p.skipped=p.skipped.concat(P.skipped);
@@ -6562,6 +6562,8 @@ function importPreview(pre){
   const capW=importWheelCapSkip(dd.fresh,db.wheels||[],{wheelCapOk,wheelRiskOk,isOpenRisk});
   if(capW.skipRows)box.innerHTML+=`<div class="imp-cap-warn">${esc(importWheelCapNote(capW))} <a href="#" onclick="openUpgrade('unlimited');return false">See Pro</a></div>`;
   const n=capW.fresh.length+nf;
+  if(p.vision&&importGate({rh:true,hasNew:n>0,capOk:csvImportOk()})==='capped'){box.innerHTML=`<div class="imp-err">The free plan includes 1 import (a Robinhood CSV or a screenshot), and you've used it. Pro has unlimited imports. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
+  if(p.vision&&_importVision)box.innerHTML+=_importVision.html();
   btn.disabled=!n;btn.textContent=n?`Import ${n}`:((p.rows.length||of.length)?'Nothing new':'Import');
 }
 // ── Import gate / dedupe / landing (pure; tests/importgate.test.js) ──
@@ -6576,8 +6578,8 @@ function importDedupe(rows,existing){
 }
 // What the review step may offer: nothing new beats everything (a pure duplicate is never a "cap" problem)
 function importGate(o){if(!o.hasNew)return'nothing-new';if(o.rh&&!o.capOk)return'capped';return'ok';}
-// Only a Robinhood import that really saved trades uses a Free user's allowance
-function importUsesAllowance(p,saved){return!!(p&&p.rh&&saved>0);}
+// Only a Robinhood or screenshot import that really saved trades uses a Free user's allowance
+function importUsesAllowance(p,saved){return!!(p&&(p.rh||p.vision)&&saved>0);}
 function importLanding(o){return o.wheelRows>0?'positions':o.legs>0?'options':'';}
 // Toast copy: never say "0 imported" when LEAPs were saved; name skipped tickers clearly.
 function importToastMsg(o){
@@ -6621,13 +6623,13 @@ function _parseImportText(txt){
   if(p.error&&!(p.rows||[]).length&&!p.rh){try{const s=BCSV.parseStatementText(txt);if(s&&!s.error&&((s.rows||[]).length||(s.optionFills||[]).length))return BCSV.vetRows(s);}catch(e){}}
   return p;
 }
-let _importFiles=null;
+let _importFiles=null,_importVision=null;
 function _importFail(msg){importPreview({broker:'',rows:[],unrecognised:[],skipped:[],error:msg});}
 async function importLoadFile(file){
   if(!file)return;
   const nm=document.getElementById('import-fname');nm.textContent=file.name;
   const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
-  _importParsed=null;btn.disabled=true;
+  _importParsed=null;_importVision=null;btn.disabled=true;
   if(file.size>40*1024*1024){_importFail('That file is over 40 MB, which is far more than a trade export. Export a shorter date range and try again.');return;}
   let u8;
   try{u8=new Uint8Array(await file.arrayBuffer());}catch(e){_importFail("Couldn't read that file ("+(e&&e.message||e)+"). If it's in a cloud drive, download it to your phone first, then pick it again.");return;}
@@ -6639,6 +6641,7 @@ async function importLoadFile(file){
   const kind=FL.sniff(u8,file.name,file.type).kind;
   const put=txt=>{document.getElementById('import-csv').value=txt;nm.textContent=file.name;importPreview();};
   try{
+    if(kind==='image'){try{await (await import('./import-vision.js')).run(file,{fail:_importFail,preview:importPreview,csvOk:csvImportOk,demo:APP_DEMO,user:()=>_auth&&_auth.currentUser,esc,set:s=>{_importVision=s;},upgrade:openUpgrade,text:t=>{document.getElementById('import-csv').value=t;nm.textContent=file.name;},busy:m=>{box.innerHTML='<div class="imp-broker">'+m+'</div>';}});}catch(e){_importFail("Couldn't load the screenshot reader. Check your connection and try again.");}return;}
     if(kind==='pdf'){importLoadPDF(file,u8);return;}
     if(kind==='xlsx'){box.innerHTML='<div class="imp-broker">Reading spreadsheet…</div>';
       const score=t=>{const p=_parseImportText(t);return (p.rows||[]).length+(p.rh?p.rh.length:0)+((p.optionFills||[]).length);};
@@ -6679,14 +6682,14 @@ async function doImport(){
   if(_importBusy)return;
   if(!_importParsed)importPreview();
   const p=_importParsed;if(!p)return;
-  if(p.rh&&!csvImportOk()&&!(p.plan&&!p.rows.length&&!p.plan.newLegs.length&&!p.plan.changedLegs.length)){importPreview();return;} // belt and braces: the review step already blocks this
+  if((p.rh||p.vision)&&!csvImportOk()&&!(p.plan&&!p.rows.length&&!p.plan.newLegs.length&&!p.plan.changedLegs.length)){importPreview();return;} // belt and braces: the review step already blocks this
   let legsSaved=0;
   let capSkipLeaps=0;let capSkipTickers=new Set();let capSkipRows=0;
   if(p.plan){
     const P=p.plan;
     if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
     else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));const cap=capNewLeaps(db.opts,P.newLegs);capSkipLeaps+=cap.droppedLeaps;db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(cap.keep);cap.keep.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);legsSaved+=cap.keep.length+P.changedLegs.length;}
-    if(!p.rows.length){await _noteCsvImport(p,legsSaved);closeModal('mImport');document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();_importLand(0,legsSaved,importToastMsg({imported:0,legsSaved,capSkipLeaps}));if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
+    if(!p.rows.length){await _noteCsvImport(p,legsSaved);closeModal('mImport');document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;_importVision=null;importPreview();_importLand(0,legsSaved,importToastMsg({imported:0,legsSaved,capSkipLeaps}));if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
   }
   if(!(p.rows.length||(p.optionFills||[]).length))return;
   if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
@@ -6732,7 +6735,7 @@ async function doImport(){
     return;
   }
   closeModal('mImport');
-  document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();render();
+  document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;_importVision=null;importPreview();render();
 
   // Fetch logos and prices for any new wheels
   newWheelTickers.forEach(ticker=>{
