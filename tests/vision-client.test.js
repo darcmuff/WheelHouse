@@ -95,6 +95,11 @@ test('flagged rows start deselected and stay out of the CSV until ticked; incomp
   assert.match(html, /missing: price/); assert.match(html, /check: strike/);
   assert.strictEqual((html.match(/type="checkbox"/g) || []).length, 3);
   assert.strictEqual((html.match(/checked/g) || []).length, 1);
+  assert.ok(!/class="imp-sub"/.test(html), 'the intro line is not styled like an error');
+  assert.match(html, /class="imp-vhd"/);
+  assert.match(html, /2 rows flagged for checking \(not ticked by default\)/);
+  const all = new Set([0, 1, 2]);
+  assert.ok(!/aren't ticked|isn't ticked/.test(IV.flagsHtml(rows, all, s => String(s))), 'wording stays true after the user ticks a flagged row');
 });
 
 test('duplicate blocking: re-scanning the same screenshot adds nothing (same fingerprint as Stage 1)', () => {

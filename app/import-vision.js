@@ -78,12 +78,12 @@ function describe(r) {
   return `${r.ticker || '?'} ${r.strike || '?'}${r.type ? r.type[0].toUpperCase() : '?'} ${r.expiry || '?'} · ${ACT[r.action] || '?'} ${r.qty || '?'} @ ${p} · ${r.date || '?'}` +
     (r.missing && r.missing.length ? ` — missing: ${r.missing.join(', ')}` : '') + (r.uncertain && r.uncertain.length ? ` — check: ${r.uncertain.join(', ')}` : '');
 }
-const CSS = '<style>.imp-vis{font-family:Urbanist,-apple-system,"Segoe UI",Roboto,sans-serif;margin-top:0.5rem}.imp-vrow{display:flex;gap:0.5rem;align-items:flex-start;padding:0.25rem 0;font-size:0.75rem;line-height:1.4;cursor:pointer}.imp-vrow input{margin-top:0.15rem;flex:none}.imp-vis .imp-cap-warn .imp-vrow{color:var(--text3)}</style>';
+const CSS = '<style>.imp-vis{font-family:Urbanist,-apple-system,"Segoe UI",Roboto,sans-serif;margin-top:0.5rem}.imp-vrow{display:flex;gap:0.5rem;align-items:flex-start;padding:0.25rem 0;font-size:0.75rem;line-height:1.4;cursor:pointer}.imp-vrow input{margin-top:0.15rem;flex:none}.imp-vis .imp-cap-warn .imp-vrow{color:var(--text3)}.imp-vhd{margin-top:0.5rem;color:var(--text2)}</style>';
 export function flagsHtml(rows, sel, esc) {
   const box = (r, i) => `<label class="imp-vrow"><input type="checkbox"${sel.has(i) ? ' checked' : ''} onchange="importVisionToggle(${i})"> <span>${esc(describe(r))}</span></label>`;
   const ok = [], bad = []; rows.forEach((r, i) => (r.ok ? ok : bad).push(box(r, i)));
-  return `<div class="imp-vis">${CSS}<div class="imp-sub">From your screenshot: ${rows.length} trade${rows.length === 1 ? '' : 's'}. Ticked rows are in the box above; tick or untick to change.</div>${ok.join('')}` +
-    (bad.length ? `<div class="imp-cap-warn">${bad.length} row${bad.length === 1 ? ' needs' : 's need'} checking, so ${bad.length === 1 ? "it isn't" : "they aren't"} ticked. Tick one to add it to the box above, then fill in any blank value there.${bad.join('')}</div>` : '') + '</div>';
+  return `<div class="imp-vis">${CSS}<div class="imp-vhd">From your screenshot: ${rows.length} trade${rows.length === 1 ? '' : 's'}. Ticked rows are in the box above; tick or untick to change.</div>${ok.join('')}` +
+    (bad.length ? `<div class="imp-cap-warn">${bad.length} row${bad.length === 1 ? '' : 's'} flagged for checking (not ticked by default). Tick one to add it to the box above, then fill in any blank value there.${bad.join('')}</div>` : '') + '</div>';
 }
 export function statusMessage(s, j) {
   j = j || {};
