@@ -73,3 +73,27 @@ test('landing: wheel rows → Wheels; only LEAPs → LEAPs; nothing → stay', (
   assert.equal(G.importLanding({ wheelRows: 0, legs: 2 }), 'options');
   assert.equal(G.importLanding({ wheelRows: 0, legs: 0 }), '');
 });
+
+test('Cancel, Back or closing the Review modal never consumes the Free allowance', () => {
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'app', 'app.js'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.html'), 'utf8');
+  const doStart = src.indexOf('async function doImport()');
+  const doEnd = src.indexOf('\nfunction _importLand', doStart);
+  assert.ok(doStart >= 0 && doEnd > doStart, 'doImport block');
+  const def = src.indexOf('function _noteCsvImport');
+  const callRe = /(?<!function )_noteCsvImport\(/g;
+  const allCalls = [...src.matchAll(callRe)].map(m => m.index);
+  assert.ok(allCalls.length >= 1, 'expected _noteCsvImport calls');
+  allCalls.forEach(i => assert.ok(i > doStart && i < doEnd, 'allowance counted outside doImport at '+i));
+  assert.ok(def < doStart || def > doEnd, 'definition should sit outside doImport');
+  const close = src.slice(src.indexOf('function closeModal('), src.indexOf('function closeModal(')+400);
+  const popAt = src.indexOf("window.addEventListener('popstate'");
+  const pop = src.slice(popAt, popAt+280);
+  assert.match(close, /id==='mImport'&&_impHist/);
+  assert.match(pop, /_impHist&&m&&m\.classList\.contains\('open'\)/);
+  assert.doesNotMatch(close, /_noteCsvImport|csv-import|csvImportsUsed/);
+  assert.doesNotMatch(pop, /_noteCsvImport|csv-import|csvImportsUsed/);
+  assert.match(html, /<button class="btn btn-ghost" onclick="closeModal\('mImport'\)">Cancel<\/button>/);
+  assert.equal((html.match(/_noteCsvImport|csv-import/g) || []).length, 0);
+});
