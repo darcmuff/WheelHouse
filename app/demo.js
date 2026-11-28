@@ -14,8 +14,8 @@
   S.removeItem=function(k){return ri.call(this,isLS(this)?PREFIX+k:k);};
 
   // 2. Made-up prices. Option prices from a simple Black-Scholes so marks, profit and greeks behave like the real thing.
-  var SPOT={KO:69.80,AMD:158.40,SOFI:16.40,AAPL:238.20,MSFT:452.00,NVDA:176.50,PEP:145.20};
-  var IV={KO:0.18,AMD:0.45,SOFI:0.55,AAPL:0.27,MSFT:0.25,NVDA:0.50,PEP:0.22};
+  var SPOT={KO:69.80,AMD:158.40,SOFI:16.40,AAPL:238.20,MSFT:452.00,NVDA:176.50,PEP:145.20,INTC:24.80};
+  var IV={KO:0.18,AMD:0.45,SOFI:0.55,AAPL:0.27,MSFT:0.25,NVDA:0.50,PEP:0.22,INTC:0.42};
   function N(x){var t=1/(1+0.2316419*Math.abs(x)),d=0.3989423*Math.exp(-x*x/2),p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p;}
   function bs(S0,K,T,v,call){var r=0.04;T=Math.max(T,1/365);var d1=(Math.log(S0/K)+(r+v*v/2)*T)/(v*Math.sqrt(T)),d2=d1-v*Math.sqrt(T);
     var price=call?S0*N(d1)-K*Math.exp(-r*T)*N(d2):K*Math.exp(-r*T)*N(-d2)-S0*N(-d1);
@@ -137,6 +137,17 @@
       tr('dw-nvda','NVDA','STOC',add(days(iso(T),n6)+3),{strike:187.5,expiry:n7,premium:2.60,shares:200,exp:true});
       tr('dw-nvda','NVDA','STOC',add(-10),{strike:185,expiry:fri(11),premium:2.75,shares:200});
     }
+    // INTC: one ACTIVE rolled chain. A $25 put rolled down twice ($24, then $23.50) for credits, so the card shows
+    // "N% of $X chain" under Net P&L (now) and the roll popover shows Chain cashflow + "Now: +$X · N% captured".
+    // Fixed ids + rollIds so an existing visitor's saved demo can get it added (see load()).
+    wheels.push({id:'dw-intc',ticker:'INTC',label:'',company:'Intel',status:'open',lastPrice:null,notes:'',createdAt:add(-56),sortOrder:5});
+    var ix=0,ti=function(action,entered,o,rollId){var t=tr('dw-intc','INTC',action,entered,o);t.id='dt-intc'+(++ix);if(rollId)t.rollId=rollId;return t;};
+    var i1=fri(-28),i2=fri(-6),i3=fri(12);
+    ti('CSP',add(-56),{strike:25,expiry:i1,premium:0.60});
+    ti('BTC',add(-30),{strike:25,expiry:i1,premium:1.30},'dr-intc1');
+    ti('CSP',add(-30),{strike:24,expiry:i2,premium:1.50},'dr-intc1');
+    ti('BTC',add(-8),{strike:24,expiry:i2,premium:1.15},'dr-intc2');
+    ti('CSP',add(-8),{strike:23.5,expiry:i3,premium:1.45},'dr-intc2');
     return{wheels:wheels,trades:trades,opts:[aapl,msft,tsla,c1,c2,c3,c4,c5,c6,c7]};
   }
   function load(){try{var raw=localStorage.getItem(DATA_KEY);if(raw){var d=JSON.parse(raw);if(d&&Array.isArray(d.wheels)&&Array.isArray(d.trades)){
@@ -147,6 +158,9 @@
       if(!d.wheels.some(function(w){return w.id==='dw-pep';})){
         s.wheels.filter(function(w){return w.id==='dw-pep';}).forEach(function(w){d.wheels.push(w);});
         s.trades.filter(function(t){return t.wheelId==='dw-pep';}).forEach(function(t){d.trades.push(t);});added=true;}
+      if(!d.wheels.some(function(w){return w.id==='dw-intc';})){
+        s.wheels.filter(function(w){return w.id==='dw-intc';}).forEach(function(w){d.wheels.push(w);});
+        s.trades.filter(function(t){return t.wheelId==='dw-intc';}).forEach(function(t){d.trades.push(t);});added=true;}
       if(added)save(d);
       return{wheels:d.wheels,trades:d.trades,opts:d.opts||[]};}}}catch(e){}
     var s=seed();save(s);try{localStorage.setItem('wh-returnSet',JSON.stringify({base:'caw',account:0,target:null}));}catch(e){}return s;}

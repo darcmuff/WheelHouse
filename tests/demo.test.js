@@ -20,7 +20,7 @@ test('seed data loads: wheels, roll chain, assignment, called away, LEAPs with o
   const e=env('/demo'),d=e.win.OT_DEMO.load();
   assert.ok(d.wheels.filter(w=>w.status==='open').length>=3);
   assert.ok(d.trades.some(t=>t.action==='BTC')&&d.trades.some(t=>t.action==='CSP'));
-  assert.ok(d.trades.every(t=>!t.rollId)&&d.opts.every(l=>!l.rolledFrom),'seed trades are plain rows');
+  assert.ok(d.trades.filter(t=>t.wheelId!=='dw-intc').every(t=>!t.rollId)&&d.opts.every(l=>!l.rolledFrom),'seed trades are plain rows, except the one INTC rolled chain (demochain.test.js)');
   assert.ok(d.trades.some(t=>t.action==='IN')&&d.trades.some(t=>t.action==='OUT'));
   assert.strictEqual(d.opts.filter(l=>l.side==='long'&&l.status==='open').length,2);
   assert.strictEqual(d.opts.filter(l=>l.side==='short'&&l.status==='open').length,1);

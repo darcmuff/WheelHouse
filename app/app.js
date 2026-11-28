@@ -7798,7 +7798,7 @@ async function authSubmit(){
       await createUserWithEmailAndPassword(_auth,email,pass);
       if(_auth.currentUser)_confirmedUid=_auth.currentUser.uid;
       if(typeof otTrack==='function')otTrack('/signup-complete');
-      if(typeof trackXSignup==='function')trackXSignup();
+      if(typeof trackXSignup==='function')trackXSignup(_auth.currentUser&&_auth.currentUser.uid);
       // Show the first-ticker step as soon as Auth succeeds; Firestore and quotes continue in the background.
       showOnboardingIfNeeded();
       hideLoadingOverlay(true);
@@ -7868,7 +7868,7 @@ async function authGoogle(){
     }
     const cred=await signInWithPopup(_auth,_googleProvider);
     const info=getAdditionalUserInfo(cred);
-    if(info&&info.isNewUser){_freshSignup=true;if(typeof otTrack==='function')otTrack('/signup-complete');if(typeof trackXSignup==='function')trackXSignup();}
+    if(info&&info.isNewUser){_freshSignup=true;if(typeof otTrack==='function')otTrack('/signup-complete');if(typeof trackXSignup==='function')trackXSignup(cred.user&&cred.user.uid);}
   }catch(e){
     if(e.code==='auth/popup-closed-by-user')return;
     const msgs={'auth/popup-blocked':'Your browser blocked the Google window. Allow pop-ups for this site and try again.','auth/unauthorized-domain':'Google sign-in is not available from this address.','auth/network-request-failed':'Could not reach the sign-in service. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Please try again later.'};
@@ -8270,7 +8270,7 @@ const _googleRedirectReady = APP_DEMO ? Promise.resolve(null) : getRedirectResul
     if(info&&info.isNewUser){
       _freshSignup=true;
       if(typeof otTrack==='function')otTrack('/signup-complete');
-      if(typeof trackXSignup==='function')trackXSignup();
+      if(typeof trackXSignup==='function')trackXSignup(cred.user&&cred.user.uid);
       showOnboardingIfNeeded();
     }
   }
@@ -8292,6 +8292,8 @@ if (APP_DEMO) demoBoot(); else onAuthStateChanged(_auth, async (user) => {
 
     const fresh=isFreshSignup(user);
     _freshSignup=false;
+    // Safety net: a new account the popup/redirect checks missed (storage-partitioned redirect, Incognito) still counts once per uid.
+    if(fresh&&!APP_DEMO&&typeof trackXSignup==='function')trackXSignup(user.uid);
 
     const migrateLegacy=async()=>{
       const localData=localStorage.getItem('wheel_tracker_v7');

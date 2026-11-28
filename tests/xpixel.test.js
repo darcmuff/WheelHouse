@@ -31,22 +31,22 @@ test('landing, /start and the app (/demo shares index.html) load the pixel async
   assert.ok(file.includes("twq('config'")||file.includes('twq("config"')||file.includes("twq('config',"));
 });
 
-test('trackXSignup is a no-op when twq is missing (ad blockers) and fires the Sign up event when twq exists',()=>{
-  const calls=[];
-  const g={window:{},document:{createElement:()=>({async:false,src:''}),getElementsByTagName:()=>[{parentNode:{insertBefore:()=>{}}}]}};
-  const api=vm.runInNewContext(fs.readFileSync(path.join(A,'x-pixel.js'),'utf8')+'\nmodule.exports',{module:{exports:{}},window:g.window,document:g.document,globalThis:g});
-  assert.doesNotThrow(()=>api.trackXSignup());
-  g.window.twq=function(){calls.push([].slice.call(arguments));};
-  // re-bind if trackXSignup closed over a missing twq from the outer scope — call via the function that uses typeof twq
-  const run=new Function('twq',fs.readFileSync(path.join(A,'x-pixel.js'),'utf8')+'\nreturn {trackXSignup:(typeof trackXSignup==="function"?trackXSignup:OT_XPIXEL.trackXSignup),api:typeof OT_XPIXEL!=="undefined"?OT_XPIXEL:null};');
-  const env={module:{exports:{}},window:{twq:function(){calls.push([].slice.call(arguments));}},document:g.document};
-  // Use the required module's function against a fake global twq
-  const twq=function(){calls.push([].slice.call(arguments));};
-  const prev=global.twq;global.twq=twq;
-  try{X.trackXSignup();assert.deepStrictEqual(calls,[['event','tw-riuhw-152urb',{}]]);}
-  finally{if(prev===undefined)delete global.twq;else global.twq=prev;}
-  const again=[];global.twq=undefined;delete global.twq;
+test('trackXSignup never throws (ad blockers, no window, no storage) and fires the Sign up event through twq',()=>{
+  // Node has no window: must be a harmless no-op. Queue/stub behaviour is covered in xpixel-robust.test.js.
   assert.doesNotThrow(()=>X.trackXSignup());
+  assert.doesNotThrow(()=>X.trackXSignup('u1'));
+  const calls=[];
+  const win={localStorage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}},twq:function(){calls.push([].slice.call(arguments));}};win.window=win;
+  const ctx=vm.createContext({window:win,document:{},module:{exports:{}},setTimeout:()=>0,Date,JSON});
+  vm.runInContext(fs.readFileSync(path.join(A,'x-pixel.js'),'utf8'),ctx);
+  win.trackXSignup('u9');
+  assert.ok(calls.some(c=>c[0]==='event'&&c[1]==='tw-riuhw-152urb'));
+  // blocked storage must not stop the event either
+  const w2={localStorage:{getItem:()=>{throw new Error('blocked');},setItem:()=>{throw new Error('blocked');},removeItem:()=>{throw new Error('blocked');}},twq:function(){calls.push([].slice.call(arguments));}};w2.window=w2;
+  const before=calls.length;
+  vm.runInContext(fs.readFileSync(path.join(A,'x-pixel.js'),'utf8'),vm.createContext({window:w2,document:{},module:{exports:{}},setTimeout:()=>0,Date,JSON}));
+  assert.doesNotThrow(()=>w2.trackXSignup('u10'));
+  assert.ok(calls.length>before);
 });
 
 test('Sign up event fires only after a successful new account, never on login or a button click',()=>{
