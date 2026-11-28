@@ -5861,11 +5861,14 @@ function deleteTradeFromModal(){const id=document.getElementById('tf-id').value;
 
 
 function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');if(id==='mImport'&&_impHist){_impHist=false;try{if(history.state&&history.state.whImp)history.back();}catch(e){}}}
+// Phone/Android Back closes the Import window instead of leaving the app mid-import (one history entry while it's open)
+let _impHist=false;
+window.addEventListener('popstate',()=>{const m=document.getElementById('mImport');if(_impHist&&m&&m.classList.contains('open')){_impHist=false;m.classList.remove('open');}});
 document.querySelectorAll('.mb').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);});});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mb.open').forEach(el=>closeModal(el.id));});
 
-function openImport(){openModal('mImport');initImportDrop();}
+function openImport(){openModal('mImport');initImportDrop();try{if(!_impHist){history.pushState({whImp:1},'');_impHist=true;}}catch(e){}}
 const ACTION_MAP={'csp: cash secured put':'CSP','btc: buy to close':'BTC','stoc: sell to open call':'STOC','stc: sell to close':'STC','in: buy shares':'IN','out: sell shares':'OUT','div: dividend':'DIV','stop: sell to open put':'CSP','acc: assigned covered call':'OUT','acp: assigned cash put':'IN','exp: expired worthless':'EXP','csp':'CSP','btc':'BTC','stoc':'STOC','stc':'STC','in':'IN','out':'OUT','div':'DIV','stop':'CSP','acc':'OUT','acp':'IN','exp':'EXP'};
 const VALID_ACTIONS=new Set(['CSP','BTC','STOC','STC','IN','OUT','DIV','EXP']);
 function parseCSVLine(line){const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur.trim());cur='';}else cur+=ch;}r.push(cur.trim());return r;}

@@ -7,7 +7,8 @@ const CSS=fs.readFileSync(path.join(__dirname,'..','app','app.css'),'utf8');
 test('desktop Activity toolbar and the empty-wheels state still open the import modal',()=>{
   assert.match(SRC,/function renderActivityHead\(\)[\s\S]*?onclick="openImport\(\)">Import CSV \/ PDF/);
   assert.match(SRC,/id="wheel-empty"[\s\S]*?onclick="openImport\(\)">Import broker file/);
-  assert.match(SRC,/function openImport\(\)\{openModal\('mImport'\);initImportDrop\(\);\}/);
+  assert.match(SRC,/function openImport\(\)\{openModal\('mImport'\);initImportDrop\(\);try\{if\(!_impHist\)\{history\.pushState\(\{whImp:1\},''\);_impHist=true;\}\}catch\(e\)\{\}\}/,'opens the modal and parks one history entry so Back closes it');
+  assert.match(SRC,/window\.addEventListener\('popstate',\(\)=>\{const m=document\.getElementById\('mImport'\)/);
 });
 
 test('Settings → Your data has an Import CSV / PDF row next to Export, and it opens the import modal',()=>{
