@@ -1951,3 +1951,9 @@ select,textarea,
   .ot-demo #content{padding-bottom:calc(5.5rem + var(--demo-cta-h,3.5rem))!important}
   #demo-cta .demo-cta-btn{font-size:0.875rem;padding:0.7rem 1rem}
 }
+
+/* Import confirmation banner (after Review & Import) */
+#imp-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:1.25rem;z-index:3000;display:flex;align-items:center;gap:0.625rem;max-width:min(32rem,calc(100vw - 1.5rem));padding:0.625rem 0.75rem;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.8125rem;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#imp-toast a{color:var(--orange-safe,#f59e0b);text-decoration:underline;white-space:nowrap}
+#imp-toast button{background:none;border:0;color:var(--text3);font-size:0.875rem;cursor:pointer;padding:0.125rem 0.25rem}
+@media(max-width:700px){#imp-toast{bottom:calc(4.5rem + env(safe-area-inset-bottom,0px))}}

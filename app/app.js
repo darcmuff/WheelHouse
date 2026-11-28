@@ -6606,13 +6606,14 @@ function importPreview(pre){
   if(!txt.trim()){box.innerHTML='';_importParsed=null;btn.disabled=true;btn.textContent='Import';return;}
   const p=_routeToOpenLongs(pre||_parseImportText(txt));_importParsed=p;
   if(p.error){box.innerHTML=`<div class="imp-err">${esc(p.error)}</div>`;btn.disabled=true;btn.textContent='Import';return;}
-  if(p.rh&&!csvImportOk()){box.innerHTML=`<div class="imp-err">The free plan includes 1 Robinhood CSV import, and you've used it. Pro has unlimited imports. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
   if(p.rh){ // Robinhood activity report: plan against what's already here
     const P=rhPlan(p.rh,db.opts||[],db.trades||[],uid);p.plan=P;p.rows=P.wheelRows;p.unrecognised=p.unrecognised.concat(P.unrecognised);p.skipped=p.skipped.concat(P.skipped);
+    // Free allowance: only blocks a file that has something new to save. A pure duplicate says "Nothing new" and costs nothing.
+    if(importGate({rh:true,hasNew:p.rows.length+P.newLegs.length+P.changedLegs.length>0,capOk:csvImportOk()})==='capped'){box.innerHTML=`<div class="imp-err">The free plan includes 1 Robinhood CSV import, and you've used it. Pro has unlimited imports. <a href="#" onclick="openUpgrade('robinhood-import');return false">See Pro</a></div>`;btn.disabled=true;btn.textContent='Import';return;}
     const why={};p.skipped.forEach(x=>{why[x.reason]=(why[x.reason]||0)+1;});
     const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
     const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
-    box.innerHTML=`<div class="imp-broker">Robinhood activity report</div>`+
+    box.innerHTML=`<div class="imp-broker">Robinhood activity report</div><div class="imp-review" style="font-size:0.75rem;color:var(--text3);margin:0.25rem 0">Review these trades. Nothing is saved until you tap Import.</div>`+
       (p.rows.length?`<div class="imp-sub">${p.rows.length} wheel trade${p.rows.length>1?'s':''} to add:</div><div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+
       (P.lines.length?`<div class="imp-sub">${P.lines.length} LEAP trade${P.lines.length>1?'s':''} to add (LEAPs tab):</div><ul class="imp-bad" style="color:var(--text2)">${P.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
       (P.dupes?`<div class="imp-sub" style="color:var(--text3)">${P.dupes} already in ${_brandName()}, skipped</div>`:'')+
@@ -6622,16 +6623,33 @@ function importPreview(pre){
     btn.disabled=!n;btn.textContent=n?`Import ${p.rows.length+P.lines.length}`:'Nothing new';return;
   }
   const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
-  const rowsH=p.rows.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
+  const dd=importDedupe(p.rows,db.trades||[]);p._fresh=dd.fresh;p._dupes=dd.dupes;
+  const rowsH=dd.fresh.map(r=>`<tr><td>${esc(r.entered)}</td><td>${esc(r.ticker)}</td><td>${esc(r.action)}</td><td>${r.strike!=null?f2(r.strike):''}</td><td>${esc(r.expiry||'')}</td><td>${r.shares||''}</td><td>${f2(r.premium)}</td><td>${f2(r.total)}</td></tr>`).join('');
   const badH=p.unrecognised.length?`<div class="imp-sub">Couldn't understand ${p.unrecognised.length} row${p.unrecognised.length>1?'s':''} (not imported):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'';
   const skipH=p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">Skipped ${p.skipped.length} non-wheel row${p.skipped.length>1?'s':''} (share trades, dividends, transfers…)</div>`:'';
   box.innerHTML=`<div class="imp-broker">Detected: <b>${esc(p.broker)}</b> · ${p.rows.length} trade${p.rows.length===1?'':'s'} found</div>`+
-    (p.rows.length?`<div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+badH+skipH;
+    `<div class="imp-review" style="font-size:0.75rem;color:var(--text3);margin:0.25rem 0">Review these trades. Nothing is saved until you tap Import.</div>`+
+    (dd.fresh.length?`<div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+(dd.dupes?`<div class="imp-sub" style="color:var(--text3)">${dd.dupes} already in ${_brandName()}, will be skipped</div>`:'')+badH+skipH;
   const of=p.optionFills||[];
   if(of.length)box.innerHTML+=`<div class="imp-sub" style="color:#5eead4">+ ${of.length} long-option fill${of.length>1?'s':''} (buy-to-open and their closes) → Options tab, not the wheel:</div><ul class="imp-bad" style="color:var(--text2)">${of.map(f=>`<li>${esc(f.date)} ${f.effect==='open'?'Buy to open':f.expired?'Expired':'Sell to close'} ${f.qty}× ${esc(f.ticker)} ${f.strike}${f.type} ${esc(f.expiry)}${f.expired?'':' @ '+(+f.price).toFixed(2)}</li>`).join('')}</ul>`;
-  const n=p.rows.length+of.length;
-  btn.disabled=!n;btn.textContent=n?`Import ${n}`:'Import';
+  const n=dd.fresh.length+of.length;
+  btn.disabled=!n;btn.textContent=n?`Import ${n}`:(p.rows.length?'Nothing new':'Import');
 }
+// ── Import gate / dedupe / landing (pure; tests/importgate.test.js) ──
+const _impFp=r=>`${r.ticker}|${r.action}|${r.entered}|${+r.strike||''}|${+r.shares||''}`;
+// Re-import safety: a row is a duplicate only as many times as the log already holds it, so two genuinely identical
+// fills in one file are both kept on the first import, and a second upload of the same file adds nothing.
+function importDedupe(rows,existing){
+  const have={};(existing||[]).forEach(t=>{const k=_impFp(t);have[k]=(have[k]||0)+1;});
+  const fresh=[];let dupes=0;
+  (rows||[]).forEach(r=>{const k=_impFp(r);if(have[k]>0){have[k]--;dupes++;}else fresh.push(r);});
+  return{fresh,dupes};
+}
+// What the review step may offer: nothing new beats everything (a pure duplicate is never a "cap" problem)
+function importGate(o){if(!o.hasNew)return'nothing-new';if(o.rh&&!o.capOk)return'capped';return'ok';}
+// Only a Robinhood import that really saved trades uses a Free user's allowance
+function importUsesAllowance(p,saved){return!!(p&&p.rh&&saved>0);}
+function importLanding(o){return o.wheelRows>0?'positions':o.legs>0?'options':'';}
 // CSV first; if there's no trade table, the text may be a copied/saved statement (same line reader the PDF path uses)
 function _parseImportText(txt){
   const p=BCSV.parseBrokerCSV(txt);
@@ -6686,30 +6704,29 @@ function initImportDrop(){
 function doImport(){
   if(!_importParsed)importPreview();
   const p=_importParsed;if(!p)return;
+  if(p.rh&&!csvImportOk()&&!(p.plan&&!p.rows.length&&!p.plan.newLegs.length&&!p.plan.changedLegs.length)){importPreview();return;} // belt and braces: the review step already blocks this
+  let legsSaved=0;
   let capSkipLeaps=0;const capSkipTickers=new Set();let capSkipRows=0;
   if(p.plan){
     const P=p.plan;
     if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
-    else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));const cap=capNewLeaps(db.opts,P.newLegs);capSkipLeaps+=cap.droppedLeaps;db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(cap.keep);cap.keep.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);}
-    if(!p.rows.length){_noteCsvImport(p);closeModal('mImport');document.getElementById('import-csv').value='';_importParsed=null;importPreview();render();if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
+    else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));const cap=capNewLeaps(db.opts,P.newLegs);capSkipLeaps+=cap.droppedLeaps;db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(cap.keep);cap.keep.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);legsSaved+=cap.keep.length+P.changedLegs.length;}
+    if(!p.rows.length){_noteCsvImport(p,legsSaved);closeModal('mImport');document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();_importLand(0,legsSaved,`${legsSaved} LEAP trade${legsSaved===1?'':'s'} imported`);if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
   }
   if(!(p.rows.length||(p.optionFills||[]).length))return;
   if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
   else if((p.optionFills||[]).length){
     const before=db.opts||[];const r=OPTS.applyFills(db.opts||[],p.optionFills.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side)),uid);
     const cap=capNewLeaps(before,r.created);if(cap.dropped){const k=new Set(cap.keep.map(l=>l.id));const cr=new Set(r.created.map(l=>l.id));r.legs=r.legs.filter(l=>!cr.has(l.id)||k.has(l.id));r.created=cap.keep;capSkipLeaps+=cap.droppedLeaps;}
-    db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));
+    db.opts=r.legs;r.created.forEach(l=>_saveOpt(l));r.changed.forEach(id=>_saveOpt(db.opts.find(l=>l.id===id)));legsSaved+=r.created.length+r.changed.length;
     if(r.unmatched.length)console.warn('Option closes with no open long leg:',r.unmatched);
   }
   let imported=0,dupes=0;
   const newWheelTickers=new Set();
   const newWheels=[],newTrades=[];
-  const existingFingerprints=new Set(db.trades.map(t=>`${t.ticker}|${t.action}|${t.entered}|${t.strike||''}|${t.shares||''}`));
-  for(const r of p.rows){
+  const dd=p.plan?{fresh:p.rows,dupes:0}:importDedupe(p.rows,db.trades);dupes=dd.dupes;
+  for(const r of dd.fresh){
     const{ticker,action,entered,strike,shares}=r;
-    const fp=`${ticker}|${action}|${entered}|${strike||''}|${shares||''}`;
-    if(!p.plan&&existingFingerprints.has(fp)){dupes++;continue;}
-    existingFingerprints.add(fp);
     let wheel=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
     if(!wheel&&!wheelCapOk(ticker,db.wheels)){capSkipTickers.add(ticker);capSkipRows++;continue;}
     if(isOpenRisk(action,!!(r.roll||r.isRoll||r.rollId))&&!wheelRiskOk(db.wheels.concat(newWheels))){capSkipTickers.add(ticker);capSkipRows++;continue;}
@@ -6743,9 +6760,25 @@ function doImport(){
   if(dupes>0)parts.push(`${dupes} duplicates skipped`);
   if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in ${_brandName()}`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
   if(capSkipRows)parts.push(`${capSkipRows} trades for ${[...capSkipTickers].join(', ')} skipped (free plan limit)`);if(capSkipLeaps)parts.push(`${capSkipLeaps} LEAP${capSkipLeaps>1?'s':''} skipped (free plan limit)`);
-  _noteCsvImport(p);
-  alert(`Import complete: ${parts.join(', ')}.`);
-  if(capSkipRows||capSkipLeaps)openUpgrade('unlimited',capSkipRows?capMsg('wheel'):capMsg('leap'));
+  _noteCsvImport(p,imported+legsSaved);
+  if(capSkipRows||capSkipLeaps)setTimeout(()=>openUpgrade('unlimited',capSkipRows?capMsg('wheel'):capMsg('leap')),600);
+  _importLand(imported,legsSaved,parts.join(', '));
+}
+// After a successful import: go where the trades are (Wheels, or LEAPs if only LEAPs came in) and confirm with a banner.
+// Activity log link only where that view exists (phones keep Home · Wheels · LEAPs).
+function _importLand(wheelRows,legs,msg){
+  const to=importLanding({wheelRows,legs});
+  if(to)switchView(to);
+  else render();
+  const old=document.getElementById('imp-toast');if(old)old.remove();
+  const el=document.createElement('div');el.id='imp-toast';el.setAttribute('role','status');
+  const link=isPhoneLayout()?'':' <a href="#" id="imp-toast-log">View in Activity log</a>';
+  el.innerHTML=`<span>✓ Import complete: ${esc(msg)}.${link}</span><button type="button" aria-label="Dismiss">✕</button>`;
+  document.body.appendChild(el);
+  const kill=()=>{if(el.parentNode)el.remove();};
+  el.querySelector('button').onclick=kill;
+  const a=el.querySelector('#imp-toast-log');if(a)a.onclick=e=>{e.preventDefault();kill();switchView('log');};
+  setTimeout(kill,12000);
 }
 // ── Realised P&L chart (READ-ONLY). Closed trades only, booked on their close date, split the same way as the
 // Monthly P&L / Shares & LEAPs P&L tables: option credits vs buybacks, share sales and closed LEAPs by sign, dividends.
@@ -8349,7 +8382,7 @@ async function _accountCall(action){if(APP_DEMO)return null;const u=_auth.curren
 function _maybeStartTrial(user){try{if(_entErr||!planCfg().gating||APP_DEMO)return;if(_ent&&(_ent.trialStartedAt||isPaidPro(_ent)))return;
   const c=Date.parse(user&&user.metadata&&user.metadata.creationTime||'');if(!c||Date.now()-c>48*3600e3)return;
   _accountCall('start-trial').then(j=>{if(j&&j.started)render();}).catch(e=>console.warn('Trial start:',e.message));}catch(e){}}
-function _noteCsvImport(p){if(!p||!p.rh)return;_ent={...(_ent||{}),csvImportsUsed:((_ent&&+_ent.csvImportsUsed)||0)+1};_accountCall('csv-import').catch(e=>console.warn('Import count:',e.message));}
+function _noteCsvImport(p,saved){if(!importUsesAllowance(p,saved))return;_ent={...(_ent||{}),csvImportsUsed:((_ent&&+_ent.csvImportsUsed)||0)+1};_accountCall('csv-import').catch(e=>console.warn('Import count:',e.message));}
 async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
 
 // ── Your data: export and delete ─────────────────────────────
