@@ -6789,7 +6789,7 @@ async function doImport(){
     const P=p.plan;
     if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
     else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));const cap=capNewLeaps(db.opts,P.newLegs);capSkipLeaps+=cap.droppedLeaps;db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(cap.keep);cap.keep.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);legsSaved+=cap.keep.length+P.changedLegs.length;}
-    if(!p.rows.length){_noteCsvImport(p,legsSaved);closeModal('mImport');document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();_importLand(0,legsSaved,`${legsSaved} LEAP trade${legsSaved===1?'':'s'} imported`);if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
+    if(!p.rows.length){await _noteCsvImport(p,legsSaved);closeModal('mImport');document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();_importLand(0,legsSaved,`${legsSaved} LEAP trade${legsSaved===1?'':'s'} imported`);if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
   }
   if(!(p.rows.length||(p.optionFills||[]).length))return;
   if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
@@ -6849,7 +6849,7 @@ async function doImport(){
   if(dupes>0)parts.push(`${dupes} duplicates skipped`);
   if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in ${_brandName()}`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
   if(capSkipRows)parts.push(`${capSkipRows} trades for ${[...capSkipTickers].join(', ')} skipped (free plan limit)`);if(capSkipLeaps)parts.push(`${capSkipLeaps} LEAP${capSkipLeaps>1?'s':''} skipped (free plan limit)`);
-  _noteCsvImport(p,imported+legsSaved);
+  await _noteCsvImport(p,imported+legsSaved);
   if(capSkipRows||capSkipLeaps)setTimeout(()=>openUpgrade('unlimited',capSkipRows?capMsg('wheel'):capMsg('leap')),600);
   _importLand(imported,legsSaved,parts.join(', ')+(sv.pending?' (still syncing: keep this page open until you are online)':''));
 }
@@ -8471,7 +8471,7 @@ async function _accountCall(action){if(APP_DEMO)return null;const u=_auth.curren
 function _maybeStartTrial(user){try{if(_entErr||!planCfg().gating||APP_DEMO)return;if(_ent&&(_ent.trialStartedAt||isPaidPro(_ent)))return;
   const c=Date.parse(user&&user.metadata&&user.metadata.creationTime||'');if(!c||Date.now()-c>48*3600e3)return;
   _accountCall('start-trial').then(j=>{if(j&&j.started)render();}).catch(e=>console.warn('Trial start:',e.message));}catch(e){}}
-function _noteCsvImport(p,saved){if(!importUsesAllowance(p,saved))return;_ent={...(_ent||{}),csvImportsUsed:((_ent&&+_ent.csvImportsUsed)||0)+1};_accountCall('csv-import').catch(e=>console.warn('Import count:',e.message));}
+function _noteCsvImport(p,saved){if(!importUsesAllowance(p,saved))return Promise.resolve();_ent={...(_ent||{}),csvImportsUsed:((_ent&&+_ent.csvImportsUsed)||0)+1};return _accountCall('csv-import').catch(e=>console.warn('Import count:',e.message));}
 async function openBillingPortal(){try{location.href=await _billingCall('billing-portal');}catch(e){alert(e.message);}}
 
 // ── Your data: export and delete ─────────────────────────────

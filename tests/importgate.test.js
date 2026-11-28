@@ -61,10 +61,10 @@ test('allowance is used only by a Robinhood import that actually saved something
   assert.equal(G.importUsesAllowance({}, 5), false);
   assert.equal(G.importUsesAllowance(null, 5), false);
 });
-test('_noteCsvImport: counts once for a saved Robinhood import, never for 0 saved or other brokers', () => {
-  G.reset(); G._noteCsvImport({ rh: [] }, 0); assert.equal(G.ent.csvImportsUsed, 0); assert.deepEqual(G.calls, []);
-  G._noteCsvImport({ broker: 'Tastytrade', rows: [1] }, 4); assert.equal(G.ent.csvImportsUsed, 0); assert.deepEqual(G.calls, []);
-  G._noteCsvImport({ rh: [] }, 4); assert.equal(G.ent.csvImportsUsed, 1); assert.deepEqual(G.calls, ['csv-import']);
+test('_noteCsvImport: counts once for a saved Robinhood import, never for 0 saved or other brokers', async () => {
+  G.reset(); await G._noteCsvImport({ rh: [] }, 0); assert.equal(G.ent.csvImportsUsed, 0); assert.deepEqual(G.calls, []);
+  await G._noteCsvImport({ broker: 'Tastytrade', rows: [1] }, 4); assert.equal(G.ent.csvImportsUsed, 0); assert.deepEqual(G.calls, []);
+  await G._noteCsvImport({ rh: [] }, 4); assert.equal(G.ent.csvImportsUsed, 1); assert.deepEqual(G.calls, ['csv-import']);
 });
 
 test('landing: wheel rows → Wheels; only LEAPs → LEAPs; nothing → stay', () => {
@@ -86,6 +86,8 @@ test('Cancel, Back or closing the Review modal never consumes the Free allowance
   const allCalls = [...src.matchAll(callRe)].map(m => m.index);
   assert.ok(allCalls.length >= 1, 'expected _noteCsvImport calls');
   allCalls.forEach(i => assert.ok(i > doStart && i < doEnd, 'allowance counted outside doImport at '+i));
+  const doImport = src.slice(doStart, doEnd);
+  assert.equal((doImport.match(/await _noteCsvImport\(/g) || []).length, allCalls.length, 'doImport must wait for the allowance count to finish before the toast');
   assert.ok(def < doStart || def > doEnd, 'definition should sit outside doImport');
   const close = src.slice(src.indexOf('function closeModal('), src.indexOf('function closeModal(')+400);
   const popAt = src.indexOf("window.addEventListener('popstate'");
