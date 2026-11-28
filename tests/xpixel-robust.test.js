@@ -34,7 +34,7 @@ test('install(): stub queues calls before uwt.js loads, config comes first, uwt.
 test('trackXSignup fires the Sign up event through the queue even though uwt.js has not loaded yet',()=>{
   const e=env();
   e.win.trackXSignup('u1');
-  assert.deepStrictEqual(evs(e),[['event','tw-riuhw-152urb',{}]]);
+  assert.deepStrictEqual(evs(e),[['event','tw-riuhw-rktzs',{}]]);
 });
 
 test('trackXSignup installs the stub itself if twq is missing (no silent no-op)',()=>{
@@ -70,7 +70,7 @@ test('early stub (index.html, before x-pixel.js runs) records a pending sign-up 
   const e=env({early:m[1]});          // stub defined; app calls it before x-pixel.js has run
   // simulate: app called the stub BEFORE x-pixel.js — rebuild with a store that holds the pending record
   const e2=env({store:{'ot-x-signup-pending':JSON.stringify({u:'uD',t:1700000000000-1000})}});
-  assert.deepStrictEqual(evs(e2),[['event','tw-riuhw-152urb',{}]],'flushed on load');
+  assert.deepStrictEqual(evs(e2),[['event','tw-riuhw-rktzs',{}]],'flushed on load');
   assert.strictEqual(e2.store['ot-x-signup-sent'],'uD');
   void e;
 });
@@ -106,14 +106,16 @@ test('all three sign-up paths pass the uid, and the auth listener is a safety ne
   assert.match(listener,/if\(fresh[^)]*\)[\s\S]{0,200}trackXSignup\(user\.uid\)/,'new user detected by account age still fires (deduped by uid)');
 });
 
-test('install/fire inject uwt.js and send Sign up on optrack.app, never on a blocked host',()=>{
-  const ok=env({hostname:'optrack.app'});
-  assert.strictEqual(ok.scripts.filter(s=>/static\.ads-twitter\.com\/uwt\.js$/.test(s.src)).length,1);
-  assert.deepStrictEqual(JSON.parse(JSON.stringify([].slice.call(ok.win.twq.queue[0]))),['config','riuhw']);
-  ok.win.trackXSignup('uProd');
-  assert.deepStrictEqual(evs(ok),[['event','tw-riuhw-152urb',{}]]);
+test('install/fire inject uwt.js and send Sign up tw-riuhw-rktzs on optrack.app and www.optrack.app, never on a blocked host',()=>{
+  for(const hostname of ['optrack.app','www.optrack.app']){
+    const ok=env({hostname});
+    assert.strictEqual(ok.scripts.filter(s=>/static\.ads-twitter\.com\/uwt\.js$/.test(s.src)).length,1,hostname+' injects uwt.js');
+    assert.deepStrictEqual(JSON.parse(JSON.stringify([].slice.call(ok.win.twq.queue[0]))),['config','riuhw']);
+    ok.win.trackXSignup('uProd-'+hostname);
+    assert.deepStrictEqual(evs(ok),[['event','tw-riuhw-rktzs',{}]],hostname+' fires tw-riuhw-rktzs');
+  }
 
-  const blocked=['dev--wheelhouse-tracker.netlify.app','deploy-preview-12--wheelhouse-tracker.netlify.app','localhost','127.0.0.1',''];
+  const blocked=['dev--wheelhouse-tracker.netlify.app','deploy-preview-12--wheelhouse-tracker.netlify.app','localhost','127.0.0.1','','optrack.app.evil.com','notoptrack.app'];
   blocked.forEach(hostname=>{
     const e=env({hostname,store:{'ot-x-signup-pending':JSON.stringify({u:'uPend',t:1700000000000-1000})}});
     assert.strictEqual(e.scripts.filter(s=>/uwt\.js/.test(s.src)).length,0,hostname+' must not inject uwt.js');

@@ -11,10 +11,12 @@ const pages={
 };
 const SRC=pages.app+(fs.existsSync(path.join(A,'app.js'))?'\n'+fs.readFileSync(path.join(A,'app.js'),'utf8'):'');
 
-test('X Pixel IDs: pixel riuhw, event tw-riuhw-152urb in tw-<pixelId>-<eventId> form',()=>{
+test('X Pixel IDs: pixel riuhw, Sign up event is the literal tw-riuhw-rktzs',()=>{
   assert.strictEqual(X.PIXEL_ID,'riuhw');
-  assert.strictEqual(X.SIGNUP_EVENT,'tw-riuhw-152urb');
-  assert.strictEqual(X.SIGNUP_EVENT,'tw-'+X.PIXEL_ID+'-152urb');
+  assert.strictEqual(X.SIGNUP_EVENT,'tw-riuhw-rktzs');
+  const src=fs.readFileSync(path.join(A,'x-pixel.js'),'utf8');
+  assert.match(src,/var SIGNUP_EVENT = 'tw-riuhw-rktzs';/);
+  assert.doesNotMatch(src,/'tw-'\s*\+\s*PIXEL_ID/);
   assert.match(X.SIGNUP_EVENT,/^tw-[a-z0-9]+-[a-z0-9]+$/i);
 });
 
@@ -41,7 +43,7 @@ test('trackXSignup never throws (ad blockers, no window, no storage) and fires t
   const ctx=vm.createContext({window:win,document:{},module:{exports:{}},setTimeout:()=>0,Date,JSON,location:win.location});
   vm.runInContext(fs.readFileSync(path.join(A,'x-pixel.js'),'utf8'),ctx);
   win.trackXSignup('u9');
-  assert.ok(calls.some(c=>c[0]==='event'&&c[1]==='tw-riuhw-152urb'));
+  assert.ok(calls.some(c=>c[0]==='event'&&c[1]==='tw-riuhw-rktzs'));
   // blocked storage must not stop the event either
   const w2={localStorage:{getItem:()=>{throw new Error('blocked');},setItem:()=>{throw new Error('blocked');},removeItem:()=>{throw new Error('blocked');}},twq:function(){calls.push([].slice.call(arguments));}};w2.window=w2;
   const before=calls.length;

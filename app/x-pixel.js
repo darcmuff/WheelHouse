@@ -15,7 +15,7 @@
 // Dev, Netlify previews, localhost, and file: get a no-op twq; pending flags are cleared and never sent later.
 (function () {
   var PIXEL_ID = 'riuhw';
-  var SIGNUP_EVENT = 'tw-riuhw-152urb';
+  var SIGNUP_EVENT = 'tw-riuhw-rktzs';
   var PENDING = 'ot-x-signup-pending', SENT = 'ot-x-signup-sent';
   var PENDING_MAX_MS = 10 * 60 * 1000, GRACE_MS = 2500, DEDUPE_MS = 60 * 1000;
 
