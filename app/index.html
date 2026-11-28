@@ -570,10 +570,10 @@
 <div class="mb" id="mImport">
   <div class="mbox">
     <div class="mtitle"><span>Import CSV</span><span class="mx" onclick="closeModal('mImport')">✕</span></div>
-    <p class="hint">Drop a trade-log CSV or PDF statement from any broker (Robinhood, Tastytrade, IBKR, Schwab, Fidelity, E*Trade, Webull…) or your CoveredWheel export. Check the preview, then tap Import.</p>
-    <div id="import-drop" class="imp-drop"><div style="font-size:1.375rem">⬇</div><div><b>Drop CSV or PDF here</b> or tap to choose a file</div><div id="import-fname" style="color:var(--text3);font-size:0.75rem;margin-top:0.25rem"></div></div>
-    <input type="file" id="import-file" accept=".csv,.pdf,text/csv,text/plain,application/pdf" style="display:none">
-    <textarea id="import-csv" style="width:100%;height:6.875rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.625rem;border-radius:0.4375rem;font-size:0.8125rem;font-family:inherit;resize:vertical" placeholder="…or paste CSV here"></textarea>
+    <p class="hint">Drop a trade-log CSV, Excel or PDF statement from any broker (Robinhood, Tastytrade, IBKR, Schwab, Fidelity, E*Trade, Webull…) or your CoveredWheel export. Check the preview, then tap Import.</p>
+    <div id="import-drop" class="imp-drop"><div style="font-size:1.375rem">⬇</div><div><b>Drop CSV, Excel or PDF here</b> or tap to choose a file</div><div id="import-fname" style="color:var(--text3);font-size:0.75rem;margin-top:0.25rem"></div></div>
+    <input type="file" id="import-file" style="display:none">
+    <textarea id="import-csv" style="width:100%;height:6.875rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.625rem;border-radius:0.4375rem;font-size:0.8125rem;font-family:inherit;resize:vertical" placeholder="…or paste CSV or statement text here"></textarea>
     <div id="import-preview"></div>
     <div class="mfoot"><button class="btn btn-ghost" onclick="closeModal('mImport')">Cancel</button><button class="btn btn-primary" id="import-go" disabled onclick="doImport()">Import</button></div>
   </div>
