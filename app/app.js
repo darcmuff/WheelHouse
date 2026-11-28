@@ -6672,6 +6672,7 @@ function importPreview(pre){
     (dd.fresh.length?`<div class="imp-tbl-wrap"><table class="imp-tbl"><thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Strike</th><th>Expiry</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:'')+(dd.dupes?`<div class="imp-sub" style="color:var(--text3)">${dd.dupes} already in ${_brandName()}, will be skipped</div>`:'')+badH+skipH;
   const of=p.optionFills||[];
   if(of.length)box.innerHTML+=`<div class="imp-sub" style="color:#5eead4">+ ${of.length} long-option fill${of.length>1?'s':''} (buy-to-open and their closes) → Options tab, not the wheel:</div><ul class="imp-bad" style="color:var(--text2)">${of.map(f=>`<li>${esc(f.date)} ${f.effect==='open'?'Buy to open':f.expired?'Expired':'Sell to close'} ${f.qty}× ${esc(f.ticker)} ${f.strike}${f.type} ${esc(f.expiry)}${f.expired?'':' @ '+(+f.price).toFixed(2)}</li>`).join('')}</ul>`;
+  if(!p.rows.length&&!of.length)box.innerHTML+=`<div class="imp-err">${p.unrecognised.length?'None of the rows could be turned into a trade (see above).':'We opened the file but found no option trades in it. Share trades, dividends and transfers are ignored. Check it is the activity or transaction history for the account you trade options in.'}</div>`;
   const n=dd.fresh.length+of.length;
   btn.disabled=!n;btn.textContent=n?`Import ${n}`:(p.rows.length?'Nothing new':'Import');
 }
