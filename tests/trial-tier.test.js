@@ -58,7 +58,7 @@ test('Free: 1 Robinhood CSV import (csvImportsUsed < 1); Pro / trial unlimited; 
   assert.ok(G.csvImportOk(P,{plan:'free'},false));assert.ok(G.csvImportOk(P,{plan:'free',csvImportsUsed:0},false));
   assert.ok(!G.csvImportOk(P,{plan:'free',csvImportsUsed:1},false));assert.ok(G.csvImportOk(P,{plan:'pro',csvImportsUsed:9},false));
   assert.ok(G.csvImportOk(P,{csvImportsUsed:5,...T.trialFields(Date.now())},false));
-  assert.ok(SRC.includes('capOk:csvImportOk()')&&(SRC.match(/_noteCsvImport\(p,/g)||[]).length===2,'cap gates only a file with something new; the count is noted with a saved-trades number (importgate.test.js)');
+  assert.ok(SRC.includes('capOk:csvImportOk()')&&(SRC.match(/_noteCsvImport\(p,(legsSaved|imported)/g)||[]).length===2,'cap gates only a file with something new; the count is noted with a saved-trades number (importgate.test.js)');
   const acc=require('../netlify/functions/account');const S={u:{csvImportsUsed:0}};
   const deps={bearerUser:async()=>({uid:'u'}),getEntitlement:async u=>S[u],setEntitlement:async(u,f)=>{S[u]={...S[u],...f};}};
   const r=await acc._handler({httpMethod:'POST',headers:{},body:'{"action":"csv-import"}'},{},deps);assert.strictEqual(r.statusCode,200);assert.strictEqual(S.u.csvImportsUsed,1);
