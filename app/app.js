@@ -5887,7 +5887,8 @@ function brokerCSVLib(){
   const sniffDMY=t=>{let dm=false,md=false;for(const m of String(t).matchAll(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\b/g)){if(+m[1]>12)dm=true;if(+m[2]>12)md=true;}return dm&&!md?true:md?false:/trading ?212|etoro|\bgbp\b|£/i.test(t);};
   const yr=y=>{y=parseInt(y,10);return y<100?2000+y:y;};
   // Full-text CSV parser: quotes, "" escapes, commas/newlines inside quotes, CRLF, BOM
-  function parseCSVText(text){
+  function parseCSVText(text,delim){
+    delim=delim||',';
     text=String(text||'').replace(/^\uFEFF/,'');
     const rows=[];let row=[],cur='',q=false;
     for(let i=0;i<text.length;i++){
@@ -5896,7 +5897,7 @@ function brokerCSVLib(){
         if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}
         else cur+=ch;
       }else if(ch==='"')q=true;
-      else if(ch===','){row.push(cur.trim());cur='';}
+      else if(ch===delim){row.push(cur.trim());cur='';}
       else if(ch==='\n'||ch==='\r'){
         if(ch==='\r'&&text[i+1]==='\n')i++;
         row.push(cur.trim());rows.push(row);row=[];cur='';
@@ -5925,18 +5926,24 @@ function brokerCSVLib(){
     const d=normDate(s.split(/[,;T]/)[0]);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
   }
   // Option contract from OCC symbols or human descriptions → {ticker,expiry,strike,pc}
-  function parseOption(s){
-    if(!s)return null;s=String(s).trim();let m;
+  function parseOption(s,loose){
+    if(!s)return null;s=String(s).trim().replace(/^O:/i,'').replace(/^([A-Za-z]{2,5}) ([A-Za-z]) (?=\d{6}[CPcp])/,'$1.$2 ');let m;
     const T='([A-Z][A-Z0-9.]{0,9})';
+    // OCC with a 4-digit year: "AAPL20250117P150" (tried first so the year can't be swallowed into the ticker)
+    m=new RegExp('^[-.]?([A-Z][A-Z.]{0,9})\\s*(\\d{4})(\\d{2})(\\d{2})([CP])(\\d{8}|\\d+(?:\\.\\d+)?)$').exec(s.toUpperCase());
+    if(m&&+m[3]>=1&&+m[3]<=12&&+m[4]>=1&&+m[4]<=31){const k=m[6].length===8&&!m[6].includes('.')?parseInt(m[6],10)/1000:parseFloat(m[6]);return{ticker:m[1],expiry:`${m[2]}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
     // OCC: "AAPL  250117P00150000" / "AAPL250117P00150000" / ".AAPL250117P150" / "-AAPL250117P150"
     m=new RegExp('^[-.]?'+T+'\\s*(\\d{2})(\\d{2})(\\d{2})([CP])(\\d{8}|\\d+(?:\\.\\d+)?)$').exec(s.toUpperCase());
     if(m){const k=m[6].length===8&&!m[6].includes('.')?parseInt(m[6],10)/1000:parseFloat(m[6]);return{ticker:m[1],expiry:`${yr(m[2])}-${m[3]}-${m[4]}`,strike:k,pc:m[5]};}
     const PC='(PUT|CALL|P|C)';
-    const fin=(t,y,mo,d,k,pc)=>({ticker:t.toUpperCase(),expiry:`${yr(y)}-${pad(mo)}-${pad(d)}`,strike:parseFloat(String(k).replace(/[$,]/g,'')),pc:pc.toUpperCase()[0]});
+    // validates the date: day-first files ("17/01/2025", or ambiguous ones in a day-first file) are swapped; impossible dates → null
+    const fin=(t,y,mo,d,k,pc,numeric)=>{mo=+mo;d=+d;if(numeric&&(mo>12||(_dmy&&d<=12)))[mo,d]=[d,mo];if(mo>12&&d<=12)[mo,d]=[d,mo];if(mo<1||mo>12||d<1||d>31)return null;
+      const kk=parseFloat(String(k).replace(/[$,]/g,''));if(!(kk>0))return null;
+      return{ticker:t.toUpperCase(),expiry:`${yr(y)}-${pad(mo)}-${pad(d)}`,strike:kk,pc:pc.toUpperCase()[0]};};
     const U=s.toUpperCase();
     // "AAPL 01/17/2025 150.00 P" / "AAPL 1/17/2025 Put $150.00" / "AAPL 01/17/25 150 P"
     m=new RegExp('^'+T+'\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\s+(?:'+PC+'\\s+\\$?([\\d.,]+)|\\$?([\\d.,]+)\\s+'+PC+')\\b').exec(U);
-    if(m)return fin(m[1],m[4],m[2],m[3],m[6]||m[7],m[5]||m[8]);
+    if(m)return fin(m[1],m[4],m[2],m[3],m[6]||m[7],m[5]||m[8],true);
     // "AAPL $150 Put 1/17/2025"
     m=new RegExp('^'+T+'\\s+\\$([\\d.,]+)\\s+(PUT|CALL)\\s+(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\b').exec(U);
     if(m)return fin(m[1],m[6],m[4],m[5],m[2],m[3]);
@@ -5952,7 +5959,35 @@ function brokerCSVLib(){
     // Fidelity "... PUT (AAPL) APPLE INC JAN 17 25 $150 (100 SHS)"
     m=/\b(PUT|CALL)\s+\(([A-Z][A-Z0-9.]{0,9})\).*?\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{1,2})\s+(\d{2,4})\s+\$([\d.,]+)/.exec(U);
     if(m)return fin(m[2],m[5],MONS[m[3].toLowerCase()],m[4],m[6],m[1]);
-    return null;
+    // Fallback: any wording that holds a ticker, PUT/CALL (or P/C), a strike and an expiry date, in any order
+    return loose?scanOption(U):null; // loose = whole-cell callers only; line scanners (findOption) rely on strict matches
+  }
+  // Order-free scan. Strictly requires all four parts so stock rows, memos and cash lines never become options.
+  function scanOption(U){
+    const MP='JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC';
+    let t=' '+U.replace(/@.*$/,' ').replace(/[(),]/g,' ').replace(/\b(SOLD|BOUGHT|BUY|SELL|BTO|STO|BTC|STC|OPEN|CLOSE|TO|EXP|EXPIRES|EXPIRING|EXPIRATION|OPTIONS?|CONTRACTS?)\b/g,' ').replace(/^\s*\d+\s+(?=[A-Z])/,' ')+' ';
+    let y,mo,d,hit;
+    const cut=m=>{t=t.replace(m[0],' ');};
+    if((hit=/\b(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})\b/.exec(t))){y=+hit[1];mo=+hit[2];d=+hit[3];cut(hit);}
+    else if((hit=/\b(20\d{2})(\d{2})(\d{2})\b/.exec(t))){y=+hit[1];mo=+hit[2];d=+hit[3];cut(hit);}
+    else if((hit=new RegExp("\\b(\\d{1,2})(?:ST|ND|RD|TH)?[ -]?("+MP+")[A-Z]*\\.?[ ,-]*'?(\\d{4}|\\d{2})\\b").exec(t))){y=yr(hit[3]);mo=MONS[hit[2].toLowerCase()];d=+hit[1];cut(hit);}
+    else if((hit=new RegExp("\\b("+MP+")[A-Z]*\\.?[ -]+(\\d{1,2})(?:ST|ND|RD|TH)?[ ,-]+'?(\\d{4}|\\d{2})\\b").exec(t))){y=yr(hit[3]);mo=MONS[hit[1].toLowerCase()];d=+hit[2];cut(hit);}
+    else if((hit=/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4}|\d{2})\b/.exec(t))){y=yr(hit[3]);mo=+hit[1];d=+hit[2];if(mo>12||(_dmy&&d<=12))[mo,d]=[d,mo];cut(hit);}
+    else if((hit=/\b(\d{2})(\d{2})(\d{2})\b/.exec(t))&&+hit[2]>=1&&+hit[2]<=12&&+hit[3]>=1&&+hit[3]<=31){y=yr(hit[1]);mo=+hit[2];d=+hit[3];cut(hit);}
+    else return null;
+    if(!(mo>=1&&mo<=12&&d>=1&&d<=31&&y>=2000&&y<=2100))return null;
+    let pc='';
+    if((hit=/\b(PUT|CALL)\b/.exec(t))){pc=hit[1][0];cut(hit);}
+    else if((hit=/(?:^|\s)([PC])(?=\s|$)/.exec(t))){pc=hit[1];cut(hit);}
+    else if((hit=/(\d)([PC])(?=\s|$)/.exec(t))){pc=hit[2];t=t.replace(hit[0],hit[1]);}
+    if(!pc)return null;
+    hit=/\$?(\d{1,6}(?:\.\d{1,4})?)(?![\d.])/.exec(t.replace(/[A-Z.]*[A-Z]\d+[A-Z.]*/g,' '));
+    const k=hit?parseFloat(hit[1]):NaN;
+    if(!(k>0))return null;
+    const STOP={PUT:1,CALL:1,P:1,C:1,A:1,AN:1,THE:1,OF:1,AND:1,SHS:1,SHARES:1,USD:1};
+    const tk=(t.match(/\b[A-Z][A-Z0-9.]{0,9}\b/g)||[]).filter(w=>!STOP[w]&&!/^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$/.test(w))[0];
+    if(!tk)return null;
+    return{ticker:tk,expiry:`${y}-${pad(mo)}-${pad(d)}`,strike:k,pc};
   }
   const norm=h=>String(h||'').toLowerCase().replace(/\(\$\)/g,'').replace(/\s+/g,' ').trim();
   const SYN={
@@ -6113,9 +6148,28 @@ function brokerCSVLib(){
     if(ev.length>1&&ev[0].date>ev[ev.length-1].date)ev.reverse(); // Robinhood lists newest first; work oldest first
     return{broker:'Robinhood',rh:ev,rows:[],optionFills:[],unrecognised:bad,skipped:skip};
   }
+  // Excel/Sheets exports are not always comma-separated: ';' (EU locales), tab, '|'. Pick the delimiter that splits the
+  // first lines into the most consistent run of columns (quote-aware; comma wins ties) and rewrite the text as plain CSV
+  // so every downstream parser sees one shape. Decimal commas ("1,25") are only converted for non-comma files.
+  function normaliseDelimiter(text){
+    const lines=text.split('\n').filter(l=>l.trim()).slice(0,60);
+    const countOut=(l,d)=>{let n=0,q=false;for(let i=0;i<l.length;i++){const c=l[i];if(c==='"')q=!q;else if(!q&&c===d)n++;}return n;};
+    let best=',',bestScore=0;
+    [',',';','\t','|'].forEach(d=>{
+      const freq={};lines.forEach(l=>{const n=countOut(l,d);if(n>=2)freq[n]=(freq[n]||0)+1;});
+      let sc=0;Object.keys(freq).forEach(n=>{sc=Math.max(sc,freq[n]*(+n));});
+      if(sc>bestScore){best=d;bestScore=sc;}
+    });
+    if(best===','||!bestScore)return text;
+    const rows=parseCSVText(text,best);
+    const dec=c=>/^[-+(]?\s*[$£€]?\s*\d+(?:[.]\d{3})*,\d{1,4}\)?$/.test(c)&&!/^\d{1,3}(,\d{3})+$/.test(c)?c.replace(/\.(?=\d{3}\b)/g,'').replace(',','.'):c;
+    const q=c=>/[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;
+    return rows.map(r=>r.map(c=>q(dec(c))).join(',')).join('\n');
+  }
   function parseBrokerCSV(text){
     text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
     if(!text)return{broker:'',rows:[],unrecognised:[],skipped:[],error:'Empty file'};
+    text=normaliseDelimiter(text);
     _dmy=sniffDMY(text);
     let rows=parseCSVText(text);
     const hi=findHeader(rows);
@@ -6139,7 +6193,7 @@ function brokerCSVLib(){
       const gs=cs=>cs.map(c=>g(c)).filter(Boolean).join(' ');
       if(C.status>-1&&g(C.status)&&!/fill/i.test(g(C.status))){skip.push({line:i+1,raw,reason:'order not filled'});continue;}
       const desc=g(C.desc),sym=g(C.symbol);
-      let opt=parseOption(sym)||parseOption(desc)||parseOption(gs(C.action));
+      let opt=parseOption(sym,true)||parseOption(desc,true)||parseOption(gs(C.action),true);
       // explicit option columns (Tastytrade, generic)
       if(!opt&&C.strike>-1&&num(g(C.strike))>0&&C.expiry>-1&&g(C.expiry)){
         const pcs=(g(C.pc)||'').toUpperCase()[0];
