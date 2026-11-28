@@ -75,6 +75,12 @@ const key = r => [r.entered, r.ticker, r.action, r.strike, r.expiry, r.shares, r
   const inp = /<input[^>]*id="import-file"[^>]*>/.exec(html5);
   check('import file input has no restrictive accept= (we sniff content and explain bad files)', !!inp && !/accept=/.test(inp[0]), inp && inp[0]);
 
+  const appSrc = fs.readFileSync(path.join(__dirname, '..', 'app', 'app.js'), 'utf8');
+  const pdfFn = appSrc.slice(appSrc.indexOf('async function importLoadPDF'), appSrc.indexOf('function initImportDrop'));
+  check('PDF reader load failure gets a plain "check your connection" message (no raw module URL)', /Couldn't load the PDF reader/.test(pdfFn) && /Check your connection/.test(pdfFn) && !/e&&e\.message/.test(pdfFn));
+  check('PDF reader retries next time after a failed load (_pdfjs reset)', /_pdfjs=null;importPreview/.test(pdfFn));
+  check('password-protected PDF is named as such', /PasswordException/.test(pdfFn));
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })();

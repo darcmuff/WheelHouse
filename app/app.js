@@ -6756,12 +6756,16 @@ async function importLoadPDF(file,u8){
   const box=document.getElementById('import-preview'),btn=document.getElementById('import-go');
   box.innerHTML='<div class="imp-broker">Reading PDF…</div>';btn.disabled=true;_importParsed=null;
   try{
-    if(!_pdfjs){const V='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';_pdfjs=await import(V+'pdf.min.mjs');_pdfjs.GlobalWorkerOptions.workerSrc=V+'pdf.worker.min.mjs';}
+    if(!_pdfjs){
+      const V='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';
+      try{_pdfjs=await import(V+'pdf.min.mjs');_pdfjs.GlobalWorkerOptions.workerSrc=V+'pdf.worker.min.mjs';}
+      catch(e){_pdfjs=null;importPreview({broker:'PDF',rows:[],unrecognised:[],skipped:[],error:"Couldn't load the PDF reader. PDFs need an internet connection the first time. Check your connection and try again, or export a CSV, or paste the statement text below."});return;}
+    }
     const doc=await _pdfjs.getDocument({data:u8?u8.slice():await file.arrayBuffer()}).promise;
     const items=[];
     for(let n=1;n<=doc.numPages;n++){const tc=await(await doc.getPage(n)).getTextContent();tc.items.forEach(it=>items.push({str:it.str,transform:it.transform,page:n}));}
     importPreview(BCSV.vetRows(BCSV.parseStatementText(BCSV.pdfItemsToLines(items))));
-  }catch(e){importPreview({broker:'PDF',rows:[],unrecognised:[],skipped:[],error:"Couldn't open this PDF ("+(e&&e.message||e)+"). If it's password-protected, remove the password first; you need to be online the first time a PDF is read."});}
+  }catch(e){importPreview({broker:'PDF',rows:[],unrecognised:[],skipped:[],error:"Couldn't open this PDF"+(e&&e.name==='PasswordException'?" because it's password-protected. Remove the password and try again.":". It may be damaged or scanned as a picture. Export a CSV from your broker, or paste the statement text below.")});}
 }
 function initImportDrop(){
   const z=document.getElementById('import-drop'),fi=document.getElementById('import-file'),ta=document.getElementById('import-csv');
