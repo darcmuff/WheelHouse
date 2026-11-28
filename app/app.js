@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, getAdditionalUserInfo } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, setDoc, deleteDoc, collection, getDocsFromServer, onSnapshot, disableNetwork, terminate } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, deleteDoc, writeBatch, collection, getDocsFromServer, onSnapshot, disableNetwork, terminate } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const _firebaseConfig = {
   apiKey: "AIzaSyCZi2lMI3luwA6ZLBQF0k1fKIPkrrhFZeI",
@@ -122,6 +122,29 @@ function _saveTrade(trade){
   const uid=_currentUid();if(!uid||!trade||!trade.id)return;
   _fsSetDoc(_fsDoc(_fsDb,'users',uid,'trades',trade.id),_stripUndefined(trade))
     .catch(e=>console.error('Trade save failed:',e));
+}
+// Import save: committed in batches (Firestore allows 500 ops per batch) and awaited, so a big file isn't lost by closing the tab
+// and a failure is reported. A commit with no server answer (offline) resolves as {pending:true} after a while: the writes stay queued.
+async function _saveImportBatch(wheels,trades,opt){
+  const all=[].concat((wheels||[]).map(w=>['wheels',w]),(trades||[]).map(t=>['trades',t]));
+  if(!all.length)return{ok:true};
+  if(APP_DEMO){OT_DEMO.save(db);return{ok:true};}
+  const uid=_currentUid();if(!uid)return{ok:false,error:'not signed in'};
+  const timeoutMs=(opt&&opt.timeoutMs)||60000;let pending=false;
+  for(let i=0;i<all.length;i+=450){
+    const chunk=all.slice(i,i+450);
+    let done=false,lastErr='';
+    for(let attempt=0;attempt<2&&!done;attempt++){
+      try{
+        const b=writeBatch(_fsDb);
+        chunk.forEach(([col,d])=>{if(d&&d.id)b.set(_fsDoc(_fsDb,'users',uid,col,d.id),_stripUndefined(d));});
+        let to;const r=await Promise.race([b.commit().then(()=>'ok'),new Promise(res=>{to=setTimeout(()=>res('pending'),timeoutMs);})]).finally(()=>clearTimeout(to));
+        if(r==='pending')pending=true;done=true;
+      }catch(e){lastErr=String(e&&e.message||e);if(attempt===0)await new Promise(r=>setTimeout(r,opt&&opt.retryMs!=null?opt.retryMs:600));}
+    }
+    if(!done)return{ok:false,error:lastErr};
+  }
+  return pending?{ok:true,pending:true}:{ok:true};
 }
 let _optsLoadError='';
 // A quote we actually received is saved with its date, same as a price you type.
@@ -6673,8 +6696,13 @@ function importPreview(pre){
   const of=p.optionFills||[];
   if(of.length)box.innerHTML+=`<div class="imp-sub" style="color:#5eead4">+ ${of.length} long-option fill${of.length>1?'s':''} (buy-to-open and their closes) → Options tab, not the wheel:</div><ul class="imp-bad" style="color:var(--text2)">${of.map(f=>`<li>${esc(f.date)} ${f.effect==='open'?'Buy to open':f.expired?'Expired':'Sell to close'} ${f.qty}× ${esc(f.ticker)} ${f.strike}${f.type} ${esc(f.expiry)}${f.expired?'':' @ '+(+f.price).toFixed(2)}</li>`).join('')}</ul>`;
   if(!p.rows.length&&!of.length)box.innerHTML+=`<div class="imp-err">${p.unrecognised.length?'None of the rows could be turned into a trade (see above).':'We opened the file but found no option trades in it. Share trades, dividends and transfers are ignored. Check it is the activity or transaction history for the account you trade options in.'}</div>`;
-  const n=dd.fresh.length+of.length;
-  btn.disabled=!n;btn.textContent=n?`Import ${n}`:(p.rows.length?'Nothing new':'Import');
+  // long-option fills: count only the ones that would really change something (an already-imported open, or a close with no open leg, is not new)
+  let nf=of.length;
+  if(of.length){try{const f1=of.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side));
+    nf=f1.length-OPTS.applyFills(db.opts||[],f1,()=>'dry').unmatched.length;}catch(e){nf=of.length;}
+    if(nf<of.length)box.innerHTML+=`<div class="imp-sub" style="color:var(--text3)">${of.length-nf} long-option fill${of.length-nf>1?'s':''} already in ${_brandName()}, will be skipped</div>`;}
+  const n=dd.fresh.length+nf;
+  btn.disabled=!n;btn.textContent=n?`Import ${n}`:((p.rows.length||of.length)?'Nothing new':'Import');
 }
 // ── Import gate / dedupe / landing (pure; tests/importgate.test.js) ──
 const _impFp=r=>`${r.ticker}|${r.action}|${r.entered}|${+r.strike||''}|${+r.shares||''}`;
@@ -6742,7 +6770,9 @@ function initImportDrop(){
   z.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];importLoadFile(f);});
   let t;ta.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(importPreview,250);});
 }
-function doImport(){
+let _importBusy=false;
+async function doImport(){
+  if(_importBusy)return;
   if(!_importParsed)importPreview();
   const p=_importParsed;if(!p)return;
   if(p.rh&&!csvImportOk()&&!(p.plan&&!p.rows.length&&!p.plan.newLegs.length&&!p.plan.changedLegs.length)){importPreview();return;} // belt and braces: the review step already blocks this
@@ -6786,7 +6816,18 @@ function doImport(){
     db.trades.push(nt);newTrades.push(nt);imported++;
   }
   autoLinkRollBatch(newTrades); // only fills rollId for rows already flagged as a roll
-  newWheels.forEach(w=>_saveWheel(w));newTrades.forEach(t=>_saveTrade(t));closeModal('mImport');
+  // Write to the account in committed batches and wait for the answer, so nothing is lost if the tab is closed right after
+  const goBtn=document.getElementById('import-go');_importBusy=true;goBtn.disabled=true;goBtn.textContent=newTrades.length>40?`Saving ${newTrades.length}…`:'Saving…';
+  let sv;try{sv=await _saveImportBatch(newWheels,newTrades);}catch(e){sv={ok:false,error:String(e&&e.message||e)};}
+  _importBusy=false;
+  if(!sv.ok){ // roll the rows back out of the local copy: what you see must be what is saved
+    const nt=new Set(newTrades.map(t=>t.id)),nw=new Set(newWheels.map(w=>w.id));
+    db.trades=db.trades.filter(t=>!nt.has(t.id));db.wheels=db.wheels.filter(w=>!nw.has(w.id));render();
+    importPreview();
+    const box=document.getElementById('import-preview');box.innerHTML=`<div class="imp-err">Couldn't save to your account (${esc(sv.error||'unknown error')}). Nothing was imported. Check your connection and tap Import again.</div>`+box.innerHTML;
+    return;
+  }
+  closeModal('mImport');
   document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();render();
 
   // Fetch logos and prices for any new wheels
@@ -6803,7 +6844,7 @@ function doImport(){
   if(capSkipRows)parts.push(`${capSkipRows} trades for ${[...capSkipTickers].join(', ')} skipped (free plan limit)`);if(capSkipLeaps)parts.push(`${capSkipLeaps} LEAP${capSkipLeaps>1?'s':''} skipped (free plan limit)`);
   _noteCsvImport(p,imported+legsSaved);
   if(capSkipRows||capSkipLeaps)setTimeout(()=>openUpgrade('unlimited',capSkipRows?capMsg('wheel'):capMsg('leap')),600);
-  _importLand(imported,legsSaved,parts.join(', '));
+  _importLand(imported,legsSaved,parts.join(', ')+(sv.pending?' (still syncing: keep this page open until you are online)':''));
 }
 // After a successful import: go where the trades are (Wheels, or LEAPs if only LEAPs came in) and confirm with a banner.
 // Activity log link only where that view exists (phones keep Home · Wheels · LEAPs).
