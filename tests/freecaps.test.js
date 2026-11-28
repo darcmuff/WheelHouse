@@ -39,7 +39,7 @@ test('every creation route checks the cap',()=>{
   assert.match(body('openNewPos'),/wheelCapOk\(null,db\.wheels\)/);assert.match(body('quickAddRotation'),/wheelCapOk\(ticker/);
   assert.match(body('saveWheel'),/wheelCapOk\(ticker/);assert.match(body('openLeapAdd'),/leapCapOk\(1,db\.opts\)/);assert.match(body('saveLeap'),/!old&&!leapCapOk/);
   assert.strictEqual((body('confirmParsed').match(/wheelCapOk\(/g)||[]).length,2); // SmartScan single + roll
-  const imp=body('doImport');assert.match(imp,/wheelCapOk\(ticker,db\.wheels\)\)\{capSkipTickers/);assert.strictEqual((imp.match(/capNewLeaps\(/g)||[]).length,2);
+  const imp=body('doImport');assert.match(imp,/importWheelCapSkip\(dd\.fresh,db\.wheels,\{wheelCapOk,wheelRiskOk,isOpenRisk\}\)/);assert.match(imp,/capSkipTickers=new Set\(capW\.skipTickers\)/);assert.strictEqual((imp.match(/capNewLeaps\(/g)||[]).length,2);
   // manual trade forms that can create a wheel
   assert.strictEqual((SRC.match(/if\(ex\)\{wheelId=ex\.id;\}else\{if\(!wheelCapOk\(ticker,db\.wheels\)\)/g)||[]).length,2);
   assert.ok(!/if\(ex\)\{wheelId=ex\.id;\}else\{const mo/.test(SRC));

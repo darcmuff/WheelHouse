@@ -576,6 +576,8 @@ body.sel-mode .trow.sel{background:var(--orangeL);box-shadow:inset 0.2rem 0 0 va
 .imp-sub{margin-top:0.5rem;color:#fca5a5}
 .imp-bad{margin:0.25rem 0 0 1.125rem;color:var(--text3);font-size:0.75rem;max-height:7.5rem;overflow:auto}
 .imp-err{background:#3b1a1a;border:1px solid #7f1d1d;color:#fca5a5;padding:0.5rem 0.625rem;border-radius:0.4375rem}
+.imp-cap-warn{margin-top:0.5rem;padding:0.5rem 0.625rem;color:var(--text3);background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-family:Urbanist,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:0.75rem;line-height:1.45;font-weight:480}
+.imp-cap-warn a{color:var(--text2);text-decoration:underline}
 .btn:disabled{opacity:.45;cursor:default}
 .hint{font-size:0.875rem;color:var(--text3);margin-bottom:0.9375rem;line-height:1.7}
 /* ── LEAPs view (long calls) ── */

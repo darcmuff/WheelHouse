@@ -4,8 +4,8 @@ const test = require('node:test'), assert = require('node:assert');
 const { extractFn, extractConst } = require('./extract');
 const ctx = `let _ent={csvImportsUsed:0};let calls=[];const _accountCall=(n)=>{calls.push(n);return Promise.resolve();};
 ${extractConst('_impFp')}
-${extractFn('importDedupe')}\n${extractFn('importGate')}\n${extractFn('importUsesAllowance')}\n${extractFn('importLanding')}\n${extractFn('_noteCsvImport')}
-return {importDedupe,importGate,importUsesAllowance,importLanding,_noteCsvImport,get ent(){return _ent;},get calls(){return calls;},reset(){_ent={csvImportsUsed:0};calls=[];}};`;
+${extractFn('importDedupe')}\n${extractFn('importGate')}\n${extractFn('importUsesAllowance')}\n${extractFn('importLanding')}\n${extractFn('importToastMsg')}\n${extractFn('importWheelCapSkip')}\n${extractFn('importWheelCapNote')}\n${extractFn('_noteCsvImport')}
+return {importDedupe,importGate,importUsesAllowance,importLanding,importToastMsg,importWheelCapSkip,importWheelCapNote,_noteCsvImport,get ent(){return _ent;},get calls(){return calls;},reset(){_ent={csvImportsUsed:0};calls=[];}};`;
 const G = new Function(ctx)();
 
 const row = (o) => ({ entered: '2025-01-10', ticker: 'AAPL', action: 'CSP', strike: 150, expiry: '2025-01-17', shares: 100, premium: 1.25, ...o });
@@ -72,6 +72,94 @@ test('landing: wheel rows → Wheels; only LEAPs → LEAPs; nothing → stay', (
   assert.equal(G.importLanding({ wheelRows: 1, legs: 0 }), 'positions');
   assert.equal(G.importLanding({ wheelRows: 0, legs: 2 }), 'options');
   assert.equal(G.importLanding({ wheelRows: 0, legs: 0 }), '');
+});
+
+
+test('toast: LEAP-only never says "0 imported" when LEAPs were saved', () => {
+  assert.equal(G.importToastMsg({ imported: 0, legsSaved: 1 }), '1 LEAP imported');
+  assert.equal(G.importToastMsg({ imported: 0, legsSaved: 2, capSkipLeaps: 1 }), '2 LEAPs imported, 1 LEAP skipped (free plan limit)');
+  assert.doesNotMatch(G.importToastMsg({ imported: 0, legsSaved: 1, capSkipLeaps: 1 }), /0 imported/);
+});
+test('toast: mixed wheels and LEAPs, plus skip notes and pending', () => {
+  assert.equal(G.importToastMsg({ imported: 4 }), '4 imported');
+  assert.equal(G.importToastMsg({ imported: 3, legsSaved: 2 }), '3 trades, 2 LEAPs imported');
+  assert.equal(G.importToastMsg({ imported: 1, legsSaved: 1 }), '1 trade, 1 LEAP imported');
+  assert.equal(G.importToastMsg({ imported: 3, capSkipRows: 1, capSkipTickers: ['NVDA'] }),
+    '3 imported, 1 trade for NVDA skipped (free plan limit)');
+  assert.equal(G.importToastMsg({ imported: 240, capSkipRows: 60, capSkipTickers: ['AMZN', 'META'] }),
+    '240 imported, 60 trades for AMZN, META skipped (free plan limit)');
+  assert.equal(G.importToastMsg({ imported: 2, pending: true }),
+    '2 imported (still syncing: keep this page open until you are online)');
+});
+
+function freeCap() {
+  const lim = 2;
+  return {
+    wheelCapOk(ticker, wheels) {
+      const s = new Set((wheels || []).filter(w => w.status === 'open').map(w => w.ticker));
+      if (ticker && s.has(ticker)) return true;
+      return s.size < lim;
+    },
+    wheelRiskOk(wheels) {
+      const n = new Set((wheels || []).filter(w => w.status === 'open').map(w => w.ticker)).size;
+      return n <= lim;
+    },
+    isOpenRisk(action, isRoll) {
+      return !!(isRoll || action === 'CSP' || action === 'STOC' || action === 'STO' || action === 'CC');
+    }
+  };
+}
+const proCap = { wheelCapOk: () => true, wheelRiskOk: () => true, isOpenRisk: () => true };
+test('Review cap: Free, empty account, third ticker in the file is skipped', () => {
+  const rows = [row({}), row({ ticker: 'TSLA', action: 'STOC', strike: 450 }),
+    row({ ticker: 'NVDA', action: 'CSP', strike: 120 }), row({ ticker: 'NVDA', action: 'BTC', strike: 120, entered: '2025-01-11' })];
+  const c = G.importWheelCapSkip(rows, [], freeCap());
+  assert.equal(c.fresh.length, 2);
+  assert.equal(c.skipRows, 2);
+  assert.deepEqual(c.skipTickers, ['NVDA']);
+  assert.match(G.importWheelCapNote(c), /2 trades for NVDA will not be imported/);
+  assert.match(G.importWheelCapNote(c), /Upgrade to Pro/);
+});
+test('Review cap: Free, two open wheels, a new ticker is skipped and existing tickers stay', () => {
+  const have = [{ ticker: 'AAPL', status: 'open' }, { ticker: 'TSLA', status: 'open' }];
+  const rows = [row({}), row({ ticker: 'AMZN', action: 'CSP', strike: 180 }), row({ ticker: 'META', action: 'STOC', strike: 500 })];
+  const c = G.importWheelCapSkip(rows, have, freeCap());
+  assert.equal(c.fresh.length, 1);
+  assert.equal(c.skipRows, 2);
+  assert.deepEqual(c.skipTickers, ['AMZN', 'META']);
+  assert.match(G.importWheelCapNote(c), /2 trades for AMZN, META will not be imported/);
+});
+test('Review cap: Free, already over 2 open tickers, openings on existing wheels are close-only (closes still import)', () => {
+  const have = ['AAPL', 'TSLA', 'MSFT'].map(t => ({ ticker: t, status: 'open' }));
+  const rows = [row({ action: 'CSP' }), row({ action: 'BTC', entered: '2025-01-12' })];
+  const c = G.importWheelCapSkip(rows, have, freeCap());
+  assert.equal(c.fresh.length, 1);
+  assert.equal(c.fresh[0].action, 'BTC');
+  assert.equal(c.skipRows, 1);
+  assert.deepEqual(c.skipTickers, ['AAPL']);
+});
+test('Review cap: Pro or trial predicates skip nothing, so there is no warning', () => {
+  const rows = [row({}), row({ ticker: 'TSLA' }), row({ ticker: 'NVDA' }), row({ ticker: 'AMZN' })];
+  const c = G.importWheelCapSkip(rows, [], proCap);
+  assert.equal(c.fresh.length, 4);
+  assert.equal(c.skipRows, 0);
+  assert.deepEqual(c.skipTickers, []);
+  assert.equal(G.importWheelCapNote(c), '');
+  assert.equal(G.importWheelCapNote({ skipRows: 0 }), '');
+});
+test('doImport and importPreview share the cap planner and toast wording', () => {
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'app', 'app.js'), 'utf8');
+  const doStart = src.indexOf('async function doImport()');
+  const doEnd = src.indexOf('\nfunction _importLand', doStart);
+  const preview = src.slice(src.indexOf('function importPreview'), src.indexOf('function importDedupe'));
+  const doImport = src.slice(doStart, doEnd);
+  assert.match(doImport, /importWheelCapSkip\(/);
+  assert.match(doImport, /importToastMsg\(/);
+  assert.match(preview, /importWheelCapSkip\(/);
+  assert.match(preview, /importWheelCapNote\(/);
+  assert.match(preview, /imp-cap-warn/);
+  assert.doesNotMatch(doImport, /\$\{imported\} imported/);
 });
 
 test('Cancel, Back or closing the Review modal never consumes the Free allowance', () => {

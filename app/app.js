@@ -6685,8 +6685,10 @@ function importPreview(pre){
       (P.dupes?`<div class="imp-sub" style="color:var(--text3)">${P.dupes} already in ${_brandName()}, skipped</div>`:'')+
       (p.skipped.length?`<div class="imp-sub" style="color:var(--text3)">${p.skipped.length} row${p.skipped.length>1?'s':''} skipped: ${Object.entries(why).map(([k,n])=>`${esc(k)} (${n})`).join(', ')}</div>`:'')+
       (p.unrecognised.length?`<div class="imp-sub">Not imported (${p.unrecognised.length}):</div><ul class="imp-bad">${p.unrecognised.slice(0,30).map(b=>`<li>Line ${b.line}: ${esc(b.reason)} — <code>${esc(b.raw.slice(0,120))}</code></li>`).join('')}</ul>`:'');
-    const n=p.rows.length+P.newLegs.length+P.changedLegs.length;
-    btn.disabled=!n;btn.textContent=n?`Import ${p.rows.length+P.lines.length}`:'Nothing new';return;
+    const capW=importWheelCapSkip(p.rows,db.wheels||[],{wheelCapOk,wheelRiskOk,isOpenRisk});
+    if(capW.skipRows)box.innerHTML+=`<div class="imp-cap-warn">${esc(importWheelCapNote(capW))} <a href="#" onclick="openUpgrade('unlimited');return false">See Pro</a></div>`;
+    const n=capW.fresh.length+P.newLegs.length+P.changedLegs.length;
+    btn.disabled=!n;btn.textContent=n?`Import ${capW.fresh.length+P.lines.length}`:'Nothing new';return;
   }
   const f2=n=>n==null||n===''?'':Number(n).toFixed(2);
   const dd=importDedupe(p.rows,db.trades||[]);p._fresh=dd.fresh;p._dupes=dd.dupes;
@@ -6704,7 +6706,9 @@ function importPreview(pre){
   if(of.length){try{const f1=of.filter(f=>!(db.opts||[]).some(l=>f.effect==='open'&&l.underlying===f.ticker&&+l.strike===+f.strike&&l.expiry===f.expiry&&l.entryDate===f.date&&+l.entryPrice===+f.price&&l.side===f.side));
     nf=f1.length-OPTS.applyFills(db.opts||[],f1,()=>'dry').unmatched.length;}catch(e){nf=of.length;}
     if(nf<of.length)box.innerHTML+=`<div class="imp-sub" style="color:var(--text3)">${of.length-nf} long-option fill${of.length-nf>1?'s':''} already in ${_brandName()}, will be skipped</div>`;}
-  const n=dd.fresh.length+nf;
+  const capW=importWheelCapSkip(dd.fresh,db.wheels||[],{wheelCapOk,wheelRiskOk,isOpenRisk});
+  if(capW.skipRows)box.innerHTML+=`<div class="imp-cap-warn">${esc(importWheelCapNote(capW))} <a href="#" onclick="openUpgrade('unlimited');return false">See Pro</a></div>`;
+  const n=capW.fresh.length+nf;
   btn.disabled=!n;btn.textContent=n?`Import ${n}`:((p.rows.length||of.length)?'Nothing new':'Import');
 }
 // ── Import gate / dedupe / landing (pure; tests/importgate.test.js) ──
@@ -6722,6 +6726,42 @@ function importGate(o){if(!o.hasNew)return'nothing-new';if(o.rh&&!o.capOk)return
 // Only a Robinhood import that really saved trades uses a Free user's allowance
 function importUsesAllowance(p,saved){return!!(p&&p.rh&&saved>0);}
 function importLanding(o){return o.wheelRows>0?'positions':o.legs>0?'options':'';}
+// Toast copy: never say "0 imported" when LEAPs were saved; name skipped tickers clearly.
+function importToastMsg(o){
+  o=o||{};
+  const w=+o.imported||0,l=+o.legsSaved||0,parts=[];
+  if(w&&l)parts.push(`${w} trade${w===1?'':'s'}, ${l} LEAP${l===1?'':'s'} imported`);
+  else if(l)parts.push(`${l} LEAP${l===1?'':'s'} imported`);
+  else parts.push(`${w} imported`);
+  if(o.dupes>0)parts.push(`${o.dupes} duplicate${o.dupes===1?'':'s'} skipped`);
+  if(o.already)parts.push(`${o.already} already in ${o.brand||'OpTrack'}`);
+  const skipR=+o.capSkipRows||0,skipT=o.capSkipTickers||[],skipL=+o.capSkipLeaps||0;
+  if(skipR)parts.push(`${skipR} trade${skipR===1?'':'s'} for ${skipT.join(', ')} skipped (free plan limit)`);
+  if(skipL)parts.push(`${skipL} LEAP${skipL===1?'':'s'} skipped (free plan limit)`);
+  return parts.join(', ')+(o.pending?' (still syncing: keep this page open until you are online)':'');
+}
+// Same Free 2-open-ticker rules doImport uses. Pro/trial pass predicates that always allow, so skipRows is 0.
+function importWheelCapSkip(rows,wheels,api){
+  api=api||{};
+  const capOk=api.wheelCapOk||(()=>true),riskOk=api.wheelRiskOk||(()=>true),isRisk=api.isOpenRisk||(()=>false);
+  const skipTickers=[],seen=new Set();let skipRows=0;const fresh=[];
+  const sim=(wheels||[]).map(w=>({ticker:w.ticker,status:w.status}));
+  const newWheels=[];
+  for(const r of rows||[]){
+    const ticker=r.ticker,action=r.action;
+    let wheel=sim.find(w=>w.ticker===ticker&&w.status==='open');
+    if(!wheel&&!capOk(ticker,sim)){if(!seen.has(ticker)){seen.add(ticker);skipTickers.push(ticker);}skipRows++;continue;}
+    if(isRisk(action,!!(r.roll||r.isRoll||r.rollId))&&!riskOk(sim.concat(newWheels))){if(!seen.has(ticker)){seen.add(ticker);skipTickers.push(ticker);}skipRows++;continue;}
+    if(!wheel){wheel={ticker,status:'open'};sim.push(wheel);newWheels.push(wheel);}
+    fresh.push(r);
+  }
+  return{fresh,skipRows,skipTickers};
+}
+function importWheelCapNote(cap){
+  if(!cap||!cap.skipRows)return'';
+  const n=cap.skipRows,t=(cap.skipTickers||[]).join(', ');
+  return `Free plan: up to 2 open tickers. ${n} trade${n===1?'':'s'} for ${t} will not be imported. Upgrade to Pro for unlimited wheels.`;
+}
 // CSV first; if there's no trade table, the text may be a copied/saved statement (same line reader the PDF path uses)
 function _parseImportText(txt){
   const p=BCSV.parseBrokerCSV(txt);
@@ -6789,7 +6829,7 @@ async function doImport(){
     const P=p.plan;
     if((P.newLegs.length||P.changedLegs.length)&&optDemo)alert('Options demo mode is on, so the LEAP trades were not imported. Wheel trades were.');
     else{const ch=new Map(P.changedLegs.map(l=>[l.id,l]));const cap=capNewLeaps(db.opts,P.newLegs);capSkipLeaps+=cap.droppedLeaps;db.opts=(db.opts||[]).map(l=>ch.get(l.id)||l).concat(cap.keep);cap.keep.forEach(_saveOpt);P.changedLegs.forEach(_saveOpt);legsSaved+=cap.keep.length+P.changedLegs.length;}
-    if(!p.rows.length){await _noteCsvImport(p,legsSaved);closeModal('mImport');document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();_importLand(0,legsSaved,`${legsSaved} LEAP trade${legsSaved===1?'':'s'} imported`);if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
+    if(!p.rows.length){await _noteCsvImport(p,legsSaved);closeModal('mImport');document.getElementById('import-csv').value='';document.getElementById('import-fname').textContent='';_importParsed=null;importPreview();_importLand(0,legsSaved,importToastMsg({imported:0,legsSaved,capSkipLeaps}));if(capSkipLeaps)openUpgrade('unlimited',`${capSkipLeaps} LEAP${capSkipLeaps>1?'s were':' was'} not imported. `+capMsg('leap'));return;}
   }
   if(!(p.rows.length||(p.optionFills||[]).length))return;
   if(!p.plan&&(p.optionFills||[]).length&&optDemo){alert('Options demo mode is on — turn it off in the Options tab to import option fills. Wheel trades in this file were imported normally.');}
@@ -6803,11 +6843,11 @@ async function doImport(){
   const newWheelTickers=new Set();
   const newWheels=[],newTrades=[];
   const dd=p.plan?{fresh:p.rows,dupes:0}:importDedupe(p.rows,db.trades);dupes=dd.dupes;
-  for(const r of dd.fresh){
+  const capW=importWheelCapSkip(dd.fresh,db.wheels,{wheelCapOk,wheelRiskOk,isOpenRisk});
+  capSkipTickers=new Set(capW.skipTickers);capSkipRows=capW.skipRows;
+  for(const r of capW.fresh){
     const{ticker,action,entered,strike,shares}=r;
     let wheel=db.wheels.find(w=>w.ticker===ticker&&w.status==='open');
-    if(!wheel&&!wheelCapOk(ticker,db.wheels)){capSkipTickers.add(ticker);capSkipRows++;continue;}
-    if(isOpenRisk(action,!!(r.roll||r.isRoll||r.rollId))&&!wheelRiskOk(db.wheels.concat(newWheels))){capSkipTickers.add(ticker);capSkipRows++;continue;}
     if(!wheel){
       const existing=db.wheels.filter(w=>w.ticker===ticker).length;
       const now=new Date();
@@ -6845,13 +6885,9 @@ async function doImport(){
     }).catch(()=>{});
     fetchLogo(ticker).then(()=>render()).catch(()=>{});
   });
-  const parts=[`${imported} imported`];
-  if(dupes>0)parts.push(`${dupes} duplicates skipped`);
-  if(p.plan&&p.plan.dupes)parts.push(`${p.plan.dupes} already in ${_brandName()}`);if(p.plan&&p.plan.lines.length)parts.push(`${p.plan.lines.length} LEAP trades`);
-  if(capSkipRows)parts.push(`${capSkipRows} trades for ${[...capSkipTickers].join(', ')} skipped (free plan limit)`);if(capSkipLeaps)parts.push(`${capSkipLeaps} LEAP${capSkipLeaps>1?'s':''} skipped (free plan limit)`);
   await _noteCsvImport(p,imported+legsSaved);
   if(capSkipRows||capSkipLeaps)setTimeout(()=>openUpgrade('unlimited',capSkipRows?capMsg('wheel'):capMsg('leap')),600);
-  _importLand(imported,legsSaved,parts.join(', ')+(sv.pending?' (still syncing: keep this page open until you are online)':''));
+  _importLand(imported,legsSaved,importToastMsg({imported,legsSaved,dupes,already:p.plan&&p.plan.dupes,brand:_brandName(),capSkipRows,capSkipTickers:[...capSkipTickers],capSkipLeaps,pending:sv.pending}));
 }
 // After a successful import: go where the trades are (Wheels, or LEAPs if only LEAPs came in) and confirm with a banner.
 // Activity log link only where that view exists (phones keep Home · Wheels · LEAPs).
